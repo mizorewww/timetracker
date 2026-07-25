@@ -8,7 +8,9 @@ enum StoreWriteAuthorization {
     case isolatedTestHarness
 
     var usesApplicationState: Bool {
-        if case .applicationState = self { return true }
+        if case .applicationState = self {
+            return true
+        }
         return false
     }
 

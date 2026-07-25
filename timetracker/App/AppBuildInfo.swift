@@ -46,7 +46,8 @@ enum AppBuildInfo {
         guard let url = Bundle.main.url(forResource: "AppBuildInfo", withExtension: "plist"),
               let data = try? Data(contentsOf: url),
               let object = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil),
-              let dictionary = object as? [String: String] else {
+              let dictionary = object as? [String: String]
+        else {
             return [:]
         }
         return dictionary
@@ -95,7 +96,8 @@ private extension UIImage {
         guard let icons = Bundle.main.infoDictionary?["CFBundleIcons"] as? [String: Any],
               let primaryIcon = icons["CFBundlePrimaryIcon"] as? [String: Any],
               let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String],
-              let iconName = iconFiles.last else {
+              let iconName = iconFiles.last
+        else {
             return nil
         }
 

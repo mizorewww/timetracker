@@ -81,7 +81,7 @@ struct LedgerPersistenceValidationTests {
     func invalidEditTextLeavesSegmentSessionAndAuditMetadataUnchanged() throws {
         let context = try makeTestContext()
         let mutationDate = Date(timeIntervalSinceReferenceDate: 3_000_000)
-        let originalAuditDate = mutationDate.addingTimeInterval(-1_000)
+        let originalAuditDate = mutationDate.addingTimeInterval(-1000)
         let sourceTask = TaskNode(title: "Source task", parentID: nil, deviceID: "task-device")
         let targetTask = TaskNode(title: "Target task", parentID: nil, deviceID: "task-device")
         context.insert(sourceTask)
@@ -193,7 +193,7 @@ struct LedgerPersistenceValidationTests {
         }
 
         try autoreleasepool {
-            let context = ModelContext(try Self.makeReadOnlyContainer(at: storeURL, schema: schema))
+            let context = try ModelContext(Self.makeReadOnlyContainer(at: storeURL, schema: schema))
             let repository = SwiftDataTimeTrackingRepository(
                 context: context,
                 deviceID: "local-device",
@@ -259,7 +259,7 @@ struct LedgerPersistenceValidationTests {
         }
 
         try autoreleasepool {
-            let context = ModelContext(try Self.makeReadOnlyContainer(at: storeURL, schema: schema))
+            let context = try ModelContext(Self.makeReadOnlyContainer(at: storeURL, schema: schema))
             let repository = SwiftDataTimeTrackingRepository(
                 context: context,
                 deviceID: "local-device",

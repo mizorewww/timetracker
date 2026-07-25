@@ -3,7 +3,7 @@ import Foundation
 
 /// `flock` coordinates open descriptions across processes and path aliases.
 /// A recursive in-process lock keeps same-owner nested access from self-blocking.
-nonisolated final class PathProcessFileLock: @unchecked Sendable {
+final nonisolated class PathProcessFileLock: @unchecked Sendable {
     private let lockURL: URL
     private let recursiveLock = NSRecursiveLock()
     private var depth = 0
@@ -50,7 +50,9 @@ nonisolated final class PathProcessFileLock: @unchecked Sendable {
         var backoff = Self.initialBackoff
         while flock(descriptor, LOCK_EX | LOCK_NB) != 0 {
             let errorCode = errno
-            if errorCode == EINTR { continue }
+            if errorCode == EINTR {
+                continue
+            }
             guard errorCode == EWOULDBLOCK else {
                 Darwin.close(descriptor)
                 throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO)
@@ -66,7 +68,7 @@ nonisolated final class PathProcessFileLock: @unchecked Sendable {
     }
 
     static var acquireTimeout: TimeInterval = 5
-    private static let initialBackoff: useconds_t = 25_000
+    private static let initialBackoff: useconds_t = 25000
     private static let maximumBackoff: useconds_t = 250_000
 
     private static func releaseDescriptor(_ descriptor: Int32) {
@@ -76,12 +78,12 @@ nonisolated final class PathProcessFileLock: @unchecked Sendable {
     }
 }
 
-nonisolated final class PathFileLockRegistry: @unchecked Sendable {
+final nonisolated class PathFileLockRegistry: @unchecked Sendable {
     static let shared = PathFileLockRegistry()
 
     private let registryLock = NSLock()
-    // Strong references: a weak table can drop a lock instance mid-flight and
-    // hand the same path a second guard, defeating in-process recursion safety.
+    /// Strong references: a weak table can drop a lock instance mid-flight and
+    /// hand the same path a second guard, defeating in-process recursion safety.
     private var locksByPath: [String: PathProcessFileLock] = [:]
 
     func lock(for url: URL) -> PathProcessFileLock {

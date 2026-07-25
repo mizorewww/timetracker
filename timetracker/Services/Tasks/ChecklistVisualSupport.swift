@@ -7,7 +7,8 @@ enum ChecklistVisualSanitizer {
     nonisolated static func sanitizedIcon(_ iconName: String?) -> String {
         let trimmed = iconName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !trimmed.isEmpty,
-              SymbolCatalog.symbolNameSet.contains(trimmed) else {
+              SymbolCatalog.symbolNameSet.contains(trimmed)
+        else {
             return defaultIcon
         }
         return trimmed
@@ -31,16 +32,19 @@ struct ChecklistVisualSuggestionPolicy {
         let title = normalizedTitle(item.title)
         guard item.deletedAt == nil,
               item.isCompleted == false,
-              title.isEmpty == false else {
+              title.isEmpty == false
+        else {
             return false
         }
         guard let visual else { return true }
         guard visual.deletedAt == nil,
-              visual.userEditedAt == nil else {
+              visual.userEditedAt == nil
+        else {
             return false
         }
         if visual.suggestionTitleSnapshot == title,
-           visual.suggestionGeneratedAt != nil {
+           visual.suggestionGeneratedAt != nil
+        {
             return false
         }
         if visual.suggestionTitleSnapshot != nil {

@@ -18,12 +18,16 @@ nonisolated extension AnalyticsVisualOverlapService {
                     kind: .end,
                     segmentID: segment.id,
                     taskID: segment.taskID
-                )
+                ),
             ]
         }
         events.sort { lhs, rhs in
-            if lhs.date != rhs.date { return lhs.date < rhs.date }
-            if lhs.kind != rhs.kind { return lhs.kind.rawValue < rhs.kind.rawValue }
+            if lhs.date != rhs.date {
+                return lhs.date < rhs.date
+            }
+            if lhs.kind != rhs.kind {
+                return lhs.kind.rawValue < rhs.kind.rawValue
+            }
             return lhs.segmentID.uuidString < rhs.segmentID.uuidString
         }
 
@@ -58,7 +62,8 @@ nonisolated extension AnalyticsVisualOverlapService {
                    previous.end == start,
                    previous.concurrentSegmentCount == window.concurrentSegmentCount,
                    previous.participantCount == window.participantCount,
-                   previous.visibleParticipants == window.visibleParticipants {
+                   previous.visibleParticipants == window.visibleParticipants
+                {
                     rawWindows[rawWindows.count - 1].end = date
                 } else {
                     rawWindows.append(window)
@@ -97,7 +102,8 @@ nonisolated extension AnalyticsVisualOverlapService {
                     activeSegmentCountByTaskID[event.taskID, default: 0] += 1
                     if wasInactive,
                        residentParticipantIDs.insert(event.taskID).inserted,
-                       let participant = participantsByTaskID[event.taskID] {
+                       let participant = participantsByTaskID[event.taskID]
+                    {
                         participantHeap.insert(participant)
                     }
                 }
@@ -123,7 +129,8 @@ nonisolated extension AnalyticsVisualOverlapService {
         var participants: [OverlapAnalyticsParticipant] = []
         while participants.count < limit {
             while let candidate = heap.min,
-                  activeSegmentCountByTaskID[candidate.id] == nil {
+                  activeSegmentCountByTaskID[candidate.id] == nil
+            {
                 _ = heap.popMin()
                 residentParticipantIDs.remove(candidate.id)
             }
@@ -160,7 +167,9 @@ nonisolated struct AnalyticsVisualRawOverlapWindow {
 nonisolated struct AnalyticsVisualParticipantHeap {
     private var elements: [OverlapAnalyticsParticipant] = []
 
-    var min: OverlapAnalyticsParticipant? { elements.first }
+    var min: OverlapAnalyticsParticipant? {
+        elements.first
+    }
 
     mutating func insert(_ element: OverlapAnalyticsParticipant) {
         elements.append(element)
@@ -169,7 +178,9 @@ nonisolated struct AnalyticsVisualParticipantHeap {
 
     mutating func popMin() -> OverlapAnalyticsParticipant? {
         guard elements.isEmpty == false else { return nil }
-        if elements.count == 1 { return elements.removeLast() }
+        if elements.count == 1 {
+            return elements.removeLast()
+        }
         let minimum = elements[0]
         elements[0] = elements.removeLast()
         siftDown(from: 0)
@@ -208,11 +219,21 @@ nonisolated struct AnalyticsVisualParticipantHeap {
         _ lhs: OverlapAnalyticsParticipant,
         _ rhs: OverlapAnalyticsParticipant
     ) -> Bool {
-        if lhs.title != rhs.title { return lhs.title < rhs.title }
+        if lhs.title != rhs.title {
+            return lhs.title < rhs.title
+        }
         return lhs.id.uuidString < rhs.id.uuidString
     }
 
-    private func parentIndex(of index: Int) -> Int { (index - 1) / 2 }
-    private func leftChildIndex(of index: Int) -> Int { (2 * index) + 1 }
-    private func rightChildIndex(of index: Int) -> Int { (2 * index) + 2 }
+    private func parentIndex(of index: Int) -> Int {
+        (index - 1) / 2
+    }
+
+    private func leftChildIndex(of index: Int) -> Int {
+        (2 * index) + 1
+    }
+
+    private func rightChildIndex(of index: Int) -> Int {
+        (2 * index) + 2
+    }
 }

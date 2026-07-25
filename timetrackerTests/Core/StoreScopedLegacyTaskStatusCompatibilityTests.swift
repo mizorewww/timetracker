@@ -3,9 +3,9 @@ import SwiftData
 import Testing
 @testable import timetracker
 
+/// Exercises stale-store admission against inert legacy raw values and archive.
 @Suite(.serialized)
 @MainActor
-/// Exercises stale-store admission against inert legacy raw values and archive.
 struct StoreScopedLegacyTaskStatusCompatibilityTests {
     @Test
     func staleSceneTreatsLegacyCompletedAncestorChainAsOrdinaryWork() throws {
@@ -46,7 +46,7 @@ struct StoreScopedLegacyTaskStatusCompatibilityTests {
 
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        var draft = store.editorDraft(for: try #require(store.task(for: child.id)))
+        var draft = try store.editorDraft(for: #require(store.task(for: child.id)))
         draft.parentID = destination.id
 
         #expect(store.saveTaskDraft(draft))

@@ -70,11 +70,11 @@ struct SyncDataSnapshot: Codable, Equatable {
         )
     }
 
-    private static func applyingOptionalChanges<Record>(
+    private static func applyingOptionalChanges<Record: SyncSnapshotRecord & Equatable>(
         current: [Record]?,
         baseline: [Record]?,
         updated: [Record]?
-    ) -> [Record]? where Record: SyncSnapshotRecord & Equatable {
+    ) -> [Record]? {
         guard let updated else { return current }
         var result = current ?? []
         result.applyChanges(from: baseline ?? [], to: updated)
@@ -83,48 +83,49 @@ struct SyncDataSnapshot: Codable, Equatable {
 
     var hasProtectableUserContent: Bool {
         !tasks.isEmpty ||
-        !taskCategories.isEmpty ||
-        !taskCategoryAssignments.isEmpty ||
-        !sessions.isEmpty ||
-        !segments.isEmpty ||
-        !pomodoroRuns.isEmpty ||
-        !countdownEvents.isEmpty ||
-        !syncedPreferences.isEmpty ||
-        !checklistItems.isEmpty ||
-        !checklistItemVisuals.isEmpty ||
-        !inboxItems.isEmpty ||
-        !inboxSuggestions.isEmpty ||
-        !(inboxCaptureReceipts ?? []).isEmpty ||
-        !(taskRecurrenceRules ?? []).isEmpty ||
-        !(taskRecurrenceOccurrences ?? []).isEmpty ||
-        !(taskQuantityGoals ?? []).isEmpty ||
-        !(taskQuantityEntries ?? []).isEmpty
+            !taskCategories.isEmpty ||
+            !taskCategoryAssignments.isEmpty ||
+            !sessions.isEmpty ||
+            !segments.isEmpty ||
+            !pomodoroRuns.isEmpty ||
+            !countdownEvents.isEmpty ||
+            !syncedPreferences.isEmpty ||
+            !checklistItems.isEmpty ||
+            !checklistItemVisuals.isEmpty ||
+            !inboxItems.isEmpty ||
+            !inboxSuggestions.isEmpty ||
+            !(inboxCaptureReceipts ?? []).isEmpty ||
+            !(taskRecurrenceRules ?? []).isEmpty ||
+            !(taskRecurrenceOccurrences ?? []).isEmpty ||
+            !(taskQuantityGoals ?? []).isEmpty ||
+            !(taskQuantityEntries ?? []).isEmpty
     }
 
     var hasVisibleUserContent: Bool {
         tasks.contains { $0.deletedAt == nil } ||
-        taskCategories.contains { $0.deletedAt == nil } ||
-        taskCategoryAssignments.contains { $0.deletedAt == nil } ||
-        sessions.contains { $0.deletedAt == nil } ||
-        segments.contains { $0.deletedAt == nil } ||
-        pomodoroRuns.contains { $0.deletedAt == nil } ||
-        countdownEvents.contains { $0.deletedAt == nil } ||
-        syncedPreferences.contains { $0.deletedAt == nil } ||
-        checklistItems.contains { $0.deletedAt == nil } ||
-        checklistItemVisuals.contains { $0.deletedAt == nil } ||
-        inboxItems.contains { $0.deletedAt == nil } ||
-        inboxSuggestions.contains { $0.deletedAt == nil } ||
-        (taskRecurrenceRules ?? []).contains { $0.deletedAt == nil } ||
-        (taskRecurrenceOccurrences ?? []).contains { $0.deletedAt == nil } ||
-        (taskQuantityGoals ?? []).contains { $0.deletedAt == nil } ||
-        (taskQuantityEntries ?? []).contains { $0.deletedAt == nil }
+            taskCategories.contains { $0.deletedAt == nil } ||
+            taskCategoryAssignments.contains { $0.deletedAt == nil } ||
+            sessions.contains { $0.deletedAt == nil } ||
+            segments.contains { $0.deletedAt == nil } ||
+            pomodoroRuns.contains { $0.deletedAt == nil } ||
+            countdownEvents.contains { $0.deletedAt == nil } ||
+            syncedPreferences.contains { $0.deletedAt == nil } ||
+            checklistItems.contains { $0.deletedAt == nil } ||
+            checklistItemVisuals.contains { $0.deletedAt == nil } ||
+            inboxItems.contains { $0.deletedAt == nil } ||
+            inboxSuggestions.contains { $0.deletedAt == nil } ||
+            (taskRecurrenceRules ?? []).contains { $0.deletedAt == nil } ||
+            (taskRecurrenceOccurrences ?? []).contains { $0.deletedAt == nil } ||
+            (taskQuantityGoals ?? []).contains { $0.deletedAt == nil } ||
+            (taskQuantityEntries ?? []).contains { $0.deletedAt == nil }
     }
 
     var localizedSummary: String {
         if taskRecurrenceRules != nil ||
             taskRecurrenceOccurrences != nil ||
             taskQuantityGoals != nil ||
-            taskQuantityEntries != nil {
+            taskQuantityEntries != nil
+        {
             let recurrenceCount =
                 (taskRecurrenceRules ?? []).filter {
                     $0.deletedAt == nil
@@ -161,7 +162,6 @@ struct SyncDataSnapshot: Codable, Equatable {
             inboxItems.filter { $0.deletedAt == nil }.count
         )
     }
-
 
     func fingerprint() throws -> String {
         let encoder = JSONEncoder()

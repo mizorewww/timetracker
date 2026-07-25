@@ -5,22 +5,22 @@ import Testing
 struct HourActivityScaleTests {
     @Test
     func sharedScaleUsesOneHourAsItsMinimumUpperBound() {
-        let scale = HourActivityScale(hourTotals: [0, 30, 1_800, 3_599])
+        let scale = HourActivityScale(hourTotals: [0, 30, 1800, 3599])
 
-        #expect(scale.upperBoundSeconds == 3_600)
+        #expect(scale.upperBoundSeconds == 3600)
         #expect(scale.height(totalSeconds: 0, availableHeight: 150) == 0)
-        #expect(scale.height(totalSeconds: 1_800, availableHeight: 150) == 75)
-        #expect(scale.height(totalSeconds: 3_600, availableHeight: 150) == 150)
+        #expect(scale.height(totalSeconds: 1800, availableHeight: 150) == 75)
+        #expect(scale.height(totalSeconds: 3600, availableHeight: 150) == 150)
     }
 
     @Test
     func sharedScaleExpandsToTheLargestConcurrentGrossHour() {
-        let scale = HourActivityScale(hourTotals: [900, 5_400, 7_200, 3_600])
+        let scale = HourActivityScale(hourTotals: [900, 5400, 7200, 3600])
 
-        #expect(scale.upperBoundSeconds == 7_200)
-        #expect(scale.height(totalSeconds: 3_600, availableHeight: 150) == 75)
-        #expect(scale.height(totalSeconds: 5_400, availableHeight: 150) == 112.5)
-        #expect(scale.height(totalSeconds: 7_200, availableHeight: 150) == 150)
+        #expect(scale.upperBoundSeconds == 7200)
+        #expect(scale.height(totalSeconds: 3600, availableHeight: 150) == 75)
+        #expect(scale.height(totalSeconds: 5400, availableHeight: 150) == 112.5)
+        #expect(scale.height(totalSeconds: 7200, availableHeight: 150) == 150)
     }
 
     @Test
@@ -71,14 +71,14 @@ struct HourActivityScaleTests {
         let firstID = UUID(uuidString: "00000000-0000-0000-0000-000000000101")!
         let secondID = UUID(uuidString: "00000000-0000-0000-0000-000000000102")!
         let tinyID = UUID(uuidString: "00000000-0000-0000-0000-000000000103")!
-        let scale = HourActivityScale(hourTotals: [900, 5_400])
+        let scale = HourActivityScale(hourTotals: [900, 5400])
         let targetHeight = scale.height(totalSeconds: 900, availableHeight: 150)
 
         let layout = HourStackLayoutEngine.layout(
             inputs: [
                 HourStackLayoutInput(id: firstID, seconds: 600),
                 HourStackLayoutInput(id: secondID, seconds: 299),
-                HourStackLayoutInput(id: tinyID, seconds: 1)
+                HourStackLayoutInput(id: tinyID, seconds: 1),
             ],
             availableHeight: targetHeight,
             minSliceHeight: 0

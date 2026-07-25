@@ -146,7 +146,7 @@ struct TimeTrackingFutureWinnerMutationTests {
             ).sessions(ids: [segment.sessionID]).first
         )
         let mutationDate = startedAt.addingTimeInterval(30)
-        let futureDate = mutationDate.addingTimeInterval(3_600)
+        let futureDate = mutationDate.addingTimeInterval(3600)
         segment.updatedAt = futureDate
         session.updatedAt = futureDate
         try context.save()

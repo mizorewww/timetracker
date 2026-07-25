@@ -73,7 +73,7 @@ struct StoreScopedAITaskPlanCommandCoordinatorTests {
                     title: "Reading",
                     iconName: "book",
                     colorHex: "5E5CE6"
-                )
+                ),
             ],
             tasks: [
                 AITaskPlanTaskDraft(
@@ -82,14 +82,14 @@ struct StoreScopedAITaskPlanCommandCoordinatorTests {
                     title: "Read 150 Chapters",
                     iconName: "book",
                     colorHex: "5E5CE6",
-                    checklistItems: (1...150).map { index in
+                    checklistItems: (1 ... 150).map { index in
                         AITaskPlanChecklistDraft(
                             title: "Chapter \(index)",
                             iconName: "book",
                             colorHex: "5E5CE6"
                         )
                     }
-                )
+                ),
             ],
             modelID: "test-model"
         )
@@ -112,7 +112,8 @@ struct StoreScopedAITaskPlanCommandCoordinatorTests {
 
     @Test
     func quantityAndDailyRecurrenceMaterializeACompleteGraphAndReplayOnce()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let now = try singaporeDate(day: 22)
         let fixture = makePlanFixture(
@@ -348,7 +349,8 @@ struct StoreScopedAITaskPlanCommandCoordinatorTests {
 
     @Test
     func appleHealthManagedCategoryAndTaskIdentitiesRejectTheWholePlan()
-        throws {
+        throws
+    {
         let healthPlan = AppleHealthTaskCatalog.plan(
             for: AppleHealthTaskCatalog.allRoles
         )
@@ -368,7 +370,7 @@ struct StoreScopedAITaskPlanCommandCoordinatorTests {
 
             #expect(
                 throws:
-                    StoreScopedAITaskPlanMutationError.identityConflict
+                StoreScopedAITaskPlanMutationError.identityConflict
             ) {
                 try coordinator(container: context.container)
                     .apply(fixture.draft)
@@ -533,7 +535,7 @@ struct StoreScopedAITaskPlanCommandCoordinatorTests {
         quantityGoal: TaskQuantityGoalDraft? = nil,
         dailyRecurrence: TaskDailyRecurrenceDraft? = nil
     ) -> PlanFixture {
-        return PlanFixture(
+        PlanFixture(
             draft: AITaskPlanDraft(
                 categories: [
                     AITaskPlanCategoryDraft(
@@ -586,7 +588,7 @@ struct StoreScopedAITaskPlanCommandCoordinatorTests {
     private func coordinator(
         container: ModelContainer,
         checkpoint: @escaping
-            (AITaskPlanMutationCheckpoint) throws -> Void = { _ in }
+        (AITaskPlanMutationCheckpoint) throws -> Void = { _ in }
     ) -> StoreScopedAITaskPlanCommandCoordinator {
         StoreScopedAITaskPlanCommandCoordinator(
             container: container,
@@ -633,8 +635,9 @@ private enum AIPlanProgressFailureStage: CaseIterable {
         taskID: UUID
     ) -> Bool {
         guard case let .progress(checkpointTaskID, progressCheckpoint) =
-                checkpoint,
-              checkpointTaskID == taskID else {
+            checkpoint,
+            checkpointTaskID == taskID
+        else {
             return false
         }
         return switch (self, progressCheckpoint) {

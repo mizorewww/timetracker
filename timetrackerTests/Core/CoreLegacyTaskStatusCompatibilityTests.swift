@@ -3,8 +3,8 @@ import SwiftData
 import Testing
 @testable import timetracker
 
-@Suite(.serialized)
 /// Guards historical persistence values without restoring a product workflow.
+@Suite(.serialized)
 struct CoreLegacyTaskStatusCompatibilityTests {
     @Test @MainActor
     func legacyPlannedActiveAndCompletedValuesRemainVisibleAndTrackable() throws {

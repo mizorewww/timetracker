@@ -43,7 +43,7 @@ extension SyncDataSnapshot {
             try requireMaximumBytes(
                 record.timeZoneIdentifier,
                 maximum:
-                    TaskRecurrencePolicy.maximumTimeZoneIdentifierByteCount,
+                TaskRecurrencePolicy.maximumTimeZoneIdentifierByteCount,
                 table: .taskRecurrenceRules,
                 id: record.id,
                 field: "timeZoneIdentifier"
@@ -92,7 +92,7 @@ extension SyncDataSnapshot {
             try requireMaximumBytes(
                 record.timeZoneIdentifier,
                 maximum:
-                    TaskRecurrencePolicy.maximumTimeZoneIdentifierByteCount,
+                TaskRecurrencePolicy.maximumTimeZoneIdentifierByteCount,
                 table: .taskRecurrenceOccurrences,
                 id: record.id,
                 field: "timeZoneIdentifier"
@@ -108,7 +108,8 @@ extension SyncDataSnapshot {
                     )
                 }
                 guard record.timeZoneIdentifier ==
-                    rule.timeZoneIdentifier else {
+                    rule.timeZoneIdentifier
+                else {
                     throw SyncDataSnapshotPreflightError
                         .inconsistentStringValue(
                             table: .taskRecurrenceOccurrences,
@@ -151,9 +152,10 @@ extension SyncDataSnapshot {
             guard record.unitLabel.trimmingCharacters(
                 in: .whitespacesAndNewlines
             ).isEmpty == false,
-            record.unitLabel.unicodeScalars.contains(
-                where: CharacterSet.controlCharacters.contains
-            ) == false else {
+                record.unitLabel.unicodeScalars.contains(
+                    where: CharacterSet.controlCharacters.contains
+                ) == false
+            else {
                 throw invalidTaskProgressRawValue(
                     table: .taskQuantityGoals,
                     id: record.id,
@@ -195,7 +197,8 @@ extension SyncDataSnapshot {
                 field: "amount"
             )
             if let goal = goalByID[record.quantityGoalID],
-               goal.taskID != record.taskID {
+               goal.taskID != record.taskID
+            {
                 throw SyncDataSnapshotPreflightError.mismatchedReference(
                     table: .taskQuantityEntries,
                     id: record.id,
@@ -206,5 +209,4 @@ extension SyncDataSnapshot {
             }
         }
     }
-
 }

@@ -14,7 +14,8 @@ extension TimeTrackerStore {
         guard availableSlots > 0 else { return }
 
         for item in openInboxItems
-        where shouldAutoSuggestInboxItem(item) && inboxSuggestionFailureByItemID[item.id] == nil {
+            where shouldAutoSuggestInboxItem(item) && inboxSuggestionFailureByItemID[item.id] == nil
+        {
             guard inboxSuggestionInFlightIDs.count < Self.maximumInboxSuggestionConcurrency else { break }
             startInboxSuggestion(item, candidates: candidates, showsErrors: false)
         }
@@ -28,7 +29,8 @@ extension TimeTrackerStore {
     private func requestInboxSuggestion(_ item: InboxItem, showsErrors: Bool) {
         guard item.deletedAt == nil,
               item.isCompleted == false,
-              item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
+              item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+        else {
             return
         }
 
@@ -55,7 +57,8 @@ extension TimeTrackerStore {
         showsErrors: Bool
     ) {
         guard !inboxSuggestionInFlightIDs.contains(item.id),
-              inboxSuggestionInFlightIDs.count < Self.maximumInboxSuggestionConcurrency else {
+              inboxSuggestionInFlightIDs.count < Self.maximumInboxSuggestionConcurrency
+        else {
             enqueueInboxSuggestion(itemID: item.id, showsErrors: showsErrors)
             return
         }
@@ -120,7 +123,8 @@ extension TimeTrackerStore {
 
     func startPendingInboxSuggestionsIfNeeded() {
         while inboxSuggestionInFlightIDs.count < Self.maximumInboxSuggestionConcurrency,
-              inboxSuggestionPendingIDs.isEmpty == false {
+              inboxSuggestionPendingIDs.isEmpty == false
+        {
             let itemID = inboxSuggestionPendingIDs.removeFirst()
             let showsErrors = inboxSuggestionPendingShowsErrors.remove(itemID) != nil
             guard let item = inboxItems.first(where: { $0.id == itemID }) else { continue }

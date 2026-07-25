@@ -5,7 +5,7 @@ import Testing
 @Suite(.serialized)
 struct CoreAppSceneFeedbackRouterTests {
     @Test @MainActor
-    func feedbackIsPresentedInFIFOOrder() throws {
+    func feedbackIsPresentedInFIFOOrder() {
         let first = AppSceneFeedback(
             id: UUID(),
             context: .dataExport,
@@ -36,7 +36,7 @@ struct CoreAppSceneFeedbackRouterTests {
     }
 
     @Test @MainActor
-    func staleOrUnrelatedDismissalCannotClearCurrentFeedback() throws {
+    func staleOrUnrelatedDismissalCannotClearCurrentFeedback() {
         let first = AppSceneFeedback(
             id: UUID(),
             title: "First",
@@ -60,7 +60,7 @@ struct CoreAppSceneFeedbackRouterTests {
     }
 
     @Test @MainActor
-    func separateSceneRoutersDoNotShareFeedback() throws {
+    func separateSceneRoutersDoNotShareFeedback() {
         let mainRouter = AppSceneFeedbackRouter()
         let settingsRouter = AppSceneFeedbackRouter()
 

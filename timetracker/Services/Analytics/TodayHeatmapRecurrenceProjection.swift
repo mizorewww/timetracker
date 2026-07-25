@@ -47,15 +47,17 @@ nonisolated struct TodayHeatmapRecurrenceProjection: Equatable, Sendable {
                 TaskRecurrenceDayKey.isCanonical(rule.startDayKey) &&
                 TimeZone(identifier: rule.timeZoneIdentifier) != nil &&
                 rule.timeZoneIdentifier.utf8.count <=
-                    TaskRecurrencePolicy.maximumTimeZoneIdentifierByteCount
+                TaskRecurrencePolicy.maximumTimeZoneIdentifierByteCount
             let hasValidTemplate =
                 validTaskIDs.contains(rule.templateTaskID) &&
                 blockedTaskIDs.contains(rule.templateTaskID) == false
             guard hasCanonicalIdentity,
                   hasValidConfiguration,
-                  hasValidTemplate else {
+                  hasValidTemplate
+            else {
                 if validTaskIDs.contains(rule.templateTaskID),
-                   blockedTaskIDs.contains(rule.templateTaskID) == false {
+                   blockedTaskIDs.contains(rule.templateTaskID) == false
+                {
                     invalidTaskIDs.insert(rule.templateTaskID)
                 }
                 continue
@@ -114,14 +116,15 @@ nonisolated struct TodayHeatmapRecurrenceProjection: Equatable, Sendable {
                   occurrence.templateTaskID == rule.templateTaskID,
                   occurrence.timeZoneIdentifier == rule.timeZoneIdentifier,
                   TaskRecurrenceDayKey.isCanonical(
-                    occurrence.occurrenceDayKey
+                      occurrence.occurrenceDayKey
                   ),
                   TimeZone(identifier: occurrence.timeZoneIdentifier) != nil,
                   occurrence.occurrenceDayKey >= rule.startDayKey,
                   occurrence.templateTaskID != occurrence.generatedTaskID,
                   validTaskIDs.contains(occurrence.templateTaskID),
                   validTaskIDs.contains(occurrence.generatedTaskID),
-                  relationshipIsIncomplete == false else {
+                  relationshipIsIncomplete == false
+            else {
                 if relationshipIsIncomplete {
                     blockedTaskIDs.formUnion(participants)
                 } else {
@@ -157,7 +160,8 @@ nonisolated struct TodayHeatmapRecurrenceProjection: Equatable, Sendable {
             previousInvalidTaskIDs = invalidTaskIDs
             for candidate in candidates where
                 invalidTaskIDs.contains(candidate.templateTaskID) ||
-                invalidTaskIDs.contains(candidate.generatedTaskID) {
+                invalidTaskIDs.contains(candidate.generatedTaskID)
+            {
                 invalidTaskIDs.insert(candidate.templateTaskID)
                 invalidTaskIDs.insert(candidate.generatedTaskID)
             }
@@ -185,7 +189,7 @@ nonisolated struct TodayHeatmapRecurrenceProjection: Equatable, Sendable {
         self.init(
             ownerTaskIDByGeneratedTaskID: ownerTaskIDByGeneratedTaskID,
             generatedTaskIDsByTemplateTaskID:
-                generatedTaskIDsByTemplateTaskID,
+            generatedTaskIDsByTemplateTaskID,
             renderableTaskIDSet: validTaskIDs
                 .subtracting(blockedTaskIDs)
                 .subtracting(invalidTaskIDs),

@@ -12,7 +12,8 @@ nonisolated struct AnalyticsVisualSnapshotService {
                       endedAt: segment.endedAt,
                       in: input.period,
                       evaluatedAt: input.evaluatedAt
-                  ) else {
+                  )
+            else {
                 return nil
             }
             return AnalyticsVisualBoundedSegment(
@@ -56,7 +57,7 @@ nonisolated struct AnalyticsVisualSnapshotService {
                     ?? segment.interval.end
                 let end = min(nextHour, segment.interval.end)
                 guard end > cursor else { break }
-                if (0..<24).contains(hour) {
+                if (0 ..< 24).contains(hour) {
                     secondsByHourAndTaskID[hour][segment.taskID, default: 0] += max(
                         0,
                         Int(end.timeIntervalSince(cursor))
@@ -65,7 +66,7 @@ nonisolated struct AnalyticsVisualSnapshotService {
                 cursor = end
             }
         }
-        return (0..<24).map { hour in
+        return (0 ..< 24).map { hour in
             let slices = secondsByHourAndTaskID[hour].compactMap { taskID, seconds -> HourTaskSlice? in
                 guard seconds > 0 else { return nil }
                 let task = input.taskByID[taskID]

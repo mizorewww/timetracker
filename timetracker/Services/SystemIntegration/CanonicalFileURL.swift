@@ -11,7 +11,8 @@ nonisolated enum CanonicalFileURL {
         let decodedPath = url.path(percentEncoded: false)
         guard url.isFileURL,
               url.path.hasPrefix("/"),
-              decodedPath.utf8.contains(0) == false else {
+              decodedPath.utf8.contains(0) == false
+        else {
             return nil
         }
         var components = ["/"]
@@ -65,7 +66,8 @@ nonisolated enum CanonicalFileURL {
         var missingComponents: [String] = []
 
         while fileManager.fileExists(atPath: cursor.path) == false,
-              cursor.pathComponents.count > 1 {
+              cursor.pathComponents.count > 1
+        {
             missingComponents.insert(cursor.lastPathComponent, at: 0)
             cursor.deleteLastPathComponent()
         }
@@ -85,8 +87,9 @@ nonisolated extension DurableLocalFile {
     ) throws -> (url: URL, root: URL) {
         guard let rootComponents = CanonicalFileURL
             .lexicallyNormalizedPathComponents(of: durableRootURL),
-              let urlComponents = CanonicalFileURL
-                .lexicallyNormalizedPathComponents(of: url) else {
+            let urlComponents = CanonicalFileURL
+            .lexicallyNormalizedPathComponents(of: url)
+        else {
             throw DurableLocalFileError.durableRootIsNotAncestor
         }
         guard urlComponents.starts(with: rootComponents) else {

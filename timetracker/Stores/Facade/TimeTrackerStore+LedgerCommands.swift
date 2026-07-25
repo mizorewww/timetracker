@@ -33,7 +33,7 @@ extension TimeTrackerStore {
                         end: draft.endedAt
                     ),
                     isVisible: false
-                )
+                ),
             ])
             return true
         } catch {
@@ -116,12 +116,11 @@ extension TimeTrackerStore {
     }
 
     private func handleSegmentMutationFailure(_ error: Error) {
-        let needsRefresh: Bool
-        if let mutationError = error as? SegmentMutationError {
-            needsRefresh = mutationError == .staleDraft ||
+        let needsRefresh: Bool = if let mutationError = error as? SegmentMutationError {
+            mutationError == .staleDraft ||
                 mutationError == .inconsistentSession
         } else {
-            needsRefresh = error as? TimeTrackingRepositoryError == .taskUnavailable
+            error as? TimeTrackingRepositoryError == .taskUnavailable
         }
         guard needsRefresh else {
             errorMessage = error.localizedDescription

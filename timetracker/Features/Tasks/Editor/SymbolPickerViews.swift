@@ -13,7 +13,6 @@ struct SymbolColorPickerPresentation<Label: View>: View {
     @State private var isPickerPresented = false
     #endif
 
-    @ViewBuilder
     var body: some View {
         #if os(macOS)
         Button {
@@ -174,9 +173,8 @@ struct SymbolAndColorPicker: View {
             .accessibilityIdentifier("symbol.picker.symbols")
             .layoutPriority(1)
             #if os(iOS)
-            .scrollDismissesKeyboard(.interactively)
+                .scrollDismissesKeyboard(.interactively)
             #endif
-
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

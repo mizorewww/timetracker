@@ -30,7 +30,8 @@ struct TaskRecurrenceEditorSection: View {
             }
 
             if isGeneratedTask == false,
-               draft.dailyRecurrence != nil {
+               draft.dailyRecurrence != nil
+            {
                 LabeledContent(
                     AppStrings.localized("task.recurrence.editor.frequency"),
                     value: AppStrings.localized(
@@ -41,12 +42,13 @@ struct TaskRecurrenceEditorSection: View {
 
             if isGeneratedTask == false,
                isCreationBlockedByActiveWork,
-               draft.dailyRecurrence != nil {
+               draft.dailyRecurrence != nil
+            {
                 TaskEditorInlineErrorMessage(
                     message: TaskRecurrenceMutationError
                         .templateHasActiveWork.localizedDescription,
                     accessibilityIdentifier:
-                        "task.editor.recurrence.activeWork.error"
+                    "task.editor.recurrence.activeWork.error"
                 )
             }
         } header: {
@@ -60,30 +62,30 @@ struct TaskRecurrenceEditorSection: View {
         switch TaskRecurrenceEditorFooterPolicy.state(
             isGeneratedTask: isGeneratedTask,
             isCreationBlockedByActiveWork:
-                isCreationBlockedByActiveWork,
+            isCreationBlockedByActiveWork,
             dailyRecurrence: draft.dailyRecurrence,
             quantityGoal: draft.quantityGoal
         ) {
         case .generated:
-            return AppStrings.localized(
+            AppStrings.localized(
                 "task.recurrence.editor.generatedFooter"
             )
         case .activeWorkBlocked:
-            return AppStrings.localized(
+            AppStrings.localized(
                 "task.recurrence.editor.activeWorkFooter"
             )
         case .off:
-            return AppStrings.localized(
+            AppStrings.localized(
                 "task.recurrence.editor.offFooter"
             )
         case .paused:
-            return AppStrings.localized(
+            AppStrings.localized(
                 "task.recurrence.editor.pausedFooter"
             )
         case .enabled:
-            return AppStrings.localized("task.recurrence.editor.footer")
+            AppStrings.localized("task.recurrence.editor.footer")
         case let .enabledWithQuantity(targetAmount, unitLabel):
-            return String.localizedStringWithFormat(
+            String.localizedStringWithFormat(
                 AppStrings.localized(
                     "task.recurrence.editor.quantityFooterFormat"
                 ),
@@ -120,8 +122,12 @@ nonisolated enum TaskRecurrenceEditorFooterPolicy {
         dailyRecurrence: TaskDailyRecurrenceDraft?,
         quantityGoal: TaskQuantityGoalDraft?
     ) -> TaskRecurrenceEditorFooterState {
-        if isGeneratedTask { return .generated }
-        if isCreationBlockedByActiveWork { return .activeWorkBlocked }
+        if isGeneratedTask {
+            return .generated
+        }
+        if isCreationBlockedByActiveWork {
+            return .activeWorkBlocked
+        }
         guard let dailyRecurrence else { return .off }
         guard dailyRecurrence.isEnabled else { return .paused }
         guard let quantityGoal else { return .enabled }

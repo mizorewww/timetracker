@@ -191,7 +191,7 @@ extension WatchRowCommandState {
         }
     }
 
-    func tint(`default`: Color) -> Color {
+    func tint(default: Color) -> Color {
         switch self {
         case .idle: `default`
         case .pending: .secondary

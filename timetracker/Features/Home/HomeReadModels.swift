@@ -48,7 +48,8 @@ struct TodayHomeContent {
 
         let candidates = store.forecastDisplayItems()
         if let selectedTaskID = store.selectedTaskID,
-           let selected = store.forecastDisplayItem(for: selectedTaskID) {
+           let selected = store.forecastDisplayItem(for: selectedTaskID)
+        {
             forecasts = Array(
                 ([selected] + candidates.filter { $0.taskID != selected.taskID })
                     .prefix(max(0, forecastLimit))
@@ -102,7 +103,8 @@ extension TimeTrackerStore {
     ) -> TodayMetricsSnapshot {
         guard let todayInterval = calendar.dateInterval(of: .day, for: now),
               let previousDate = calendar.date(byAdding: .day, value: -1, to: now),
-              let previousInterval = calendar.dateInterval(of: .day, for: previousDate) else {
+              let previousInterval = calendar.dateInterval(of: .day, for: previousDate)
+        else {
             return TodayMetricsSnapshot(
                 grossSeconds: 0,
                 wallSeconds: 0,

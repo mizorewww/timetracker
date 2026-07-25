@@ -93,7 +93,8 @@ extension TaskHierarchyPicker {
             _,
             maximumSelectionCount
         ) = mode,
-        let maximumSelectionCount else {
+            let maximumSelectionCount
+        else {
             return false
         }
         return selectedTaskIDs.count >= maximumSelectionCount &&
@@ -175,12 +176,14 @@ extension TaskHierarchyPicker {
         for item: TaskHierarchyProjection.Item
     ) -> String {
         if let unavailableReason = item.unavailableReason,
-           isSelectionDisabled(for: item) {
+           isSelectionDisabled(for: item)
+        {
             return unavailableReason
         }
         if isSelectionLimitReached(for: item),
            case let .multipleSelection(_, _, maximumSelectionCount) = mode,
-           let maximumSelectionCount {
+           let maximumSelectionCount
+        {
             return String(
                 format: AppStrings.localized(
                     "taskPicker.selection.limitReachedFormat"

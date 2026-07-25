@@ -1,7 +1,7 @@
 import Foundation
 
 enum TaskEstimatePolicy {
-    static let minuteRange = 0...600
+    static let minuteRange = 0 ... 600
     static let maximumSeconds = minuteRange.upperBound * 60
 
     static func normalized(seconds: Int?) -> Int? {

@@ -75,12 +75,13 @@ extension SyncConflictService {
     }
 
     func hasCompletedCloudRecoveryImportReceipt() throws -> Bool {
-        cloudRecoveryImportIsReady(in: try loadState())
+        try cloudRecoveryImportIsReady(in: loadState())
     }
 
     func cloudRecoveryImportIsReady(in state: SyncConflictState) -> Bool {
         guard let session = state.cloudRecoveryImportSession,
-              session.hasCompletedInitialImport else {
+              session.hasCompletedInitialImport
+        else {
             return false
         }
         if AppCloudSync.isCloudDownloadRecoveryActive {

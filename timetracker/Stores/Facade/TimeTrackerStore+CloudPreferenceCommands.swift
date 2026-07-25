@@ -77,7 +77,8 @@ extension TimeTrackerStore {
                 from: current
             )
         guard !isEnabled || updated.count <=
-                AppPreferenceValueSanitizer.maximumTodayHeatmapTaskCount else {
+            AppPreferenceValueSanitizer.maximumTodayHeatmapTaskCount
+        else {
             return false
         }
         return setTodayHeatmapTaskIDs(updated)

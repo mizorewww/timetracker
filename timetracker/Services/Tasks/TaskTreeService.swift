@@ -49,12 +49,12 @@ struct TaskTreeService {
             parentPathCache[task.id] = parentID.flatMap { pathCache[$0] } ?? ""
             pathCache[task.id] = Self.displayPath(components: components, wasTruncated: wasTruncated)
 
-            let breadcrumbAccumulator: TaskBreadcrumbAccumulator
-            if let parentID,
-               let parentBreadcrumb = breadcrumbAccumulatorByTaskID[parentID] {
-                breadcrumbAccumulator = parentBreadcrumb.appending(task.title)
+            let breadcrumbAccumulator: TaskBreadcrumbAccumulator = if let parentID,
+                                                                      let parentBreadcrumb = breadcrumbAccumulatorByTaskID[parentID]
+            {
+                parentBreadcrumb.appending(task.title)
             } else {
-                breadcrumbAccumulator = .root(task.title)
+                .root(task.title)
             }
             breadcrumbAccumulatorByTaskID[task.id] = breadcrumbAccumulator
             breadcrumbByTaskID[task.id] = breadcrumbAccumulator.presentation
@@ -116,7 +116,8 @@ struct TaskTreeService {
         guard let newParentID else { return true }
         guard taskID != newParentID else { return false }
         guard eligibility.visibleTaskIDs.contains(newParentID),
-              eligibility.trackableTaskIDs.contains(newParentID) else {
+              eligibility.trackableTaskIDs.contains(newParentID)
+        else {
             return false
         }
         return !descendantIDs(of: taskID, tasks: canonicalTasks).contains(newParentID)
@@ -141,11 +142,17 @@ struct TaskTreeService {
         return wasTruncated ? "… / \(path)" : path
     }
 
-    nonisolated private static func siblingDisplayOrder(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {
-        if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
+    private nonisolated static func siblingDisplayOrder(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {
+        if lhs.sortOrder != rhs.sortOrder {
+            return lhs.sortOrder < rhs.sortOrder
+        }
         let titleOrder = lhs.title.localizedStandardCompare(rhs.title)
-        if titleOrder != .orderedSame { return titleOrder == .orderedAscending }
-        if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+        if titleOrder != .orderedSame {
+            return titleOrder == .orderedAscending
+        }
+        if lhs.createdAt != rhs.createdAt {
+            return lhs.createdAt < rhs.createdAt
+        }
         return lhs.id.uuidString < rhs.id.uuidString
     }
 }
@@ -168,12 +175,12 @@ private struct TaskBreadcrumbAccumulator {
     }
 
     func appending(_ component: String) -> TaskBreadcrumbAccumulator {
-        let updatedExactComponents: [String]?
-        if let exactComponents,
-           exactComponents.count < Self.maximumExactComponentCount {
-            updatedExactComponents = exactComponents + [component]
+        let updatedExactComponents: [String]? = if let exactComponents,
+                                                   exactComponents.count < Self.maximumExactComponentCount
+        {
+            exactComponents + [component]
         } else {
-            updatedExactComponents = nil
+            nil
         }
         return TaskBreadcrumbAccumulator(
             firstComponent: firstComponent,

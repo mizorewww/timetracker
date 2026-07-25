@@ -145,7 +145,7 @@ struct ActiveTimerRow: View {
     let store: TimeTrackerStore
     let segment: TimeSegment
     let actionLabelStyle: TaskTimerActionLabelStyle
-    var openTaskDetail: ((UUID) -> Void)? = nil
+    var openTaskDetail: ((UUID) -> Void)?
 
     private var presentation: TaskIdentityPresentation {
         guard let task = store.task(for: segment.taskID) else {

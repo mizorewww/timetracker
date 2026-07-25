@@ -21,33 +21,33 @@ struct DesktopRootView: View {
         .navigationSplitViewStyle(.balanced)
         .accessibilityIdentifier("mac.splitNavigation")
         #if os(macOS)
-        .focusedSceneValue(\.timeTrackerStore, store)
-        .focusedSceneValue(\.appPresentationRouter, presentationRouter)
-        .onAppear {
-            routeSettingsDestination(store.desktopDestination)
-        }
-        .onChange(of: store.desktopDestination) { _, destination in
-            routeSettingsDestination(destination)
-        }
+            .focusedSceneValue(\.timeTrackerStore, store)
+            .focusedSceneValue(\.appPresentationRouter, presentationRouter)
+            .onAppear {
+                routeSettingsDestination(store.desktopDestination)
+            }
+            .onChange(of: store.desktopDestination) { _, destination in
+                routeSettingsDestination(destination)
+            }
         #endif
     }
 
     private var sidebarColumn: some View {
         SidebarView(store: store)
-            #if os(macOS)
+        #if os(macOS)
             .navigationSplitViewColumnWidth(
                 min: layout.sidebar.min,
                 ideal: layout.sidebar.ideal,
                 max: layout.sidebar.max ?? layout.sidebar.ideal
             )
-            #endif
+        #endif
     }
 
     private var detailColumn: some View {
         DesktopContentView(store: store)
-            #if os(macOS)
+        #if os(macOS)
             .navigationSplitViewColumnWidth(min: layout.detail.min, ideal: layout.detail.ideal)
-            #endif
+        #endif
     }
 
     #if os(macOS)

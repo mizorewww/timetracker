@@ -44,7 +44,7 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
                 $0.endedAt == nil && $0.deletedAt == nil
             }
         )
-        let candidateIDs = Set(try context.fetch(descriptor).map(\.id))
+        let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
         return try canonicalRuns(ids: candidateIDs)
             .filter {
                 $0.endedAt == nil &&
@@ -59,11 +59,11 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
         let descriptor = FetchDescriptor<PomodoroRun>(
             predicate: #Predicate {
                 $0.endedAt == nil &&
-                $0.stateRaw != completed &&
-                $0.stateRaw != cancelled
+                    $0.stateRaw != completed &&
+                    $0.stateRaw != cancelled
             }
         )
-        let candidateIDs = Set(try context.fetch(descriptor).map(\.id))
+        let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
         return try canonicalRuns(ids: candidateIDs)
             .filter {
                 $0.endedAt == nil &&
@@ -80,7 +80,8 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
             for existingRun in try activeRuns() {
                 if existingRun.phaseHasExpired(at: now),
                    existingRun.state == .focusing || existingRun.state == .interrupted,
-                   let deadline = existingRun.phaseDeadline {
+                   let deadline = existingRun.phaseDeadline
+                {
                     try completeFocusMutation(
                         existingRun,
                         endedAt: deadline,
@@ -133,7 +134,8 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
             guard let run = try run(id: runID),
                   run.state == expectedState,
                   run.deletedAt == nil,
-                  run.endedAt == nil else {
+                  run.endedAt == nil
+            else {
                 return false
             }
             try completeFocusMutation(
@@ -157,7 +159,8 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
             guard let run = try run(id: runID),
                   run.state == expectedState,
                   run.deletedAt == nil,
-                  run.endedAt == nil else {
+                  run.endedAt == nil
+            else {
                 return false
             }
             let now = nowProvider()
@@ -176,7 +179,8 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
         guard let run = try run(id: runID),
               run.state == .focusing || run.state == .interrupted,
               let deadline = run.phaseDeadline,
-              deadline <= now else {
+              deadline <= now
+        else {
             return false
         }
         return try completeFocus(
@@ -191,14 +195,16 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
               run.deletedAt == nil,
               run.endedAt == nil,
               run.state != .completed,
-              run.state != .cancelled else {
+              run.state != .cancelled
+        else {
             return
         }
         try context.performAtomicMutation {
             let now = nowProvider()
-            if (run.state == .focusing || run.state == .interrupted),
+            if run.state == .focusing || run.state == .interrupted,
                let deadline = run.phaseDeadline,
-               deadline <= now {
+               deadline <= now
+            {
                 try completeFocusMutation(run, endedAt: deadline, mutationDate: now)
                 guard let reconciledRun = try self.run(id: runID), reconciledRun.state != .completed else {
                     return
@@ -302,7 +308,7 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
         let descriptor = FetchDescriptor<TimeSegment>(
             predicate: #Predicate { $0.sessionID == targetSessionID }
         )
-        let candidateIDs = Set(try context.fetch(descriptor).map(\.id))
+        let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
         guard candidateIDs.isEmpty == false else { return [] }
         let requestedIDs = Array(candidateIDs)
         let duplicateDescriptor = FetchDescriptor<TimeSegment>(
@@ -312,7 +318,9 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
             .visibleDeduplicatedByID()
             .filter { $0.sessionID == targetSessionID }
             .sorted { lhs, rhs in
-                if lhs.startedAt != rhs.startedAt { return lhs.startedAt < rhs.startedAt }
+                if lhs.startedAt != rhs.startedAt {
+                    return lhs.startedAt < rhs.startedAt
+                }
                 return lhs.id.uuidString < rhs.id.uuidString
             }
     }
@@ -335,7 +343,9 @@ final class SwiftDataPomodoroRepository: PomodoroRepository {
     }
 
     private func runCreationOrder(_ lhs: PomodoroRun, _ rhs: PomodoroRun) -> Bool {
-        if lhs.createdAt != rhs.createdAt { return lhs.createdAt > rhs.createdAt }
+        if lhs.createdAt != rhs.createdAt {
+            return lhs.createdAt > rhs.createdAt
+        }
         return lhs.id.uuidString < rhs.id.uuidString
     }
 }

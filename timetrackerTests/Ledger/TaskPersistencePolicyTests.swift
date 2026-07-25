@@ -66,7 +66,7 @@ struct TaskPersistencePolicyTests {
             colorHex: task.colorHex,
             iconName: task.iconName,
             notes: "Original notes",
-            estimatedSeconds: 1_800,
+            estimatedSeconds: 1800,
             dueAt: originalDueAt
         )
         task.deviceID = "remote-device"
@@ -91,8 +91,8 @@ struct TaskPersistencePolicyTests {
                 colorHex: "AABBCC",
                 iconName: "star",
                 notes: String(repeating: "n", count: maximum + 1),
-                estimatedSeconds: 3_600,
-                dueAt: originalDueAt.addingTimeInterval(86_400)
+                estimatedSeconds: 3600,
+                dueAt: originalDueAt.addingTimeInterval(86400)
             )
         }
 
@@ -102,7 +102,7 @@ struct TaskPersistencePolicyTests {
         #expect(task.colorHex == "112233")
         #expect(task.iconName == "circle")
         #expect(task.notes == "Original notes")
-        #expect(task.estimatedSeconds == 1_800)
+        #expect(task.estimatedSeconds == 1800)
         #expect(task.dueAt == originalDueAt)
         #expect(task.updatedAt == originalUpdatedAt)
         #expect(task.deviceID == "remote-device")
@@ -113,9 +113,9 @@ struct TaskPersistencePolicyTests {
     func taskPersistenceAcceptsExactMultibyteLimitsAndNormalizesCompactFields() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "local-device")
-        let title = String(repeating: "界", count: 1_365) + "a"
+        let title = String(repeating: "界", count: 1365) + "a"
         let iconName = String(repeating: "界", count: 85) + "a"
-        let notes = String(repeating: "界", count: 21_845) + "\n"
+        let notes = String(repeating: "界", count: 21845) + "\n"
 
         #expect(title.utf8.count == SyncDataSnapshotRestoreLimits.maximumTitleByteCount)
         #expect(iconName.utf8.count == SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount)
@@ -181,7 +181,7 @@ struct TaskPersistencePolicyTests {
         #expect(task.archivedAt == task.updatedAt)
         #expect(task.statusRaw == LegacyTaskStatusRaw.archived)
 
-        let originalArchivedAt = Date(timeIntervalSince1970: 1_000)
+        let originalArchivedAt = Date(timeIntervalSince1970: 1000)
         task.archivedAt = originalArchivedAt
         try context.save()
 
@@ -273,9 +273,9 @@ struct TaskPersistencePolicyTests {
 
     @Test @MainActor
     func taskEditorValidationAcceptsExactUtf8LimitsAndMultilineNotes() {
-        let title = String(repeating: "界", count: 1_365) + "a"
+        let title = String(repeating: "界", count: 1365) + "a"
         let compactValue = String(repeating: "界", count: 85) + "a"
-        let notes = String(repeating: "界", count: 21_845) + "a"
+        let notes = String(repeating: "界", count: 21845) + "a"
         let validation = TaskEditorValidation(
             title: title,
             notes: notes,

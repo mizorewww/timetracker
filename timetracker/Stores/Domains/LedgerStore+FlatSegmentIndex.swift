@@ -37,7 +37,7 @@ extension LedgerStore {
 
     mutating func reindexFlatSegments(from startIndex: Int) {
         guard startIndex < allSegments.count else { return }
-        for index in startIndex..<allSegments.count {
+        for index in startIndex ..< allSegments.count {
             segmentArrayIndexByID[allSegments[index].id] = index
         }
     }

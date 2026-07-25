@@ -42,7 +42,8 @@ extension RollupIncrementalIndex {
             var cursor: UUID? = startID
             while let current = cursor,
                   result[current] == nil,
-                  visited.insert(current).inserted {
+                  visited.insert(current).inserted
+            {
                 chain.append(current)
                 cursor = parentByTaskID[current]
             }

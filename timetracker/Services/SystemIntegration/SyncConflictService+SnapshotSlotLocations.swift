@@ -4,7 +4,7 @@ extension SyncConflictService {
     nonisolated func conflictSnapshotURL(
         for reference: SyncConflictSnapshotReference
     ) throws -> URL {
-        Self.conflictSnapshotURL(for: reference, stateURL: try stateURL())
+        try Self.conflictSnapshotURL(for: reference, stateURL: stateURL())
     }
 
     nonisolated static func conflictSnapshotURL(
@@ -18,7 +18,7 @@ extension SyncConflictService {
 
     nonisolated static func allConflictSnapshotSlotURLs(for stateURL: URL) -> [URL] {
         SyncConflictSnapshotStorageSlot.allCases.flatMap { slot in
-            (0...1).map { generation in
+            (0 ... 1).map { generation in
                 conflictSnapshotURL(
                     for: SyncConflictSnapshotReference(
                         slot: slot,
@@ -34,7 +34,7 @@ extension SyncConflictService {
 
     nonisolated static func isConflictSnapshotSlotFileName(_ fileName: String) -> Bool {
         SyncConflictSnapshotStorageSlot.allCases.contains { slot in
-            (0...1).contains { generation in
+            (0 ... 1).contains { generation in
                 fileName == "\(slot.fileStem)-\(generation).json"
             }
         }
@@ -65,7 +65,7 @@ extension SyncConflictService {
             $0 != preferredSlot
         }
         for slot in slots {
-            for generation in 0...1 where !usedLocations.contains("\(slot.rawValue)-\(generation)") {
+            for generation in 0 ... 1 where !usedLocations.contains("\(slot.rawValue)-\(generation)") {
                 return SyncConflictSnapshotReference(
                     slot: slot,
                     generation: generation,

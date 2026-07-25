@@ -78,7 +78,8 @@ extension TimeTrackerStore {
             : .ready
         if persistenceWriteSafety == .ready,
            pendingSyncConflict == nil,
-           hasCompletedStartupConfiguration == false {
+           hasCompletedStartupConfiguration == false
+        {
             configureIfNeeded(context: modelContext)
         }
     }
@@ -94,7 +95,8 @@ extension TimeTrackerStore {
         guard persistenceWriteSafety == .ready,
               pendingSyncConflict == nil,
               hasCompletedStartupConfiguration == false,
-              let modelContext else {
+              let modelContext
+        else {
             return
         }
         configureIfNeeded(context: modelContext)

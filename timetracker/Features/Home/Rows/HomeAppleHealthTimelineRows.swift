@@ -114,8 +114,8 @@ struct AppleHealthTimelineAccessRow: View {
                 tint: .pink
             )
             Button(actionTitle, action: action)
-            .buttonStyle(.borderless)
-            .frame(minHeight: 44)
+                .buttonStyle(.borderless)
+                .frame(minHeight: 44)
         }
     }
 

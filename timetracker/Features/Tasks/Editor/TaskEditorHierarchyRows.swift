@@ -19,7 +19,7 @@ struct TaskParentPickerRow: View {
 
     var body: some View {
         Picker(AppStrings.localized("editor.task.parent"), selection: $selection) {
-            Text(.app("editor.task.rootLevel")).tag(Optional<UUID>.none)
+            Text(.app("editor.task.rootLevel")).tag(UUID?.none)
             ForEach(options) { option in
                 Text(title(for: option))
                     .tag(Optional(option.id))
@@ -37,7 +37,8 @@ struct TaskParentPickerRow: View {
 
     private var missingCurrentParentID: UUID? {
         guard let selection,
-              options.contains(where: { $0.id == selection }) == false else {
+              options.contains(where: { $0.id == selection }) == false
+        else {
             return nil
         }
         return selection
@@ -72,7 +73,7 @@ struct TaskCategoryPickerRow: View {
 
     var body: some View {
         Picker(AppStrings.localized("taskCategory.title"), selection: $selection) {
-            Text(.app("taskCategory.none")).tag(Optional<UUID>.none)
+            Text(.app("taskCategory.none")).tag(UUID?.none)
             ForEach(options) { option in
                 Label(option.title, systemImage: option.iconName)
                     .tag(Optional(option.id))
@@ -84,7 +85,8 @@ struct TaskCategoryPickerRow: View {
 
     private var accessibilitySelectionValue: String {
         guard let selection,
-              let option = options.first(where: { $0.id == selection }) else {
+              let option = options.first(where: { $0.id == selection })
+        else {
             return AppStrings.localized("taskCategory.none")
         }
         return option.title

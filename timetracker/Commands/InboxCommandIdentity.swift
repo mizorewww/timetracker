@@ -52,9 +52,9 @@ extension InboxCommandHandler {
                     : []
             )
         let winner = resolution.winner
-        let preparedWinner = PreparedInboxItemMutation(
+        let preparedWinner = try PreparedInboxItemMutation(
             item: winner,
-            text: try InboxPersistencePolicy.prepareItem(
+            text: InboxPersistencePolicy.prepareItem(
                 title: winner.title,
                 notes: winner.notes,
                 suggestionReason: winner.suggestionReason
@@ -67,9 +67,9 @@ extension InboxCommandHandler {
                     $0.effectiveSuggestionContextID == contextID
             }
             .map { sibling in
-                PreparedInboxItemMutation(
+                try PreparedInboxItemMutation(
                     item: sibling,
-                    text: try InboxPersistencePolicy.prepareItem(
+                    text: InboxPersistencePolicy.prepareItem(
                         title: sibling.title,
                         notes: sibling.notes,
                         suggestionReason: sibling.suggestionReason

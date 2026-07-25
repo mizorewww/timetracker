@@ -84,7 +84,7 @@ struct TaskHierarchyPickerTests {
                 taskID: completedParent.id,
                 categoryID: category.id,
                 deviceID: "test"
-            )
+            ),
         ]
         store.tasks = [completedParent, child, availableTask]
 
@@ -208,7 +208,7 @@ struct TaskHierarchyPickerTests {
                 taskID: task.id,
                 title: "Second step",
                 deviceID: "test"
-            )
+            ),
         ]
         store.activeSegments = [
             TimeSegment(
@@ -216,7 +216,7 @@ struct TaskHierarchyPickerTests {
                 taskID: task.id,
                 source: .timer,
                 deviceID: "test"
-            )
+            ),
         ]
         let projection = TaskHierarchyProjection(
             store: store,
@@ -421,5 +421,4 @@ struct TaskHierarchyPickerTests {
         picker.select(availableItem)
         #expect(selectedIDs == [selected.id])
     }
-
 }

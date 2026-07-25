@@ -41,7 +41,7 @@ struct StoreScopedSegmentPomodoroMutationTests {
         )
 
         let freshContext = ModelContext(container)
-        let timeRepository = self.timeRepository(freshContext)
+        let timeRepository = timeRepository(freshContext)
         let segments = try timeRepository.segments(
             sessionIDs: [fixture.sessionID]
         )
@@ -101,7 +101,7 @@ struct StoreScopedSegmentPomodoroMutationTests {
         )
 
         let freshContext = ModelContext(container)
-        let timeRepository = self.timeRepository(freshContext)
+        let timeRepository = timeRepository(freshContext)
         let segment = try #require(
             try timeRepository.allSegments().first {
                 $0.id == fixture.activeSegmentID

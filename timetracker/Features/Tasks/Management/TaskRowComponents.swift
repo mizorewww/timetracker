@@ -9,7 +9,7 @@ struct TaskMenuContent: View {
     let store: TimeTrackerStore
     let task: TaskNode
     @Environment(AppPresentationRouter.self) private var presentationRouter
-    var preservingDestination: TimeTrackerStore.DesktopDestination? = nil
+    var preservingDestination: TimeTrackerStore.DesktopDestination?
     var surface: TaskMenuSurface = .contextual
 
     private var activeSegment: TimeSegment? {
@@ -77,7 +77,7 @@ struct TaskMenuContent: View {
             }
         }
 
-        if showsPrimaryActions && showsArchiveAction {
+        if showsPrimaryActions, showsArchiveAction {
             Divider()
         }
 

@@ -92,7 +92,8 @@ struct TaskChecklistEditorSection: View {
         let neighborVisualIndex = placement.visualIndex + direction
         guard orderedChecklistIndices.indices.contains(neighborVisualIndex),
               checklistItems.indices.contains(placement.sourceIndex),
-              checklistItems.indices.contains(orderedChecklistIndices[neighborVisualIndex]) else {
+              checklistItems.indices.contains(orderedChecklistIndices[neighborVisualIndex])
+        else {
             return false
         }
         let neighborSourceIndex = orderedChecklistIndices[neighborVisualIndex]

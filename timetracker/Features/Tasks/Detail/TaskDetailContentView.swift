@@ -115,7 +115,7 @@ struct TaskDetailList: View {
         case .incomplete:
             store.errorMessage = TaskQuantityEntryMutationError
                 .incompleteQuantityGraph.localizedDescription
-        case .available(let detail):
+        case let .available(detail):
             if let entryID {
                 guard let entry = detail.entries.first(where: {
                     $0.id == entryID

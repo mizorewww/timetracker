@@ -41,7 +41,8 @@ nonisolated struct AnalyticsRefreshPlan: Hashable, Sendable {
         }
 
         guard let nextLocalDay = calendar.dateInterval(of: .day, for: liveNow)?.end,
-              nextLocalDay > liveNow else {
+              nextLocalDay > liveNow
+        else {
             return nil
         }
         return AnalyticsRefreshPlan(

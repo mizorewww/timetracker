@@ -42,7 +42,9 @@ nonisolated extension DurableLocalFile {
         }
         if result != 0 {
             let errorCode = errno
-            if errorCode == ENOENT { return }
+            if errorCode == ENOENT {
+                return
+            }
             throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO)
         }
         guard (metadata.st_mode & S_IFMT) != S_IFLNK else {
@@ -57,7 +59,9 @@ nonisolated extension DurableLocalFile {
         }
         if result != 0 {
             let errorCode = errno
-            if errorCode == ENOENT { return false }
+            if errorCode == ENOENT {
+                return false
+            }
             throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO)
         }
         guard (metadata.st_mode & S_IFMT) != S_IFLNK else {
@@ -83,7 +87,8 @@ nonisolated extension DurableLocalFile {
         while true {
             var isDirectory: ObjCBool = false
             if fileManager.fileExists(atPath: cursor.path, isDirectory: &isDirectory),
-               isDirectory.boolValue {
+               isDirectory.boolValue
+            {
                 return cursor
             }
             guard cursor.pathComponents.count > 1 else { return cursor }
@@ -101,7 +106,8 @@ nonisolated extension DurableLocalFile {
             atPath: standardizedRoot.path,
             isDirectory: &isDirectory
         ),
-              isDirectory.boolValue else {
+            isDirectory.boolValue
+        else {
             throw DurableLocalFileError.durableRootUnavailable
         }
         let canonicalRoot = try CanonicalFileURL.resolvingExistingPath(
@@ -122,7 +128,9 @@ nonisolated extension DurableLocalFile {
         var cursor = directoryURL
         while true {
             chain.append(cursor)
-            if cursor.path == rootURL.path { return chain }
+            if cursor.path == rootURL.path {
+                return chain
+            }
             let parent = cursor.deletingLastPathComponent()
             // Foundation 27 can represent deleting the filesystem root as
             // `file:///../` instead of returning the root unchanged. The
@@ -149,7 +157,9 @@ nonisolated extension DurableLocalFile {
         }
         guard descriptor >= 0 else {
             let errorCode = errno
-            if errorCode == ELOOP { throw DurableLocalFileError.symbolicLinkNotAllowed }
+            if errorCode == ELOOP {
+                throw DurableLocalFileError.symbolicLinkNotAllowed
+            }
             throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO)
         }
         Darwin.close(descriptor)

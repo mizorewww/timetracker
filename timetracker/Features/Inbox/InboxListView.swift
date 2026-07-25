@@ -74,7 +74,8 @@ struct InboxListRow: View {
 
     private var applicableSuggestionAction: ApplicableSuggestionAction? {
         guard !item.isCompleted,
-              let suggestion = store.inboxSuggestion(for: item) else {
+              let suggestion = store.inboxSuggestion(for: item)
+        else {
             return nil
         }
         let destination = store.inboxSuggestionDestinationPresentation(
@@ -94,8 +95,8 @@ struct InboxListRow: View {
         !item.isCompleted &&
             (
                 store.inboxSuggestionInFlightIDs.contains(item.id) ||
-                store.inboxSuggestion(for: item) != nil ||
-                store.inboxSuggestionFailureMessage(for: item) != nil
+                    store.inboxSuggestion(for: item) != nil ||
+                    store.inboxSuggestionFailureMessage(for: item) != nil
             )
     }
 }

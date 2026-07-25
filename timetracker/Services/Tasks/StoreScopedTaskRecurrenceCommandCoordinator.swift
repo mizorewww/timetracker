@@ -17,7 +17,7 @@ struct StoreScopedTaskRecurrenceCommandCoordinator {
         writeAuthorization: StoreWriteAuthorization = .applicationState,
         deviceID: String = DeviceIdentity.current,
         didReachCheckpoint: @escaping
-            (TaskRecurrenceMutationCheckpoint) throws -> Void = { _ in }
+        (TaskRecurrenceMutationCheckpoint) throws -> Void = { _ in }
     ) {
         self.container = container
         self.writeAuthorization = writeAuthorization
@@ -37,18 +37,19 @@ struct StoreScopedTaskRecurrenceCommandCoordinator {
                 guard rule.deletedAt == nil,
                       rule.isEnabled,
                       rule.id == TaskProgressIdentity.recurrenceRuleID(
-                        templateTaskID: rule.templateTaskID
+                          templateTaskID: rule.templateTaskID
                       ),
                       rule.cadenceRaw ==
-                        TaskRecurrenceCadence.daily.rawValue,
+                      TaskRecurrenceCadence.daily.rawValue,
                       TaskRecurrenceDayKey.isCanonical(rule.startDayKey),
                       Self.validTimeZone(rule.timeZoneIdentifier) != nil,
                       state.templateEligibleTaskIDs.contains(
-                        rule.templateTaskID
+                          rule.templateTaskID
                       ),
                       let template = state.taskByID[rule.templateTaskID],
                       template.deletedAt == nil,
-                      template.isArchivedForLifecycle == false else {
+                      template.isArchivedForLifecycle == false
+                else {
                     continue
                 }
                 try materializeCurrentDay(
@@ -74,7 +75,7 @@ extension StoreScopedTaskRecurrenceCommandCoordinator {
     ) throws -> Result {
         try writeAuthorization.requireUserWritesAllowed()
         return try StoreScopedTimerMutationTransaction(
-            scope: try TimerStoreScope(container: container),
+            scope: TimerStoreScope(container: container),
             container: container
         ).withFreshContext { context in
             var state = try TaskRecurrencePersistenceState(context: context)
@@ -97,7 +98,8 @@ extension StoreScopedTaskRecurrenceCommandCoordinator {
     static func validTimeZone(_ identifier: String) -> TimeZone? {
         guard identifier.isEmpty == false,
               identifier.utf8.count <=
-                TaskRecurrencePolicy.maximumTimeZoneIdentifierByteCount else {
+              TaskRecurrencePolicy.maximumTimeZoneIdentifierByteCount
+        else {
             return nil
         }
         return TimeZone(identifier: identifier)

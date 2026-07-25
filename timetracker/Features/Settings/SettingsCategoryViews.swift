@@ -8,7 +8,9 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     case intelligence
     case advanced
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var title: String {
         AppStrings.localized("settings.category.\(rawValue).title")

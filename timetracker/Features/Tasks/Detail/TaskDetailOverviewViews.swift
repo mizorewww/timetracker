@@ -110,7 +110,6 @@ struct TaskDetailForecastSection: View {
         displayItem?.rollup ?? store.rollup(for: task.id)
     }
 
-    @ViewBuilder
     var body: some View {
         if let rollup {
             Section {

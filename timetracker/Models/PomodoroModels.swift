@@ -13,7 +13,7 @@ enum PomodoroState: String, Codable, CaseIterable {
 
 struct PomodoroPlan: Identifiable, Codable, Equatable {
     static let minuteOptions = Array(stride(from: 5, through: 60, by: 5))
-    static let roundRange = 1...24
+    static let roundRange = 1 ... 24
     private static let classicPlanID = UUID(uuidString: "E5CEB875-7D85-45B5-91E9-CA263F08BBF6")!
     private static let deepWorkPlanID = UUID(uuidString: "6272DC5F-D683-486F-BF36-29C439746C98")!
     private static let quickStartPlanID = UUID(uuidString: "7D2C2A71-FA5C-474A-8D5D-4CD4D5C7668B")!
@@ -50,24 +50,32 @@ struct PomodoroPlan: Identifiable, Codable, Equatable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
-        name = AppPreferenceValueSanitizer.pomodoroPlanName(
-            try container.decodeIfPresent(String.self, forKey: .name)
+        name = try AppPreferenceValueSanitizer.pomodoroPlanName(
+            container.decodeIfPresent(String.self, forKey: .name)
                 ?? AppStrings.localized("pomodoro.untitledPlan")
         )
-        iconName = ChecklistVisualSanitizer.sanitizedIcon(try container.decodeIfPresent(String.self, forKey: .iconName))
-        colorHex = ChecklistVisualSanitizer.sanitizedColor(
-            try container.decodeIfPresent(String.self, forKey: .colorHex),
+        iconName = try ChecklistVisualSanitizer.sanitizedIcon(container.decodeIfPresent(String.self, forKey: .iconName))
+        colorHex = try ChecklistVisualSanitizer.sanitizedColor(
+            container.decodeIfPresent(String.self, forKey: .colorHex),
             fallback: "FF2D55"
         )
-        focusMinutes = Self.normalizedMinute(try container.decodeIfPresent(Int.self, forKey: .focusMinutes) ?? 25)
-        shortBreakMinutes = Self.normalizedMinute(try container.decodeIfPresent(Int.self, forKey: .shortBreakMinutes) ?? 5)
-        longBreakMinutes = Self.normalizedMinute(try container.decodeIfPresent(Int.self, forKey: .longBreakMinutes) ?? 15)
-        rounds = (try container.decodeIfPresent(Int.self, forKey: .rounds) ?? 4).clamped(to: Self.roundRange)
+        focusMinutes = try Self.normalizedMinute(container.decodeIfPresent(Int.self, forKey: .focusMinutes) ?? 25)
+        shortBreakMinutes = try Self.normalizedMinute(container.decodeIfPresent(Int.self, forKey: .shortBreakMinutes) ?? 5)
+        longBreakMinutes = try Self.normalizedMinute(container.decodeIfPresent(Int.self, forKey: .longBreakMinutes) ?? 15)
+        rounds = try (container.decodeIfPresent(Int.self, forKey: .rounds) ?? 4).clamped(to: Self.roundRange)
     }
 
-    var focusSeconds: Int { focusMinutes * 60 }
-    var shortBreakSeconds: Int { shortBreakMinutes * 60 }
-    var longBreakSeconds: Int { longBreakMinutes * 60 }
+    var focusSeconds: Int {
+        focusMinutes * 60
+    }
+
+    var shortBreakSeconds: Int {
+        shortBreakMinutes * 60
+    }
+
+    var longBreakSeconds: Int {
+        longBreakMinutes * 60
+    }
 
     var displayName: String {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -118,7 +126,7 @@ struct PomodoroPlan: Identifiable, Codable, Equatable {
                 shortBreakMinutes: 5,
                 longBreakMinutes: 10,
                 rounds: 2
-            )
+            ),
         ]
     }
 
@@ -127,9 +135,9 @@ struct PomodoroPlan: Identifiable, Codable, Equatable {
     }
 
     static func normalizedMinute(_ value: Int) -> Int {
-        let clamped = value.clamped(to: 5...60)
+        let clamped = value.clamped(to: 5 ... 60)
         let rounded = Int((Double(clamped) / 5.0).rounded()) * 5
-        return rounded.clamped(to: 5...60)
+        return rounded.clamped(to: 5 ... 60)
     }
 }
 
@@ -160,18 +168,18 @@ final class PomodoroRun {
         targetRounds: Int = 1,
         deviceID: String
     ) {
-        self.id = UUID()
+        id = UUID()
         self.taskID = taskID
-        self.focusSecondsPlanned = focus
-        self.breakSecondsPlanned = breakSeconds
-        self.longBreakSecondsPlanned = longBreakSeconds
-        self.stateRaw = PomodoroState.planned.rawValue
-        self.completedFocusRounds = 0
+        focusSecondsPlanned = focus
+        breakSecondsPlanned = breakSeconds
+        longBreakSecondsPlanned = longBreakSeconds
+        stateRaw = PomodoroState.planned.rawValue
+        completedFocusRounds = 0
         self.targetRounds = targetRounds
-        self.createdAt = Date()
-        self.updatedAt = Date()
+        createdAt = Date()
+        updatedAt = Date()
         self.deviceID = deviceID
-        self.clientMutationID = UUID()
+        clientMutationID = UUID()
     }
 }
 

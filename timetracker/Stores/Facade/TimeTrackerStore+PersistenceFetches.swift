@@ -7,7 +7,7 @@ extension TimeTrackerStore {
         let descriptor = FetchDescriptor<SyncedPreference>(
             sortBy: [
                 SortDescriptor(\.key),
-                SortDescriptor(\.updatedAt, order: .reverse)
+                SortDescriptor(\.updatedAt, order: .reverse),
             ]
         )
         let all = try modelContext.fetch(descriptor)
@@ -65,8 +65,8 @@ extension TimeTrackerStore {
 
     func fetchInboxItemReadModels() throws -> [InboxItemReadModel] {
         guard let modelContext else { return [] }
-        return InboxSuggestionIdentityService().visibleLogicalReadModels(
-            from: try modelContext.fetch(FetchDescriptor<InboxItem>())
+        return try InboxSuggestionIdentityService().visibleLogicalReadModels(
+            from: modelContext.fetch(FetchDescriptor<InboxItem>())
         )
     }
 
@@ -94,16 +94,26 @@ extension TimeTrackerStore {
         return try modelContext.fetch(FetchDescriptor<CountdownEvent>())
             .visibleDeduplicatedByID()
             .sorted { lhs, rhs in
-                if lhs.date != rhs.date { return lhs.date < rhs.date }
-                if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+                if lhs.date != rhs.date {
+                    return lhs.date < rhs.date
+                }
+                if lhs.createdAt != rhs.createdAt {
+                    return lhs.createdAt < rhs.createdAt
+                }
                 return lhs.id.uuidString < rhs.id.uuidString
             }
     }
 
     private func checklistItemOrder(_ lhs: ChecklistItem, _ rhs: ChecklistItem) -> Bool {
-        if lhs.taskID != rhs.taskID { return lhs.taskID.uuidString < rhs.taskID.uuidString }
-        if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
-        if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+        if lhs.taskID != rhs.taskID {
+            return lhs.taskID.uuidString < rhs.taskID.uuidString
+        }
+        if lhs.sortOrder != rhs.sortOrder {
+            return lhs.sortOrder < rhs.sortOrder
+        }
+        if lhs.createdAt != rhs.createdAt {
+            return lhs.createdAt < rhs.createdAt
+        }
         return lhs.id.uuidString < rhs.id.uuidString
     }
 
@@ -111,7 +121,9 @@ extension TimeTrackerStore {
         _ lhs: ChecklistItemVisual,
         _ rhs: ChecklistItemVisual
     ) -> Bool {
-        if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+        if lhs.createdAt != rhs.createdAt {
+            return lhs.createdAt < rhs.createdAt
+        }
         return lhs.id.uuidString < rhs.id.uuidString
     }
 }

@@ -96,7 +96,7 @@ struct LiveActivitySettingsSection: View {
                 symbolName: "checkmark.circle.fill",
                 tint: .green
             )
-        case .unavailable(let failure):
+        case let .unavailable(failure):
             unavailablePresentation(failure)
         }
     }
@@ -149,7 +149,7 @@ struct LiveActivitySettingsSection: View {
             "synchronizing"
         case .active:
             "active"
-        case .unavailable(let failure):
+        case let .unavailable(failure):
             failureIdentifierComponent(failure)
         }
     }

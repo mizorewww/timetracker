@@ -10,11 +10,11 @@ struct TaskManagementAccessibilityTests {
         let progress = ChecklistProgress(taskID: task.id, totalCount: 3, completedCount: 1)
         let rollup = TaskRollup(
             taskID: task.id,
-            workedSeconds: 3_600,
-            estimatedTotalSeconds: 10_800,
-            remainingSeconds: 7_200,
+            workedSeconds: 3600,
+            estimatedTotalSeconds: 10800,
+            remainingSeconds: 7200,
             projectedDays: 2,
-            historicalDailyAverageSeconds: 1_800,
+            historicalDailyAverageSeconds: 1800,
             historicalActiveDayCount: 2,
             checklistProgress: progress,
             confidence: .medium,
@@ -33,7 +33,7 @@ struct TaskManagementAccessibilityTests {
             identityContext: .hierarchical,
             progress: progress,
             rollup: rollup,
-            workedSeconds: 3_600,
+            workedSeconds: 3600,
             childCount: 2,
             isRunning: true
         )
@@ -49,15 +49,15 @@ struct TaskManagementAccessibilityTests {
             AppStrings.running,
             String(
                 format: AppStrings.localized("tasks.workedFormat"),
-                DurationFormatter.compact(3_600)
+                DurationFormatter.compact(3600)
             ),
             String(format: AppStrings.localized("checklist.progressFormat"), 1, 3),
             String(
                 format: AppStrings.localized("forecast.remainingFormat"),
-                DurationFormatter.compact(7_200)
+                DurationFormatter.compact(7200)
             ),
             rollup.projectedDaysDisplayText,
-            String(format: AppStrings.localized("tasks.childCount"), 2)
+            String(format: AppStrings.localized("tasks.childCount"), 2),
         ])
     }
 
@@ -87,7 +87,7 @@ struct TaskManagementAccessibilityTests {
             String(
                 format: AppStrings.localized("tasks.workedFormat"),
                 DurationFormatter.compact(0)
-            )
+            ),
         ])
     }
 
@@ -150,14 +150,15 @@ struct TaskManagementAccessibilityTests {
                     Int64(20),
                     Int64(50),
                     "reps"
-                )
+                ),
             ]
         )
     }
 
     @Test
     func generatedRoleDistinguishesTodayFromHistoricalOccurrences()
-        throws {
+        throws
+    {
         let timeZone = try #require(
             TimeZone(identifier: "Asia/Singapore")
         )

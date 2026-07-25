@@ -110,7 +110,7 @@ struct TaskProgressDataLifecycleTests {
             records.generatedTask.id,
         ])
         #expect(store.recurrenceOccurrences.map(\.id) == [
-            records.occurrence.id
+            records.occurrence.id,
         ])
         #expect(store.quantityGoals.map(\.id) == [records.goal.id])
         #expect(store.quantityEntries.map(\.id) == [records.entry.id])

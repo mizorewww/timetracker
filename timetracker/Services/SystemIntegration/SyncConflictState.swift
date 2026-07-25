@@ -6,7 +6,7 @@ enum SyncConflictStateFileError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .corruptStateQuarantined:
-            return AppStrings.localized("sync.state.corruptRecovered")
+            AppStrings.localized("sync.state.corruptRecovered")
         }
     }
 }
@@ -20,13 +20,13 @@ enum SyncConflictError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .localSnapshotMissing:
-            return AppStrings.localized("sync.conflict.error.localSnapshotMissing")
+            AppStrings.localized("sync.conflict.error.localSnapshotMissing")
         case .cloudSnapshotMissing:
-            return AppStrings.localized("sync.conflict.error.cloudSnapshotMissing")
+            AppStrings.localized("sync.conflict.error.cloudSnapshotMissing")
         case .uploadSnapshotMissing:
-            return AppStrings.localized("sync.conflict.error.uploadSnapshotMissing")
+            AppStrings.localized("sync.conflict.error.uploadSnapshotMissing")
         case .cloudRecoveryAlreadyInProgress:
-            return AppStrings.localized("sync.conflict.error.recoveryInProgress")
+            AppStrings.localized("sync.conflict.error.recoveryInProgress")
         }
     }
 }
@@ -78,7 +78,8 @@ struct CloudRecoveryImportSession: Codable, Equatable {
 
     mutating func record(_ receipt: CloudRecoveryContainerEventReceipt) {
         guard receipt.succeeded,
-              receipt.startedAt >= startedAt else {
+              receipt.startedAt >= startedAt
+        else {
             return
         }
 
@@ -92,7 +93,8 @@ struct CloudRecoveryImportSession: Codable, Equatable {
         case .import:
             guard storeIdentifier == receipt.storeIdentifier,
                   let setupCompletedAt,
-                  receipt.startedAt >= setupCompletedAt else {
+                  receipt.startedAt >= setupCompletedAt
+            else {
                 return
             }
             initialImportCompletedAt = receipt.completedAt

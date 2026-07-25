@@ -270,7 +270,7 @@ struct DataModelContractTests {
 
     @Test @MainActor
     func cloudSyncedSchemaIncludesChecklistAndAllUserDataModels() throws {
-        let requiredModelNames: Set<String> = [
+        let requiredModelNames: Set = [
             "TaskNode",
             "TaskCategory",
             "TaskCategoryAssignment",
@@ -287,7 +287,7 @@ struct DataModelContractTests {
             "TaskRecurrenceRule",
             "TaskRecurrenceOccurrence",
             "TaskQuantityGoal",
-            "TaskQuantityEntry"
+            "TaskQuantityEntry",
         ]
 
         #expect(requiredModelNames.isSubset(of: TimeTrackerModelRegistry.cloudSyncedUserModelNames))
@@ -505,7 +505,7 @@ struct DataModelContractTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "JSON Task", parentID: nil, colorHex: nil, iconName: nil)
-        let start = Date(timeIntervalSince1970: 2_000)
+        let start = Date(timeIntervalSince1970: 2000)
         _ = try timeRepository.addManualSegment(
             taskID: task.id,
             startedAt: start,

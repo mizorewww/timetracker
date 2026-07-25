@@ -22,7 +22,7 @@ enum TaskLifecycleMutationError: LocalizedError, Equatable {
             return AppStrings.localized("task.action.archive.stopFirst")
         case .archivedAncestorMustRestoreFirst:
             return AppStrings.localized("task.action.unarchive.parentFirst")
-        case .parentChangeBlocked(let blocker):
+        case let .parentChangeBlocked(blocker):
             let key = switch blocker {
             case .archived: "task.parent.archivedLocked"
             case .unavailable: "task.parent.unavailableLocked"

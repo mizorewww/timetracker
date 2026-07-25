@@ -82,7 +82,7 @@ struct LedgerSessionIndex {
 
     private mutating func reindex(from startIndex: Int) {
         guard startIndex < sessions.count else { return }
-        for index in startIndex..<sessions.count {
+        for index in startIndex ..< sessions.count {
             arrayIndexByID[sessions[index].id] = index
         }
     }

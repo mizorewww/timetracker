@@ -14,7 +14,7 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
                 quantityGoal: draft.quantityGoal,
                 dailyRecurrence: draft.dailyRecurrence,
                 confirmsQuantityProgressReset:
-                    draft.confirmsQuantityProgressReset
+                draft.confirmsQuantityProgressReset
             )
         let scope = try TimerStoreScope(container: container)
         let transaction = StoreScopedTimerMutationTransaction(
@@ -33,7 +33,8 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
                let proposedTaskID,
                let savedTask = tasksBeforeSave.first(where: {
                    $0.id == proposedTaskID
-               }) {
+               })
+            {
                 return TaskDraftMutationOutcome(
                     savedTaskID: savedTask.id,
                     relatedTaskIDs: Self.relatedTaskIDs(
@@ -73,16 +74,15 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
             } ?? []
             let saveChecklistDrafts:
                 ([ChecklistEditorDraft], UUID) throws -> Void = { drafts, taskID in
-                try ChecklistDraftService().save(
-                    drafts: drafts,
-                    taskID: taskID,
-                    context: context,
-                    deviceID: resolvedDeviceID
-                )
-            }
-            let savedTaskID: UUID
-            if let proposedTaskID {
-                savedTaskID = try TaskDraftCommandHandler().saveNew(
+                    try ChecklistDraftService().save(
+                        drafts: drafts,
+                        taskID: taskID,
+                        context: context,
+                        deviceID: resolvedDeviceID
+                    )
+                }
+            let savedTaskID: UUID = if let proposedTaskID {
+                try TaskDraftCommandHandler().saveNew(
                     draft: draft,
                     proposedTaskID: proposedTaskID,
                     sanitizedTitle: sanitizedTitle,
@@ -90,7 +90,7 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
                     saveChecklistDrafts: saveChecklistDrafts
                 )
             } else {
-                savedTaskID = try TaskDraftCommandHandler().save(
+                try TaskDraftCommandHandler().save(
                     draft: draft,
                     sanitizedTitle: sanitizedTitle,
                     taskRepository: taskRepository,
@@ -140,11 +140,11 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
         var parentID = task.parentID
         while let currentID = parentID,
               visited.insert(currentID).inserted,
-              let parent = taskByID[currentID] {
+              let parent = taskByID[currentID]
+        {
             ancestors.insert(currentID)
             parentID = parent.parentID
         }
         return ancestors
     }
-
 }

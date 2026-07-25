@@ -28,23 +28,21 @@ struct TaskDetailView: View {
     }
 
     var body: some View {
-        Group {
-            if let initialDraft {
-                TaskDetailWorkspace(
-                    store: store,
-                    taskID: taskID,
-                    initialDraft: initialDraft,
-                    returnDestination: returnDestination,
-                    dismissDetail: dismissDetail,
-                    replaceDetail: replaceDetail
-                )
-                .id(taskID)
-            } else {
-                ContentUnavailableView(
-                    AppStrings.localized("task.empty.selectTask"),
-                    systemImage: "checklist"
-                )
-            }
+        if let initialDraft {
+            TaskDetailWorkspace(
+                store: store,
+                taskID: taskID,
+                initialDraft: initialDraft,
+                returnDestination: returnDestination,
+                dismissDetail: dismissDetail,
+                replaceDetail: replaceDetail
+            )
+            .id(taskID)
+        } else {
+            ContentUnavailableView(
+                AppStrings.localized("task.empty.selectTask"),
+                systemImage: "checklist"
+            )
         }
     }
 }

@@ -255,7 +255,7 @@ struct CoreSyncConflictTests {
             #expect(try service.loadState().pendingCloudExportCheckpoints?.isEmpty ?? true)
 
             let start = Date(timeIntervalSinceReferenceDate: 2_000_000)
-            for index in 0..<100 {
+            for index in 0 ..< 100 {
                 try service.markCloudExportStarted(
                     eventID: UUID(),
                     now: start.addingTimeInterval(Double(index))
@@ -263,7 +263,7 @@ struct CoreSyncConflictTests {
             }
             let boundedState = try service.loadState()
             #expect((boundedState.pendingCloudExportCheckpoints?.count ?? 0) <= 16)
-            #expect(try Data(contentsOf: stateURL).count < 64_000)
+            #expect(try Data(contentsOf: stateURL).count < 64000)
 
             try service.markCloudExportFinished(eventID: UUID(), succeeded: true)
             #expect(try service.loadState().baseFingerprint == baseBeforeFailure)
@@ -304,8 +304,8 @@ struct CoreSyncConflictTests {
         #if os(macOS)
         let lockedProcess = Process()
         lockedProcess.executableURL = URL(fileURLWithPath: "/usr/bin/lockf")
-        lockedProcess.arguments = [
-            "-t", "0", try firstService.stateLockURL().path, "/usr/bin/true"
+        lockedProcess.arguments = try [
+            "-t", "0", firstService.stateLockURL().path, "/usr/bin/true",
         ]
         lockedProcess.standardError = Pipe()
         try lockedProcess.run()
@@ -322,8 +322,8 @@ struct CoreSyncConflictTests {
         #if os(macOS)
         let releasedProcess = Process()
         releasedProcess.executableURL = URL(fileURLWithPath: "/usr/bin/lockf")
-        releasedProcess.arguments = [
-            "-t", "1", try firstService.stateLockURL().path, "/usr/bin/true"
+        releasedProcess.arguments = try [
+            "-t", "1", firstService.stateLockURL().path, "/usr/bin/true",
         ]
         releasedProcess.standardError = Pipe()
         try releasedProcess.run()
@@ -631,15 +631,15 @@ struct CoreSyncConflictTests {
 
         var localSnapshot = SyncDataSnapshot(tasks: [
             record("Discarded local duplicate", updatedAt: baseDate),
-            record("Local branch", updatedAt: baseDate.addingTimeInterval(1))
+            record("Local branch", updatedAt: baseDate.addingTimeInterval(1)),
         ])
         let baselineSnapshot = SyncDataSnapshot(tasks: [
             record("Discarded baseline duplicate", updatedAt: baseDate),
-            record("Baseline", updatedAt: baseDate.addingTimeInterval(1))
+            record("Baseline", updatedAt: baseDate.addingTimeInterval(1)),
         ])
         let updatedSnapshot = SyncDataSnapshot(tasks: [
             record("Discarded updated duplicate", updatedAt: baseDate),
-            record("Updated branch", updatedAt: baseDate.addingTimeInterval(2))
+            record("Updated branch", updatedAt: baseDate.addingTimeInterval(2)),
         ])
 
         localSnapshot.applyChanges(from: baselineSnapshot, to: updatedSnapshot)
@@ -1503,7 +1503,7 @@ struct CoreSyncConflictTests {
             cloudContext.insert(remoteTask)
             let activeRun = PomodoroRun(
                 taskID: remoteTask.id,
-                focus: 1_500,
+                focus: 1500,
                 breakSeconds: 300,
                 longBreakSeconds: 900,
                 targetRounds: 4,
@@ -2034,7 +2034,7 @@ struct CoreSyncConflictTests {
     @MainActor
     private func acknowledgeCurrentCloudExport(
         service: SyncConflictService,
-        context: ModelContext
+        context _: ModelContext
     ) throws {
         let eventID = UUID()
         try service.markCloudExportStarted(eventID: eventID)
@@ -2109,7 +2109,7 @@ struct CoreSyncConflictTests {
         kind: CloudRecoveryImportKind,
         storeIdentifier: String = "test-cloud-store"
     ) throws {
-        let sessionStartedAt = Date(timeIntervalSince1970: 10_000)
+        let sessionStartedAt = Date(timeIntervalSince1970: 10000)
         try service.beginCloudRecoveryImportSession(
             kind: kind,
             startedAt: sessionStartedAt

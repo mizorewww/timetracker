@@ -6,7 +6,9 @@ struct LedgerStore {
     var allSegments: [TimeSegment] = []
     var rollupChanges: [LedgerSegmentChange] = []
 
-    var sessions: [TimeSession] { sessionIndex.sessions }
+    var sessions: [TimeSession] {
+        sessionIndex.sessions
+    }
 
     var segmentByID: [UUID: TimeSegment] = [:]
     var segmentSnapshotByID: [UUID: LedgerSegmentSnapshot] = [:]
@@ -46,8 +48,8 @@ struct LedgerStore {
         // example, startup reconciliation just after midnight). Re-fetch every
         // impacted identity so the full-history index receives that terminal
         // version instead of retaining the old active object or deleting it.
-        let fetched = uniqueSegments(
-            visibleFetched + (try repository.segments(ids: impactedIDs))
+        let fetched = try uniqueSegments(
+            visibleFetched + (repository.segments(ids: impactedIDs))
         )
         let impactedSessionIDs = Set(
             impactedIDs.compactMap { segmentSnapshotByID[$0]?.sessionID }
@@ -61,9 +63,9 @@ struct LedgerStore {
             refreshUnchangedTimeSensitiveSegments: true
         )
         if impactedSessionIDs.isEmpty == false {
-            sessionIndex.replace(
+            try sessionIndex.replace(
                 ids: impactedSessionIDs,
-                with: try repository.sessions(ids: impactedSessionIDs)
+                with: repository.sessions(ids: impactedSessionIDs)
             )
         }
         activeSegments = refreshedActive
@@ -77,7 +79,7 @@ struct LedgerStore {
     ) throws {
         let fetchedSegments = try repository.allSegments().deduplicatedByID()
         rebuildSegmentIndexes(segments: fetchedSegments, now: now, calendar: calendar)
-        sessionIndex.rebuild(try repository.sessions())
+        try sessionIndex.rebuild(repository.sessions())
         hasLoadedHistory = true
         resetRollupChanges()
     }
@@ -147,5 +149,4 @@ struct LedgerStore {
     func sessions(for ids: Set<UUID>) -> [TimeSession] {
         sessionIndex.sessions(for: ids)
     }
-
 }

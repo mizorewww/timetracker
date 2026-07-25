@@ -122,7 +122,7 @@ struct StoreScopedTimerMutationLockTests {
         let lock = StoreScopedTimerMutationLock()
 
         #expect(throws: InjectedFailure.self) {
-            try lock.withExclusiveAccess(for: scope) { () throws -> Void in
+            try lock.withExclusiveAccess(for: scope) { () throws in
                 throw InjectedFailure()
             }
         }
@@ -264,7 +264,7 @@ struct StoreScopedTimerMutationLockTests {
     }
 }
 
-nonisolated private final class ThreadSafeFlag: @unchecked Sendable {
+private final nonisolated class ThreadSafeFlag: @unchecked Sendable {
     private let lock = NSLock()
     private var storedValue = false
 

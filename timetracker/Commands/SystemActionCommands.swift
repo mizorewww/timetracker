@@ -12,7 +12,7 @@ struct CommittedMutationSnapshotRecorder {
     private let syncConflictService: SyncConflictService
 
     init() {
-        self.syncConflictService = SyncConflictService()
+        syncConflictService = SyncConflictService()
     }
 
     init(syncConflictService: SyncConflictService) {
@@ -205,14 +205,15 @@ struct SystemActionCommandHandler {
             events: events
         )
     }
-
 }
 
 struct StopAllTimersOutcome: Equatable {
     let stoppedSegmentIDs: [UUID]
     let events: Set<StoreDomainEvent>
 
-    var didMutate: Bool { stoppedSegmentIDs.isEmpty == false }
+    var didMutate: Bool {
+        stoppedSegmentIDs.isEmpty == false
+    }
 }
 
 enum SystemActionCommandError: LocalizedError, Equatable {

@@ -59,7 +59,8 @@ extension WatchAppStore {
                 return
             }
             guard let self,
-                  commandQueue.pendingCommands.contains(where: { $0.id == command.id }) else {
+                  commandQueue.pendingCommands.contains(where: { $0.id == command.id })
+            else {
                 return
             }
             confirmationTasks[command.id] = nil
@@ -74,7 +75,8 @@ extension WatchAppStore {
         }
         guard commandQueue.isSafeForRestoration,
               let data = try? JSONEncoder().encode(commandQueue),
-              data.count <= WatchTransportLimits.maximumQueueEncodedBytes else {
+              data.count <= WatchTransportLimits.maximumQueueEncodedBytes
+        else {
             defaults.removeObject(forKey: Self.commandQueueKey)
             Self.logger.error("Could not persist an unsafe watch command queue")
             return

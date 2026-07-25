@@ -16,17 +16,17 @@ struct SettingsSceneView: View {
                 PersistenceRecoveryView(safety: store.effectivePersistenceWriteSafety)
             }
         }
-            .environment(presentationRouter)
-            .environment(feedbackRouter)
-            .appPresentationHost(
-                store: store,
-                router: presentationRouter,
-                feedbackRouter: feedbackRouter
-            )
-            .appSceneFeedbackHost(router: feedbackRouter)
-            .task {
-                store.configureIfNeeded(context: modelContext)
-            }
+        .environment(presentationRouter)
+        .environment(feedbackRouter)
+        .appPresentationHost(
+            store: store,
+            router: presentationRouter,
+            feedbackRouter: feedbackRouter
+        )
+        .appSceneFeedbackHost(router: feedbackRouter)
+        .task {
+            store.configureIfNeeded(context: modelContext)
+        }
     }
 }
 #endif

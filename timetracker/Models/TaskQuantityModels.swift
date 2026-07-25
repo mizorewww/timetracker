@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 nonisolated enum TaskQuantityPolicy {
-    static let valueRange = 1...1_000_000
+    static let valueRange = 1 ... 1_000_000
     static let maximumUnitLabelByteCount = 128
 }
 

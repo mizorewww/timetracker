@@ -44,7 +44,9 @@ nonisolated extension DurableLocalFile {
         }
         guard descriptor >= 0 else {
             let errorCode = errno
-            if errorCode == ENOENT { return nil }
+            if errorCode == ENOENT {
+                return nil
+            }
             if errorCode == ELOOP {
                 throw DurableLocalFileError.symbolicLinkNotAllowed
             }
@@ -61,7 +63,8 @@ nonisolated extension DurableLocalFile {
         }
         let knownByteCount = metadata.st_size
         guard knownByteCount >= 0,
-              knownByteCount <= Int64(maximumByteCount) else {
+              knownByteCount <= Int64(maximumByteCount)
+        else {
             throw DurableLocalFileReadError.exceedsMaximumByteCount(
                 actualByteCount: Int(clamping: knownByteCount),
                 maximumByteCount: maximumByteCount
@@ -70,7 +73,7 @@ nonisolated extension DurableLocalFile {
 
         var data = Data()
         data.reserveCapacity(Int(knownByteCount))
-        var buffer = [UInt8](repeating: 0, count: 64 * 1_024)
+        var buffer = [UInt8](repeating: 0, count: 64 * 1024)
         while true {
             let remaining = maximumByteCount - data.count
             let requestedByteCount = min(
@@ -86,10 +89,14 @@ nonisolated extension DurableLocalFile {
             }
             if readByteCount < 0 {
                 let errorCode = errno
-                if errorCode == EINTR { continue }
+                if errorCode == EINTR {
+                    continue
+                }
                 throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO)
             }
-            if readByteCount == 0 { return data }
+            if readByteCount == 0 {
+                return data
+            }
             data.append(contentsOf: buffer.prefix(readByteCount))
             guard data.count <= maximumByteCount else {
                 throw DurableLocalFileReadError.exceedsMaximumByteCount(

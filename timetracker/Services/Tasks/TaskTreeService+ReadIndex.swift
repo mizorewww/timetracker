@@ -37,7 +37,8 @@ extension TaskTreeService {
         let searchEntries = indexes.orderedTaskIDs.compactMap { taskID -> TaskTreeSearchEntry? in
             guard visibleTaskIDs.contains(taskID),
                   let task = indexes.taskByID[taskID],
-                  task.deletedAt == nil else {
+                  task.deletedAt == nil
+            else {
                 return nil
             }
             return TaskTreeSearchEntry(

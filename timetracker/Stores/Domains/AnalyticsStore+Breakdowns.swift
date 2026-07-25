@@ -42,18 +42,18 @@ extension AnalyticsStore {
                 cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs
             )
         }
-            .sorted { lhs, rhs in
-                let lhsEnd = lhs.endedAt ?? period.start
-                let rhsEnd = rhs.endedAt ?? period.start
-                if lhsEnd != rhsEnd {
-                    return lhsEnd > rhsEnd
-                }
-                if lhs.startedAt != rhs.startedAt {
-                    return lhs.startedAt > rhs.startedAt
-                }
-                return lhs.id.uuidString < rhs.id.uuidString
+        .sorted { lhs, rhs in
+            let lhsEnd = lhs.endedAt ?? period.start
+            let rhsEnd = rhs.endedAt ?? period.start
+            if lhsEnd != rhsEnd {
+                return lhsEnd > rhsEnd
             }
-            .map(\.id)
+            if lhs.startedAt != rhs.startedAt {
+                return lhs.startedAt > rhs.startedAt
+            }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
+        .map(\.id)
     }
 
     func boundedSegments(
@@ -185,11 +185,11 @@ extension AnalyticsStore {
     func analyticsInterval(for range: AnalyticsRange, now: Date, calendar: Calendar) -> DateInterval? {
         switch range {
         case .today:
-            return calendar.dateInterval(of: .day, for: now)
+            calendar.dateInterval(of: .day, for: now)
         case .week:
-            return calendar.dateInterval(of: .weekOfYear, for: now)
+            calendar.dateInterval(of: .weekOfYear, for: now)
         case .month:
-            return calendar.dateInterval(of: .month, for: now)
+            calendar.dateInterval(of: .month, for: now)
         }
     }
 
@@ -235,7 +235,8 @@ enum AnalyticsFocusRoundPolicy {
               segment.source == .pomodoro,
               cancelledPomodoroSessionIDs.contains(segment.sessionID) == false,
               let endedAt = segment.endedAt,
-              endedAt > segment.startedAt else {
+              endedAt > segment.startedAt
+        else {
             return false
         }
         return endedAt >= period.start &&

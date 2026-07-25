@@ -115,8 +115,8 @@ struct InboxSuggestionSyncIdentityTests {
         )
 
         var store = InboxStore()
-        store.refresh(
-            items: try restoredContext.fetch(FetchDescriptor<InboxItem>()),
+        try store.refresh(
+            items: restoredContext.fetch(FetchDescriptor<InboxItem>()),
             suggestions: []
         )
         let winner = try #require(store.items.first)
@@ -158,7 +158,7 @@ struct InboxSuggestionSyncIdentityTests {
         let restoredContext = try makeTestContext()
         try snapshot.restoreAsLocalWinner(
             context: restoredContext,
-            now: Date(timeIntervalSinceReferenceDate: 1_000)
+            now: Date(timeIntervalSinceReferenceDate: 1000)
         )
 
         let restoredItems = try restoredContext.fetch(FetchDescriptor<InboxItem>())
@@ -175,7 +175,7 @@ struct InboxSuggestionSyncIdentityTests {
             suggestions: restoredSuggestions
         )[restoredItem.id]
 
-        #expect(restoredCanonical.updatedAt == Date(timeIntervalSinceReferenceDate: 1_000))
+        #expect(restoredCanonical.updatedAt == Date(timeIntervalSinceReferenceDate: 1000))
         #expect(restoredStale.updatedAt == Date(timeIntervalSinceReferenceDate: 200))
         #expect(restoredWinner?.id == canonical.id)
     }
@@ -299,7 +299,7 @@ struct InboxSuggestionSyncIdentityTests {
         let restoredContext = try makeTestContext()
         try SyncDataSnapshot.capture(context: sourceContext).restoreAsLocalWinner(
             context: restoredContext,
-            now: Date(timeIntervalSinceReferenceDate: 1_000)
+            now: Date(timeIntervalSinceReferenceDate: 1000)
         )
         let restoredItems = try restoredContext.fetch(FetchDescriptor<InboxItem>())
         let restoredWinner = try #require(
@@ -342,7 +342,7 @@ struct InboxSuggestionSyncIdentityTests {
         let restoredContext = try makeTestContext()
         try SyncDataSnapshot.capture(context: sourceContext).restoreAsLocalWinner(
             context: restoredContext,
-            now: Date(timeIntervalSinceReferenceDate: 1_000)
+            now: Date(timeIntervalSinceReferenceDate: 1000)
         )
         let restoredItems = try restoredContext.fetch(FetchDescriptor<InboxItem>())
         let restoredWinner = try #require(
@@ -500,7 +500,7 @@ struct InboxSuggestionSyncIdentityTests {
     }
 
     @Test
-    func legacySnapshotMergeDoesNotTreatMissingReceiptTableAsAnEmptyTable() throws {
+    func legacySnapshotMergeDoesNotTreatMissingReceiptTableAsAnEmptyTable() {
         let item = InboxItem(title: "Existing receipt item", deviceID: "test")
         let receipt = InboxCaptureReceipt(
             commandKey: "test.integration\u{1F}\(UUID().uuidString.lowercased())",

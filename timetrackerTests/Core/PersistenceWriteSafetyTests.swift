@@ -20,7 +20,7 @@ struct PersistenceWriteSafetyTests {
         defaults.set(true, forKey: key)
 
         let isolatedStore = makeTestStore()
-        isolatedStore.configureIfNeeded(context: try makeTestContext())
+        try isolatedStore.configureIfNeeded(context: makeTestContext())
         let applicationStore = TimeTrackerStore()
 
         #expect(isolatedStore.effectivePersistenceWriteSafety == .ready)
@@ -65,7 +65,7 @@ struct PersistenceWriteSafetyTests {
         let storeURL = directory.appending(path: "persistence.store")
         let schema = TimeTrackerModelRegistry.currentSchema
         let taskID = UUID()
-        let originalDate = Date(timeIntervalSinceReferenceDate: 50_000)
+        let originalDate = Date(timeIntervalSinceReferenceDate: 50000)
         let originalMutationID = UUID()
 
         try initializeWritableStore(at: storeURL, schema: schema) { context in
@@ -83,7 +83,7 @@ struct PersistenceWriteSafetyTests {
             context.insert(task)
         }
 
-        let context = ModelContext(try makeReadOnlyContainer(at: storeURL, schema: schema))
+        let context = try ModelContext(makeReadOnlyContainer(at: storeURL, schema: schema))
         let repository = SwiftDataTaskRepository(context: context, deviceID: "local-device")
 
         #expect(throws: (any Error).self) {
@@ -95,8 +95,8 @@ struct PersistenceWriteSafetyTests {
                 colorHex: "AABBCC",
                 iconName: "star",
                 notes: "This mutation must be rolled back.",
-                estimatedSeconds: 3_600,
-                dueAt: originalDate.addingTimeInterval(86_400)
+                estimatedSeconds: 3600,
+                dueAt: originalDate.addingTimeInterval(86400)
             )
         }
 
@@ -125,7 +125,7 @@ struct PersistenceWriteSafetyTests {
         let taskID = UUID()
         let sessionID = UUID()
         let predecessorID = UUID()
-        let startedAt = Date(timeIntervalSinceReferenceDate: 75_000)
+        let startedAt = Date(timeIntervalSinceReferenceDate: 75000)
         let stoppedAt = startedAt.addingTimeInterval(120)
         let restartedAt = stoppedAt.addingTimeInterval(30)
 

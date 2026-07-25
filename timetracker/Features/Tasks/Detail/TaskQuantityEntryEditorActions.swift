@@ -4,7 +4,7 @@ import SwiftUI
 enum TaskQuantityEntryEditorActions {
     static var allowedDateRange: ClosedRange<Date> {
         let maximumDate = PersistentDatePolicy.maximumDateExclusive.addingTimeInterval(-1)
-        return PersistentDatePolicy.minimumDate...maximumDate
+        return PersistentDatePolicy.minimumDate ... maximumDate
     }
 
     static func validationMessage(
@@ -24,8 +24,8 @@ enum TaskQuantityEntryEditorActions {
         draft: TaskQuantityEntryEditorDraft
     ) -> Bool {
         switch route.mode {
-        case .add(let entryID):
-            return store.recordTaskQuantity(
+        case let .add(entryID):
+            store.recordTaskQuantity(
                 taskID: route.taskID,
                 goalBaseline: route.goalBaseline,
                 amount: draft.amount,
@@ -33,7 +33,7 @@ enum TaskQuantityEntryEditorActions {
                 recordedAt: draft.recordedAt
             )
         case let .edit(entryBaseline, operationID, _):
-            return store.updateTaskQuantityEntry(
+            store.updateTaskQuantityEntry(
                 baseline: entryBaseline,
                 goalBaseline: route.goalBaseline,
                 amount: draft.amount,

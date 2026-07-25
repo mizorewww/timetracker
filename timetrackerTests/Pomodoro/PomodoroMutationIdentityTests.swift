@@ -147,7 +147,7 @@ struct PomodoroMutationIdentityTests {
     func reconciliationReplacesRemoteWriterAcrossRunAndLedger() throws {
         let context = try makeTestContext()
         let phaseStart = Date(timeIntervalSinceReferenceDate: 520_000)
-        let mutationDate = phaseStart.addingTimeInterval(1_000)
+        let mutationDate = phaseStart.addingTimeInterval(1000)
         let writer = "reconciliation-writer"
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: writer)
         let timeRepository = SwiftDataTimeTrackingRepository(
@@ -208,7 +208,7 @@ struct PomodoroMutationIdentityTests {
     func commandCancellationAndDiscardUseInjectedWriterAndMutationClock() throws {
         let context = try makeTestContext()
         let effectiveEndDate = Date(timeIntervalSinceReferenceDate: 530_000)
-        let mutationDate = effectiveEndDate.addingTimeInterval(5_000)
+        let mutationDate = effectiveEndDate.addingTimeInterval(5000)
         let writer = "command-writer"
         let fixture = try insertActiveFixture(
             context: context,
@@ -265,7 +265,7 @@ struct PomodoroMutationIdentityTests {
     func commandExpiredSettlementStampsInjectedWriter() throws {
         let context = try makeTestContext()
         let phaseStart = Date(timeIntervalSinceReferenceDate: 540_000)
-        let mutationDate = phaseStart.addingTimeInterval(5_000)
+        let mutationDate = phaseStart.addingTimeInterval(5000)
         let writer = "deadline-writer"
         let fixture = try insertActiveFixture(
             context: context,

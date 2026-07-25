@@ -10,7 +10,7 @@ enum TimeTrackerSchemaV1: VersionedSchema {
             TimeSession.self,
             TimeSegment.self,
             PomodoroRun.self,
-            DailySummary.self
+            DailySummary.self,
         ]
     }
 }
@@ -25,7 +25,7 @@ enum TimeTrackerSchemaV2: VersionedSchema {
             TimeSegment.self,
             PomodoroRun.self,
             DailySummary.self,
-            CountdownEvent.self
+            CountdownEvent.self,
         ]
     }
 }
@@ -42,7 +42,7 @@ enum TimeTrackerSchemaV3: VersionedSchema {
             DailySummary.self,
             CountdownEvent.self,
             SyncedPreference.self,
-            ChecklistItem.self
+            ChecklistItem.self,
         ]
     }
 }
@@ -60,10 +60,9 @@ enum TimeTrackerSchemaV4: VersionedSchema {
             DailySummary.self,
             CountdownEvent.self,
             SyncedPreference.self,
-            ChecklistItem.self
+            ChecklistItem.self,
         ]
     }
-
 }
 
 enum TimeTrackerSchemaV5: VersionedSchema {
@@ -80,7 +79,7 @@ enum TimeTrackerSchemaV5: VersionedSchema {
             DailySummary.self,
             CountdownEvent.self,
             SyncedPreference.self,
-            ChecklistItem.self
+            ChecklistItem.self,
         ]
     }
 }
@@ -100,7 +99,7 @@ enum TimeTrackerSchemaV6: VersionedSchema {
             DailySummary.self,
             CountdownEvent.self,
             SyncedPreference.self,
-            ChecklistItem.self
+            ChecklistItem.self,
         ]
     }
 }
@@ -122,10 +121,9 @@ enum TimeTrackerSchemaV7: VersionedSchema {
             CountdownEvent.self,
             SyncedPreference.self,
             ChecklistItem.self,
-            TimeTrackerSchemaV7.ChecklistItemVisual.self
+            TimeTrackerSchemaV7.ChecklistItemVisual.self,
         ]
     }
-
 }
 
 enum TimeTrackerSchemaV8: VersionedSchema {
@@ -145,7 +143,7 @@ enum TimeTrackerSchemaV8: VersionedSchema {
             CountdownEvent.self,
             SyncedPreference.self,
             ChecklistItem.self,
-            ChecklistItemVisual.self
+            ChecklistItemVisual.self,
         ]
     }
 }
@@ -166,7 +164,7 @@ enum TimeTrackerSchemaV9: VersionedSchema {
             CountdownEvent.self,
             SyncedPreference.self,
             ChecklistItem.self,
-            ChecklistItemVisual.self
+            ChecklistItemVisual.self,
         ]
     }
 }
@@ -187,7 +185,7 @@ enum TimeTrackerSchemaV10: VersionedSchema {
             CountdownEvent.self,
             SyncedPreference.self,
             ChecklistItem.self,
-            ChecklistItemVisual.self
+            ChecklistItemVisual.self,
         ]
     }
 }
@@ -209,7 +207,7 @@ enum TimeTrackerSchemaV11: VersionedSchema {
             CountdownEvent.self,
             SyncedPreference.self,
             ChecklistItem.self,
-            ChecklistItemVisual.self
+            ChecklistItemVisual.self,
         ]
     }
 }
@@ -231,7 +229,7 @@ enum TimeTrackerSchemaV12: VersionedSchema {
             CountdownEvent.self,
             SyncedPreference.self,
             ChecklistItem.self,
-            ChecklistItemVisual.self
+            ChecklistItemVisual.self,
         ]
     }
 }
@@ -244,7 +242,7 @@ enum TimeTrackerSchemaV13: VersionedSchema {
             TaskRecurrenceRule.self,
             TaskRecurrenceOccurrence.self,
             TaskQuantityGoal.self,
-            TaskQuantityEntry.self
+            TaskQuantityEntry.self,
         ]
     }
 }

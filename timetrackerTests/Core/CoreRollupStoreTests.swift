@@ -7,7 +7,7 @@ struct CoreRollupStoreTests {
     @Test @MainActor
     func rollupStoreOwnsForecastStateSeparatelyFromAnalyticsCache() {
         let task = TaskNode(title: "Rollup Task", parentID: nil, deviceID: "test")
-        let session = TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: Date(timeIntervalSince1970: 25_000), titleSnapshot: task.title)
+        let session = TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: Date(timeIntervalSince1970: 25000), titleSnapshot: task.title)
         let segment = TimeSegment(
             sessionID: session.id,
             taskID: task.id,
@@ -18,12 +18,12 @@ struct CoreRollupStoreTests {
         )
         let checklist = [
             ChecklistItem(taskID: task.id, title: "Done", isCompleted: true, sortOrder: 0, deviceID: "test"),
-            ChecklistItem(taskID: task.id, title: "Next", isCompleted: false, sortOrder: 1, deviceID: "test")
+            ChecklistItem(taskID: task.id, title: "Next", isCompleted: false, sortOrder: 1, deviceID: "test"),
         ]
         var rollupStore = RollupStore()
         let analyticsStore = AnalyticsStore()
 
-        rollupStore.refresh(tasks: [task], segments: [segment], checklistItems: checklist, now: session.startedAt.addingTimeInterval(1_000))
+        rollupStore.refresh(tasks: [task], segments: [segment], checklistItems: checklist, now: session.startedAt.addingTimeInterval(1000))
 
         #expect(rollupStore.rollup(for: task.id)?.workedSeconds == 900)
         #expect(rollupStore.checklistProgress(for: task.id, checklistItems: checklist).label == "1/2")
@@ -32,7 +32,7 @@ struct CoreRollupStoreTests {
 
     @Test @MainActor
     func rollupStoreRefreshAffectedRecomputesImpactedBranchAndAncestors() throws {
-        let start = Date(timeIntervalSince1970: 30_000)
+        let start = Date(timeIntervalSince1970: 30000)
         let parent = TaskNode(title: "Parent", parentID: nil, deviceID: "test")
         let changedChild = TaskNode(title: "Changed Child", parentID: parent.id, deviceID: "test")
         let untouchedChild = TaskNode(title: "Untouched Child", parentID: parent.id, deviceID: "test")
@@ -52,25 +52,25 @@ struct CoreRollupStoreTests {
             source: .timer,
             deviceID: "test",
             startedAt: start,
-            endedAt: start.addingTimeInterval(1_200)
+            endedAt: start.addingTimeInterval(1200)
         )
         let initialChecklist = [
             ChecklistItem(taskID: changedChild.id, title: "Done", isCompleted: true, sortOrder: 0, deviceID: "test"),
             ChecklistItem(taskID: changedChild.id, title: "Next", isCompleted: false, sortOrder: 1, deviceID: "test"),
             ChecklistItem(taskID: untouchedChild.id, title: "Done", isCompleted: true, sortOrder: 0, deviceID: "test"),
-            ChecklistItem(taskID: untouchedChild.id, title: "Next", isCompleted: false, sortOrder: 1, deviceID: "test")
+            ChecklistItem(taskID: untouchedChild.id, title: "Next", isCompleted: false, sortOrder: 1, deviceID: "test"),
         ]
         var store = RollupStore()
         store.refresh(
             tasks: [parent, changedChild, untouchedChild],
             segments: [changedSegment, untouchedSegment],
             checklistItems: initialChecklist,
-            now: start.addingTimeInterval(2_000)
+            now: start.addingTimeInterval(2000)
         )
 
         let initialUntouched = try #require(store.rollup(for: untouchedChild.id))
-        #expect(initialUntouched.workedSeconds == 1_200)
-        #expect(store.rollup(for: parent.id)?.remainingSeconds == 1_800)
+        #expect(initialUntouched.workedSeconds == 1200)
+        #expect(store.rollup(for: parent.id)?.remainingSeconds == 1800)
 
         let staleIfRecomputedSegment = TimeSegment(
             sessionID: untouchedSession.id,
@@ -78,10 +78,10 @@ struct CoreRollupStoreTests {
             source: .timer,
             deviceID: "test",
             startedAt: start,
-            endedAt: start.addingTimeInterval(7_200)
+            endedAt: start.addingTimeInterval(7200)
         )
         let updatedChecklist = initialChecklist + [
-            ChecklistItem(taskID: changedChild.id, title: "Later", isCompleted: false, sortOrder: 2, deviceID: "test")
+            ChecklistItem(taskID: changedChild.id, title: "Later", isCompleted: false, sortOrder: 2, deviceID: "test"),
         ]
 
         store.refreshAffected(
@@ -89,12 +89,12 @@ struct CoreRollupStoreTests {
             tasks: [parent, changedChild, untouchedChild],
             segments: [changedSegment, staleIfRecomputedSegment],
             checklistItems: updatedChecklist,
-            now: start.addingTimeInterval(8_000)
+            now: start.addingTimeInterval(8000)
         )
 
-        #expect(store.rollup(for: changedChild.id)?.remainingSeconds == 1_200)
+        #expect(store.rollup(for: changedChild.id)?.remainingSeconds == 1200)
         #expect(store.rollup(for: untouchedChild.id) == initialUntouched)
-        #expect(store.rollup(for: parent.id)?.remainingSeconds == 2_400)
+        #expect(store.rollup(for: parent.id)?.remainingSeconds == 2400)
     }
 
     @Test @MainActor
@@ -118,7 +118,7 @@ struct CoreRollupStoreTests {
             source: .timer,
             deviceID: "test",
             startedAt: oldStart,
-            endedAt: oldStart.addingTimeInterval(3_600)
+            endedAt: oldStart.addingTimeInterval(3600)
         )
         let recentSegment = TimeSegment(
             sessionID: UUID(),
@@ -126,7 +126,7 @@ struct CoreRollupStoreTests {
             source: .timer,
             deviceID: "test",
             startedAt: recentStart,
-            endedAt: recentStart.addingTimeInterval(1_800)
+            endedAt: recentStart.addingTimeInterval(1800)
         )
         let untouchedSegment = TimeSegment(
             sessionID: UUID(),
@@ -138,7 +138,7 @@ struct CoreRollupStoreTests {
         )
         let initialChecklist = [
             ChecklistItem(taskID: changedChild.id, title: "Done", isCompleted: true, sortOrder: 0, deviceID: "test"),
-            ChecklistItem(taskID: changedChild.id, title: "Next", isCompleted: false, sortOrder: 1, deviceID: "test")
+            ChecklistItem(taskID: changedChild.id, title: "Next", isCompleted: false, sortOrder: 1, deviceID: "test"),
         ]
         let tasks = [parent, changedChild, untouchedChild]
         var incremental = RollupStore()
@@ -151,8 +151,8 @@ struct CoreRollupStoreTests {
         )
         let untouchedBefore = try #require(incremental.rollup(for: untouchedChild.id))
         let initialChanged = try #require(incremental.rollup(for: changedChild.id))
-        #expect(initialChanged.workedSeconds == 5_400)
-        #expect(initialChanged.historicalDailyAverageSeconds == 1_800)
+        #expect(initialChanged.workedSeconds == 5400)
+        #expect(initialChanged.historicalDailyAverageSeconds == 1800)
         #expect(initialChanged.historicalActiveDayCount == 1)
 
         let updatedSegment = TimeSegment(
@@ -161,11 +161,11 @@ struct CoreRollupStoreTests {
             source: .timer,
             deviceID: "test",
             startedAt: recentStart,
-            endedAt: recentStart.addingTimeInterval(2_700)
+            endedAt: recentStart.addingTimeInterval(2700)
         )
         updatedSegment.id = recentSegment.id
         let updatedChecklist = initialChecklist + [
-            ChecklistItem(taskID: changedChild.id, title: "Later", isCompleted: false, sortOrder: 2, deviceID: "test")
+            ChecklistItem(taskID: changedChild.id, title: "Later", isCompleted: false, sortOrder: 2, deviceID: "test"),
         ]
         incremental.refreshAffected(
             directTaskIDs: [changedChild.id],
@@ -175,7 +175,7 @@ struct CoreRollupStoreTests {
                     id: recentSegment.id,
                     before: LedgerSegmentSnapshot(recentSegment),
                     after: LedgerSegmentSnapshot(updatedSegment)
-                )
+                ),
             ],
             checklistItemsByTaskID: [changedChild.id: updatedChecklist],
             now: now,
@@ -218,8 +218,8 @@ struct CoreRollupStoreTests {
             taskID: expiringTask.id,
             source: .timer,
             deviceID: "test",
-            startedAt: firstWindowDay.addingTimeInterval(8 * 3_600),
-            endedAt: firstWindowDay.addingTimeInterval(9 * 3_600)
+            startedAt: firstWindowDay.addingTimeInterval(8 * 3600),
+            endedAt: firstWindowDay.addingTimeInterval(9 * 3600)
         )
         var incremental = RollupStore()
         incremental.refresh(
@@ -233,7 +233,7 @@ struct CoreRollupStoreTests {
 
         let later = try #require(calendar.date(byAdding: .day, value: 1, to: now))
         let editedChecklist = [
-            ChecklistItem(taskID: editedTask.id, title: "New", sortOrder: 0, deviceID: "test")
+            ChecklistItem(taskID: editedTask.id, title: "New", sortOrder: 0, deviceID: "test"),
         ]
         incremental.refreshAffected(
             directTaskIDs: [editedTask.id],
@@ -254,7 +254,7 @@ struct CoreRollupStoreTests {
         )
         #expect(incremental.rollup(for: expiringTask.id) == rebuilt.rollup(for: expiringTask.id))
         #expect(incremental.rollup(for: expiringTask.id)?.historicalActiveDayCount == 0)
-        #expect(incremental.rollup(for: expiringTask.id)?.workedSeconds == 3_600)
+        #expect(incremental.rollup(for: expiringTask.id)?.workedSeconds == 3600)
     }
 
     @Test @MainActor
@@ -280,8 +280,8 @@ struct CoreRollupStoreTests {
             taskID: paceTask.id,
             source: .timer,
             deviceID: "test",
-            startedAt: earlierWindowStart.addingTimeInterval(8 * 3_600),
-            endedAt: earlierWindowStart.addingTimeInterval(9 * 3_600)
+            startedAt: earlierWindowStart.addingTimeInterval(8 * 3600),
+            endedAt: earlierWindowStart.addingTimeInterval(9 * 3600)
         )
         var incremental = RollupStore()
         incremental.refresh(
@@ -312,7 +312,7 @@ struct CoreRollupStoreTests {
         )
         #expect(incremental.rollup(for: paceTask.id) == rebuilt.rollup(for: paceTask.id))
         #expect(incremental.rollup(for: paceTask.id)?.historicalActiveDayCount == 1)
-        #expect(incremental.rollup(for: paceTask.id)?.historicalDailyAverageSeconds == 3_600)
+        #expect(incremental.rollup(for: paceTask.id)?.historicalDailyAverageSeconds == 3600)
     }
 
     @Test @MainActor
@@ -332,7 +332,7 @@ struct CoreRollupStoreTests {
             taskID: activeTask.id,
             source: .timer,
             deviceID: "test",
-            startedAt: now.addingTimeInterval(-3_600)
+            startedAt: now.addingTimeInterval(-3600)
         )
         var incremental = RollupStore()
         incremental.refresh(
@@ -345,7 +345,7 @@ struct CoreRollupStoreTests {
 
         let later = now.addingTimeInterval(60)
         let editedChecklist = [
-            ChecklistItem(taskID: editedTask.id, title: "New", sortOrder: 0, deviceID: "test")
+            ChecklistItem(taskID: editedTask.id, title: "New", sortOrder: 0, deviceID: "test"),
         ]
         incremental.refreshAffected(
             directTaskIDs: [editedTask.id],
@@ -365,7 +365,7 @@ struct CoreRollupStoreTests {
             calendar: calendar
         )
         #expect(incremental.rollup(for: activeTask.id) == rebuilt.rollup(for: activeTask.id))
-        #expect(incremental.rollup(for: activeTask.id)?.workedSeconds == 3_660)
+        #expect(incremental.rollup(for: activeTask.id)?.workedSeconds == 3660)
     }
 
     @Test @MainActor
@@ -373,7 +373,7 @@ struct CoreRollupStoreTests {
         var utc = Calendar(identifier: .gregorian)
         utc.timeZone = try #require(TimeZone(secondsFromGMT: 0))
         var plusTwo = utc
-        plusTwo.timeZone = try #require(TimeZone(secondsFromGMT: 2 * 3_600))
+        plusTwo.timeZone = try #require(TimeZone(secondsFromGMT: 2 * 3600))
         let segmentStart = try #require(utc.date(from: DateComponents(
             year: 2026,
             month: 7,
@@ -381,7 +381,7 @@ struct CoreRollupStoreTests {
             hour: 23,
             minute: 30
         )))
-        let now = segmentStart.addingTimeInterval(2 * 3_600)
+        let now = segmentStart.addingTimeInterval(2 * 3600)
         let paceTask = TaskNode(title: "Pace", parentID: nil, deviceID: "test")
         let editedTask = TaskNode(title: "Edited", parentID: nil, deviceID: "test")
         let segment = TimeSegment(
@@ -390,7 +390,7 @@ struct CoreRollupStoreTests {
             source: .timer,
             deviceID: "test",
             startedAt: segmentStart,
-            endedAt: segmentStart.addingTimeInterval(3_600)
+            endedAt: segmentStart.addingTimeInterval(3600)
         )
         var incremental = RollupStore()
         incremental.refresh(
@@ -421,7 +421,7 @@ struct CoreRollupStoreTests {
         )
         #expect(incremental.rollup(for: paceTask.id) == rebuilt.rollup(for: paceTask.id))
         #expect(incremental.rollup(for: paceTask.id)?.historicalActiveDayCount == 1)
-        #expect(incremental.rollup(for: paceTask.id)?.historicalDailyAverageSeconds == 3_600)
+        #expect(incremental.rollup(for: paceTask.id)?.historicalDailyAverageSeconds == 3600)
     }
 
     @Test @MainActor
@@ -466,7 +466,7 @@ struct CoreRollupStoreTests {
 
         let later = now.addingTimeInterval(600)
         let editedChecklist = [
-            ChecklistItem(taskID: editedTask.id, title: "Trigger", sortOrder: 0, deviceID: "test")
+            ChecklistItem(taskID: editedTask.id, title: "Trigger", sortOrder: 0, deviceID: "test"),
         ]
         incremental.refreshAffected(
             directTaskIDs: [editedTask.id],
@@ -486,7 +486,7 @@ struct CoreRollupStoreTests {
         )
 
         #expect(incremental.rollup(for: trackedTask.id) == laterRebuild.rollup(for: trackedTask.id))
-        #expect(incremental.rollup(for: trackedTask.id)?.workedSeconds == 1_500)
+        #expect(incremental.rollup(for: trackedTask.id)?.workedSeconds == 1500)
 
         let rewound = now.addingTimeInterval(-300)
         incremental.refreshAffected(

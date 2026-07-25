@@ -26,7 +26,8 @@ enum CloudSyncSmokeTestRunner {
     static func runIfRequested(context: ModelContext, store: TimeTrackerStore) async -> Bool {
         guard let argumentIndex = CommandLine.arguments.firstIndex(of: argument),
               CommandLine.arguments.indices.contains(argumentIndex + 1),
-              let mode = Mode(rawValue: CommandLine.arguments[argumentIndex + 1]) else {
+              let mode = Mode(rawValue: CommandLine.arguments[argumentIndex + 1])
+        else {
             return false
         }
 
@@ -119,7 +120,8 @@ enum CloudSyncSmokeTestRunner {
             let visibleTasks = try visibleTasks(context: context)
             logVisibleState(context: context, prefix: "\(prefix)-attempt-\(attempt)")
             if let expectedID,
-               visibleTasks.contains(where: { $0.id == expectedID }) {
+               visibleTasks.contains(where: { $0.id == expectedID })
+            {
                 log("recoveredTaskID=\(expectedID.uuidString)")
                 return
             }
@@ -137,7 +139,8 @@ enum CloudSyncSmokeTestRunner {
         let token = UserDefaults.standard.string(forKey: tokenKey) ?? UUID().uuidString
         UserDefaults.standard.set(token, forKey: tokenKey)
         if let existingID = storedTaskID(),
-           try visibleTasks(context: context).contains(where: { $0.id == existingID }) {
+           try visibleTasks(context: context).contains(where: { $0.id == existingID })
+        {
             log("seedTaskAlreadyExists=\(existingID.uuidString)")
             return
         }
@@ -174,7 +177,7 @@ enum CloudSyncSmokeTestRunner {
         }
     }
 
-    nonisolated private static func log(_ message: String) {
+    private nonisolated static func log(_ message: String) {
         let line = "[CloudSmoke] \(message)"
         print(line)
         NSLog("%@", line)
@@ -192,13 +195,14 @@ enum CloudSyncSmokeTestRunner {
                 queue: .main
             ) { notification in
                 guard let event = notification.userInfo?[NSPersistentCloudKitContainer.eventNotificationUserInfoKey]
-                    as? NSPersistentCloudKitContainer.Event else {
+                    as? NSPersistentCloudKitContainer.Event
+                else {
                     log("cloudEvent=unknown")
                     return
                 }
                 let error = event.error.map { String(describing: $0) } ?? "none"
                 log("cloudEvent type=\(cloudEventTypeName(event.type)) finished=\(event.endDate != nil) error=\(error)")
-            }
+            },
         ]
     }
 
@@ -207,7 +211,7 @@ enum CloudSyncSmokeTestRunner {
         observers.forEach { center.removeObserver($0) }
     }
 
-    nonisolated private static func cloudEventTypeName(_ type: NSPersistentCloudKitContainer.EventType) -> String {
+    private nonisolated static func cloudEventTypeName(_ type: NSPersistentCloudKitContainer.EventType) -> String {
         switch type {
         case .setup:
             "setup"

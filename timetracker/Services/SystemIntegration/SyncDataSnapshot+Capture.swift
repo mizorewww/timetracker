@@ -70,8 +70,8 @@ extension SyncDataSnapshot {
                 .deduplicatedByID().map(ChecklistItemVisualRecord.init).sortedByID()
         }
         if domains.contains(.inbox) {
-            snapshot.inboxItems = InboxSuggestionIdentityService().physicalResolutions(
-                from: try context.fetch(FetchDescriptor<InboxItem>())
+            snapshot.inboxItems = try InboxSuggestionIdentityService().physicalResolutions(
+                from: context.fetch(FetchDescriptor<InboxItem>())
             ).map {
                 InboxItemRecord(
                     $0.winner,
@@ -91,35 +91,35 @@ extension SyncDataSnapshot {
 
     @MainActor
     private static func captureAllDomains(context: ModelContext) throws -> SyncDataSnapshot {
-        SyncDataSnapshot(
-            tasks: try context.fetch(FetchDescriptor<TaskNode>()).deduplicatedByID().map(TaskRecord.init).sortedByID(),
-            taskCategories: try context.fetch(FetchDescriptor<TaskCategory>()).deduplicatedByID().map(TaskCategoryRecord.init).sortedByID(),
-            taskCategoryAssignments: try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).deduplicatedByID().map(TaskCategoryAssignmentRecord.init).sortedByID(),
-            sessions: try context.fetch(FetchDescriptor<TimeSession>()).deduplicatedByID().map(TimeSessionRecord.init).sortedByID(),
-            segments: try context.fetch(FetchDescriptor<TimeSegment>()).deduplicatedByID().map(TimeSegmentRecord.init).sortedByID(),
-            pomodoroRuns: try context.fetch(FetchDescriptor<PomodoroRun>()).deduplicatedByID().map(PomodoroRunRecord.init).sortedByID(),
-            countdownEvents: try context.fetch(FetchDescriptor<CountdownEvent>()).deduplicatedByID().map(CountdownEventRecord.init).sortedByID(),
-            syncedPreferences: try context.fetch(FetchDescriptor<SyncedPreference>())
+        try SyncDataSnapshot(
+            tasks: context.fetch(FetchDescriptor<TaskNode>()).deduplicatedByID().map(TaskRecord.init).sortedByID(),
+            taskCategories: context.fetch(FetchDescriptor<TaskCategory>()).deduplicatedByID().map(TaskCategoryRecord.init).sortedByID(),
+            taskCategoryAssignments: context.fetch(FetchDescriptor<TaskCategoryAssignment>()).deduplicatedByID().map(TaskCategoryAssignmentRecord.init).sortedByID(),
+            sessions: context.fetch(FetchDescriptor<TimeSession>()).deduplicatedByID().map(TimeSessionRecord.init).sortedByID(),
+            segments: context.fetch(FetchDescriptor<TimeSegment>()).deduplicatedByID().map(TimeSegmentRecord.init).sortedByID(),
+            pomodoroRuns: context.fetch(FetchDescriptor<PomodoroRun>()).deduplicatedByID().map(PomodoroRunRecord.init).sortedByID(),
+            countdownEvents: context.fetch(FetchDescriptor<CountdownEvent>()).deduplicatedByID().map(CountdownEventRecord.init).sortedByID(),
+            syncedPreferences: context.fetch(FetchDescriptor<SyncedPreference>())
                 .deduplicatedByID()
                 .filter { SyncedPreferenceService.shouldSyncKey($0.key) }
                 .map(SyncedPreferenceRecord.init)
                 .sortedByID(),
-            checklistItems: try context.fetch(FetchDescriptor<ChecklistItem>()).deduplicatedByID().map(ChecklistItemRecord.init).sortedByID(),
-            checklistItemVisuals: try context.fetch(FetchDescriptor<ChecklistItemVisual>()).deduplicatedByID().map(ChecklistItemVisualRecord.init).sortedByID(),
+            checklistItems: context.fetch(FetchDescriptor<ChecklistItem>()).deduplicatedByID().map(ChecklistItemRecord.init).sortedByID(),
+            checklistItemVisuals: context.fetch(FetchDescriptor<ChecklistItemVisual>()).deduplicatedByID().map(ChecklistItemVisualRecord.init).sortedByID(),
             inboxItems: InboxSuggestionIdentityService().physicalResolutions(
-                from: try context.fetch(FetchDescriptor<InboxItem>())
+                from: context.fetch(FetchDescriptor<InboxItem>())
             ).map {
                 InboxItemRecord(
                     $0.winner,
                     mergedDismissedSuggestionRevisionID: $0.mergedDismissedSuggestionRevisionID
                 )
             }.sortedByID(),
-            inboxSuggestions: try context.fetch(FetchDescriptor<InboxSuggestion>()).deduplicatedByID().map(InboxSuggestionRecord.init).sortedByID(),
-            inboxCaptureReceipts: try context.fetch(FetchDescriptor<InboxCaptureReceipt>()).deduplicatedByID().map(InboxCaptureReceiptRecord.init).sortedByID(),
-            taskRecurrenceRules: try context.fetch(FetchDescriptor<TaskRecurrenceRule>()).deduplicatedByID().map(TaskRecurrenceRuleRecord.init).sortedByID(),
-            taskRecurrenceOccurrences: try context.fetch(FetchDescriptor<TaskRecurrenceOccurrence>()).deduplicatedByID().map(TaskRecurrenceOccurrenceRecord.init).sortedByID(),
-            taskQuantityGoals: try context.fetch(FetchDescriptor<TaskQuantityGoal>()).deduplicatedByID().map(TaskQuantityGoalRecord.init).sortedByID(),
-            taskQuantityEntries: try context.fetch(FetchDescriptor<TaskQuantityEntry>()).deduplicatedByID().map(TaskQuantityEntryRecord.init).sortedByID()
+            inboxSuggestions: context.fetch(FetchDescriptor<InboxSuggestion>()).deduplicatedByID().map(InboxSuggestionRecord.init).sortedByID(),
+            inboxCaptureReceipts: context.fetch(FetchDescriptor<InboxCaptureReceipt>()).deduplicatedByID().map(InboxCaptureReceiptRecord.init).sortedByID(),
+            taskRecurrenceRules: context.fetch(FetchDescriptor<TaskRecurrenceRule>()).deduplicatedByID().map(TaskRecurrenceRuleRecord.init).sortedByID(),
+            taskRecurrenceOccurrences: context.fetch(FetchDescriptor<TaskRecurrenceOccurrence>()).deduplicatedByID().map(TaskRecurrenceOccurrenceRecord.init).sortedByID(),
+            taskQuantityGoals: context.fetch(FetchDescriptor<TaskQuantityGoal>()).deduplicatedByID().map(TaskQuantityGoalRecord.init).sortedByID(),
+            taskQuantityEntries: context.fetch(FetchDescriptor<TaskQuantityEntry>()).deduplicatedByID().map(TaskQuantityEntryRecord.init).sortedByID()
         )
     }
 }

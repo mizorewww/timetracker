@@ -25,11 +25,12 @@ extension TodayActivityHeatmapSnapshotService {
             }
             guard validTaskIDs.contains(segment.taskID),
                   let clipped = TrackedTimePolicy.interval(
-                    startedAt: segment.startedAt,
-                    endedAt: segment.endedAt,
-                    now: now,
-                    clippedTo: interval
-                  ) else {
+                      startedAt: segment.startedAt,
+                      endedAt: segment.endedAt,
+                      now: now,
+                      clippedTo: interval
+                  )
+            else {
                 continue
             }
             segmentIntervalsByTaskID[segment.taskID, default: []].append(clipped)
@@ -45,7 +46,8 @@ extension TodayActivityHeatmapSnapshotService {
             checklistTaskIDs.insert(item.taskID)
             guard item.isCompleted,
                   let completedAt = item.completedAt,
-                  completedAt <= now else {
+                  completedAt <= now
+            else {
                 continue
             }
             let day = calendar.startOfDay(for: completedAt)
@@ -57,11 +59,13 @@ extension TodayActivityHeatmapSnapshotService {
         for goal in quantityGoals.visibleDeduplicatedByID() {
             guard validTaskIDs.contains(goal.taskID),
                   TaskQuantityPolicy.valueRange.contains(goal.targetAmount),
-                  normalizedHeatmapUnit(goal.unitLabel).isEmpty == false else {
+                  normalizedHeatmapUnit(goal.unitLabel).isEmpty == false
+            else {
                 continue
             }
             if let current = quantityGoalByTaskID[goal.taskID],
-               current.updatedAt >= goal.updatedAt {
+               current.updatedAt >= goal.updatedAt
+            {
                 continue
             }
             quantityGoalByTaskID[goal.taskID] = goal
@@ -72,7 +76,8 @@ extension TodayActivityHeatmapSnapshotService {
             guard entry.amount > 0,
                   entry.recordedAt <= now,
                   let goal = quantityGoalByTaskID[entry.taskID],
-                  entry.quantityGoalID == goal.id else {
+                  entry.quantityGoalID == goal.id
+            else {
                 continue
             }
             let day = calendar.startOfDay(for: entry.recordedAt)

@@ -44,52 +44,53 @@ struct PomodoroView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle(AppStrings.focus)
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.inline)
         #endif
-        .accessibilityIdentifier("pomodoro.view")
-        .background(PomodoroBackgroundColor().ignoresSafeArea())
-        .onAppear {
-            normalizeSelectedPlan()
-            normalizeFocusTaskSelection()
-            store.reconcileActivePomodoro(now: Date())
-        }
-        .onChange(of: store.preferences.pomodoroPlans) { _, _ in
-            normalizeSelectedPlan()
-        }
-        .onChange(of: availableFocusTaskIDs) { _, _ in
-            normalizeFocusTaskSelection()
-        }
-        .onChange(of: store.activePomodoroRun?.clientMutationID) { _, mutationID in
-            guard isStopConfirmationPresented,
-                  mutationID != stopConfirmationPhase?.mutationID else {
-                return
+            .accessibilityIdentifier("pomodoro.view")
+            .background(PomodoroBackgroundColor().ignoresSafeArea())
+            .onAppear {
+                normalizeSelectedPlan()
+                normalizeFocusTaskSelection()
+                store.reconcileActivePomodoro(now: Date())
             }
-            isStopConfirmationPresented = false
-            stopConfirmationPhase = nil
-        }
-        .onChange(of: isStopConfirmationPresented) { _, isPresented in
-            if isPresented == false {
-                stopConfirmationPhase = nil
+            .onChange(of: store.preferences.pomodoroPlans) { _, _ in
+                normalizeSelectedPlan()
             }
-        }
-        .confirmationDialog(
-            AppStrings.localized("pomodoro.stop.confirm.title"),
-            isPresented: $isStopConfirmationPresented,
-            titleVisibility: .visible
-        ) {
-            Button(AppStrings.localized("pomodoro.stop"), role: .destructive) {
-                guard let stopConfirmationPhase else {
+            .onChange(of: availableFocusTaskIDs) { _, _ in
+                normalizeFocusTaskSelection()
+            }
+            .onChange(of: store.activePomodoroRun?.clientMutationID) { _, mutationID in
+                guard isStopConfirmationPresented,
+                      mutationID != stopConfirmationPhase?.mutationID
+                else {
                     return
                 }
-                store.cancelActivePomodoro(phase: stopConfirmationPhase)
-                self.stopConfirmationPhase = nil
-            }
-            Button(AppStrings.cancel, role: .cancel) {
+                isStopConfirmationPresented = false
                 stopConfirmationPhase = nil
             }
-        } message: {
-            Text(.app("pomodoro.stop.confirm.message"))
-        }
+            .onChange(of: isStopConfirmationPresented) { _, isPresented in
+                if isPresented == false {
+                    stopConfirmationPhase = nil
+                }
+            }
+            .confirmationDialog(
+                AppStrings.localized("pomodoro.stop.confirm.title"),
+                isPresented: $isStopConfirmationPresented,
+                titleVisibility: .visible
+            ) {
+                Button(AppStrings.localized("pomodoro.stop"), role: .destructive) {
+                    guard let stopConfirmationPhase else {
+                        return
+                    }
+                    store.cancelActivePomodoro(phase: stopConfirmationPhase)
+                    self.stopConfirmationPhase = nil
+                }
+                Button(AppStrings.cancel, role: .cancel) {
+                    stopConfirmationPhase = nil
+                }
+            } message: {
+                Text(.app("pomodoro.stop.confirm.message"))
+            }
     }
 
     private func normalizeSelectedPlan() {
@@ -104,7 +105,8 @@ struct PomodoroView: View {
         guard focusTaskID.map(availableTaskIDs.contains) != true else { return }
 
         if let selectedTaskID = store.selectedTaskID,
-           availableTaskIDs.contains(selectedTaskID) {
+           availableTaskIDs.contains(selectedTaskID)
+        {
             focusTaskID = selectedTaskID
         } else {
             focusTaskID = availableFocusTaskIDs.first
@@ -119,7 +121,6 @@ struct PomodoroView: View {
             }
         )
     }
-
 }
 
 private struct PomodoroBackgroundColor: View {

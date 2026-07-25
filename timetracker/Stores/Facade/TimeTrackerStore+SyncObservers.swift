@@ -30,7 +30,7 @@ extension TimeTrackerStore {
                 guard let events = StoreMutationBroadcaster.events(from: notification) else {
                     return
                 }
-                self.refreshExternalStoreMutationReadModels(events: events)
+                refreshExternalStoreMutationReadModels(events: events)
             }
         }
         storeMutationObserver = SyncNotificationObserverToken(token)
@@ -92,7 +92,7 @@ extension TimeTrackerStore {
         let center = NotificationCenter.default
         let names: [Notification.Name] = [
             .NSPersistentStoreRemoteChange,
-            NSPersistentCloudKitContainer.eventChangedNotification
+            NSPersistentCloudKitContainer.eventChangedNotification,
         ]
         syncObservers = names.map { name in
             let token = center.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
@@ -101,7 +101,8 @@ extension TimeTrackerStore {
                     if let event = notification.userInfo?[
                         NSPersistentCloudKitContainer.eventNotificationUserInfoKey
                     ] as? NSPersistentCloudKitContainer.Event,
-                        event.endDate != nil {
+                        event.endDate != nil
+                    {
                         do {
                             try store.syncConflictService.recordCloudRecoveryContainerEvent(event)
                         } catch {
@@ -140,7 +141,8 @@ extension TimeTrackerStore {
         }
         do {
             if AppCloudSync.isCloudImportRecoveryActive,
-               try syncConflictService.hasCompletedCloudRecoveryImportReceipt() {
+               try syncConflictService.hasCompletedCloudRecoveryImportReceipt()
+            {
                 scheduleQuietRefresh(
                     reason: .cloudImportFinished(
                         succeeded: true,
@@ -154,26 +156,28 @@ extension TimeTrackerStore {
         }
     }
 
-    nonisolated private func cloudExportStartIdentifier(
+    private nonisolated func cloudExportStartIdentifier(
         for name: Notification.Name,
         notification: Notification
     ) -> UUID? {
         guard name == NSPersistentCloudKitContainer.eventChangedNotification,
               let event = notification.userInfo?[NSPersistentCloudKitContainer.eventNotificationUserInfoKey]
-                as? NSPersistentCloudKitContainer.Event,
+              as? NSPersistentCloudKitContainer.Event,
               event.type == .export,
-              event.endDate == nil else {
+              event.endDate == nil
+        else {
             return nil
         }
         return event.identifier
     }
 
-    nonisolated private func syncRefreshReason(for name: Notification.Name, notification: Notification) -> SyncRefreshReason? {
+    private nonisolated func syncRefreshReason(for name: Notification.Name, notification: Notification) -> SyncRefreshReason? {
         guard name == NSPersistentCloudKitContainer.eventChangedNotification else {
             return .remoteStoreChanged
         }
         guard let event = notification.userInfo?[NSPersistentCloudKitContainer.eventNotificationUserInfoKey] as? NSPersistentCloudKitContainer.Event,
-              event.endDate != nil else {
+              event.endDate != nil
+        else {
             return nil
         }
         switch event.type {
@@ -199,5 +203,4 @@ extension TimeTrackerStore {
             return .remoteStoreChanged
         }
     }
-
 }

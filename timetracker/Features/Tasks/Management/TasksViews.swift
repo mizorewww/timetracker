@@ -79,7 +79,6 @@ struct TasksView: View {
                     }
                 }
             }
-
         }
         .modifier(
             TasksSearchPresentation(
@@ -89,75 +88,76 @@ struct TasksView: View {
         )
         .navigationTitle(AppStrings.tasks)
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.inline)
         #endif
-        .accessibilityIdentifier("tasks.view")
+            .accessibilityIdentifier("tasks.view")
         #if os(iOS)
-        .listStyle(.insetGrouped)
-        .scrollDismissesKeyboard(.interactively)
+            .listStyle(.insetGrouped)
+            .scrollDismissesKeyboard(.interactively)
         #else
-        .listStyle(.inset)
+            .listStyle(.inset)
         #endif
-        .toolbar {
-            Menu {
-                Button {
-                    presentationRouter.presentNewTask(using: store, preservingDestination: .tasks)
-                } label: {
-                    Label(AppStrings.localized("tasks.newRoot"), systemImage: "plus")
-                }
-                .accessibilityIdentifier("tasks.addRoot")
+            .toolbar {
+                Menu {
+                    Button {
+                        presentationRouter.presentNewTask(using: store, preservingDestination: .tasks)
+                    } label: {
+                        Label(AppStrings.localized("tasks.newRoot"), systemImage: "plus")
+                    }
+                    .accessibilityIdentifier("tasks.addRoot")
 
-                Button {
-                    presentationRouter.presentNewTaskCategory()
-                } label: {
-                    Label(AppStrings.localized("taskCategory.new"), systemImage: "square.grid.2x2")
-                }
+                    Button {
+                        presentationRouter.presentNewTaskCategory()
+                    } label: {
+                        Label(AppStrings.localized("taskCategory.new"), systemImage: "square.grid.2x2")
+                    }
 
-                Button {
-                    presentationRouter.presentTaskCategoryOrdering()
-                } label: {
-                    Label(
-                        AppStrings.localized("taskCategory.sort"),
-                        systemImage: "arrow.up.arrow.down"
-                    )
-                }
-                .disabled(store.taskCategories.count < 2)
-                .accessibilityIdentifier("tasks.sortCategories")
+                    Button {
+                        presentationRouter.presentTaskCategoryOrdering()
+                    } label: {
+                        Label(
+                            AppStrings.localized("taskCategory.sort"),
+                            systemImage: "arrow.up.arrow.down"
+                        )
+                    }
+                    .disabled(store.taskCategories.count < 2)
+                    .accessibilityIdentifier("tasks.sortCategories")
 
-                Divider()
+                    Divider()
 
-                Button {
-                    presentationRouter.presentAITaskPlanGenerator()
+                    Button {
+                        presentationRouter.presentAITaskPlanGenerator()
+                    } label: {
+                        Label(
+                            AppStrings.localized("aiTaskPlan.generateMenu"),
+                            systemImage: "sparkles"
+                        )
+                    }
+                    .accessibilityIdentifier("tasks.generatePlan")
                 } label: {
-                    Label(
-                        AppStrings.localized("aiTaskPlan.generateMenu"),
-                        systemImage: "sparkles"
-                    )
+                    Label(AppStrings.localized("tasks.add"), systemImage: "plus")
                 }
-                .accessibilityIdentifier("tasks.generatePlan")
-            } label: {
-                Label(AppStrings.localized("tasks.add"), systemImage: "plus")
+                .accessibilityIdentifier("tasks.add")
             }
-            .accessibilityIdentifier("tasks.add")
-        }
-        .confirmationDialog(
-            AppStrings.localized("taskCategory.delete.confirm.title"),
-            isPresented: categoryDeletionBinding,
-            titleVisibility: .visible
-        ) {
-            Button(AppStrings.localized("taskCategory.delete"), role: .destructive) {
-                if let categoryPendingDeletionID,
-                   let category = store.taskCategory(for: categoryPendingDeletionID) {
-                    store.deleteTaskCategory(category)
+            .confirmationDialog(
+                AppStrings.localized("taskCategory.delete.confirm.title"),
+                isPresented: categoryDeletionBinding,
+                titleVisibility: .visible
+            ) {
+                Button(AppStrings.localized("taskCategory.delete"), role: .destructive) {
+                    if let categoryPendingDeletionID,
+                       let category = store.taskCategory(for: categoryPendingDeletionID)
+                    {
+                        store.deleteTaskCategory(category)
+                    }
+                    categoryPendingDeletionID = nil
                 }
-                categoryPendingDeletionID = nil
+                Button(AppStrings.cancel, role: .cancel) {
+                    categoryPendingDeletionID = nil
+                }
+            } message: {
+                Text(.app("taskCategory.delete.confirm.message"))
             }
-            Button(AppStrings.cancel, role: .cancel) {
-                categoryPendingDeletionID = nil
-            }
-        } message: {
-            Text(.app("taskCategory.delete.confirm.message"))
-        }
     }
 
     @ViewBuilder
@@ -199,7 +199,7 @@ struct TasksView: View {
                         categoryExpansionState.toggle(section.id)
                     },
                     disclosureAccessibilityIdentifier:
-                        "tasks.category.disclosure.\(section.id)"
+                    "tasks.category.disclosure.\(section.id)"
                 )
             }
         }
@@ -267,7 +267,8 @@ struct TasksView: View {
 
     private func editAction(for section: TaskTreeVisibleSectionModel) -> (() -> Void)? {
         guard let categoryID = section.categoryID,
-              let category = store.taskCategory(for: categoryID) else {
+              let category = store.taskCategory(for: categoryID)
+        else {
             return nil
         }
         return {
@@ -277,7 +278,8 @@ struct TasksView: View {
 
     private func deleteAction(for section: TaskTreeVisibleSectionModel) -> (() -> Void)? {
         guard let categoryID = section.categoryID,
-              let category = store.taskCategory(for: categoryID) else {
+              let category = store.taskCategory(for: categoryID)
+        else {
             return nil
         }
         return {
@@ -290,7 +292,6 @@ private struct TasksSearchPresentation: ViewModifier {
     @Binding var text: String
     let usesInlineField: Bool
 
-    @ViewBuilder
     func body(content: Content) -> some View {
         if usesInlineField {
             content
@@ -311,21 +312,17 @@ private struct TaskManagementTreeRow: View {
     let openTaskDetail: (TaskNode) -> Void
 
     var body: some View {
-        Group {
-            if let task = store.task(for: row.taskID) {
-                TaskManagementFlatRow(
-                    store: store,
-                    task: task,
-                    supplement: supplement,
-                    treeDepth: row.depth,
-                    childCount: row.childCount,
-                    isExpanded: row.isExpanded,
-                    toggleExpansion: toggleExpansion,
-                    openTaskDetail: openTaskDetail
-                )
-            } else {
-                EmptyView()
-            }
+        if let task = store.task(for: row.taskID) {
+            TaskManagementFlatRow(
+                store: store,
+                task: task,
+                supplement: supplement,
+                treeDepth: row.depth,
+                childCount: row.childCount,
+                isExpanded: row.isExpanded,
+                toggleExpansion: toggleExpansion,
+                openTaskDetail: openTaskDetail
+            )
         }
     }
 }

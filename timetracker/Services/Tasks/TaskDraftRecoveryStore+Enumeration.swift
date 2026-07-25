@@ -3,12 +3,15 @@ import Foundation
 nonisolated struct TaskDraftRecoveryRecord:
     Identifiable,
     Equatable,
-    Sendable {
+    Sendable
+{
     let sourceTaskID: UUID
     let savedAt: Date
     let draft: TaskEditorDraft
 
-    var id: UUID { sourceTaskID }
+    var id: UUID {
+        sourceTaskID
+    }
 }
 
 nonisolated extension TaskDraftRecoveryStore {
@@ -36,7 +39,7 @@ nonisolated extension TaskDraftRecoveryStore {
                     envelope.draft.taskID == envelope.sourceTaskID &&
                     envelope.draft.baseline != nil &&
                     fileName(for: envelope.sourceTaskID) ==
-                        url.lastPathComponent &&
+                    url.lastPathComponent &&
                     isExpired(envelope.savedAt) == false
                 guard isValid else {
                     try removeFile(at: url, locations: locations)

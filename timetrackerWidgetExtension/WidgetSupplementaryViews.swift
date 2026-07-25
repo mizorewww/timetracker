@@ -86,7 +86,6 @@ struct SnapshotFreshnessLabel: View {
     let freshness: WidgetSnapshotFreshness
     let generatedAt: Date
 
-    @ViewBuilder
     var body: some View {
         switch freshness {
         case .current:

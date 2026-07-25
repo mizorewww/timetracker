@@ -15,7 +15,8 @@ extension TimeTrackerStore {
             taskID -> TaskNode? in
             guard pinnedIDs.insert(taskID).inserted,
                   let task = taskByID[taskID],
-                  isTaskEligibleAsParent(task) else {
+                  isTaskEligibleAsParent(task)
+            else {
                 return nil
             }
             return task
@@ -32,8 +33,12 @@ extension TimeTrackerStore {
                 let rhsPath = taskPath(for: rhs)
                 let lhsKey = lhsPath.lowercased()
                 let rhsKey = rhsPath.lowercased()
-                if lhsKey != rhsKey { return lhsKey < rhsKey }
-                if lhsPath != rhsPath { return lhsPath < rhsPath }
+                if lhsKey != rhsKey {
+                    return lhsKey < rhsKey
+                }
+                if lhsPath != rhsPath {
+                    return lhsPath < rhsPath
+                }
                 return lhs.id.uuidString < rhs.id.uuidString
             }
         let candidateWindow = (pinnedTasks + frequentTasks + remainingTasks)
@@ -68,8 +73,12 @@ extension TimeTrackerStore {
                 }
                 let lhsKey = lhs.title.lowercased()
                 let rhsKey = rhs.title.lowercased()
-                if lhsKey != rhsKey { return lhsKey < rhsKey }
-                if lhs.title != rhs.title { return lhs.title < rhs.title }
+                if lhsKey != rhsKey {
+                    return lhsKey < rhsKey
+                }
+                if lhs.title != rhs.title {
+                    return lhs.title < rhs.title
+                }
                 return lhs.id.uuidString < rhs.id.uuidString
             }
             .prefix(candidateLimit)

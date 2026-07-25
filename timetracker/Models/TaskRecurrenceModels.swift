@@ -33,8 +33,9 @@ nonisolated enum TaskRecurrenceDayKey {
     static func isCanonical(_ value: String) -> Bool {
         guard value.utf8.count == 10,
               value.utf8.allSatisfy({
-                  (48...57).contains($0) || $0 == 45
-              }) else {
+                  (48 ... 57).contains($0) || $0 == 45
+              })
+        else {
             return false
         }
         let parts = value.split(
@@ -47,7 +48,8 @@ nonisolated enum TaskRecurrenceDayKey {
               parts[2].count == 2,
               let year = Int(parts[0]),
               let month = Int(parts[1]),
-              let day = Int(parts[2]) else {
+              let day = Int(parts[2])
+        else {
             return false
         }
 
@@ -90,7 +92,8 @@ nonisolated enum TaskRecurrenceDayKey {
         let parts = value.split(separator: "-")
         guard let year = Int(parts[0]),
               let month = Int(parts[1]),
-              let day = Int(parts[2]) else {
+              let day = Int(parts[2])
+        else {
             return nil
         }
 
@@ -105,7 +108,8 @@ nonisolated enum TaskRecurrenceDayKey {
             day: day
         )
         guard let date = calendar.date(from: components),
-              self.value(for: date, timeZone: timeZone) == value else {
+              self.value(for: date, timeZone: timeZone) == value
+        else {
             return nil
         }
         return date

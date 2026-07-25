@@ -101,5 +101,4 @@ extension SettingsView {
             message: error.localizedDescription
         )
     }
-
 }

@@ -34,7 +34,8 @@ nonisolated struct AppleHealthTimelineProjectionService {
         to visibleInterval: DateInterval
     ) -> DateInterval? {
         guard endedAt > visibleInterval.start,
-              startedAt < visibleInterval.end else {
+              startedAt < visibleInterval.end
+        else {
             return nil
         }
         let start = max(startedAt, visibleInterval.start)
@@ -67,9 +68,15 @@ nonisolated struct AppleHealthTimelineProjectionService {
     ) -> Bool {
         let lhsIsValid = lhs.endedAt > lhs.startedAt
         let rhsIsValid = rhs.endedAt > rhs.startedAt
-        if lhsIsValid != rhsIsValid { return lhsIsValid }
-        if lhs.startedAt != rhs.startedAt { return lhs.startedAt < rhs.startedAt }
-        if lhs.endedAt != rhs.endedAt { return lhs.endedAt < rhs.endedAt }
+        if lhsIsValid != rhsIsValid {
+            return lhsIsValid
+        }
+        if lhs.startedAt != rhs.startedAt {
+            return lhs.startedAt < rhs.startedAt
+        }
+        if lhs.endedAt != rhs.endedAt {
+            return lhs.endedAt < rhs.endedAt
+        }
         if lhs.kind.rawValue != rhs.kind.rawValue {
             return lhs.kind.rawValue < rhs.kind.rawValue
         }
@@ -82,9 +89,15 @@ nonisolated struct AppleHealthTimelineProjectionService {
     ) -> Bool {
         let lhsIsValid = lhs.endedAt > lhs.startedAt
         let rhsIsValid = rhs.endedAt > rhs.startedAt
-        if lhsIsValid != rhsIsValid { return lhsIsValid }
-        if lhs.startedAt != rhs.startedAt { return lhs.startedAt < rhs.startedAt }
-        if lhs.endedAt != rhs.endedAt { return lhs.endedAt < rhs.endedAt }
+        if lhsIsValid != rhsIsValid {
+            return lhsIsValid
+        }
+        if lhs.startedAt != rhs.startedAt {
+            return lhs.startedAt < rhs.startedAt
+        }
+        if lhs.endedAt != rhs.endedAt {
+            return lhs.endedAt < rhs.endedAt
+        }
         if lhs.stage.rawValue != rhs.stage.rawValue {
             return lhs.stage.rawValue < rhs.stage.rawValue
         }

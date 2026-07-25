@@ -20,7 +20,7 @@ nonisolated struct AppleHealthSleepEpisodeService {
             guard $0.endedAt > $0.startedAt else { return false }
             return $0.stage.isAsleep == false
                 || $0.endedAt.timeIntervalSince($0.startedAt)
-                    <= AppleHealthSleepEpisodePolicy.maximumEpisodeDuration
+                <= AppleHealthSleepEpisodePolicy.maximumEpisodeDuration
         }
         let bySource = Dictionary(
             grouping: valid,
@@ -65,7 +65,8 @@ nonisolated struct AppleHealthSleepEpisodeService {
     ) -> Bool {
         let candidateEnd = max(episode.interval.end, sample.endedAt)
         guard candidateEnd.timeIntervalSince(episode.interval.start)
-            <= AppleHealthSleepEpisodePolicy.maximumEpisodeDuration else {
+            <= AppleHealthSleepEpisodePolicy.maximumEpisodeDuration
+        else {
             return false
         }
         guard sample.startedAt > episode.interval.end else { return true }
@@ -78,7 +79,8 @@ nonisolated struct AppleHealthSleepEpisodeService {
             return true
         }
         if gap.duration <= AppleHealthSleepEpisodePolicy.awakeGapLimit,
-           isCovered(gap, by: awake) {
+           isCovered(gap, by: awake)
+        {
             return true
         }
         return gap.duration <= AppleHealthSleepEpisodePolicy.inBedGapLimit
@@ -143,8 +145,12 @@ nonisolated struct AppleHealthSleepEpisodeService {
         _ lhs: AppleHealthSleepSample,
         _ rhs: AppleHealthSleepSample
     ) -> Bool {
-        if lhs.startedAt != rhs.startedAt { return lhs.startedAt < rhs.startedAt }
-        if lhs.endedAt != rhs.endedAt { return lhs.endedAt < rhs.endedAt }
+        if lhs.startedAt != rhs.startedAt {
+            return lhs.startedAt < rhs.startedAt
+        }
+        if lhs.endedAt != rhs.endedAt {
+            return lhs.endedAt < rhs.endedAt
+        }
         return lhs.id.uuidString < rhs.id.uuidString
     }
 
@@ -152,7 +158,9 @@ nonisolated struct AppleHealthSleepEpisodeService {
         _ lhs: DateInterval,
         _ rhs: DateInterval
     ) -> Bool {
-        if lhs.start != rhs.start { return lhs.start < rhs.start }
+        if lhs.start != rhs.start {
+            return lhs.start < rhs.start
+        }
         return lhs.end < rhs.end
     }
 }

@@ -56,10 +56,11 @@ extension TaskDraftProgressMutationService {
         if hasAmbiguousGoalClaim ||
             existing == nil && (
                 goalRows.isEmpty == false ||
-                entryRows.contains {
-                    $0.quantityGoalID == goalID
-                }
-            ) {
+                    entryRows.contains {
+                        $0.quantityGoalID == goalID
+                    }
+            )
+        {
             throw TaskProgressDraftMutationError.incompleteQuantityGraph
         }
         if unitChangeWouldReinterpretProgress(
@@ -159,7 +160,8 @@ extension TaskDraftProgressMutationService {
         _ model: Model,
         at date: Date
     ) where Model: SoftDeletablePersistentUUIDModel &
-        ClientMutationTrackedModel {
+        ClientMutationTrackedModel
+    {
         model.deletedAt = date
         model.updatedAt = date
         model.deviceID = deviceID

@@ -42,7 +42,7 @@ struct CountdownTitleEditor: View {
             draft.reconcile(persistedTitle: newTitle)
         }
         .onChange(of: isTitleFocused) { wasFocused, isFocused in
-            if wasFocused && !isFocused {
+            if wasFocused, !isFocused {
                 commitTitle()
             }
         }
@@ -66,7 +66,7 @@ struct CountdownTitleEditor: View {
                 )
                 .accessibilityIdentifier("settings.countdown.title.field")
                 #if os(iOS)
-                .textInputAutocapitalization(.sentences)
+                    .textInputAutocapitalization(.sentences)
                 #endif
 
                 saveButton

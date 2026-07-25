@@ -84,21 +84,21 @@ struct TaskCategoryPicker: View {
         )
         #else
         .background(AppColors.background)
-        .searchable(
-            text: $searchText,
-            prompt: AppStrings.localized("taskCategory.searchPrompt")
-        )
+            .searchable(
+                text: $searchText,
+                prompt: AppStrings.localized("taskCategory.searchPrompt")
+            )
         #endif
-        .navigationTitle(context.navigationTitle)
-        .accessibilityIdentifier(context.accessibilityIdentifier)
+            .navigationTitle(context.navigationTitle)
+            .accessibilityIdentifier(context.accessibilityIdentifier)
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.inline)
         #endif
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button(AppStrings.cancel, action: onDismiss)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(AppStrings.cancel, action: onDismiss)
+                }
             }
-        }
     }
 
     private var categoryList: some View {

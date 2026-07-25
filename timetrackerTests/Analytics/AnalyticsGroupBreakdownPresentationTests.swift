@@ -18,7 +18,7 @@ struct AnalyticsGroupBreakdownPresentationTests {
 
     @Test @MainActor
     func presentationAggregatesHiddenGroupsIntoNamedOtherItem() {
-        let points = (1...8).map { index in
+        let points = (1 ... 8).map { index in
             AnalyticsGroupBreakdownPoint(
                 id: "group-\(index)",
                 kind: .rootTask,
@@ -33,19 +33,19 @@ struct AnalyticsGroupBreakdownPresentationTests {
 
         let presentation = AnalyticsGroupBreakdownPresentation.make(
             items: points,
-            reportedTotalSeconds: 3_600,
+            reportedTotalSeconds: 3600,
             otherTitle: "Other",
             otherSubtitle: "Combined smaller groups"
         )
 
-        #expect(presentation.totalSeconds == 3_600)
+        #expect(presentation.totalSeconds == 3600)
         #expect(presentation.items.count == 6)
         #expect(presentation.items.prefix(5).map(\.title) == [
-            "Group 1", "Group 2", "Group 3", "Group 4", "Group 5"
+            "Group 1", "Group 2", "Group 3", "Group 4", "Group 5",
         ])
         #expect(presentation.items.last?.title == "Other")
         #expect(presentation.items.last?.grossSeconds == 600)
-        #expect(presentation.items.reduce(0) { $0 + $1.grossSeconds } == 3_600)
+        #expect(presentation.items.reduce(0) { $0 + $1.grossSeconds } == 3600)
     }
 
     @Test @MainActor
@@ -71,6 +71,6 @@ struct AnalyticsGroupBreakdownPresentationTests {
         #expect(layout.allSatisfy { $0.width >= 4 })
         let occupiedWidth = layout.reduce(CGFloat.zero) { $0 + $1.width } + 15
         #expect(abs(occupiedWidth - 100) < 0.001)
-        #expect(abs(try #require(layout.first).width - 65) < 0.001)
+        #expect(try abs(#require(layout.first).width - 65) < 0.001)
     }
 }

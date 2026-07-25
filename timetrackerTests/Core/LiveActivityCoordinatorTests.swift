@@ -15,7 +15,7 @@ struct LiveActivityCoordinatorTests {
             (.active, .active),
             (.stale, .stale),
             (.ended, .ended),
-            (.dismissed, .dismissed)
+            (.dismissed, .dismissed),
         ]
 
         for (activityKitState, expected) in cases {
@@ -37,7 +37,7 @@ struct LiveActivityCoordinatorTests {
             (.missingProcessIdentifier, .configuration),
             (.unentitled, .configuration),
             (.malformedActivityIdentifier, .configuration),
-            (.reconnectNotPermitted, .configuration)
+            (.reconnectNotPermitted, .configuration),
         ]
 
         for (error, expected) in cases {
@@ -80,7 +80,9 @@ struct LiveActivityCoordinatorTests {
         #expect(coordinator.status == .active)
 
         client.setActivitiesEnabled(true)
-        for _ in 0..<20 { await Task.yield() }
+        for _ in 0 ..< 20 {
+            await Task.yield()
+        }
         #expect(client.requestCount == 1)
     }
 
@@ -93,7 +95,7 @@ struct LiveActivityCoordinatorTests {
                 LiveActivityRegistration(
                     id: "orphan",
                     segmentID: scenario.segment.id.uuidString
-                )
+                ),
             ]
         )
         let coordinator = LiveActivityCoordinator(client: client)
@@ -206,7 +208,7 @@ struct LiveActivityCoordinatorTests {
                 LiveActivityRegistration(
                     id: "existing",
                     segmentID: scenario.segment.id.uuidString
-                )
+                ),
             ]
         )
         client.shouldBlockNextUpdate = true
@@ -221,7 +223,9 @@ struct LiveActivityCoordinatorTests {
 
         client.setActivitiesEnabled(false)
         client.setActivitiesEnabled(true)
-        for _ in 0..<20 { await Task.yield() }
+        for _ in 0 ..< 20 {
+            await Task.yield()
+        }
         #expect(client.updateCount == 1)
 
         client.releaseBlockedUpdate()
@@ -239,7 +243,7 @@ struct LiveActivityCoordinatorTests {
                 LiveActivityRegistration(
                     id: "existing",
                     segmentID: scenario.segment.id.uuidString
-                )
+                ),
             ]
         )
         client.shouldBlockNextUpdate = true
@@ -374,7 +378,9 @@ struct LiveActivityCoordinatorTests {
         #expect(await eventually {
             coordinator.status == .unavailable(.removed)
         })
-        for _ in 0..<20 { await Task.yield() }
+        for _ in 0 ..< 20 {
+            await Task.yield()
+        }
         await coordinator.waitUntilIdle()
 
         #expect(client.requestCount == 0)
@@ -397,7 +403,7 @@ struct LiveActivityCoordinatorTests {
                     id: "dismissed",
                     segmentID: scenario.segment.id.uuidString,
                     state: .dismissed
-                )
+                ),
             ]
         )
         let coordinator = LiveActivityCoordinator(client: client)
@@ -586,7 +592,9 @@ struct LiveActivityCoordinatorTests {
         await coordinator.waitUntilIdle()
 
         client.sendActivityState(.dismissed, for: registration.id)
-        for _ in 0..<20 { await Task.yield() }
+        for _ in 0 ..< 20 {
+            await Task.yield()
+        }
         await coordinator.waitUntilIdle()
 
         #expect(client.requestCount == 0)
@@ -634,7 +642,7 @@ struct LiveActivityCoordinatorTests {
                     id: "ended",
                     segmentID: scenario.segment.id.uuidString,
                     state: .ended
-                )
+                ),
             ]
         )
         let coordinator = LiveActivityCoordinator(client: client)
@@ -724,8 +732,10 @@ struct LiveActivityCoordinatorTests {
     private func eventually(
         _ predicate: @escaping @MainActor () -> Bool
     ) async -> Bool {
-        for _ in 0..<1_000 {
-            if predicate() { return true }
+        for _ in 0 ..< 1000 {
+            if predicate() {
+                return true
+            }
             await Task.yield()
         }
         return false
@@ -814,7 +824,9 @@ private final class FakeLiveActivitySystemClient: LiveActivitySystemClient {
     ) throws -> LiveActivityRegistration {
         requestCount += 1
         requestedContents.append(content)
-        if let requestError { throw requestError }
+        if let requestError {
+            throw requestError
+        }
         let registration = LiveActivityRegistration(
             id: "activity-\(requestCount)",
             segmentID: attributes.segmentID,
@@ -851,7 +863,7 @@ private final class FakeLiveActivitySystemClient: LiveActivitySystemClient {
 
     func end(
         activityID: String,
-        content: ActivityContent<TimeTrackingActivityAttributes.ContentState>
+        content _: ActivityContent<TimeTrackingActivityAttributes.ContentState>
     ) async {
         endCount += 1
         activities.removeAll { $0.id == activityID }

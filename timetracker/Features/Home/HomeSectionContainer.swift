@@ -7,8 +7,7 @@ enum HomeSectionContainer {
 
 extension View {
     func homeVisualizationListSection() -> some View {
-        self
-            .listRowBackground(Color.clear)
+        listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
     }
 
@@ -20,8 +19,7 @@ extension View {
     func homeVisualizationListCard(
         accessibilityIdentifier: String
     ) -> some View {
-        self
-            .padding(16)
+        padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 AppColors.cardBackground,

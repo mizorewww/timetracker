@@ -32,7 +32,8 @@ extension TimeTrackerStore {
         if ledgerDomainStore.hasIndexedSegmentHistory {
             return segmentIDs.compactMap { segmentID in
                 guard let segment = ledgerDomainStore.segment(for: segmentID),
-                      segment.deletedAt == nil else {
+                      segment.deletedAt == nil
+                else {
                     return nil
                 }
                 return segment

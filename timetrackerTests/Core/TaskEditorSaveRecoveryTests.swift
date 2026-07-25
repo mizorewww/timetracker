@@ -18,7 +18,7 @@ struct TaskEditorSaveRecoveryTests {
             )
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        var staleDraft = store.editorDraft(for: try #require(store.task(for: task.id)))
+        var staleDraft = try store.editorDraft(for: #require(store.task(for: task.id)))
         let staleMutationID = try #require(staleDraft.baseline?.taskMutationID)
 
         let siblingContext = ModelContext(context.container)
@@ -90,8 +90,8 @@ struct TaskEditorSaveRecoveryTests {
         )
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        var edited = store.editorDraft(
-            for: try #require(store.task(for: original.id))
+        var edited = try store.editorDraft(
+            for: #require(store.task(for: original.id))
         )
         let originalItemID = try #require(
             edited.checklistItems.first?.existingID
@@ -114,7 +114,7 @@ struct TaskEditorSaveRecoveryTests {
             copy,
             proposedTaskID: recoveryTaskID
         ) {
-        case .saved(let taskID):
+        case let .saved(taskID):
             savedTaskID = taskID
         case .stale, .failed:
             Issue.record("Recovery copy should save as a new task")

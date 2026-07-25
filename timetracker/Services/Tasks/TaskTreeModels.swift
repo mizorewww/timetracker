@@ -46,8 +46,13 @@ struct TaskTreeRowModel: Identifiable, Equatable {
     let childCount: Int
     let isExpanded: Bool
 
-    var id: UUID { taskID }
-    var hasChildren: Bool { childCount > 0 }
+    var id: UUID {
+        taskID
+    }
+
+    var hasChildren: Bool {
+        childCount > 0
+    }
 }
 
 struct TaskTreeCategorySectionModel: Identifiable {

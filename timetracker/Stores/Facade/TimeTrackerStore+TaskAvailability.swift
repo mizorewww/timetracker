@@ -17,18 +17,18 @@ extension TimeTrackerStore {
         _ = taskReadModelRevision
         return taskDomainStore.incompleteRecurrenceTemplateTaskIDs
             .contains(task.id) || taskRecurrenceRules.contains {
-            $0.deletedAt == nil && $0.templateTaskID == task.id
-        } || taskRecurrenceOccurrences.contains {
-            $0.deletedAt == nil && $0.templateTaskID == task.id
-        }
+                $0.deletedAt == nil && $0.templateTaskID == task.id
+            } || taskRecurrenceOccurrences.contains {
+                $0.deletedAt == nil && $0.templateTaskID == task.id
+            }
     }
 
     func isGeneratedRecurrenceTask(taskID: UUID) -> Bool {
         _ = taskReadModelRevision
         return taskDomainStore.incompleteRecurrenceGeneratedTaskIDs
             .contains(taskID) || taskRecurrenceOccurrences.contains {
-            $0.deletedAt == nil && $0.generatedTaskID == taskID
-        }
+                $0.deletedAt == nil && $0.generatedTaskID == taskID
+            }
     }
 
     func taskHasActiveWork(taskID: UUID) -> Bool {

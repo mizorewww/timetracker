@@ -8,12 +8,19 @@ nonisolated enum PomodoroPreset: String, CaseIterable, Identifiable, Sendable {
     case classic = "25 / 5"
     case deep = "50 / 10"
     case quick = "15 / 3"
-    case custom = "custom"
+    case custom
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
-    var focusSeconds: Int { focusMinutes * 60 }
-    var breakSeconds: Int { breakMinutes * 60 }
+    var focusSeconds: Int {
+        focusMinutes * 60
+    }
+
+    var breakSeconds: Int {
+        breakMinutes * 60
+    }
 
     var focusMinutes: Int {
         switch self {

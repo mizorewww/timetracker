@@ -43,14 +43,15 @@ struct LLMChecklistVisualSuggestionService {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMInboxSuggestionServiceError.invalidResponse
         }
-        guard (200..<300).contains(httpResponse.statusCode) else {
+        guard (200 ..< 300).contains(httpResponse.statusCode) else {
             throw LLMModelServiceError.responseStatus(httpResponse.statusCode)
         }
         try LLMSecureHTTPTransport.validateBufferedResponse(data)
 
         let decoded = try JSONDecoder().decode(OpenAIChatCompletionResponse.self, from: data)
         guard let content = decoded.choices.first?.message.content,
-              let contentData = content.data(using: .utf8) else {
+              let contentData = content.data(using: .utf8)
+        else {
             throw LLMInboxSuggestionServiceError.invalidResponse
         }
         let payload = try JSONDecoder().decode(ChecklistVisualSuggestionPayload.self, from: contentData)
@@ -94,7 +95,8 @@ struct LLMChecklistVisualSuggestionService {
         guard !trimmedEndpoint.isEmpty else { throw LLMModelServiceError.missingEndpoint }
         guard !trimmedAPIKey.isEmpty else { throw LLMModelServiceError.missingAPIKey }
         guard trimmedEndpoint.utf8.count <= LLMSuggestionInputPolicy.maximumEndpointByteCount,
-              trimmedAPIKey.utf8.count <= LLMSuggestionInputPolicy.maximumAPIKeyByteCount else {
+              trimmedAPIKey.utf8.count <= LLMSuggestionInputPolicy.maximumAPIKeyByteCount
+        else {
             throw LLMInboxSuggestionServiceError.requestTooLarge
         }
         guard let url = LLMInboxSuggestionService.chatCompletionsURL(endpoint: trimmedEndpoint) else {
@@ -119,11 +121,11 @@ struct LLMChecklistVisualSuggestionService {
                     ),
                     .init(
                         role: "user",
-                        content: try prompt(
+                        content: prompt(
                             input: input,
                             instructions: preparedInstructions
                         )
-                    )
+                    ),
                 ],
                 temperature: 0.2,
                 responseFormat: .init(type: "json_object")
@@ -168,7 +170,8 @@ struct LLMChecklistVisualSuggestionService {
         )
         let data = try JSONEncoder().encode(payload)
         guard data.count <= LLMSuggestionInputPolicy.maximumPromptByteCount,
-              let json = String(data: data, encoding: .utf8) else {
+              let json = String(data: data, encoding: .utf8)
+        else {
             throw LLMInboxSuggestionServiceError.requestTooLarge
         }
         return json

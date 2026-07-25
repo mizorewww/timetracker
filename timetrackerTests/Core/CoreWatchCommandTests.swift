@@ -31,7 +31,7 @@ struct CoreWatchCommandTests {
         #expect(store.load().isEmpty)
         #expect(defaults.object(forKey: key) == nil)
 
-        let excessiveCommands = (0...WatchTransportLimits.maximumIncomingCommands).map { offset in
+        let excessiveCommands = (0 ... WatchTransportLimits.maximumIncomingCommands).map { offset in
             WatchTimerCommand(
                 id: UUID(),
                 type: .startTask,
@@ -41,13 +41,13 @@ struct CoreWatchCommandTests {
                 deviceID: "watch"
             )
         }
-        defaults.set(try JSONEncoder().encode(excessiveCommands), forKey: key)
+        try defaults.set(JSONEncoder().encode(excessiveCommands), forKey: key)
         #expect(store.load().isEmpty)
         #expect(defaults.object(forKey: key) == nil)
 
         var structurallyInvalid = command
         structurallyInvalid.deviceID = ""
-        defaults.set(try JSONEncoder().encode([structurallyInvalid]), forKey: key)
+        try defaults.set(JSONEncoder().encode([structurallyInvalid]), forKey: key)
         #expect(store.load().isEmpty)
         #expect(defaults.object(forKey: key) == nil)
     }
@@ -59,7 +59,7 @@ struct CoreWatchCommandTests {
             type: .startTask,
             taskID: UUID(),
             segmentID: nil,
-            issuedAt: Date(timeIntervalSinceReferenceDate: 1_234),
+            issuedAt: Date(timeIntervalSinceReferenceDate: 1234),
             deviceID: "watch-device"
         )
 
@@ -82,7 +82,7 @@ struct CoreWatchCommandTests {
         let result = WatchCommandResult(
             commandID: UUID(),
             status: .missingTask,
-            completedAt: Date(timeIntervalSinceReferenceDate: 1_500),
+            completedAt: Date(timeIntervalSinceReferenceDate: 1500),
             relatedID: UUID(),
             failureCode: "missing"
         )
@@ -247,7 +247,7 @@ struct CoreWatchCommandTests {
     }
 
     @Test
-    func failedWatchCommandCanBeDiscardedAndLateSnapshotSuccessClearsTimeout() throws {
+    func failedWatchCommandCanBeDiscardedAndLateSnapshotSuccessClearsTimeout() {
         let taskID = UUID()
         let command = WatchTimerCommand(
             id: UUID(),
@@ -321,7 +321,7 @@ struct CoreWatchCommandTests {
     func watchCommandQueueBoundsPendingAndFailedRestorationState() {
         let issuedAt = Date(timeIntervalSinceReferenceDate: 600)
         var queue = WatchCommandQueueState()
-        for offset in 0...WatchTransportLimits.maximumPersistedPendingCommands {
+        for offset in 0 ... WatchTransportLimits.maximumPersistedPendingCommands {
             queue.enqueue(
                 WatchTimerCommand(
                     id: UUID(),
@@ -361,19 +361,19 @@ struct CoreWatchCommandTests {
         let timerID = UUID()
         let taskID = UUID()
         let snapshot = WatchStateSnapshot(
-            generatedAt: Date(timeIntervalSinceReferenceDate: 2_000),
-            todayGrossSeconds: 3_600,
-            todayWallSeconds: 2_400,
+            generatedAt: Date(timeIntervalSinceReferenceDate: 2000),
+            todayGrossSeconds: 3600,
+            todayWallSeconds: 2400,
             activeTimers: [
                 WatchActiveTimerSnapshot(
                     id: timerID,
                     taskID: taskID,
                     title: "Watch timer",
                     path: "Work",
-                    startedAt: Date(timeIntervalSinceReferenceDate: 1_900),
+                    startedAt: Date(timeIntervalSinceReferenceDate: 1900),
                     colorHex: "#0A84FF",
                     iconName: "timer"
-                )
+                ),
             ],
             recentTasks: [
                 WatchRecentTaskSnapshot(
@@ -384,7 +384,7 @@ struct CoreWatchCommandTests {
                     iconName: "bolt",
                     quickStartRank: 0,
                     allTasksRank: 0
-                )
+                ),
             ]
         )
 
@@ -558,8 +558,8 @@ struct CoreWatchCommandTests {
         #expect(original.hasPrefix(bounded))
         #expect(String(data: Data(bounded.utf8), encoding: .utf8) == bounded)
 
-        let generatedAt = Date(timeIntervalSinceReferenceDate: 2_500)
-        let recentTasks = (0..<WatchTransportLimits.maximumRecentTasks).map { _ in
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 2500)
+        let recentTasks = (0 ..< WatchTransportLimits.maximumRecentTasks).map { _ in
             WatchRecentTaskSnapshot(
                 taskID: UUID(),
                 title: String(
@@ -589,7 +589,7 @@ struct CoreWatchCommandTests {
     @Test
     func watchStartCommandWaitsForANewerSnapshotContainingTheTask() {
         let taskID = UUID()
-        let issuedAt = Date(timeIntervalSinceReferenceDate: 1_000)
+        let issuedAt = Date(timeIntervalSinceReferenceDate: 1000)
         let command = WatchTimerCommand(
             id: UUID(),
             type: .startTask,
@@ -616,7 +616,7 @@ struct CoreWatchCommandTests {
     @Test
     func watchStopCommandWaitsForANewerSnapshotWithoutTheSegment() {
         let segmentID = UUID()
-        let issuedAt = Date(timeIntervalSinceReferenceDate: 2_000)
+        let issuedAt = Date(timeIntervalSinceReferenceDate: 2000)
         let activeTimer = WatchActiveTimerSnapshot(
             id: segmentID,
             taskID: UUID(),
@@ -642,7 +642,7 @@ struct CoreWatchCommandTests {
 
     @Test
     func watchSnapshotFreshnessUsesTheSharedFifteenMinuteBoundary() {
-        let generatedAt = Date(timeIntervalSinceReferenceDate: 3_000)
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 3000)
         let snapshot = watchSnapshot(generatedAt: generatedAt, activeTimers: [])
 
         #expect(snapshot.freshness(at: generatedAt.addingTimeInterval(WatchStateSnapshot.staleAfter)) == .current)
@@ -651,7 +651,7 @@ struct CoreWatchCommandTests {
 
     @Test
     func staleWatchSnapshotFreezesElapsedTimeAtTheSnapshotBoundary() {
-        let generatedAt = Date(timeIntervalSinceReferenceDate: 3_000)
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 3000)
         let timer = WatchActiveTimerSnapshot(
             id: UUID(),
             taskID: UUID(),
@@ -680,7 +680,7 @@ struct CoreWatchCommandTests {
         let pinned = try taskRepository.createTask(title: "Pinned", parentID: nil, colorHex: "#0A84FF", iconName: "pin")
         let frequent = try taskRepository.createTask(title: "Frequent", parentID: nil, colorHex: "#30D158", iconName: "bolt")
         let occasional = try taskRepository.createTask(title: "Occasional", parentID: nil, colorHex: "#FF9F0A", iconName: "book")
-        let start = Date(timeIntervalSinceReferenceDate: 5_000)
+        let start = Date(timeIntervalSinceReferenceDate: 5000)
 
         _ = try timeRepository.addManualSegment(
             taskID: occasional.id,
@@ -690,14 +690,14 @@ struct CoreWatchCommandTests {
         )
         _ = try timeRepository.addManualSegment(
             taskID: frequent.id,
-            startedAt: start.addingTimeInterval(1_000),
-            endedAt: start.addingTimeInterval(1_600),
+            startedAt: start.addingTimeInterval(1000),
+            endedAt: start.addingTimeInterval(1600),
             note: nil
         )
         _ = try timeRepository.addManualSegment(
             taskID: frequent.id,
-            startedAt: start.addingTimeInterval(2_000),
-            endedAt: start.addingTimeInterval(2_600),
+            startedAt: start.addingTimeInterval(2000),
+            endedAt: start.addingTimeInterval(2600),
             note: nil
         )
 
@@ -705,7 +705,7 @@ struct CoreWatchCommandTests {
         store.configureIfNeeded(context: context)
         store.setQuickStartTaskIDs([pinned.id])
 
-        let snapshot = store.watchStateSnapshot(now: start.addingTimeInterval(3_000))
+        let snapshot = store.watchStateSnapshot(now: start.addingTimeInterval(3000))
 
         #expect(
             Array(snapshot.allTasksByUsage.map(\.taskID).prefix(3)) ==
@@ -726,9 +726,9 @@ struct CoreWatchCommandTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         var createdTasks: [TaskNode] = []
 
-        for index in 0..<12 {
-            createdTasks.append(
-                try taskRepository.createTask(
+        for index in 0 ..< 12 {
+            try createdTasks.append(
+                taskRepository.createTask(
                     title: "Task \(index)",
                     parentID: nil,
                     colorHex: nil,
@@ -845,7 +845,7 @@ struct CoreWatchCommandTests {
             title: "Z title must not override stable identity",
             parentID: nil
         )
-        let olderStart = Date(timeIntervalSinceReferenceDate: 1_000)
+        let olderStart = Date(timeIntervalSinceReferenceDate: 1000)
         let recentStart = olderStart.addingTimeInterval(300)
 
         for task in [olderSecond, olderFirst] {
@@ -878,9 +878,9 @@ struct CoreWatchCommandTests {
     func watchSnapshotReservesTransportCapacityForPinnedQuickStartTasks() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
-        let fixedUpdatedAt = Date(timeIntervalSinceReferenceDate: 1_000)
+        let fixedUpdatedAt = Date(timeIntervalSinceReferenceDate: 1000)
         var createdTasks: [TaskNode] = []
-        for index in 0..<(WatchTransportLimits.maximumRecentTasks + 4) {
+        for index in 0 ..< (WatchTransportLimits.maximumRecentTasks + 4) {
             let taskID = try #require(
                 UUID(
                     uuidString: String(
@@ -905,7 +905,7 @@ struct CoreWatchCommandTests {
         store.setQuickStartTaskIDs([pinnedTask.id])
 
         let snapshot = store.watchStateSnapshot(
-            now: Date(timeIntervalSinceReferenceDate: 10_000)
+            now: Date(timeIntervalSinceReferenceDate: 10000)
         )
 
         #expect(snapshot.recentTasks.count == WatchTransportLimits.maximumRecentTasks)
@@ -927,10 +927,10 @@ struct CoreWatchCommandTests {
     @Test @MainActor
     func watchSnapshotPreservesLegacyQuickStartPreviewAtCapacity() throws {
         let context = try makeTestContext()
-        let baselineDate = Date(timeIntervalSinceReferenceDate: 1_000)
+        let baselineDate = Date(timeIntervalSinceReferenceDate: 1000)
         var taskIDs: [UUID] = []
 
-        for index in 1...(WatchTransportLimits.maximumRecentTasks + 4) {
+        for index in 1 ... (WatchTransportLimits.maximumRecentTasks + 4) {
             let taskID = try #require(
                 UUID(
                     uuidString: String(
@@ -956,12 +956,12 @@ struct CoreWatchCommandTests {
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
         let snapshot = store.watchStateSnapshot(
-            now: baselineDate.addingTimeInterval(1_000)
+            now: baselineDate.addingTimeInterval(1000)
         )
         let expectedLegacyPreview = Array(taskIDs.suffix(4).reversed())
         let expectedUsageMembership =
             Array(taskIDs.prefix(WatchTransportLimits.maximumRecentTasks - 4)) +
-                Array(taskIDs.suffix(4))
+            Array(taskIDs.suffix(4))
 
         #expect(snapshot.recentTasks.count == WatchTransportLimits.maximumRecentTasks)
         #expect(
@@ -980,10 +980,10 @@ struct CoreWatchCommandTests {
     func watchSnapshotReservesTransportCapacityForRunningTasks() throws {
         let context = try makeTestContext()
         let now = Date()
-        let historicalStart = now.addingTimeInterval(-3_600)
+        let historicalStart = now.addingTimeInterval(-3600)
         var frequentTaskIDs: [UUID] = []
 
-        for index in 1...WatchTransportLimits.maximumRecentTasks {
+        for index in 1 ... WatchTransportLimits.maximumRecentTasks {
             let taskID = try #require(
                 UUID(
                     uuidString: String(
@@ -1001,7 +1001,7 @@ struct CoreWatchCommandTests {
             task.id = taskID
             context.insert(task)
 
-            for segmentOffset in 0..<2 {
+            for segmentOffset in 0 ..< 2 {
                 let startedAt = historicalStart.addingTimeInterval(
                     TimeInterval(segmentOffset * 120)
                 )
@@ -1099,7 +1099,7 @@ struct CoreWatchCommandTests {
             colorHex: nil,
             iconName: nil
         )
-        let oldStart = Date(timeIntervalSinceReferenceDate: 1_000)
+        let oldStart = Date(timeIntervalSinceReferenceDate: 1000)
         _ = try timeRepository.addManualSegment(
             taskID: frequent.id,
             startedAt: oldStart,
@@ -1124,7 +1124,7 @@ struct CoreWatchCommandTests {
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let store = makeTestStore()
         store.configureRepositoriesIfNeeded(context: context)
-        let now = Date(timeIntervalSinceReferenceDate: 50_000)
+        let now = Date(timeIntervalSinceReferenceDate: 50000)
 
         let cacheError = try store.refreshCommittedMutationSurfaces(
             events: [
@@ -1132,7 +1132,7 @@ struct CoreWatchCommandTests {
                     taskID: recent.id,
                     dateInterval: nil,
                     isVisible: true
-                )
+                ),
             ],
             widgetCache: WidgetSnapshotCache(
                 store: SharedWidgetSnapshotStore(defaults: defaults)
@@ -1165,7 +1165,7 @@ struct CoreWatchCommandTests {
             title: "Challenger",
             parentID: nil
         )
-        let initialStart = Date(timeIntervalSinceReferenceDate: 1_000)
+        let initialStart = Date(timeIntervalSinceReferenceDate: 1000)
         _ = try timeRepository.addManualSegment(
             taskID: initialLeader.id,
             startedAt: initialStart,
@@ -1176,7 +1176,7 @@ struct CoreWatchCommandTests {
         store.configureIfNeeded(context: context)
         #expect(store.watchStateSnapshot().allTasksByUsage.first?.taskID == initialLeader.id)
 
-        let challengerStart = initialStart.addingTimeInterval(1_000)
+        let challengerStart = initialStart.addingTimeInterval(1000)
         for offset in [0.0, 120.0] {
             _ = try timeRepository.addManualSegment(
                 taskID: challenger.id,
@@ -1194,7 +1194,7 @@ struct CoreWatchCommandTests {
                         end: challengerStart.addingTimeInterval(180)
                     ),
                     isVisible: false
-                )
+                ),
             ]
         )
 
@@ -1232,7 +1232,7 @@ struct CoreWatchCommandTests {
             "timetrackerWatchApp/WatchTaskListView.swift",
             "timetrackerWatchApp/WatchTaskRows.swift",
             "timetrackerWatchApp/WatchStatusViews.swift",
-            "timetrackerWatchApp/WatchTimerRows.swift"
+            "timetrackerWatchApp/WatchTimerRows.swift",
         ].map(sourceText).joined(separator: "\n")
 
         #expect(source.contains("NavigationStack"))
@@ -1295,12 +1295,12 @@ struct CoreWatchCommandTests {
             "timetrackerWatchApp/WatchAppStore.swift",
             "timetrackerWatchApp/WatchAppStore+Commands.swift",
             "timetrackerWatchApp/WatchAppStore+Connectivity.swift",
-            "timetrackerWatchApp/WatchAppStore+SessionDelegate.swift"
+            "timetrackerWatchApp/WatchAppStore+SessionDelegate.swift",
         ]
         let source = try storeFiles.map(sourceText).joined(separator: "\n")
         let dashboard = try [
             "timetrackerWatchApp/WatchDashboardView.swift",
-            "timetrackerWatchApp/WatchStatusViews.swift"
+            "timetrackerWatchApp/WatchStatusViews.swift",
         ].map(sourceText).joined(separator: "\n")
 
         #expect(source.contains("commandQueue.enqueue(command)"))
@@ -1408,7 +1408,7 @@ struct CoreWatchCommandTests {
         let task = try taskRepository.createTask(title: "Watch task", parentID: nil, colorHex: nil, iconName: nil)
         let receiptStore = InMemoryWatchCommandReceiptStore()
         let processor = makeTestWatchCommandProcessor(receiptStore: receiptStore)
-        let issuedAt = Date(timeIntervalSinceReferenceDate: 1_000)
+        let issuedAt = Date(timeIntervalSinceReferenceDate: 1000)
         let command = WatchTimerCommand(
             id: UUID(),
             type: .startTask,
@@ -1452,7 +1452,7 @@ struct CoreWatchCommandTests {
         let processor = makeTestWatchCommandProcessor(
             receiptStore: InMemoryWatchCommandReceiptStore()
         )
-        let issuedAt = Date(timeIntervalSinceReferenceDate: 1_100)
+        let issuedAt = Date(timeIntervalSinceReferenceDate: 1100)
         let start = WatchTimerCommand(
             id: UUID(),
             type: .startTask,
@@ -1622,7 +1622,7 @@ struct CoreWatchCommandTests {
             Issue.record("The requested watch timer should start")
             return
         }
-        #expect(Set(try timeRepository.activeSegments().map(\.id)) == [runningSegment.id, startedID])
+        #expect(try Set(timeRepository.activeSegments().map(\.id)) == [runningSegment.id, startedID])
     }
 
     @Test @MainActor
@@ -1787,7 +1787,7 @@ struct CoreWatchCommandTests {
         let receiptStore = InMemoryWatchCommandReceiptStore()
         let processor = makeTestWatchCommandProcessor(receiptStore: receiptStore)
         let taskID = UUID()
-        let issuedAt = Date(timeIntervalSinceReferenceDate: 1_000)
+        let issuedAt = Date(timeIntervalSinceReferenceDate: 1000)
         let command = WatchTimerCommand(
             id: UUID(),
             type: .startTask,
@@ -1826,7 +1826,7 @@ struct CoreWatchCommandTests {
         let segment = try timeRepository.startTask(taskID: task.id, source: .watch)
         let receiptStore = InMemoryWatchCommandReceiptStore()
         let processor = makeTestWatchCommandProcessor(receiptStore: receiptStore)
-        let issuedAt = Date(timeIntervalSinceReferenceDate: 1_100)
+        let issuedAt = Date(timeIntervalSinceReferenceDate: 1100)
         let command = WatchTimerCommand(
             id: UUID(),
             type: .stopSegment,
@@ -1867,7 +1867,7 @@ struct CoreWatchCommandTests {
         let receiptStore = InMemoryWatchCommandReceiptStore()
         let processor = makeTestWatchCommandProcessor(receiptStore: receiptStore)
         let commandID = UUID()
-        let issuedAt = Date(timeIntervalSinceReferenceDate: 1_200)
+        let issuedAt = Date(timeIntervalSinceReferenceDate: 1200)
         let staleCommand = WatchTimerCommand(
             id: commandID,
             type: .startTask,

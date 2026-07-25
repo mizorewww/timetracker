@@ -13,7 +13,8 @@ struct AppSceneDeepLinkCoordinator {
 
     func drain() {
         guard pendingDeepLinks.urls.isEmpty == false,
-              store.taskDetailNavigationGuard.hasPendingNavigation == false else {
+              store.taskDetailNavigationGuard.hasPendingNavigation == false
+        else {
             return
         }
 
@@ -46,7 +47,7 @@ struct AppSceneDeepLinkCoordinator {
                     routesAfterSystemAction: false
                 )
                 return disposition == .handled ? .routeToToday : nil
-            case .openTask(let taskID):
+            case let .openTask(taskID):
                 guard store.isTaskDetailRouteValid(taskID) else {
                     return nil
                 }
@@ -63,7 +64,7 @@ struct AppSceneDeepLinkCoordinator {
             case .routeToToday:
                 store.closeTaskDetailNavigation()
                 store.desktopDestination = .today
-            case .deepLink(let url):
+            case let .deepLink(url):
                 let disposition = store.handleDeepLink(
                     url,
                     presentationRouter: presentationRouter
@@ -81,7 +82,7 @@ private enum PreparedDeepLinkAction {
     case routeToToday
 
     var deepLinkURL: URL? {
-        guard case .deepLink(let url) = self else { return nil }
+        guard case let .deepLink(url) = self else { return nil }
         return url
     }
 }

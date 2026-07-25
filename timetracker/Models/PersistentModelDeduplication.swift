@@ -126,12 +126,14 @@ private extension PersistentUUIDModel {
         }
         if let mutation = self as? ClientMutationTrackedModel,
            let otherMutation = other as? ClientMutationTrackedModel,
-           mutation.clientMutationID != otherMutation.clientMutationID {
+           mutation.clientMutationID != otherMutation.clientMutationID
+        {
             return mutation.clientMutationID.uuidString > otherMutation.clientMutationID.uuidString
         }
         if let segment = self as? TimeSegment,
            let otherSegment = other as? TimeSegment,
-           segment.deterministicConflictKey != otherSegment.deterministicConflictKey {
+           segment.deterministicConflictKey != otherSegment.deterministicConflictKey
+        {
             return segment.deterministicConflictKey > otherSegment.deterministicConflictKey
         }
         return false
@@ -146,7 +148,7 @@ private extension TimeSegment {
             String(startedAt.timeIntervalSinceReferenceDate),
             endedAt.map { String($0.timeIntervalSinceReferenceDate) } ?? "active",
             sourceRaw,
-            deletedAt.map { String($0.timeIntervalSinceReferenceDate) } ?? "visible"
+            deletedAt.map { String($0.timeIntervalSinceReferenceDate) } ?? "visible",
         ].joined(separator: "|")
     }
 }

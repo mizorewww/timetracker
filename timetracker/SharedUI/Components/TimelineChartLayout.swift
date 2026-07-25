@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+
 nonisolated enum TimelineChartAxisTickRole: Equatable, Sendable {
     case start
     case interior
@@ -8,10 +9,12 @@ nonisolated enum TimelineChartAxisTickRole: Equatable, Sendable {
         self != .interior
     }
 }
+
 nonisolated struct TimelineChartAxisTick: Equatable, Sendable {
     let date: Date
     let role: TimelineChartAxisTickRole
 }
+
 nonisolated struct TimelineChartLaneLayout: Equatable, Sendable {
     let origin: CGFloat
     let laneExtent: CGFloat
@@ -20,6 +23,7 @@ nonisolated struct TimelineChartLaneLayout: Equatable, Sendable {
     var midpoint: CGFloat {
         origin + groupExtent / 2
     }
+
     func offset(for lane: Int) -> CGFloat {
         origin + CGFloat(max(0, lane)) * (laneExtent + laneSpacing)
     }
@@ -123,6 +127,7 @@ nonisolated enum TimelineChartLayout {
             preferredSpacing: horizontalPreferredLaneSpacing
         )
     }
+
     static func verticalLanes(
         width: CGFloat,
         laneCount: Int,
@@ -415,7 +420,8 @@ nonisolated enum TimelineChartLayout {
 
         guard gaps.isEmpty == false,
               height > 0,
-              availableExtent >= height else {
+              availableExtent >= height
+        else {
             return TimelineChartVerticalGapLabelLayout(
                 placements: [],
                 hiddenCount: gaps.count
@@ -607,7 +613,8 @@ nonisolated enum TimelineChartLayout {
         ) where !compression.isInsideOmittedGap(date) {
             let position = length * CGFloat(compression.ratio(for: date))
             guard position - lastPosition >= spacing,
-                  endPosition - position >= spacing else {
+                  endPosition - position >= spacing
+            else {
                 continue
             }
             ticks.append(TimelineChartAxisTick(date: date, role: .interior))
@@ -637,6 +644,7 @@ nonisolated enum TimelineChartLayout {
             return maximumOrigin
         }
     }
+
     private static func centeredLanes(
         plotOrigin: CGFloat,
         plotExtent: CGFloat,
@@ -647,11 +655,10 @@ nonisolated enum TimelineChartLayout {
         let count = max(1, laneCount)
         let available = max(1, plotExtent)
         let gapCount = max(0, count - 1)
-        let spacing: CGFloat
-        if gapCount == 0 {
-            spacing = 0
+        let spacing: CGFloat = if gapCount == 0 {
+            0
         } else {
-            spacing = min(
+            min(
                 preferredSpacing,
                 max(0, (available - CGFloat(count)) / CGFloat(gapCount))
             )
@@ -777,7 +784,7 @@ nonisolated enum TimelineChartLayout {
         let lastIndex = candidates.count - 1
         var selected: [VerticalGapLabelCandidate] = []
         selected.reserveCapacity(count)
-        for index in 0..<count {
+        for index in 0 ..< count {
             let sourceIndex = Int(
                 (Double(index) * Double(lastIndex) / Double(count - 1)).rounded()
             )
@@ -794,7 +801,7 @@ nonisolated enum TimelineChartLayout {
         in interval: DateInterval,
         calendar: Calendar
     ) -> [Date] {
-        let totalHours = max(1, interval.duration / 3_600)
+        let totalHours = max(1, interval.duration / 3600)
         let step = totalHours <= 4 ? 1 : (totalHours <= 10 ? 2 : 4)
         var tick = calendar.dateInterval(
             of: .hour,

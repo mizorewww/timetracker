@@ -110,14 +110,14 @@ extension ChecklistStore {
 
     mutating func reindexItems(from startIndex: Int) {
         guard startIndex < items.count else { return }
-        for index in startIndex..<items.count {
+        for index in startIndex ..< items.count {
             itemArrayIndexByID[items[index].id] = index
         }
     }
 
     mutating func reindexVisuals(from startIndex: Int) {
         guard startIndex < visuals.count else { return }
-        for index in startIndex..<visuals.count {
+        for index in startIndex ..< visuals.count {
             visualArrayIndexByID[visuals[index].id] = index
         }
     }

@@ -2,8 +2,13 @@ import Darwin
 import Foundation
 
 nonisolated extension DurableLocalFile {
-    private static var temporaryWritePrefix: String { ".TimeTrackerWrite-" }
-    private static var temporaryWriteSuffix: String { ".tmp" }
+    private static var temporaryWritePrefix: String {
+        ".TimeTrackerWrite-"
+    }
+
+    private static var temporaryWriteSuffix: String {
+        ".tmp"
+    }
 
     func writeWithExclusiveAccess(
         _ data: Data,
@@ -34,8 +39,12 @@ nonisolated extension DurableLocalFile {
         var descriptorIsOpen = true
         var published = false
         defer {
-            if descriptorIsOpen { Darwin.close(descriptor) }
-            if published == false { try? fileManager.removeItem(at: temporaryURL) }
+            if descriptorIsOpen {
+                Darwin.close(descriptor)
+            }
+            if published == false {
+                try? fileManager.removeItem(at: temporaryURL)
+            }
         }
 
         try writeAll(data, to: descriptor)
@@ -92,7 +101,9 @@ nonisolated extension DurableLocalFile {
                 )
                 if written < 0 {
                     let errorCode = errno
-                    if errorCode == EINTR { continue }
+                    if errorCode == EINTR {
+                        continue
+                    }
                     throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO)
                 }
                 guard written > 0 else { throw POSIXError(.EIO) }
@@ -115,7 +126,9 @@ nonisolated extension DurableLocalFile {
             let status = candidate.path.withCString { Darwin.lstat($0, &metadata) }
             if status != 0 {
                 let errorCode = errno
-                if errorCode == ENOENT { continue }
+                if errorCode == ENOENT {
+                    continue
+                }
                 throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO)
             }
             let fileType = metadata.st_mode & S_IFMT
@@ -126,6 +139,8 @@ nonisolated extension DurableLocalFile {
             }
             removedFile = true
         }
-        if removedFile { try synchronizeDirectory(directoryURL) }
+        if removedFile {
+            try synchronizeDirectory(directoryURL)
+        }
     }
 }

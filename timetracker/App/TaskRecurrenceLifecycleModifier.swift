@@ -68,7 +68,8 @@ private struct TaskRecurrenceLifecycleModifier: ViewModifier {
 
     private func materializeIfReady() {
         guard scheduleIdentity.isReady,
-              scheduleIdentity.isActive else {
+              scheduleIdentity.isActive
+        else {
             return
         }
         store.materializeCurrentDailyTaskRecurrences()
@@ -76,7 +77,8 @@ private struct TaskRecurrenceLifecycleModifier: ViewModifier {
 
     private func runSchedule() async {
         guard scheduleIdentity.isReady,
-              scheduleIdentity.isActive else {
+              scheduleIdentity.isActive
+        else {
             return
         }
         var planningDate = Date()
@@ -97,7 +99,8 @@ private struct TaskRecurrenceLifecycleModifier: ViewModifier {
             }
             guard Task.isCancelled == false,
                   scenePhase == .active,
-                  store.effectivePersistenceWriteSafety == .ready else {
+                  store.effectivePersistenceWriteSafety == .ready
+            else {
                 return
             }
             let observedAt = max(Date(), deadline)

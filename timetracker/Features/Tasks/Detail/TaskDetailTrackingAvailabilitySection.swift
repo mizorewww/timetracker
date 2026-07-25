@@ -4,7 +4,6 @@ struct TaskDetailTrackingAvailabilitySection: View {
     let store: TimeTrackerStore
     let task: TaskNode
 
-    @ViewBuilder
     var body: some View {
         if !store.isTaskVisible(task) {
             availabilitySection(
@@ -16,7 +15,7 @@ struct TaskDetailTrackingAvailabilitySection: View {
             availabilitySection(
                 titleKey: "task.recurrence.template.title",
                 messageKey:
-                    "task.recurrence.template.trackingUnavailable",
+                "task.recurrence.template.trackingUnavailable",
                 systemImage: "calendar.badge.clock"
             )
         } else if !store.isTaskAvailableForTracking(task) {

@@ -11,7 +11,7 @@ struct SidebarRevealButton: View {
         .accessibilityLabel(AppStrings.localized("sidebar.show"))
         .accessibilityIdentifier("sidebar.show")
         #if os(macOS)
-        .help(AppStrings.localized("sidebar.show"))
+            .help(AppStrings.localized("sidebar.show"))
         #endif
     }
 }

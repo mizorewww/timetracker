@@ -3,7 +3,8 @@ import Foundation
 extension SwiftDataTimeTrackingRepository {
     func stopSegment(segmentID: UUID) throws {
         guard let segment = try canonicalSegments(ids: [segmentID]).first,
-              segment.endedAt == nil else {
+              segment.endedAt == nil
+        else {
             return
         }
         let now = nowProvider()

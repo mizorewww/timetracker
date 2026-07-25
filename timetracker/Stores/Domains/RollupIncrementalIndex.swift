@@ -94,5 +94,4 @@ struct RollupIncrementalIndex {
         rebuildSubtreeRecentBuckets()
         rebuildHistoricalPaces(taskIDs: Set(taskByID.keys))
     }
-
 }

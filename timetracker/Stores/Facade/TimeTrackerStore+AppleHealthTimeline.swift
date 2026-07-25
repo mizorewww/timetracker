@@ -158,7 +158,8 @@ extension TimeTrackerStore {
                 let status = try await appleHealthDataReader
                     .authorizationRequestStatus()
                 guard isCurrentAppleHealthTimelineRequest(requestID),
-                      isAppleHealthTimelineEnabled else {
+                      isAppleHealthTimelineEnabled
+                else {
                     return
                 }
                 switch status {
@@ -178,7 +179,8 @@ extension TimeTrackerStore {
             try await appleHealthDataReader.requestReadAuthorization()
         } catch is CancellationError {
             guard isCurrentAppleHealthTimelineRequest(requestID),
-                  isAppleHealthTimelineEnabled else {
+                  isAppleHealthTimelineEnabled
+            else {
                 return
             }
             appleHealthTimelineItems = []
@@ -186,7 +188,8 @@ extension TimeTrackerStore {
             return
         } catch {
             guard isCurrentAppleHealthTimelineRequest(requestID),
-                  isAppleHealthTimelineEnabled else {
+                  isAppleHealthTimelineEnabled
+            else {
                 return
             }
             appleHealthTimelineItems = []
@@ -195,7 +198,8 @@ extension TimeTrackerStore {
         }
 
         guard isCurrentAppleHealthTimelineRequest(requestID),
-              isAppleHealthTimelineEnabled else {
+              isAppleHealthTimelineEnabled
+        else {
             return
         }
         await loadAppleHealthTimeline(
@@ -248,7 +252,8 @@ extension TimeTrackerStore {
                 loadTask.cancel()
             }
             guard isCurrentAppleHealthTimelineRequest(requestID),
-                  isAppleHealthTimelineEnabled else {
+                  isAppleHealthTimelineEnabled
+            else {
                 return
             }
             appleHealthTimelineLoadTask = nil
@@ -271,7 +276,8 @@ extension TimeTrackerStore {
             }
         } catch is CancellationError {
             guard isCurrentAppleHealthTimelineRequest(requestID),
-                  isAppleHealthTimelineEnabled else {
+                  isAppleHealthTimelineEnabled
+            else {
                 return
             }
             appleHealthTimelineLoadTask = nil
@@ -279,7 +285,8 @@ extension TimeTrackerStore {
             appleHealthTimelineState = .ready
         } catch {
             guard isCurrentAppleHealthTimelineRequest(requestID),
-                  isAppleHealthTimelineEnabled else {
+                  isAppleHealthTimelineEnabled
+            else {
                 return
             }
             appleHealthTimelineLoadTask = nil
@@ -295,7 +302,7 @@ extension TimeTrackerStore {
         let day = calendar.dateInterval(of: .day, for: now)
             ?? DateInterval(
                 start: calendar.startOfDay(for: now),
-                duration: 86_400
+                duration: 86400
             )
         let end = min(day.end, max(day.start, now))
         return DateInterval(start: day.start, end: end)

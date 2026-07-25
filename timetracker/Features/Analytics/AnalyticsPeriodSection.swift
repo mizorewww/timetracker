@@ -79,7 +79,6 @@ private struct AnalyticsPeriodFilter: View {
         }
     }
 
-    @ViewBuilder
     private var rangePicker: some View {
         Group {
             if dynamicTypeSize.isAccessibilitySize {
@@ -99,7 +98,6 @@ private struct AnalyticsPeriodFilter: View {
         .accessibilityIdentifier("analytics.range")
     }
 
-    @ViewBuilder
     private var rangeOptions: some View {
         ForEach(AnalyticsRange.allCases) { range in
             Text(range.displayName).tag(range)

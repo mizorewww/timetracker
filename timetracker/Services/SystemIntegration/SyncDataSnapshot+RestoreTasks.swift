@@ -140,7 +140,8 @@ extension SyncDataSnapshot {
                     (record.deletedAt == nil) == (current.deletedAt == nil) &&
                     (record.createdAt > current.createdAt ||
                         (record.createdAt == current.createdAt &&
-                            record.id.uuidString > current.id.uuidString))) {
+                            record.id.uuidString > current.id.uuidString)))
+            {
                 winnersByTaskID[record.taskID] = record
             }
         }

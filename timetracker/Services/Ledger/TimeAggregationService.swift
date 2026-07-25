@@ -4,9 +4,9 @@ struct TimeAggregationService {
     func totalSeconds(segments: [TimeSegment], mode: AggregationMode, now: Date = Date()) -> Int {
         switch mode {
         case .gross:
-            return grossSeconds(segments, now: now)
+            grossSeconds(segments, now: now)
         case .wallClock:
-            return wallClockSeconds(segments, now: now)
+            wallClockSeconds(segments, now: now)
         }
     }
 

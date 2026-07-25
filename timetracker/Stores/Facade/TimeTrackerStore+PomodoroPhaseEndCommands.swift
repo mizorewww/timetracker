@@ -55,7 +55,8 @@ extension TimeTrackerStore {
 
         guard let deadline = activeFocusPomodoroRuns
             .compactMap(\.phaseDeadline)
-            .min() else {
+            .min()
+        else {
             return
         }
 
@@ -97,7 +98,7 @@ extension TimeTrackerStore {
                 )
             )
             switch outcome {
-            case .mutated(let snapshot):
+            case let .mutated(snapshot):
                 finishStoreScopedPomodoroMutation(
                     events: snapshot.events,
                     referencedTaskIDs: snapshot.referencedTaskIDs

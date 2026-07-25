@@ -122,7 +122,7 @@ struct CoreTaskIdentityPresentationTests {
             "规划",
             "Implementation",
             "Review",
-            "Ship"
+            "Ship",
         ]
         var tasks: [TaskNode] = []
         var parentID: UUID?

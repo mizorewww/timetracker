@@ -45,7 +45,8 @@ enum AppCloudSync {
             return .ephemeral(lastError)
         }
         if UserDefaults.standard.bool(forKey: pendingCloudDownloadResetKey) ||
-            isCloudRecoveryPending {
+            isCloudRecoveryPending
+        {
             return .cloudRecoveryPending(lastError)
         }
         return .ready
@@ -78,11 +79,11 @@ enum AppCloudSync {
     static var allowsPermanentTombstonePurge: Bool {
         switch persistenceMode {
         case modeUITest, modeDemoData:
-            return true
+            true
         case modeICloud, modeLocal, modeLocalFallback, modeInMemoryFallback:
-            return false
+            false
         default:
-            return false
+            false
         }
     }
 
@@ -189,5 +190,4 @@ enum AppCloudSync {
         UserDefaults.standard.set(modeDemoData, forKey: modeKey)
         UserDefaults.standard.removeObject(forKey: errorKey)
     }
-
 }

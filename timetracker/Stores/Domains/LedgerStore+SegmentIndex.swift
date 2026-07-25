@@ -1,4 +1,5 @@
 import Foundation
+
 extension LedgerStore {
     mutating func rebuildSegmentIndexes(
         segments: [TimeSegment],
@@ -56,11 +57,10 @@ extension LedgerStore {
         for id in ids {
             let before = segmentSnapshotByID[id]
             let afterModel = fetchedByID[id]
-            let after: LedgerSegmentSnapshot?
-            if let afterModel {
-                after = LedgerSegmentSnapshot(afterModel)
+            let after: LedgerSegmentSnapshot? = if let afterModel {
+                LedgerSegmentSnapshot(afterModel)
             } else {
-                after = nil
+                nil
             }
             let shouldRefresh = before != after ||
                 (refreshUnchangedTimeSensitiveSegments && after?.isTimeSensitive(at: now) == true)
@@ -181,8 +181,8 @@ extension LedgerStore {
         }
         return result
     }
+
     func uniqueSegments(_ segments: [TimeSegment]) -> [TimeSegment] {
         segments.deduplicatedByID().filter { $0.deletedAt == nil }
     }
-
 }

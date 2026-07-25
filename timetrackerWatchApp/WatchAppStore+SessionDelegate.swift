@@ -34,7 +34,7 @@ extension WatchAppStore: WCSessionDelegate {
     }
 
     nonisolated func session(
-        _ session: WCSession,
+        _: WCSession,
         didReceiveApplicationContext applicationContext: [String: Any]
     ) {
         Task { @MainActor in
@@ -43,7 +43,7 @@ extension WatchAppStore: WCSessionDelegate {
     }
 
     nonisolated func session(
-        _ session: WCSession,
+        _: WCSession,
         didReceiveUserInfo userInfo: [String: Any] = [:]
     ) {
         Task { @MainActor in
@@ -51,14 +51,14 @@ extension WatchAppStore: WCSessionDelegate {
         }
     }
 
-    nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+    nonisolated func session(_: WCSession, didReceiveMessage message: [String: Any]) {
         Task { @MainActor in
             applyPayload(message)
         }
     }
 
     nonisolated func session(
-        _ session: WCSession,
+        _: WCSession,
         didReceiveMessage message: [String: Any],
         replyHandler: @escaping ([String: Any]) -> Void
     ) {

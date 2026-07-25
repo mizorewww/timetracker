@@ -153,7 +153,8 @@ struct StoreScopedInboxMoveCommandCoordinatorTests {
             destination: .checklist(taskID: task.id)
         )
         guard case let .checklist(checklistItemID, destinationTaskID, _) =
-            outcome.creation else {
+            outcome.creation
+        else {
             Issue.record("Expected the manual checklist route to win")
             return
         }

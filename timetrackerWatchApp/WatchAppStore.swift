@@ -13,6 +13,7 @@ final class WatchAppStore: NSObject {
             persistCommandQueue()
         }
     }
+
     var isSnapshotStale = false
     var hasConnectivityError = false
 
@@ -41,7 +42,8 @@ final class WatchAppStore: NSObject {
         if let data = defaults.data(forKey: Self.commandQueueKey) {
             if data.count <= WatchTransportLimits.maximumQueueEncodedBytes,
                let restoredQueue = try? JSONDecoder().decode(WatchCommandQueueState.self, from: data),
-               restoredQueue.isSafeForRestoration {
+               restoredQueue.isSafeForRestoration
+            {
                 commandQueue = restoredQueue
             } else {
                 commandQueue = WatchCommandQueueState()

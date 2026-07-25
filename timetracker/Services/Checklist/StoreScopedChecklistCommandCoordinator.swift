@@ -138,7 +138,8 @@ struct StoreScopedChecklistCommandCoordinator {
             }
             guard currentMutationIDs == baseline.itemMutationIDs,
                   orderedItemIDs.count == items.count,
-                  Set(orderedItemIDs) == Set(items.map(\.id)) else {
+                  Set(orderedItemIDs) == Set(items.map(\.id))
+            else {
                 throw StoreScopedChecklistMutationError.checklistChanged
             }
             let currentOrder = Self.ordered(items).map(\.id)
@@ -202,9 +203,15 @@ struct StoreScopedChecklistCommandCoordinator {
 
     private static func ordered(_ items: [ChecklistItem]) -> [ChecklistItem] {
         items.sorted { lhs, rhs in
-            if lhs.isCompleted != rhs.isCompleted { return !lhs.isCompleted }
-            if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
-            if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+            if lhs.isCompleted != rhs.isCompleted {
+                return !lhs.isCompleted
+            }
+            if lhs.sortOrder != rhs.sortOrder {
+                return lhs.sortOrder < rhs.sortOrder
+            }
+            if lhs.createdAt != rhs.createdAt {
+                return lhs.createdAt < rhs.createdAt
+            }
             return lhs.id.uuidString < rhs.id.uuidString
         }
     }

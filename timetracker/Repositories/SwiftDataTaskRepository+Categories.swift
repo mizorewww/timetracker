@@ -6,8 +6,12 @@ extension SwiftDataTaskRepository {
         try context.fetch(FetchDescriptor<TaskCategory>())
             .visibleDeduplicatedByID()
             .sorted { lhs, rhs in
-                if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
-                if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+                if lhs.sortOrder != rhs.sortOrder {
+                    return lhs.sortOrder < rhs.sortOrder
+                }
+                if lhs.createdAt != rhs.createdAt {
+                    return lhs.createdAt < rhs.createdAt
+                }
                 return lhs.id.uuidString < rhs.id.uuidString
             }
     }
@@ -16,7 +20,9 @@ extension SwiftDataTaskRepository {
         try context.fetch(FetchDescriptor<TaskCategoryAssignment>())
             .visibleDeduplicatedByID()
             .sorted { lhs, rhs in
-                if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+                if lhs.createdAt != rhs.createdAt {
+                    return lhs.createdAt < rhs.createdAt
+                }
                 return lhs.id.uuidString < rhs.id.uuidString
             }
     }
@@ -41,7 +47,8 @@ extension SwiftDataTaskRepository {
             uniqueKeysWithValues: categories.map { ($0.id, $0) }
         )
         guard orderedCategoryIDs.count == categories.count,
-              Set(orderedCategoryIDs) == Set(categoryByID.keys) else {
+              Set(orderedCategoryIDs) == Set(categoryByID.keys)
+        else {
             throw TaskRepositoryError.categoryUnavailable
         }
         guard categories.map(\.id) != orderedCategoryIDs else {

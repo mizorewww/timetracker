@@ -78,16 +78,16 @@ struct PreferenceSyncBehaviorTests {
     @Test @MainActor
     func corruptedSyncedPreferencesAreNormalizedAndBounded() {
         let repeatedID = UUID()
-        let planValues = (0..<40).map { index in
+        let planValues = (0 ..< 40).map { index in
             PomodoroPlan(
                 id: index < 2 ? repeatedID : UUID(),
                 name: String(repeating: "p", count: 200),
                 focusMinutes: 25
             )
         }
-        let quickStartValues = (0..<40).map { _ in UUID() }
-        let heatmapValues = (0..<80).map { _ in UUID() }
-        let modelValues = (0..<300).map { " model-\($0) " } + ["model-1", "   "]
+        let quickStartValues = (0 ..< 40).map { _ in UUID() }
+        let heatmapValues = (0 ..< 80).map { _ in UUID() }
+        let modelValues = (0 ..< 300).map { " model-\($0) " } + ["model-1", "   "]
         let preferences = AppPreferences(syncedPreferences: [
             SyncedPreference(
                 key: AppPreferenceKey.preferredColorScheme.rawValue,
@@ -125,7 +125,7 @@ struct PreferenceSyncBehaviorTests {
             ),
             SyncedPreference(
                 key: AppPreferenceKey.llmEndpoint.rawValue,
-                valueJSON: PreferenceJSON.encode("  https://example.test/" + String(repeating: "a", count: 3_000)),
+                valueJSON: PreferenceJSON.encode("  https://example.test/" + String(repeating: "a", count: 3000)),
                 deviceID: "remote"
             ),
             SyncedPreference(
@@ -137,7 +137,7 @@ struct PreferenceSyncBehaviorTests {
                 key: AppPreferenceKey.llmAvailableModelIDs.rawValue,
                 valueJSON: PreferenceJSON.encode(modelValues),
                 deviceID: "remote"
-            )
+            ),
         ])
 
         #expect(preferences.preferredColorScheme == "system")
@@ -169,12 +169,12 @@ struct PreferenceSyncBehaviorTests {
 
     @Test @MainActor
     func heatmapPreferenceJSONCanonicalizesInvalidDuplicateAndOversizedSelections() throws {
-        let taskIDs = (0..<(AppPreferenceValueSanitizer.maximumTodayHeatmapTaskCount + 2))
+        let taskIDs = (0 ..< (AppPreferenceValueSanitizer.maximumTodayHeatmapTaskCount + 2))
             .map { _ in UUID() }
         let rawValues = [
             taskIDs[0].uuidString.lowercased(),
             "not-a-uuid",
-            taskIDs[0].uuidString
+            taskIDs[0].uuidString,
         ] + taskIDs.dropFirst().map(\.uuidString)
 
         let canonicalJSON = try PreferenceJSON.canonicalValueJSON(
@@ -204,14 +204,14 @@ struct PreferenceSyncBehaviorTests {
                 key: AppPreferenceKey.todayHeatmapPeriod.rawValue,
                 valueJSON: PreferenceJSON.encode(ActivityHeatmapPeriod.threeMonths.rawValue),
                 deviceID: "remote"
-            )
+            ),
         ])
         let invalid = AppPreferences(syncedPreferences: [
             SyncedPreference(
                 key: AppPreferenceKey.todayHeatmapPeriod.rawValue,
                 valueJSON: PreferenceJSON.encode("futurePeriod"),
                 deviceID: "remote"
-            )
+            ),
         ])
         let canonicalJSON = try PreferenceJSON.canonicalValueJSON(
             for: .todayHeatmapPeriod,
@@ -311,7 +311,7 @@ struct PreferenceSyncBehaviorTests {
         let keys = AppPreferenceKey.allCases.map(\.rawValue) + [
             AppCloudSync.enabledKey,
             SyncedPreferenceService.migrationKey,
-            SyncedPreferenceService.legacyLLMAPIKey
+            SyncedPreferenceService.legacyLLMAPIKey,
         ]
         let previousValues = Dictionary(uniqueKeysWithValues: keys.map { ($0, defaults.object(forKey: $0)) })
         defer {
@@ -427,8 +427,8 @@ struct PreferenceSyncBehaviorTests {
         context.insert(cloudPreference)
         try context.save()
 
-        let preferences = AppPreferences(
-            syncedPreferences: try context.fetch(FetchDescriptor<SyncedPreference>())
+        let preferences = try AppPreferences(
+            syncedPreferences: context.fetch(FetchDescriptor<SyncedPreference>())
         )
         #expect(preferences.defaultFocusMinutes == 55)
     }
@@ -552,7 +552,7 @@ struct PreferenceSyncBehaviorTests {
                 shortBreakMinutes: 10,
                 longBreakMinutes: 20,
                 rounds: 5
-            )
+            ),
         ])
         #expect(store.setLLMConfiguration(
             endpoint: " https://example.test/v1 ",
@@ -733,19 +733,19 @@ struct PreferenceSyncBehaviorTests {
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
-        var firstDraft = store.editorDraft(for: try #require(store.task(for: task.id)))
+        var firstDraft = try store.editorDraft(for: #require(store.task(for: task.id)))
         firstDraft.checklistItems = [
             ChecklistEditorDraft(title: "Write copy"),
-            ChecklistEditorDraft(title: "Ship build")
+            ChecklistEditorDraft(title: "Ship build"),
         ]
         store.saveTaskDraft(firstDraft)
         #expect(store.checklistItems(for: task.id).map(\.title) == ["Write copy", "Ship build"])
 
         let existing = store.checklistItems(for: task.id)
-        var secondDraft = store.editorDraft(for: try #require(store.task(for: task.id)))
+        var secondDraft = try store.editorDraft(for: #require(store.task(for: task.id)))
         secondDraft.checklistItems = [
             ChecklistEditorDraft(item: existing[1]),
-            ChecklistEditorDraft(item: existing[0])
+            ChecklistEditorDraft(item: existing[0]),
         ]
         secondDraft.checklistItems[0].isCompleted = true
         secondDraft.checklistItems.removeLast()
@@ -775,7 +775,7 @@ struct PreferenceSyncBehaviorTests {
             ChecklistOrderingElement(id: openA, isCompleted: false),
             ChecklistOrderingElement(id: openB, isCompleted: false),
             ChecklistOrderingElement(id: doneA, isCompleted: true),
-            ChecklistOrderingElement(id: doneB, isCompleted: true)
+            ChecklistOrderingElement(id: doneB, isCompleted: true),
         ]
 
         #expect(service.reorderedIDs(elements: elements, sourceOffsets: IndexSet(integer: 1), destination: 0) == [openB, openA, doneA, doneB])
@@ -791,7 +791,7 @@ struct PreferenceSyncBehaviorTests {
             ChecklistOrderingElement(id: "Done A", isCompleted: true),
             ChecklistOrderingElement(id: "Open A", isCompleted: false),
             ChecklistOrderingElement(id: "Done B", isCompleted: true),
-            ChecklistOrderingElement(id: "Open B", isCompleted: false)
+            ChecklistOrderingElement(id: "Open B", isCompleted: false),
         ]
 
         let grouped = service.completionGrouped(
@@ -836,11 +836,11 @@ struct PreferenceSyncBehaviorTests {
         let completed = store.checklistItems(for: task.id)
         #expect(completed.map(\.title) == ["B", "C", "A"])
         #expect(Dictionary(uniqueKeysWithValues: completed
-            .filter { $0.id != itemA.id }
-            .map { ($0.id, $0.sortOrder) }) == siblingSortOrderByID)
+                .filter { $0.id != itemA.id }
+                .map { ($0.id, $0.sortOrder) }) == siblingSortOrderByID)
         #expect(Dictionary(uniqueKeysWithValues: completed
-            .filter { $0.id != itemA.id }
-            .map { ($0.id, $0.clientMutationID) }) == siblingMutationIDByID)
+                .filter { $0.id != itemA.id }
+                .map { ($0.id, $0.clientMutationID) }) == siblingMutationIDByID)
         #expect(store.checklistItemsForDisplay(for: task.id).map(\.title) == ["B", "C", "A"])
         let completedA = try #require(completed.first { $0.id == itemA.id })
         #expect(
@@ -851,8 +851,8 @@ struct PreferenceSyncBehaviorTests {
         #expect(store.toggleChecklistItem(completedA))
         #expect(store.checklistItemsForDisplay(for: task.id).map(\.title) == ["B", "A", "C"])
         #expect(Dictionary(uniqueKeysWithValues: store.checklistItems(for: task.id)
-            .filter { $0.id != itemA.id }
-            .map { ($0.id, $0.clientMutationID) }) == siblingMutationIDByID)
+                .filter { $0.id != itemA.id }
+                .map { ($0.id, $0.clientMutationID) }) == siblingMutationIDByID)
     }
 
     @Test @MainActor

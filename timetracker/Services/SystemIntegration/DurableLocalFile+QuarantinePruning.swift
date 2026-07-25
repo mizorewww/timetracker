@@ -15,7 +15,7 @@ nonisolated extension DurableLocalFile {
                 .contentModificationDateKey,
                 .fileSizeKey,
                 .isRegularFileKey,
-                .isSymbolicLinkKey
+                .isSymbolicLinkKey,
             ],
             options: []
         )
@@ -29,7 +29,7 @@ nonisolated extension DurableLocalFile {
                 .contentModificationDateKey,
                 .fileSizeKey,
                 .isRegularFileKey,
-                .isSymbolicLinkKey
+                .isSymbolicLinkKey,
             ])
             guard values.isSymbolicLink != true, values.isRegularFile == true else {
                 urlsToRemove.append(url)
@@ -38,7 +38,8 @@ nonisolated extension DurableLocalFile {
             guard let byteCount = values.fileSize.map(Int64.init),
                   byteCount >= 0,
                   let modifiedAt = values.contentModificationDate,
-                  modifiedAt.timeIntervalSinceReferenceDate.isFinite else {
+                  modifiedAt.timeIntervalSinceReferenceDate.isFinite
+            else {
                 throw DurableLocalFileError.quarantineEntryMetadataUnavailable
             }
             if modifiedAt <= oldestAllowedDate || modifiedAt > newestAllowedDate {
@@ -110,7 +111,8 @@ nonisolated extension DurableLocalFile {
         sourceDirectory: URL
     ) throws {
         guard try managedFileExists(at: quarantineURL),
-              try managedFileExists(at: sourceURL) == false else {
+              try managedFileExists(at: sourceURL) == false
+        else {
             throw DurableLocalFileError.quarantineRollbackFailed(
                 canonicalPath: sourceURL.path,
                 quarantinePath: quarantineURL.path

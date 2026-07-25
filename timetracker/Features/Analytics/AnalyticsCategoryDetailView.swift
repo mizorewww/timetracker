@@ -68,11 +68,10 @@ struct AnalyticsCategoryDetailView: View {
         .navigationTitle(category.destinationTitle)
         .accessibilityIdentifier("analytics.categoryDetail.\(category.rawValue)")
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.inline)
         #endif
-        .transaction { transaction in
-            transaction.animation = nil
-        }
+            .transaction { transaction in
+                transaction.animation = nil
+            }
     }
-
 }

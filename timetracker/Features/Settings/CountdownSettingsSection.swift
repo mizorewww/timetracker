@@ -65,7 +65,11 @@ struct CountdownSettingsSection: View {
             AppStrings.localized("settings.countdown.delete.confirm.title"),
             isPresented: Binding(
                 get: { pendingDeletionEventID != nil },
-                set: { if !$0 { pendingDeletionEventID = nil } }
+                set: {
+                    if !$0 {
+                        pendingDeletionEventID = nil
+                    }
+                }
             ),
             titleVisibility: .visible
         ) {

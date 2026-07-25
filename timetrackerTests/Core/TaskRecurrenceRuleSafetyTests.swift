@@ -108,7 +108,7 @@ struct TaskRecurrenceRuleSafetyTests {
 
         #expect(
             throws:
-                TaskRecurrenceMutationError.immutableRuleConfiguration
+            TaskRecurrenceMutationError.immutableRuleConfiguration
         ) {
             try command.createDailyRule(
                 templateTaskID: template.id,
@@ -123,7 +123,7 @@ struct TaskRecurrenceRuleSafetyTests {
 
         #expect(
             throws:
-                TaskRecurrenceMutationError.immutableRuleConfiguration
+            TaskRecurrenceMutationError.immutableRuleConfiguration
         ) {
             try command.createDailyRule(
                 templateTaskID: template.id,
@@ -302,7 +302,8 @@ struct TaskRecurrenceRuleSafetyTests {
 
     @Test
     func archivedTemplateSkipsDaysAndUnarchiveCreatesOnlyToday()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let template = try makeTemplate(
             in: context,
@@ -375,7 +376,8 @@ struct TaskRecurrenceRuleSafetyTests {
 
     @Test
     func occurrenceArrivingBeforeRuleStillProtectsTemplate()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let template = try makeTemplate(
             in: context,
@@ -402,11 +404,11 @@ struct TaskRecurrenceRuleSafetyTests {
 
         #expect(service.trackableTaskIDs(tasks: tasks).contains(template.id))
         #expect(
-            service.directWorkTaskIDs(
+            try service.directWorkTaskIDs(
                 tasks: tasks,
                 recurrenceRules: [],
                 recurrenceOccurrences:
-                    try repository.taskRecurrenceOccurrences()
+                repository.taskRecurrenceOccurrences()
             ).contains(template.id) == false
         )
     }

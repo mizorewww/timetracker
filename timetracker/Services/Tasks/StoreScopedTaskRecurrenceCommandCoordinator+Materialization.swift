@@ -12,8 +12,9 @@ extension StoreScopedTaskRecurrenceCommandCoordinator {
     ) throws {
         guard rule.isEnabled,
               let timeZone = TimeZone(
-                identifier: rule.timeZoneIdentifier
-              ) else {
+                  identifier: rule.timeZoneIdentifier
+              )
+        else {
             return
         }
         let dayKey = TaskRecurrenceDayKey.value(
@@ -46,7 +47,8 @@ extension StoreScopedTaskRecurrenceCommandCoordinator {
               state.claimedOccurrenceKeys.contains(occurrenceKey) == false,
               state.claimedTaskIDs.contains(generatedTaskID) == false,
               state.claimedQuantityGoalIDs.contains(generatedGoalID) ==
-                false else {
+              false
+        else {
             return
         }
 
@@ -105,8 +107,8 @@ extension StoreScopedTaskRecurrenceCommandCoordinator {
                 generatedTaskID: generatedTaskID,
                 generatedQuantityGoalID: copiedGoalID,
                 affectedAncestorTaskIDs:
-                    state.ancestors(of: template.id)
-                        .union([template.id])
+                state.ancestors(of: template.id)
+                    .union([template.id])
             )
         )
     }
@@ -142,7 +144,7 @@ private extension StoreScopedTaskRecurrenceCommandCoordinator {
             trimmedUnit.isEmpty == false &&
             hasControlCharacter == false &&
             goal.unitLabel.utf8.count <=
-                TaskQuantityPolicy.maximumUnitLabelByteCount
+            TaskQuantityPolicy.maximumUnitLabelByteCount
         return QuantityBlueprint(
             goal: isValid ? goal : nil,
             isValid: isValid

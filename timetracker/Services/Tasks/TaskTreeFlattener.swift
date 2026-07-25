@@ -1,6 +1,6 @@
 import Foundation
 
-struct TaskTreeFlattener {
+enum TaskTreeFlattener {
     static func visibleRows(
         rootTasks: [TaskNode],
         children: (TaskNode) -> [TaskNode],

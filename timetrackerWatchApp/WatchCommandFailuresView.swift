@@ -4,7 +4,9 @@ struct WatchCommandFailurePresentation: Equatable, Identifiable {
     let failure: WatchFailedCommand
     let title: String
 
-    var id: UUID { failure.id }
+    var id: UUID {
+        failure.id
+    }
 }
 
 struct WatchCommandFailuresView: View {

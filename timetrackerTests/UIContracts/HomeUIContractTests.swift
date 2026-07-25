@@ -37,20 +37,20 @@ struct HomeUIContractTests {
         }
 
         try addSegment(
-            start: previousStart.addingTimeInterval(23.5 * 3_600),
+            start: previousStart.addingTimeInterval(23.5 * 3600),
             end: todayStart.addingTimeInterval(30 * 60)
         )
         try addSegment(
-            start: previousStart.addingTimeInterval(23.75 * 3_600),
+            start: previousStart.addingTimeInterval(23.75 * 3600),
             end: todayStart.addingTimeInterval(15 * 60)
         )
         try addSegment(
-            start: todayStart.addingTimeInterval(9 * 3_600),
-            end: todayStart.addingTimeInterval(10 * 3_600)
+            start: todayStart.addingTimeInterval(9 * 3600),
+            end: todayStart.addingTimeInterval(10 * 3600)
         )
         try addSegment(
-            start: todayStart.addingTimeInterval(9.5 * 3_600),
-            end: todayStart.addingTimeInterval(10.5 * 3_600)
+            start: todayStart.addingTimeInterval(9.5 * 3600),
+            end: todayStart.addingTimeInterval(10.5 * 3600)
         )
 
         let store = makeTestStore()
@@ -58,10 +58,10 @@ struct HomeUIContractTests {
 
         let snapshot = store.todayMetricsSnapshot(now: now, calendar: calendar)
 
-        #expect(snapshot.grossSeconds == 9_900)
-        #expect(snapshot.wallSeconds == 7_200)
-        #expect(snapshot.previousGrossSeconds == 2_700)
-        #expect(snapshot.previousWallSeconds == 1_800)
+        #expect(snapshot.grossSeconds == 9900)
+        #expect(snapshot.wallSeconds == 7200)
+        #expect(snapshot.previousGrossSeconds == 2700)
+        #expect(snapshot.previousWallSeconds == 1800)
     }
 
     @Test @MainActor
@@ -106,34 +106,34 @@ struct HomeUIContractTests {
         }
 
         try addSegment(
-            start: week.start.addingTimeInterval(-1_800),
-            end: week.start.addingTimeInterval(1_800)
+            start: week.start.addingTimeInterval(-1800),
+            end: week.start.addingTimeInterval(1800)
         )
         try addSegment(
-            start: week.start.addingTimeInterval(9 * 3_600),
-            end: week.start.addingTimeInterval(10 * 3_600)
+            start: week.start.addingTimeInterval(9 * 3600),
+            end: week.start.addingTimeInterval(10 * 3600)
         )
         try addSegment(
-            start: week.start.addingTimeInterval(9.5 * 3_600),
-            end: week.start.addingTimeInterval(10.5 * 3_600)
+            start: week.start.addingTimeInterval(9.5 * 3600),
+            end: week.start.addingTimeInterval(10.5 * 3600)
         )
         let wednesday = try #require(
             calendar.date(byAdding: .day, value: 2, to: week.start)
         )
         try addSegment(
-            start: wednesday.addingTimeInterval(23.5 * 3_600),
-            end: wednesday.addingTimeInterval(24.5 * 3_600)
+            start: wednesday.addingTimeInterval(23.5 * 3600),
+            end: wednesday.addingTimeInterval(24.5 * 3600)
         )
         try addSegment(
-            start: now.addingTimeInterval(-2 * 3_600),
-            end: now.addingTimeInterval(3_600)
+            start: now.addingTimeInterval(-2 * 3600),
+            end: now.addingTimeInterval(3600)
         )
         let friday = try #require(
             calendar.date(byAdding: .day, value: 4, to: week.start)
         )
         try addSegment(
-            start: friday.addingTimeInterval(10 * 3_600),
-            end: friday.addingTimeInterval(11 * 3_600)
+            start: friday.addingTimeInterval(10 * 3600),
+            end: friday.addingTimeInterval(11 * 3600)
         )
 
         let store = makeTestStore()
@@ -146,9 +146,9 @@ struct HomeUIContractTests {
 
         #expect(snapshot.interval == week)
         #expect(snapshot.daily.count == 4)
-        #expect(snapshot.daily.map(\.grossSeconds) == [9_000, 0, 1_800, 9_000])
-        #expect(snapshot.daily.map(\.wallSeconds) == [7_200, 0, 1_800, 9_000])
-        #expect(snapshot.totalGrossSeconds == 19_800)
+        #expect(snapshot.daily.map(\.grossSeconds) == [9000, 0, 1800, 9000])
+        #expect(snapshot.daily.map(\.wallSeconds) == [7200, 0, 1800, 9000])
+        #expect(snapshot.totalGrossSeconds == 19800)
         #expect(snapshot.hasTrackedTime)
         #expect(snapshot.requiresLiveRefresh)
     }
@@ -186,7 +186,7 @@ struct HomeUIContractTests {
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
         let firstDate = start.addingTimeInterval(600)
-        let secondDate = start.addingTimeInterval(1_200)
+        let secondDate = start.addingTimeInterval(1200)
 
         let first = store.weeklyGrossTimeSnapshot(
             now: firstDate,
@@ -213,7 +213,7 @@ struct HomeUIContractTests {
 
         #expect(segment.endedAt == nil)
         #expect(first.totalGrossSeconds == 600)
-        #expect(second.totalGrossSeconds == 1_200)
+        #expect(second.totalGrossSeconds == 1200)
         #expect(first.requiresLiveRefresh)
         #expect(second.requiresLiveRefresh)
         #expect(firstRequest.evaluationKey.liveRefreshBucket != nil)
@@ -240,7 +240,7 @@ struct HomeUIContractTests {
         let week = try #require(
             calendar.dateInterval(of: .weekOfYear, for: now)
         )
-        let expectedDates = try (0..<4).map { offset in
+        let expectedDates = try (0 ..< 4).map { offset in
             try #require(
                 calendar.date(byAdding: .day, value: offset, to: week.start)
             )
@@ -346,13 +346,13 @@ struct HomeUIContractTests {
                 weekday: 1
             )
         )
-        #expect(week.duration == 167 * 3_600)
-        #expect(sundayDay.duration == 23 * 3_600)
+        #expect(week.duration == 167 * 3600)
+        #expect(sundayDay.duration == 23 * 3600)
         #expect(snapshot.interval == week)
         #expect(snapshot.daily.map(\.date) == [sunday, monday, tuesday])
-        #expect(snapshot.daily.map(\.grossSeconds) == [81_000, 1_800, 0])
-        #expect(snapshot.daily.map(\.wallSeconds) == [81_000, 1_800, 0])
-        #expect(snapshot.totalGrossSeconds == 82_800)
+        #expect(snapshot.daily.map(\.grossSeconds) == [81000, 1800, 0])
+        #expect(snapshot.daily.map(\.wallSeconds) == [81000, 1800, 0])
+        #expect(snapshot.totalGrossSeconds == 82800)
         #expect(snapshot.hasTrackedTime)
         #expect(snapshot.requiresLiveRefresh == false)
     }
@@ -385,7 +385,7 @@ struct HomeUIContractTests {
         _ = try timeRepository.addManualSegment(
             taskID: task.id,
             startedAt: start,
-            endedAt: start.addingTimeInterval(3_600),
+            endedAt: start.addingTimeInterval(3600),
             note: nil
         )
         let store = makeTestStore()
@@ -396,12 +396,12 @@ struct HomeUIContractTests {
             calendar: calendar
         )
         let second = store.weeklyGrossTimeSnapshot(
-            now: start.addingTimeInterval(1_200),
+            now: start.addingTimeInterval(1200),
             calendar: calendar
         )
 
         #expect(first.totalGrossSeconds == 600)
-        #expect(second.totalGrossSeconds == 1_200)
+        #expect(second.totalGrossSeconds == 1200)
         #expect(first.requiresLiveRefresh)
         #expect(second.requiresLiveRefresh)
     }
@@ -434,14 +434,14 @@ struct HomeUIContractTests {
         _ = try timeRepository.addManualSegment(
             taskID: task.id,
             startedAt: start,
-            endedAt: start.addingTimeInterval(3_600),
+            endedAt: start.addingTimeInterval(3600),
             note: nil
         )
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
         let beforeDate = start.addingTimeInterval(-600)
         let duringDate = start.addingTimeInterval(600)
-        let afterDate = start.addingTimeInterval(4_200)
+        let afterDate = start.addingTimeInterval(4200)
 
         let before = store.weeklyGrossTimeSnapshot(
             now: beforeDate,
@@ -486,7 +486,7 @@ struct HomeUIContractTests {
         #expect(waitingRequest.evaluationKey.liveRefreshBucket != nil)
         #expect(during.totalGrossSeconds == 600)
         #expect(during.requiresLiveRefresh)
-        #expect(after.totalGrossSeconds == 3_600)
+        #expect(after.totalGrossSeconds == 3600)
         #expect(after.requiresLiveRefresh == false)
         #expect(rewound.totalGrossSeconds == 0)
         #expect(rewound.requiresLiveRefresh)
@@ -496,7 +496,7 @@ struct HomeUIContractTests {
 
     @Test @MainActor
     func todayCountdownOrderingIsStableForMatchingDatesAndTitles() {
-        let date = Date(timeIntervalSince1970: 10_000)
+        let date = Date(timeIntervalSince1970: 10000)
         let later = CountdownEvent(title: "Later", date: date.addingTimeInterval(1), deviceID: "test")
         let beta = CountdownEvent(title: "Beta", date: date, deviceID: "test")
         let alphaB = CountdownEvent(title: "Alpha", date: date, deviceID: "test")
@@ -517,7 +517,7 @@ struct HomeUIContractTests {
         let pinnedTask = try taskRepository.createTask(title: "Pinned", parentID: nil, colorHex: nil, iconName: nil)
         let frequentTask = try taskRepository.createTask(title: "Frequent", parentID: nil, colorHex: nil, iconName: nil)
         let occasionalTask = try taskRepository.createTask(title: "Occasional", parentID: nil, colorHex: nil, iconName: nil)
-        let start = Date(timeIntervalSince1970: 10_000)
+        let start = Date(timeIntervalSince1970: 10000)
 
         _ = try timeRepository.addManualSegment(
             taskID: occasionalTask.id,
@@ -527,20 +527,20 @@ struct HomeUIContractTests {
         )
         _ = try timeRepository.addManualSegment(
             taskID: frequentTask.id,
-            startedAt: start.addingTimeInterval(1_000),
-            endedAt: start.addingTimeInterval(1_600),
+            startedAt: start.addingTimeInterval(1000),
+            endedAt: start.addingTimeInterval(1600),
             note: nil
         )
         _ = try timeRepository.addManualSegment(
             taskID: frequentTask.id,
-            startedAt: start.addingTimeInterval(2_000),
-            endedAt: start.addingTimeInterval(2_600),
+            startedAt: start.addingTimeInterval(2000),
+            endedAt: start.addingTimeInterval(2600),
             note: nil
         )
         _ = try timeRepository.addManualSegment(
             taskID: pinnedTask.id,
-            startedAt: start.addingTimeInterval(3_000),
-            endedAt: start.addingTimeInterval(3_600),
+            startedAt: start.addingTimeInterval(3000),
+            endedAt: start.addingTimeInterval(3600),
             note: nil
         )
 
@@ -551,5 +551,4 @@ struct HomeUIContractTests {
 
         #expect(quickStartTasks.map(\.id) == [frequentTask.id, occasionalTask.id])
     }
-
 }

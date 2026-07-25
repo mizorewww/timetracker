@@ -28,7 +28,7 @@ struct PhoneHomeView: View {
                     container: .listSection,
                     showsWallTime: store.preferences.showGrossAndWallTogether
                 )
-                    .textCase(nil)
+                .textCase(nil)
             }
 
             HomeWeeklyGrossTimeSection(

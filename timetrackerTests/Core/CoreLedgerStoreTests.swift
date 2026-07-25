@@ -9,7 +9,7 @@ struct CoreLedgerStoreTests {
         let repository = LedgerRefreshSpyRepository()
         var store = LedgerStore()
 
-        try store.refreshVisible(repository: repository, now: Date(timeIntervalSince1970: 10_000))
+        try store.refreshVisible(repository: repository, now: Date(timeIntervalSince1970: 10000))
 
         #expect(repository.activeSegmentsCallCount == 1)
         #expect(repository.rangeSegmentsCallCount == 1)
@@ -40,16 +40,16 @@ struct CoreLedgerStoreTests {
             taskID: taskID,
             source: .timer,
             deviceID: "test",
-            startedAt: Date(timeIntervalSince1970: 10_000)
+            startedAt: Date(timeIntervalSince1970: 10000)
         )
-        unchangedSession.endedAt = Date(timeIntervalSince1970: 10_100)
+        unchangedSession.endedAt = Date(timeIntervalSince1970: 10100)
         let unchangedSegment = TimeSegment(
             sessionID: unchangedSession.id,
             taskID: taskID,
             source: .timer,
             deviceID: "test",
-            startedAt: Date(timeIntervalSince1970: 10_000),
-            endedAt: Date(timeIntervalSince1970: 10_100)
+            startedAt: Date(timeIntervalSince1970: 10000),
+            endedAt: Date(timeIntervalSince1970: 10100)
         )
 
         let updatedSession = TimeSession(
@@ -104,13 +104,13 @@ struct CoreLedgerStoreTests {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
         let firstDay = Date(timeIntervalSince1970: 172_800)
-        let secondDay = firstDay.addingTimeInterval(86_400)
+        let secondDay = firstDay.addingTimeInterval(86400)
         let taskID = UUID()
         let session = TimeSession(
             taskID: taskID,
             source: .timer,
             deviceID: "test",
-            startedAt: firstDay.addingTimeInterval(3_600)
+            startedAt: firstDay.addingTimeInterval(3600)
         )
         let activeSegment = TimeSegment(
             sessionID: session.id,
@@ -126,7 +126,7 @@ struct CoreLedgerStoreTests {
         var store = LedgerStore()
         try store.refreshHistory(
             repository: repository,
-            now: firstDay.addingTimeInterval(12 * 3_600),
+            now: firstDay.addingTimeInterval(12 * 3600),
             calendar: calendar
         )
         repository.resetCounters()
@@ -136,9 +136,9 @@ struct CoreLedgerStoreTests {
             repository: repository,
             ranges: [StoreInvalidationRange(
                 start: secondDay,
-                end: secondDay.addingTimeInterval(86_400)
+                end: secondDay.addingTimeInterval(86400)
             )],
-            now: secondDay.addingTimeInterval(12 * 3_600)
+            now: secondDay.addingTimeInterval(12 * 3600)
         )
 
         #expect(store.segment(for: activeSegment.id) == nil)
@@ -153,13 +153,13 @@ struct CoreLedgerStoreTests {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
         let firstDay = Date(timeIntervalSince1970: 172_800)
-        let secondDay = firstDay.addingTimeInterval(86_400)
+        let secondDay = firstDay.addingTimeInterval(86400)
         let taskID = UUID()
         let session = TimeSession(
             taskID: taskID,
             source: .timer,
             deviceID: "test",
-            startedAt: firstDay.addingTimeInterval(3_600)
+            startedAt: firstDay.addingTimeInterval(3600)
         )
         let segment = TimeSegment(
             sessionID: session.id,
@@ -175,12 +175,12 @@ struct CoreLedgerStoreTests {
 
         try store.refreshHistory(
             repository: repository,
-            now: firstDay.addingTimeInterval(12 * 3_600),
+            now: firstDay.addingTimeInterval(12 * 3600),
             calendar: calendar
         )
 
-        let queryNow = secondDay.addingTimeInterval(12 * 3_600)
-        let interval = DateInterval(start: secondDay, end: secondDay.addingTimeInterval(86_400))
+        let queryNow = secondDay.addingTimeInterval(12 * 3600)
+        let interval = DateInterval(start: secondDay, end: secondDay.addingTimeInterval(86400))
         #expect(store.segments(overlapping: interval, now: queryNow).map(\.id) == [segment.id])
         #expect(store.segments(forTaskIDs: [taskID]).map(\.id) == [segment.id])
         #expect(store.segments(forSessionID: session.id).map(\.id) == [segment.id])
@@ -225,14 +225,14 @@ struct CoreLedgerStoreTests {
 
         #expect(store.segmentIDsByDay.isEmpty)
         #expect(store.longSpanSegmentIDs == [segment.id])
-        let day = DateInterval(
+        let day = try DateInterval(
             start: queryDay,
-            end: try #require(calendar.date(byAdding: .day, value: 1, to: queryDay))
+            end: #require(calendar.date(byAdding: .day, value: 1, to: queryDay))
         )
         #expect(store.segments(overlapping: day, now: end).map(\.id) == [segment.id])
-        let wholeHistory = DateInterval(
+        let wholeHistory = try DateInterval(
             start: start,
-            end: try #require(calendar.date(byAdding: .day, value: 1, to: end))
+            end: #require(calendar.date(byAdding: .day, value: 1, to: end))
         )
         #expect(store.segments(overlapping: wholeHistory, now: end).map(\.id) == [segment.id])
     }
@@ -248,13 +248,13 @@ struct CoreLedgerStoreTests {
             calendar.date(from: DateComponents(year: 2026, month: 3, day: 1, hour: 12))
         )
         let taskID = UUID()
-        let sessions = (0..<40).map { offset in
+        let sessions = (0 ..< 40).map { offset in
             TimeSession(
                 taskID: taskID,
                 source: .timer,
                 deviceID: "test",
                 startedAt: calendar.date(byAdding: .day, value: offset, to: firstDay)!
-                    .addingTimeInterval(3_600)
+                    .addingTimeInterval(3600)
             )
         }
         let segments = sessions.map { session in
@@ -321,7 +321,7 @@ struct CoreLedgerStoreTests {
         repository.fullSessions = [session]
         let queryInterval = DateInterval(
             start: reference,
-            end: reference.addingTimeInterval(1_200)
+            end: reference.addingTimeInterval(1200)
         )
         var store = LedgerStore()
 
@@ -338,7 +338,7 @@ struct CoreLedgerStoreTests {
 
         try store.refreshHistory(
             repository: repository,
-            now: reference.addingTimeInterval(1_200),
+            now: reference.addingTimeInterval(1200),
             calendar: calendar
         )
         repository.rangeSegments = []
@@ -355,13 +355,13 @@ struct CoreLedgerStoreTests {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
         let firstDay = Date(timeIntervalSince1970: 172_800)
-        let secondDay = firstDay.addingTimeInterval(86_400)
+        let secondDay = firstDay.addingTimeInterval(86400)
         let taskID = UUID()
         let session = TimeSession(
             taskID: taskID,
             source: .pomodoro,
             deviceID: "test",
-            startedAt: firstDay.addingTimeInterval(23 * 3_600)
+            startedAt: firstDay.addingTimeInterval(23 * 3600)
         )
         let active = TimeSegment(
             sessionID: session.id,
@@ -412,7 +412,7 @@ struct CoreLedgerStoreTests {
         let taskID = UUID()
         let otherTaskID = UUID()
         let base = Date(timeIntervalSinceReferenceDate: 2_000_000)
-        let sessions = (0..<14).map { index in
+        let sessions = (0 ..< 14).map { index in
             TimeSession(
                 taskID: index.isMultiple(of: 3) ? otherTaskID : taskID,
                 source: .timer,
@@ -435,13 +435,15 @@ struct CoreLedgerStoreTests {
         repository.fullSessions = sessions
         var store = LedgerStore()
 
-        try store.refreshHistory(repository: repository, now: base.addingTimeInterval(1_000))
+        try store.refreshHistory(repository: repository, now: base.addingTimeInterval(1000))
 
         #expect(store.recentSegmentIDsByTaskID[taskID]?.count == 8)
         let expected = segments
             .filter { $0.taskID == taskID || $0.taskID == otherTaskID }
             .sorted { lhs, rhs in
-                if lhs.startedAt != rhs.startedAt { return lhs.startedAt > rhs.startedAt }
+                if lhs.startedAt != rhs.startedAt {
+                    return lhs.startedAt > rhs.startedAt
+                }
                 return lhs.id.uuidString < rhs.id.uuidString
             }
             .prefix(4)
@@ -452,7 +454,7 @@ struct CoreLedgerStoreTests {
         store.replaceSegments(
             ids: [removed.id],
             with: [],
-            now: base.addingTimeInterval(1_100),
+            now: base.addingTimeInterval(1100),
             calendar: .current,
             refreshUnchangedTimeSensitiveSegments: false
         )
@@ -460,7 +462,9 @@ struct CoreLedgerStoreTests {
         let remainingTaskSegments = segments
             .filter { $0.taskID == taskID && $0.id != removed.id }
             .sorted { lhs, rhs in
-                if lhs.startedAt != rhs.startedAt { return lhs.startedAt > rhs.startedAt }
+                if lhs.startedAt != rhs.startedAt {
+                    return lhs.startedAt > rhs.startedAt
+                }
                 return lhs.id.uuidString < rhs.id.uuidString
             }
             .prefix(8)
@@ -504,28 +508,28 @@ struct CoreLedgerStoreTests {
 
         let sparseCurrent = segment(
             taskID: sparseTaskID,
-            startedAt: day.addingTimeInterval(3_600)
+            startedAt: day.addingTimeInterval(3600)
         )
         let deepCurrent = segment(
             taskID: deepHistoryTaskID,
-            startedAt: day.addingTimeInterval(7_200)
+            startedAt: day.addingTimeInterval(7200)
         )
-        let unrelated = (0..<50).map { index in
+        let unrelated = (0 ..< 50).map { index in
             segment(
                 taskID: unrelatedTaskID,
-                startedAt: day.addingTimeInterval(Double(10_800 + index * 60))
+                startedAt: day.addingTimeInterval(Double(10800 + index * 60))
             )
         }
-        let sparseHistory = (1...20).map { offset in
+        let sparseHistory = (1 ... 20).map { offset in
             segment(
                 taskID: sparseTaskID,
-                startedAt: day.addingTimeInterval(Double(-offset * 86_400))
+                startedAt: day.addingTimeInterval(Double(-offset * 86400))
             )
         }
-        let deepHistory = (1...60).map { offset in
+        let deepHistory = (1 ... 60).map { offset in
             segment(
                 taskID: deepHistoryTaskID,
-                startedAt: day.addingTimeInterval(Double(-offset * 86_400))
+                startedAt: day.addingTimeInterval(Double(-offset * 86400))
             )
         }
         let records = [sparseCurrent, deepCurrent] + unrelated + sparseHistory + deepHistory
@@ -597,7 +601,7 @@ private final class LedgerRefreshSpyRepository: TimeTrackingRepository {
         try segments(from: from, to: to, now: Date())
     }
 
-    func segments(from: Date, to: Date, now: Date) throws -> [TimeSegment] {
+    func segments(from _: Date, to _: Date, now _: Date) throws -> [TimeSegment] {
         rangeSegmentsCallCount += 1
         return rangeSegments
     }
@@ -607,19 +611,19 @@ private final class LedgerRefreshSpyRepository: TimeTrackingRepository {
         return fullSegments
     }
 
-    func startTask(taskID: UUID, source: TimeSessionSource) throws -> TimeSegment {
+    func startTask(taskID _: UUID, source _: TimeSessionSource) throws -> TimeSegment {
         fatalError("Unused in LedgerRefreshSpyRepository")
     }
 
-    func stopSegment(segmentID: UUID) throws {}
+    func stopSegment(segmentID _: UUID) throws {}
 
-    func updateSegment(segmentID: UUID, taskID: UUID, startedAt: Date, endedAt: Date?, note: String?) throws {}
+    func updateSegment(segmentID _: UUID, taskID _: UUID, startedAt _: Date, endedAt _: Date?, note _: String?) throws {}
 
-    func softDeleteSegment(segmentID: UUID) throws {}
+    func softDeleteSegment(segmentID _: UUID) throws {}
 
-    func stopSession(sessionID: UUID) throws {}
+    func stopSession(sessionID _: UUID) throws {}
 
-    func addManualSegment(taskID: UUID, startedAt: Date, endedAt: Date, note: String?) throws -> TimeSegment {
+    func addManualSegment(taskID _: UUID, startedAt _: Date, endedAt _: Date, note _: String?) throws -> TimeSegment {
         fatalError("Unused in LedgerRefreshSpyRepository")
     }
 }

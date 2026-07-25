@@ -11,12 +11,12 @@ extension StoreScopedSegmentCommandCoordinator {
         timeRepository: SwiftDataTimeTrackingRepository,
         pomodoroRepository: SwiftDataPomodoroRepository
     ) throws -> StoreScopedSegmentMutationOutcome {
-        let segmentsAfter = Dictionary(uniqueKeysWithValues: try timeRepository.segments(
+        let segmentsAfter = try Dictionary(uniqueKeysWithValues: timeRepository.segments(
             ids: Set(before.segments.keys)
         ).map {
             ($0.id, LedgerSegmentMutationSnapshot(segment: $0))
         })
-        let runsAfter = Dictionary(uniqueKeysWithValues: try pomodoroRepository.runs(
+        let runsAfter = try Dictionary(uniqueKeysWithValues: pomodoroRepository.runs(
             ids: Set(before.runs.keys)
         ).map {
             ($0.id, SegmentPomodoroMutationSnapshot(run: $0))
@@ -29,7 +29,8 @@ extension StoreScopedSegmentCommandCoordinator {
             )
         }
         if segmentChanges.isEmpty,
-           let subject = before.segments[subjectSegmentID] {
+           let subject = before.segments[subjectSegmentID]
+        {
             segmentChanges = [
                 LedgerSegmentMutationChange(
                     before: subject,

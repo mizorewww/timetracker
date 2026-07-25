@@ -8,7 +8,8 @@ protocol AppleHealthTimelinePreferenceStoring: AnyObject {
 
 @MainActor
 final class UserDefaultsAppleHealthTimelinePreferenceStore:
-    AppleHealthTimelinePreferenceStoring {
+    AppleHealthTimelinePreferenceStoring
+{
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
@@ -32,8 +33,8 @@ final class UserDefaultsAppleHealthTimelinePreferenceStore:
             Set(
                 defaults.stringArray(
                     forKey:
-                        AppLocalPreferenceKey
-                            .appleHealthTaskCatalogClearRecoveryTaskIDs
+                    AppLocalPreferenceKey
+                        .appleHealthTaskCatalogClearRecoveryTaskIDs
                 )?.compactMap(UUID.init(uuidString:)) ?? []
             )
         }
@@ -41,8 +42,8 @@ final class UserDefaultsAppleHealthTimelinePreferenceStore:
             defaults.set(
                 newValue.map(\.uuidString).sorted(),
                 forKey:
-                    AppLocalPreferenceKey
-                        .appleHealthTaskCatalogClearRecoveryTaskIDs
+                AppLocalPreferenceKey
+                    .appleHealthTaskCatalogClearRecoveryTaskIDs
             )
         }
     }

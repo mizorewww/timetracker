@@ -69,7 +69,7 @@ struct CoreLegacyCountdownMigrationTests {
     func payloadAboveMaximumRecordCountIsRejected() throws {
         let defaults = try makeDefaults()
         defer { clear(defaults) }
-        let records = (0...LegacyCountdownMigrationPolicy.maximumEventCount).map { index in
+        let records = (0 ... LegacyCountdownMigrationPolicy.maximumEventCount).map { index in
             "{\"title\":\"Event \(index)\",\"date\":\"2030-01-01T00:00:00Z\"}"
         }
         defaults.set("[\(records.joined(separator: ","))]", forKey: LegacyCountdownMigrationPolicy.payloadKey)
@@ -90,7 +90,7 @@ struct CoreLegacyCountdownMigrationTests {
 
     @Test @MainActor
     func maximumCountTitleAndSupportedDatesRemainCompatible() throws {
-        let records = (0..<LegacyCountdownMigrationPolicy.maximumEventCount).map { index in
+        let records = (0 ..< LegacyCountdownMigrationPolicy.maximumEventCount).map { index in
             let title = index == 0
                 ? String(repeating: "x", count: LegacyCountdownMigrationPolicy.maximumTitleByteCount)
                 : "Event \(index)"

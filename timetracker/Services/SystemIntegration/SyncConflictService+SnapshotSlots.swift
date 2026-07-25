@@ -134,11 +134,11 @@ extension SyncConflictService {
             }
         }
 
-        return manifest.state(
-            localSnapshot: try snapshot(for: manifest.localSnapshot),
-            pendingForcedUploadSnapshot: try snapshot(for: manifest.pendingForcedUploadSnapshot),
-            pendingCloudSnapshot: try snapshot(for: manifest.pendingCloudSnapshot),
-            pendingConflictWorkingSnapshot: try snapshot(
+        return try manifest.state(
+            localSnapshot: snapshot(for: manifest.localSnapshot),
+            pendingForcedUploadSnapshot: snapshot(for: manifest.pendingForcedUploadSnapshot),
+            pendingCloudSnapshot: snapshot(for: manifest.pendingCloudSnapshot),
+            pendingConflictWorkingSnapshot: snapshot(
                 for: manifest.pendingConflictWorkingSnapshot
             )
         )
@@ -157,8 +157,9 @@ extension SyncConflictService {
         })
         let fileNames = try FileManager.default.contentsOfDirectory(atPath: directory.path)
         for fileName in fileNames
-        where Self.isConflictSnapshotSlotFileName(fileName)
-            && protectedFileNames.contains(fileName) == false {
+            where Self.isConflictSnapshotSlotFileName(fileName)
+            && protectedFileNames.contains(fileName) == false
+        {
             // Directory enumeration may return a physical `/private/var` URL
             // even when the state location was obtained as logical `/var`.
             // Rebuild the managed target from the same directory spelling used
@@ -170,5 +171,4 @@ extension SyncConflictService {
             )
         }
     }
-
 }

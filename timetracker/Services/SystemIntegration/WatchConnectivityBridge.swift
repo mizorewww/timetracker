@@ -38,6 +38,7 @@ final class WatchConnectivityBridge: NSObject {
             drainPendingCommandsIfPossible()
         }
     }
+
     var diagnosticHandler: ((WatchConnectivityDiagnostic) -> Void)?
     private(set) var lastDiagnostic: WatchConnectivityDiagnostic?
 
@@ -55,7 +56,7 @@ final class WatchConnectivityBridge: NSObject {
         self.session = session
         self.diagnosticHandler = diagnosticHandler
         self.pendingCommandStore = pendingCommandStore
-        self.pendingCommands = pendingCommandStore.load()
+        pendingCommands = pendingCommandStore.load()
         super.init()
     }
 
@@ -209,8 +210,8 @@ final class WatchConnectivityBridge: NSObject {
 
 extension WatchConnectivityBridge: WCSessionDelegate {
     nonisolated func session(
-        _ session: WCSession,
-        activationDidCompleteWith activationState: WCSessionActivationState,
+        _: WCSession,
+        activationDidCompleteWith _: WCSessionActivationState,
         error: Error?
     ) {
         guard let error else { return }
@@ -219,14 +220,14 @@ extension WatchConnectivityBridge: WCSessionDelegate {
         }
     }
 
-    nonisolated func sessionDidBecomeInactive(_ session: WCSession) {}
+    nonisolated func sessionDidBecomeInactive(_: WCSession) {}
 
     nonisolated func sessionDidDeactivate(_ session: WCSession) {
         session.activate()
     }
 
     nonisolated func session(
-        _ session: WCSession,
+        _: WCSession,
         didReceiveUserInfo userInfo: [String: Any] = [:]
     ) {
         Task { @MainActor [weak self] in
@@ -235,7 +236,7 @@ extension WatchConnectivityBridge: WCSessionDelegate {
     }
 
     nonisolated func session(
-        _ session: WCSession,
+        _: WCSession,
         didReceiveMessage message: [String: Any]
     ) {
         Task { @MainActor [weak self] in
@@ -244,7 +245,7 @@ extension WatchConnectivityBridge: WCSessionDelegate {
     }
 
     nonisolated func session(
-        _ session: WCSession,
+        _: WCSession,
         didReceiveMessage message: [String: Any],
         replyHandler: @escaping ([String: Any]) -> Void
     ) {

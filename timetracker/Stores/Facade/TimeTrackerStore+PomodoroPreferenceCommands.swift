@@ -11,17 +11,17 @@ extension TimeTrackerStore {
 
     @discardableResult
     func setDefaultFocusMinutes(_ value: Int) -> Bool {
-        setPreference(.defaultFocusMinutes, valueJSON: PreferenceJSON.encode(value.clamped(to: 1...480)))
+        setPreference(.defaultFocusMinutes, valueJSON: PreferenceJSON.encode(value.clamped(to: 1 ... 480)))
     }
 
     @discardableResult
     func setDefaultBreakMinutes(_ value: Int) -> Bool {
-        setPreference(.defaultBreakMinutes, valueJSON: PreferenceJSON.encode(value.clamped(to: 1...480)))
+        setPreference(.defaultBreakMinutes, valueJSON: PreferenceJSON.encode(value.clamped(to: 1 ... 480)))
     }
 
     @discardableResult
     func setDefaultPomodoroRounds(_ value: Int) -> Bool {
-        setPreference(.defaultPomodoroRounds, valueJSON: PreferenceJSON.encode(value.clamped(to: 1...24)))
+        setPreference(.defaultPomodoroRounds, valueJSON: PreferenceJSON.encode(value.clamped(to: 1 ... 24)))
     }
 
     @discardableResult

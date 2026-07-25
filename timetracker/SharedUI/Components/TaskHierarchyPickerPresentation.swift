@@ -122,6 +122,7 @@ extension TaskHierarchyPickerSelectionContext {
             AppStrings.localized("heatmap.picker.title")
         }
     }
+
     var accessibilityIdentifier: String {
         switch self {
         case .pomodoro:
@@ -134,6 +135,7 @@ extension TaskHierarchyPickerSelectionContext {
             "settings.todayHeatmap.taskPicker"
         }
     }
+
     var selectionHint: String {
         switch self {
         case .pomodoro:
@@ -146,6 +148,7 @@ extension TaskHierarchyPickerSelectionContext {
             AppStrings.localized("heatmap.picker.selectionHint")
         }
     }
+
     var emptyStateTitle: String {
         switch self {
         case .pomodoro:

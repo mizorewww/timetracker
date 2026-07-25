@@ -13,8 +13,12 @@ struct TaskCategoryOrderMutationBaseline: Equatable, Sendable {
 
     private static func ordered(_ categories: [TaskCategory]) -> [TaskCategory] {
         categories.sorted { lhs, rhs in
-            if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
-            if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+            if lhs.sortOrder != rhs.sortOrder {
+                return lhs.sortOrder < rhs.sortOrder
+            }
+            if lhs.createdAt != rhs.createdAt {
+                return lhs.createdAt < rhs.createdAt
+            }
             return lhs.id.uuidString < rhs.id.uuidString
         }
     }

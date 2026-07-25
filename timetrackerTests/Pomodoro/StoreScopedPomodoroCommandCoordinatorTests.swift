@@ -20,7 +20,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
 
         let outcome = try coordinator(context.container).start(
             taskID: focusTask.id,
-            focusSeconds: 1_500,
+            focusSeconds: 1500,
             breakSeconds: 300,
             longBreakSeconds: nil,
             targetRounds: 2
@@ -60,7 +60,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
         #expect(throws: SystemActionCommandError.taskNotFound) {
             _ = try coordinator(context.container).start(
                 taskID: focusTask.id,
-                focusSeconds: 1_500,
+                focusSeconds: 1500,
                 breakSeconds: 300,
                 longBreakSeconds: nil,
                 targetRounds: 2
@@ -99,7 +99,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
         #expect(throws: SystemActionCommandError.taskNotFound) {
             _ = try coordinator(context.container).start(
                 taskID: healthTask.id,
-                focusSeconds: 1_500,
+                focusSeconds: 1500,
                 breakSeconds: 300,
                 longBreakSeconds: nil,
                 targetRounds: 2
@@ -124,7 +124,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
 
         let outcome = try coordinator(context.container).start(
             taskID: focusTask.id,
-            focusSeconds: 1_500,
+            focusSeconds: 1500,
             breakSeconds: 300,
             longBreakSeconds: nil,
             targetRounds: 2
@@ -154,7 +154,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
         )
         let started = try coordinator(context.container).start(
             taskID: task.id,
-            focusSeconds: 1_500,
+            focusSeconds: 1500,
             breakSeconds: 300,
             longBreakSeconds: nil,
             targetRounds: 3
@@ -188,7 +188,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
         )
         let started = try coordinator(context.container).start(
             taskID: task.id,
-            focusSeconds: 1_500,
+            focusSeconds: 1500,
             breakSeconds: 300,
             longBreakSeconds: nil,
             targetRounds: 3
@@ -223,7 +223,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
         let otherTask = try makeTask("Other", repository: taskRepository)
         let started = try coordinator(context.container).start(
             taskID: focusTask.id,
-            focusSeconds: 1_500,
+            focusSeconds: 1500,
             breakSeconds: 300,
             longBreakSeconds: nil,
             targetRounds: 2
@@ -239,7 +239,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
         let outcome = try coordinator(context.container).resume(
             phase: phase
         )
-        guard case .resumed(let mutation) = outcome else {
+        guard case let .resumed(mutation) = outcome else {
             Issue.record("The current break phase should resume")
             return
         }
@@ -258,7 +258,7 @@ struct StoreScopedPomodoroCommandCoordinatorTests {
         let otherTask = try makeTask("Other", repository: taskRepository)
         let started = try coordinator(context.container).start(
             taskID: focusTask.id,
-            focusSeconds: 1_500,
+            focusSeconds: 1500,
             breakSeconds: 300,
             longBreakSeconds: nil,
             targetRounds: 2

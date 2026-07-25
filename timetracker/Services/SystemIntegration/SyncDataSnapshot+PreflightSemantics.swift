@@ -55,7 +55,8 @@ extension SyncDataSnapshot {
             )
         }
         for record in inboxSuggestions
-        where InboxSuggestionDestinationKind(rawValue: record.destinationKindRaw) == nil {
+            where InboxSuggestionDestinationKind(rawValue: record.destinationKindRaw) == nil
+        {
             throw SyncDataSnapshotPreflightError.invalidRawValue(
                 table: .inboxSuggestions,
                 id: record.id,
@@ -69,28 +70,28 @@ extension SyncDataSnapshot {
         for record in pomodoroRuns {
             try require(
                 record.focusSecondsPlanned,
-                in: 1...28_800,
+                in: 1 ... 28800,
                 recordID: record.id,
                 field: "focusSecondsPlanned"
             )
             try require(
                 record.breakSecondsPlanned,
-                in: 1...28_800,
+                in: 1 ... 28800,
                 recordID: record.id,
                 field: "breakSecondsPlanned"
             )
             if let longBreakSecondsPlanned = record.longBreakSecondsPlanned {
                 try require(
                     longBreakSecondsPlanned,
-                    in: 1...28_800,
+                    in: 1 ... 28800,
                     recordID: record.id,
                     field: "longBreakSecondsPlanned"
                 )
             }
-            try require(record.targetRounds, in: 1...24, recordID: record.id, field: "targetRounds")
+            try require(record.targetRounds, in: 1 ... 24, recordID: record.id, field: "targetRounds")
             try require(
                 record.completedFocusRounds,
-                in: 0...record.targetRounds,
+                in: 0 ... record.targetRounds,
                 recordID: record.id,
                 field: "completedFocusRounds"
             )
@@ -117,42 +118,42 @@ extension SyncDataSnapshot {
     private func validatePreferenceValues() throws {
         for record in syncedPreferences {
             guard !record.key.isEmpty,
-                  !record.key.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
+                  !record.key.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains)
+            else {
                 throw SyncDataSnapshotPreflightError.invalidPreferenceKey(id: record.id, key: record.key)
             }
             let data = Data(record.valueJSON.utf8)
             guard SyncedPreferenceService.shouldSyncKey(record.key) else { continue }
-            let isValid: Bool
-            if let key = AppPreferenceKey(rawValue: record.key) {
+            let isValid: Bool = if let key = AppPreferenceKey(rawValue: record.key) {
                 switch key {
                 case .preferredColorScheme,
                      .pomodoroDefaultMode,
                      .todayHeatmapPeriod,
                      .llmEndpoint,
                      .llmSelectedModel:
-                    isValid = decodes(String.self, from: data)
+                    decodes(String.self, from: data)
                 case .llmInboxSuggestionInstructions,
                      .llmChecklistVisualInstructions,
                      .llmTaskPlanInstructions:
-                    isValid = (
+                    (
                         try? PreferenceJSON.canonicalValueJSON(
                             for: key,
                             from: record.valueJSON
                         )
                     ) != nil
                 case .defaultFocusMinutes, .defaultBreakMinutes, .defaultPomodoroRounds:
-                    isValid = decodes(Int.self, from: data)
+                    decodes(Int.self, from: data)
                 case .pomodoroPlans:
-                    isValid = decodes([PomodoroPlan].self, from: data)
+                    decodes([PomodoroPlan].self, from: data)
                 case .allowParallelTimers, .showGrossAndWallTogether:
-                    isValid = decodes(Bool.self, from: data)
+                    decodes(Bool.self, from: data)
                 case .quickStartTaskIDs,
                      .todayHeatmapTaskIDs,
                      .llmAvailableModelIDs:
-                    isValid = decodes([String].self, from: data)
+                    decodes([String].self, from: data)
                 }
             } else {
-                isValid = (try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)) != nil
+                (try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)) != nil
             }
             guard isValid else {
                 throw SyncDataSnapshotPreflightError.invalidPreferenceValue(id: record.id, key: record.key)
@@ -234,8 +235,9 @@ extension SyncDataSnapshot {
                 inboxItemID: receipt.inboxItemID
             )
             if let existing = committedResultByCommandKey[receipt.commandKey],
-               (existing.payloadFingerprint != result.payloadFingerprint ||
-                   existing.inboxItemID != result.inboxItemID) {
+               existing.payloadFingerprint != result.payloadFingerprint ||
+               existing.inboxItemID != result.inboxItemID
+            {
                 throw SyncDataSnapshotPreflightError.inconsistentInboxCaptureCommandKey(
                     commandKey: receipt.commandKey
                 )

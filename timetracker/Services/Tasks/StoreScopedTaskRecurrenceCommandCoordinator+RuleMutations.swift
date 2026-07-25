@@ -22,6 +22,7 @@ extension StoreScopedTaskRecurrenceCommandCoordinator {
             )
         }
     }
+
     func setEnabled(
         baseline: TaskRecurrenceRuleMutationBaseline,
         isEnabled: Bool,

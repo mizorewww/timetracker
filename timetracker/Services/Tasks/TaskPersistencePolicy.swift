@@ -31,17 +31,17 @@ enum TaskPersistenceValidationError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case let .required(field):
-            return String.localizedStringWithFormat(
+            String.localizedStringWithFormat(
                 AppStrings.localized("persistence.error.requiredFormat"),
                 AppStrings.localized(field.localizationKey)
             )
         case let .controlCharacter(field):
-            return String.localizedStringWithFormat(
+            String.localizedStringWithFormat(
                 AppStrings.localized("persistence.error.controlCharacterFormat"),
                 AppStrings.localized(field.localizationKey)
             )
         case let .byteLimitExceeded(field, actual, maximum):
-            return String.localizedStringWithFormat(
+            String.localizedStringWithFormat(
                 AppStrings.localized("persistence.error.tooLongFormat"),
                 AppStrings.localized(field.localizationKey),
                 Int64(actual),
@@ -89,11 +89,11 @@ enum TaskPersistencePolicy {
         iconName: String?,
         notes: String?
     ) throws -> PreparedTaskPersistenceValues {
-        PreparedTaskPersistenceValues(
-            title: try requiredSingleLine(title, field: .taskTitle),
-            colorHex: try optionalSingleLine(colorHex, field: .colorHex),
-            iconName: try optionalSingleLine(iconName, field: .iconName),
-            notes: try optionalMultiline(notes, field: .notes)
+        try PreparedTaskPersistenceValues(
+            title: requiredSingleLine(title, field: .taskTitle),
+            colorHex: optionalSingleLine(colorHex, field: .colorHex),
+            iconName: optionalSingleLine(iconName, field: .iconName),
+            notes: optionalMultiline(notes, field: .notes)
         )
     }
 
@@ -102,10 +102,10 @@ enum TaskPersistencePolicy {
         colorHex: String?,
         iconName: String?
     ) throws -> PreparedTaskPersistenceValues {
-        PreparedTaskPersistenceValues(
-            title: try requiredSingleLine(title, field: .categoryTitle),
-            colorHex: try optionalSingleLine(colorHex, field: .colorHex),
-            iconName: try optionalSingleLine(iconName, field: .iconName),
+        try PreparedTaskPersistenceValues(
+            title: requiredSingleLine(title, field: .categoryTitle),
+            colorHex: optionalSingleLine(colorHex, field: .colorHex),
+            iconName: optionalSingleLine(iconName, field: .iconName),
             notes: nil
         )
     }
@@ -165,7 +165,8 @@ enum TaskPersistencePolicy {
         let containsUnsupportedControl = value.unicodeScalars.contains { scalar in
             guard CharacterSet.controlCharacters.contains(scalar) else { return false }
             if allowsMultilineWhitespace,
-               scalar.value == 9 || scalar.value == 10 || scalar.value == 13 {
+               scalar.value == 9 || scalar.value == 10 || scalar.value == 13
+            {
                 return false
             }
             return true

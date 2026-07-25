@@ -244,7 +244,8 @@ extension AppPresentationRouter {
         categoryID: UUID?
     ) -> AppPresentation.Content? {
         if let parentID,
-           store.parentEligibleTaskIDs.contains(parentID) == false {
+           store.parentEligibleTaskIDs.contains(parentID) == false
+        {
             store.errorMessage = AppStrings.localized("task.parentUnavailable")
             return nil
         }

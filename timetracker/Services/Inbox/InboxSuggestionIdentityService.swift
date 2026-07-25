@@ -85,27 +85,32 @@ struct InboxItemReadModel {
 
 struct InboxSuggestionIdentityService {
     func visibleLogicalItems<S: Sequence>(from items: S) -> [InboxItem]
-    where S.Element == InboxItem {
+        where S.Element == InboxItem
+    {
         visibleLogicalReadModels(from: items).map(\.item)
     }
 
     func visibleLogicalReadModels<S: Sequence>(from items: S) -> [InboxItemReadModel]
-    where S.Element == InboxItem {
+        where S.Element == InboxItem
+    {
         visibleLogicalResolutions(from: items).map(\.readModel)
     }
 
     func logicalWinners<S: Sequence>(from items: S) -> [InboxItem]
-    where S.Element == InboxItem {
+        where S.Element == InboxItem
+    {
         logicalResolutions(from: items).map(\.winner)
     }
 
     func visibleLogicalResolutions<S: Sequence>(from items: S) -> [InboxItemMergeResolution]
-    where S.Element == InboxItem {
+        where S.Element == InboxItem
+    {
         logicalResolutions(from: items).filter { $0.winner.deletedAt == nil }
     }
 
     func logicalResolutions<S: Sequence>(from items: S) -> [InboxItemMergeResolution]
-    where S.Element == InboxItem {
+        where S.Element == InboxItem
+    {
         let physicalResolutions = physicalResolutions(from: items)
         var winners: [UUID: InboxItem] = [:]
         for resolution in physicalResolutions {
@@ -133,7 +138,8 @@ struct InboxSuggestionIdentityService {
     /// Resolves only duplicate physical identifiers while preserving dismissal
     /// facts for historical siblings that share a logical context.
     func physicalResolutions<S: Sequence>(from items: S) -> [InboxItemMergeResolution]
-    where S.Element == InboxItem {
+        where S.Element == InboxItem
+    {
         let source = Array(items)
         let dismissedIdentities = Set(source.compactMap { item in
             item.isCurrentSuggestionRevisionDismissed ? item.suggestionIdentity : nil
@@ -178,7 +184,8 @@ struct InboxSuggestionIdentityService {
         return items.reduce(into: [:]) { result, item in
             if let suggestion = byIdentity[item.suggestionIdentity] ??
                 legacyByPhysicalItemID[item.id] ??
-                legacyByPhysicalItemID[item.effectiveSuggestionContextID] {
+                legacyByPhysicalItemID[item.effectiveSuggestionContextID]
+            {
                 result[item.id] = suggestion
             }
         }
@@ -218,7 +225,8 @@ struct InboxSuggestionIdentityService {
             return
         }
         if suggestion.updatedAt > existing.updatedAt ||
-            (suggestion.updatedAt == existing.updatedAt && suggestion.id.uuidString > existing.id.uuidString) {
+            (suggestion.updatedAt == existing.updatedAt && suggestion.id.uuidString > existing.id.uuidString)
+        {
             index[key] = suggestion
         }
     }

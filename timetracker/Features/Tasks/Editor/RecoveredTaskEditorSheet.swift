@@ -121,7 +121,7 @@ struct RecoveredTaskEditorSheet: View {
             proposedTaskID: presentation.proposedTaskID,
             returnDestination: presentation.returnDestination
         )
-        if case .saved(let taskID) = result {
+        if case let .saved(taskID) = result {
             savedTaskID = taskID
         }
         return result

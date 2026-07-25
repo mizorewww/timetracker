@@ -34,7 +34,7 @@ struct ChecklistForecastTests {
                 source: .timer,
                 deviceID: "test",
                 startedAt: sameDayStart,
-                endedAt: sameDayStart.addingTimeInterval(3_600)
+                endedAt: sameDayStart.addingTimeInterval(3600)
             ),
             TimeSegment(
                 sessionID: UUID(),
@@ -42,8 +42,8 @@ struct ChecklistForecastTests {
                 source: .timer,
                 deviceID: "test",
                 startedAt: nextDayStart,
-                endedAt: nextDayStart.addingTimeInterval(1_800)
-            )
+                endedAt: nextDayStart.addingTimeInterval(1800)
+            ),
         ]
 
         let seconds = ForecastingService().recentDailyAvailableSeconds(
@@ -53,7 +53,7 @@ struct ChecklistForecastTests {
             calendar: calendar
         )
 
-        #expect(seconds == 3_600)
+        #expect(seconds == 3600)
     }
 
     @Test @MainActor
@@ -70,7 +70,7 @@ struct ChecklistForecastTests {
             source: .timer,
             deviceID: "test",
             startedAt: segmentStart,
-            endedAt: segmentStart.addingTimeInterval(3_600)
+            endedAt: segmentStart.addingTimeInterval(3600)
         )
 
         let seconds = ForecastingService().recentDailyAvailableSeconds(
@@ -81,7 +81,7 @@ struct ChecklistForecastTests {
         )
 
         #expect(ForecastingService.maximumRecentDayCount == 366)
-        #expect(seconds == 3_600)
+        #expect(seconds == 3600)
     }
 
     @Test @MainActor
@@ -94,7 +94,7 @@ struct ChecklistForecastTests {
 
         _ = try timeRepository.addManualSegment(
             taskID: task.id,
-            startedAt: end.addingTimeInterval(-3_600),
+            startedAt: end.addingTimeInterval(-3600),
             endedAt: end,
             note: nil
         )
@@ -102,30 +102,30 @@ struct ChecklistForecastTests {
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
-        var firstDraft = store.editorDraft(for: try #require(store.task(for: task.id)))
+        var firstDraft = try store.editorDraft(for: #require(store.task(for: task.id)))
         firstDraft.checklistItems = [
             ChecklistEditorDraft(title: "Done", isCompleted: true),
-            ChecklistEditorDraft(title: "Todo", isCompleted: false)
+            ChecklistEditorDraft(title: "Todo", isCompleted: false),
         ]
         store.saveTaskDraft(firstDraft)
 
         let firstRollup = try #require(store.rollup(for: task.id))
         #expect(firstRollup.checklistProgress.label == "1/2")
-        #expect(firstRollup.estimatedTotalSeconds == 7_200)
-        #expect(firstRollup.remainingSeconds == 3_600)
-        #expect(firstRollup.historicalDailyAverageSeconds == 3_600)
+        #expect(firstRollup.estimatedTotalSeconds == 7200)
+        #expect(firstRollup.remainingSeconds == 3600)
+        #expect(firstRollup.historicalDailyAverageSeconds == 3600)
         #expect(firstRollup.historicalActiveDayCount == 1)
         #expect(abs((firstRollup.projectedDays ?? 0) - 1.0) < 0.05)
 
-        var secondDraft = store.editorDraft(for: try #require(store.task(for: task.id)))
+        var secondDraft = try store.editorDraft(for: #require(store.task(for: task.id)))
         secondDraft.checklistItems.append(ChecklistEditorDraft(title: "Also done", isCompleted: true))
         store.saveTaskDraft(secondDraft)
 
         let secondRollup = try #require(store.rollup(for: task.id))
         #expect(secondRollup.checklistProgress.label == "2/3")
-        #expect(secondRollup.estimatedTotalSeconds == 5_400)
-        #expect(secondRollup.remainingSeconds == 1_800)
-        #expect(secondRollup.historicalDailyAverageSeconds == 3_600)
+        #expect(secondRollup.estimatedTotalSeconds == 5400)
+        #expect(secondRollup.remainingSeconds == 1800)
+        #expect(secondRollup.historicalDailyAverageSeconds == 3600)
         #expect(secondRollup.historicalActiveDayCount == 1)
         #expect(abs((secondRollup.projectedDays ?? 0) - 0.5) < 0.05)
     }
@@ -140,7 +140,7 @@ struct ChecklistForecastTests {
 
         _ = try timeRepository.addManualSegment(
             taskID: task.id,
-            startedAt: end.addingTimeInterval(-3_600),
+            startedAt: end.addingTimeInterval(-3600),
             endedAt: end,
             note: nil
         )
@@ -148,49 +148,49 @@ struct ChecklistForecastTests {
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
-        var draft = store.editorDraft(for: try #require(store.task(for: task.id)))
+        var draft = try store.editorDraft(for: #require(store.task(for: task.id)))
         draft.checklistItems = [
             ChecklistEditorDraft(title: "Already done", isCompleted: true),
-            ChecklistEditorDraft(title: "Tap me", isCompleted: false)
+            ChecklistEditorDraft(title: "Tap me", isCompleted: false),
         ]
         store.saveTaskDraft(draft)
 
         let firstRollup = try #require(store.rollup(for: task.id))
         #expect(firstRollup.checklistProgress.label == "1/2")
-        #expect(firstRollup.estimatedTotalSeconds == 7_200)
-        #expect(firstRollup.remainingSeconds == 3_600)
+        #expect(firstRollup.estimatedTotalSeconds == 7200)
+        #expect(firstRollup.remainingSeconds == 3600)
 
         let itemToToggle = try #require(store.checklistItems(for: task.id).first { $0.title == "Tap me" })
         store.toggleChecklistItem(itemToToggle)
 
         let secondRollup = try #require(store.rollup(for: task.id))
         #expect(secondRollup.checklistProgress.label == "2/2")
-        #expect(secondRollup.estimatedTotalSeconds == 3_600)
+        #expect(secondRollup.estimatedTotalSeconds == 3600)
         #expect(secondRollup.remainingSeconds == 0)
         #expect(secondRollup.projectedDays == 0)
         #expect(secondRollup.forecastState == .completed)
     }
 
     @Test @MainActor
-    func checklistForecastRequiresCompletedItemAndTrackedTime() throws {
+    func checklistForecastRequiresCompletedItemAndTrackedTime() {
         let taskWithNoCompletedItem = TaskNode(title: "No completed item", parentID: nil, deviceID: "test")
         let taskWithNoTime = TaskNode(title: "No tracked time", parentID: nil, deviceID: "test")
-        let start = Date(timeIntervalSince1970: 10_000)
+        let start = Date(timeIntervalSince1970: 10000)
         let segments = [
-            TimeSegment(sessionID: UUID(), taskID: taskWithNoCompletedItem.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(1_800))
+            TimeSegment(sessionID: UUID(), taskID: taskWithNoCompletedItem.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(1800)),
         ]
         let checklist = [
             ChecklistItem(taskID: taskWithNoCompletedItem.id, title: "First", isCompleted: false, sortOrder: 10, deviceID: "test"),
             ChecklistItem(taskID: taskWithNoCompletedItem.id, title: "Second", isCompleted: false, sortOrder: 20, deviceID: "test"),
             ChecklistItem(taskID: taskWithNoTime.id, title: "Done", isCompleted: true, sortOrder: 10, deviceID: "test"),
-            ChecklistItem(taskID: taskWithNoTime.id, title: "Todo", isCompleted: false, sortOrder: 20, deviceID: "test")
+            ChecklistItem(taskID: taskWithNoTime.id, title: "Todo", isCompleted: false, sortOrder: 20, deviceID: "test"),
         ]
 
         let rollups = TaskRollupService().rollups(
             tasks: [taskWithNoCompletedItem, taskWithNoTime],
             segments: segments,
             checklistItems: checklist,
-            now: start.addingTimeInterval(2_000)
+            now: start.addingTimeInterval(2000)
         )
 
         #expect(rollups[taskWithNoCompletedItem.id]?.estimatedTotalSeconds == nil)
@@ -212,29 +212,29 @@ struct ChecklistForecastTests {
         let task = TaskNode(title: "Forecast Task", parentID: nil, deviceID: "test")
         let unrelated = TaskNode(title: "Unrelated", parentID: nil, deviceID: "test")
         let segments = [
-            TimeSegment(sessionID: UUID(), taskID: task.id, source: .timer, deviceID: "test", startedAt: dayOne, endedAt: dayOne.addingTimeInterval(3_600)),
-            TimeSegment(sessionID: UUID(), taskID: task.id, source: .timer, deviceID: "test", startedAt: dayTwo, endedAt: dayTwo.addingTimeInterval(7_200)),
-            TimeSegment(sessionID: UUID(), taskID: unrelated.id, source: .timer, deviceID: "test", startedAt: dayOne, endedAt: dayOne.addingTimeInterval(36_000))
+            TimeSegment(sessionID: UUID(), taskID: task.id, source: .timer, deviceID: "test", startedAt: dayOne, endedAt: dayOne.addingTimeInterval(3600)),
+            TimeSegment(sessionID: UUID(), taskID: task.id, source: .timer, deviceID: "test", startedAt: dayTwo, endedAt: dayTwo.addingTimeInterval(7200)),
+            TimeSegment(sessionID: UUID(), taskID: unrelated.id, source: .timer, deviceID: "test", startedAt: dayOne, endedAt: dayOne.addingTimeInterval(36000)),
         ]
         let checklist = [
             ChecklistItem(taskID: task.id, title: "Done", isCompleted: true, sortOrder: 10, deviceID: "test"),
             ChecklistItem(taskID: task.id, title: "Todo 1", isCompleted: false, sortOrder: 20, deviceID: "test"),
             ChecklistItem(taskID: task.id, title: "Todo 2", isCompleted: false, sortOrder: 30, deviceID: "test"),
-            ChecklistItem(taskID: task.id, title: "Todo 3", isCompleted: false, sortOrder: 40, deviceID: "test")
+            ChecklistItem(taskID: task.id, title: "Todo 3", isCompleted: false, sortOrder: 40, deviceID: "test"),
         ]
 
         let rollups = TaskRollupService().rollups(
             tasks: [task, unrelated],
             segments: segments,
             checklistItems: checklist,
-            now: dayTwo.addingTimeInterval(10_000)
+            now: dayTwo.addingTimeInterval(10000)
         )
         let rollup = try #require(rollups[task.id])
 
-        #expect(rollup.workedSeconds == 10_800)
-        #expect(rollup.estimatedTotalSeconds == 43_200)
-        #expect(rollup.remainingSeconds == 32_400)
-        #expect(rollup.historicalDailyAverageSeconds == 5_400)
+        #expect(rollup.workedSeconds == 10800)
+        #expect(rollup.estimatedTotalSeconds == 43200)
+        #expect(rollup.remainingSeconds == 32400)
+        #expect(rollup.historicalDailyAverageSeconds == 5400)
         #expect(rollup.historicalActiveDayCount == 2)
         #expect(abs((rollup.projectedDays ?? 0) - 6.0) < 0.05)
     }
@@ -258,14 +258,14 @@ struct ChecklistForecastTests {
                 source: .manual,
                 deviceID: "test",
                 startedAt: staleStart,
-                endedAt: staleStart.addingTimeInterval(7_200)
+                endedAt: staleStart.addingTimeInterval(7200)
             ),
             TimeSegment(
                 sessionID: UUID(),
                 taskID: task.id,
                 source: .manual,
                 deviceID: "test",
-                startedAt: now.addingTimeInterval(-3_600),
+                startedAt: now.addingTimeInterval(-3600),
                 endedAt: now
             ),
             TimeSegment(
@@ -274,8 +274,8 @@ struct ChecklistForecastTests {
                 source: .manual,
                 deviceID: "test",
                 startedAt: futureStart,
-                endedAt: futureStart.addingTimeInterval(18_000)
-            )
+                endedAt: futureStart.addingTimeInterval(18000)
+            ),
         ]
 
         let rollup = try #require(TaskRollupService().rollups(
@@ -288,7 +288,7 @@ struct ChecklistForecastTests {
         #expect(TaskRollupHistoricalPolicy.paceDayCount == 90)
         #expect(TaskRollupHistoricalPolicy.paceDayCount == RollupIncrementalIndex.historicalPaceDayCount)
         #expect(rollup.historicalActiveDayCount == 1)
-        #expect(rollup.historicalDailyAverageSeconds == 3_600)
+        #expect(rollup.historicalDailyAverageSeconds == 3600)
     }
 
     @Test @MainActor
@@ -296,27 +296,27 @@ struct ChecklistForecastTests {
         let parent = TaskNode(title: "Parent", parentID: nil, deviceID: "test")
         let child = TaskNode(title: "Child", parentID: parent.id, deviceID: "test")
         let grandchild = TaskNode(title: "Grandchild", parentID: child.id, deviceID: "test")
-        grandchild.estimatedSeconds = 1_200
-        let start = Date(timeIntervalSince1970: 10_000)
+        grandchild.estimatedSeconds = 1200
+        let start = Date(timeIntervalSince1970: 10000)
         let segments = [
-            TimeSegment(sessionID: UUID(), taskID: parent.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(1_000)),
+            TimeSegment(sessionID: UUID(), taskID: parent.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(1000)),
             TimeSegment(sessionID: UUID(), taskID: child.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(600)),
-            TimeSegment(sessionID: UUID(), taskID: grandchild.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(300))
+            TimeSegment(sessionID: UUID(), taskID: grandchild.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(300)),
         ]
         let checklist = [
             ChecklistItem(taskID: parent.id, title: "One", isCompleted: true, sortOrder: 10, deviceID: "test"),
             ChecklistItem(taskID: parent.id, title: "Two", isCompleted: false, sortOrder: 20, deviceID: "test"),
             ChecklistItem(taskID: child.id, title: "A", isCompleted: true, sortOrder: 10, deviceID: "test"),
-            ChecklistItem(taskID: child.id, title: "B", isCompleted: true, sortOrder: 20, deviceID: "test")
+            ChecklistItem(taskID: child.id, title: "B", isCompleted: true, sortOrder: 20, deviceID: "test"),
         ]
 
-        let rollups = TaskRollupService().rollups(tasks: [parent, child, grandchild], segments: segments, checklistItems: checklist, now: start.addingTimeInterval(2_000))
+        let rollups = TaskRollupService().rollups(tasks: [parent, child, grandchild], segments: segments, checklistItems: checklist, now: start.addingTimeInterval(2000))
         let parentRollup = try #require(rollups[parent.id])
 
-        #expect(parentRollup.workedSeconds == 1_900)
-        #expect(parentRollup.estimatedTotalSeconds == 3_800)
-        #expect(parentRollup.remainingSeconds == 1_900)
-        #expect(parentRollup.historicalDailyAverageSeconds == 1_900)
+        #expect(parentRollup.workedSeconds == 1900)
+        #expect(parentRollup.estimatedTotalSeconds == 3800)
+        #expect(parentRollup.remainingSeconds == 1900)
+        #expect(parentRollup.historicalDailyAverageSeconds == 1900)
         #expect(parentRollup.historicalActiveDayCount == 1)
         #expect(abs((parentRollup.projectedDays ?? 0) - 1.0) < 0.05)
         #expect(parentRollup.checklistProgress.label == "1/2")
@@ -325,15 +325,15 @@ struct ChecklistForecastTests {
     }
 
     @Test @MainActor
-    func taskRollupTreatsLegacyCompletedRawAsOrdinaryAndChecklistAsCompletion() throws {
+    func taskRollupTreatsLegacyCompletedRawAsOrdinaryAndChecklistAsCompletion() {
         let empty = TaskNode(title: "Empty", parentID: nil, deviceID: "test")
         let planned = TaskNode(title: "Planned", parentID: nil, deviceID: "test")
         planned.estimatedSeconds = 900
         let legacyCompleted = TaskNode(title: "Legacy Done", parentID: nil, deviceID: "test")
         legacyCompleted.statusRaw = LegacyTaskStatusRaw.completed
-        legacyCompleted.estimatedSeconds = 3_600
+        legacyCompleted.estimatedSeconds = 3600
         let checklistCompleted = TaskNode(title: "Checklist Done", parentID: nil, deviceID: "test")
-        checklistCompleted.estimatedSeconds = 1_800
+        checklistCompleted.estimatedSeconds = 1800
         let deletedChecklist = ChecklistItem(taskID: planned.id, title: "Removed", isCompleted: true, sortOrder: 10, deviceID: "test")
         deletedChecklist.deletedAt = Date()
         let completedChecklist = ChecklistItem(
@@ -357,39 +357,39 @@ struct ChecklistForecastTests {
         #expect(rollups[planned.id]?.estimatedTotalSeconds == 900)
         #expect(rollups[planned.id]?.remainingSeconds == 900)
         #expect(rollups[planned.id]?.forecastState == .ready)
-        #expect(rollups[legacyCompleted.id]?.remainingSeconds == 3_600)
+        #expect(rollups[legacyCompleted.id]?.remainingSeconds == 3600)
         #expect(rollups[legacyCompleted.id]?.forecastState == .ready)
         #expect(rollups[checklistCompleted.id]?.remainingSeconds == 0)
         #expect(rollups[checklistCompleted.id]?.forecastState == .completed)
     }
 
     @Test @MainActor
-    func explicitOrChecklistBackedForecastsAreDisplayable() throws {
+    func explicitOrChecklistBackedForecastsAreDisplayable() {
         let historyOnly = TaskNode(title: "History Only", parentID: nil, deviceID: "test")
         let manual = TaskNode(title: "Manual", parentID: nil, deviceID: "test")
-        manual.estimatedSeconds = 1_800
+        manual.estimatedSeconds = 1800
         let checklistTask = TaskNode(title: "Checklist", parentID: nil, deviceID: "test")
-        let start = Date(timeIntervalSince1970: 10_000)
+        let start = Date(timeIntervalSince1970: 10000)
         let segments = [
             TimeSegment(sessionID: UUID(), taskID: historyOnly.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(600)),
-            TimeSegment(sessionID: UUID(), taskID: checklistTask.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(900))
+            TimeSegment(sessionID: UUID(), taskID: checklistTask.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(900)),
         ]
         let checklist = [
             ChecklistItem(taskID: checklistTask.id, title: "Done", isCompleted: true, sortOrder: 10, deviceID: "test"),
-            ChecklistItem(taskID: checklistTask.id, title: "Todo", isCompleted: false, sortOrder: 20, deviceID: "test")
+            ChecklistItem(taskID: checklistTask.id, title: "Todo", isCompleted: false, sortOrder: 20, deviceID: "test"),
         ]
 
         let rollups = TaskRollupService().rollups(
             tasks: [historyOnly, manual, checklistTask],
             segments: segments,
             checklistItems: checklist,
-            now: start.addingTimeInterval(2_000)
+            now: start.addingTimeInterval(2000)
         )
 
         #expect(rollups[historyOnly.id]?.forecastState == .needsChecklist)
         #expect(rollups[historyOnly.id]?.isDisplayableForecast == false)
-        #expect(rollups[manual.id]?.estimatedTotalSeconds == 1_800)
-        #expect(rollups[manual.id]?.remainingSeconds == 1_800)
+        #expect(rollups[manual.id]?.estimatedTotalSeconds == 1800)
+        #expect(rollups[manual.id]?.remainingSeconds == 1800)
         #expect(rollups[manual.id]?.forecastState == .ready)
         #expect(rollups[manual.id]?.isDisplayableForecast == true)
         #expect(rollups[manual.id]?.forecastSourceLabel == AppStrings.localized("forecast.source.currentTask"))
@@ -399,10 +399,10 @@ struct ChecklistForecastTests {
     @Test @MainActor
     func explicitEstimateSubtractsOwnWorkAndRollsUpChildWorkSeparately() throws {
         let parent = TaskNode(title: "Parent", parentID: nil, deviceID: "test")
-        parent.estimatedSeconds = 1_800
+        parent.estimatedSeconds = 1800
         let child = TaskNode(title: "Child", parentID: parent.id, deviceID: "test")
-        child.estimatedSeconds = 1_200
-        let start = Date(timeIntervalSince1970: 10_000)
+        child.estimatedSeconds = 1200
+        let start = Date(timeIntervalSince1970: 10000)
         let segments = [
             TimeSegment(
                 sessionID: UUID(),
@@ -419,42 +419,42 @@ struct ChecklistForecastTests {
                 deviceID: "test",
                 startedAt: start,
                 endedAt: start.addingTimeInterval(300)
-            )
+            ),
         ]
 
         let rollups = TaskRollupService().rollups(
             tasks: [parent, child],
             segments: segments,
             checklistItems: [],
-            now: start.addingTimeInterval(2_000)
+            now: start.addingTimeInterval(2000)
         )
         let parentRollup = try #require(rollups[parent.id])
 
         #expect(parentRollup.workedSeconds == 900)
-        #expect(parentRollup.estimatedTotalSeconds == 3_000)
-        #expect(parentRollup.remainingSeconds == 2_100)
+        #expect(parentRollup.estimatedTotalSeconds == 3000)
+        #expect(parentRollup.remainingSeconds == 2100)
         #expect(parentRollup.forecastState == .aggregate)
         #expect(parentRollup.forecastSourceTaskCount == 2)
         #expect(Set(parentRollup.forecastSourceTaskIDs) == Set([parent.id, child.id]))
     }
 
     @Test @MainActor
-    func forecastDisplayServiceDrillsIntoSingleChildButAggregatesMultipleChildren() throws {
+    func forecastDisplayServiceDrillsIntoSingleChildButAggregatesMultipleChildren() {
         let parent = TaskNode(title: "Parent", parentID: nil, deviceID: "test")
         let firstChild = TaskNode(title: "First", parentID: parent.id, deviceID: "test")
         let secondChild = TaskNode(title: "Second", parentID: parent.id, deviceID: "test")
-        let start = Date(timeIntervalSince1970: 20_000)
-        let firstSegment = TimeSegment(sessionID: UUID(), taskID: firstChild.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(1_200))
+        let start = Date(timeIntervalSince1970: 20000)
+        let firstSegment = TimeSegment(sessionID: UUID(), taskID: firstChild.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(1200))
         let secondSegment = TimeSegment(sessionID: UUID(), taskID: secondChild.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(600))
         let firstChecklist = [
             ChecklistItem(taskID: firstChild.id, title: "Done", isCompleted: true, sortOrder: 10, deviceID: "test"),
-            ChecklistItem(taskID: firstChild.id, title: "Todo", isCompleted: false, sortOrder: 20, deviceID: "test")
+            ChecklistItem(taskID: firstChild.id, title: "Todo", isCompleted: false, sortOrder: 20, deviceID: "test"),
         ]
         let firstOnlyRollups = TaskRollupService().rollups(
             tasks: [parent, firstChild, secondChild],
             segments: [firstSegment],
             checklistItems: firstChecklist,
-            now: start.addingTimeInterval(2_000)
+            now: start.addingTimeInterval(2000)
         )
 
         let firstOnlyDisplay = ForecastDisplayService().displayItems(
@@ -465,13 +465,13 @@ struct ChecklistForecastTests {
 
         let secondChecklist = [
             ChecklistItem(taskID: secondChild.id, title: "Done", isCompleted: true, sortOrder: 10, deviceID: "test"),
-            ChecklistItem(taskID: secondChild.id, title: "Todo", isCompleted: false, sortOrder: 20, deviceID: "test")
+            ChecklistItem(taskID: secondChild.id, title: "Todo", isCompleted: false, sortOrder: 20, deviceID: "test"),
         ]
         let multiRollups = TaskRollupService().rollups(
             tasks: [parent, firstChild, secondChild],
             segments: [firstSegment, secondSegment],
             checklistItems: firstChecklist + secondChecklist,
-            now: start.addingTimeInterval(2_000)
+            now: start.addingTimeInterval(2000)
         )
 
         let multiDisplay = ForecastDisplayService().displayItems(
@@ -487,24 +487,24 @@ struct ChecklistForecastTests {
     func parentForecastIncludesChildForecastsWhenOwnChecklistIsIncomplete() throws {
         let parent = TaskNode(title: "Parent", parentID: nil, deviceID: "test")
         let child = TaskNode(title: "Child", parentID: parent.id, deviceID: "test")
-        let start = Date(timeIntervalSince1970: 30_000)
-        let childSegment = TimeSegment(sessionID: UUID(), taskID: child.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(1_200))
+        let start = Date(timeIntervalSince1970: 30000)
+        let childSegment = TimeSegment(sessionID: UUID(), taskID: child.id, source: .timer, deviceID: "test", startedAt: start, endedAt: start.addingTimeInterval(1200))
         let checklist = [
             ChecklistItem(taskID: parent.id, title: "Parent todo", isCompleted: false, sortOrder: 10, deviceID: "test"),
             ChecklistItem(taskID: child.id, title: "Child done", isCompleted: true, sortOrder: 10, deviceID: "test"),
-            ChecklistItem(taskID: child.id, title: "Child todo", isCompleted: false, sortOrder: 20, deviceID: "test")
+            ChecklistItem(taskID: child.id, title: "Child todo", isCompleted: false, sortOrder: 20, deviceID: "test"),
         ]
         let rollups = TaskRollupService().rollups(
             tasks: [parent, child],
             segments: [childSegment],
             checklistItems: checklist,
-            now: start.addingTimeInterval(2_000)
+            now: start.addingTimeInterval(2000)
         )
         let parentRollup = try #require(rollups[parent.id])
 
         #expect(parentRollup.forecastState == .aggregate)
-        #expect(parentRollup.remainingSeconds == 1_200)
-        #expect(parentRollup.estimatedTotalSeconds == 2_400)
+        #expect(parentRollup.remainingSeconds == 1200)
+        #expect(parentRollup.estimatedTotalSeconds == 2400)
         #expect(parentRollup.forecastSourceTaskIDs == [child.id])
         #expect(parentRollup.forecastSourceLabel == String(format: AppStrings.localized("forecast.source.aggregate"), 1))
         #expect(ForecastDisplayService().displayItem(for: parent.id, tasks: [parent, child], rollups: rollups)?.taskID == parent.id)
@@ -512,7 +512,7 @@ struct ChecklistForecastTests {
     }
 
     @Test @MainActor
-    func forecastCannotSurfaceChildrenHiddenByEitherLegacyArchiveMarker() throws {
+    func forecastCannotSurfaceChildrenHiddenByEitherLegacyArchiveMarker() {
         let rawArchivedParent = TaskNode(
             title: "Raw archived parent",
             parentID: nil,
@@ -525,7 +525,7 @@ struct ChecklistForecastTests {
             parentID: rawArchivedParent.id,
             deviceID: "test"
         )
-        rawArchivedChild.estimatedSeconds = 1_800
+        rawArchivedChild.estimatedSeconds = 1800
 
         let timestampArchivedParent = TaskNode(
             title: "Timestamp archived parent",
@@ -539,7 +539,7 @@ struct ChecklistForecastTests {
             parentID: timestampArchivedParent.id,
             deviceID: "test"
         )
-        timestampArchivedChild.estimatedSeconds = 1_800
+        timestampArchivedChild.estimatedSeconds = 1800
         let tasks = [
             rawArchivedParent,
             rawArchivedChild,

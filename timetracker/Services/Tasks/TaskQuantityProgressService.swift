@@ -34,7 +34,8 @@ struct TaskQuantityProgressService {
         guard let goal = goalWinners[expectedGoalID],
               goal.deletedAt == nil,
               goal.taskID == taskID,
-              goalIsCanonical(goal) else {
+              goalIsCanonical(goal)
+        else {
             return nil
         }
 
@@ -52,7 +53,7 @@ struct TaskQuantityProgressService {
                     $0.quantityGoalID == expectedGoalID)
         }
         guard connectedVisibleEntries.allSatisfy({
-                $0.taskID == taskID &&
+            $0.taskID == taskID &&
                 $0.quantityGoalID == expectedGoalID &&
                 TaskQuantityPolicy.valueRange.contains($0.amount) &&
                 PersistentDatePolicy.contains($0.recordedAt) &&
@@ -132,7 +133,8 @@ struct TaskQuantityProgressService {
             let scopedEntries = (entriesByTaskID[taskID] ?? []) +
                 (entriesByGoalID[expectedGoalID] ?? [])
             guard scopedGoals.isEmpty == false ||
-                    scopedEntries.isEmpty == false else {
+                scopedEntries.isEmpty == false
+            else {
                 return
             }
             result[taskID] = snapshot(
@@ -140,7 +142,7 @@ struct TaskQuantityProgressService {
                 goals: scopedGoals,
                 entries: scopedEntries,
                 isRecordingAllowed:
-                    recordingAllowedTaskIDs.contains(taskID)
+                recordingAllowedTaskIDs.contains(taskID)
             )
         }
     }
@@ -148,7 +150,8 @@ struct TaskQuantityProgressService {
     func goalIsCanonical(_ goal: TaskQuantityGoal) -> Bool {
         guard TaskQuantityPolicy.valueRange.contains(goal.targetAmount),
               PersistentDatePolicy.contains(goal.createdAt),
-              PersistentDatePolicy.contains(goal.updatedAt) else {
+              PersistentDatePolicy.contains(goal.updatedAt)
+        else {
             return false
         }
         do {

@@ -209,7 +209,7 @@ struct TaskProgressSnapshotContractTests {
         let staged = SyncDataSnapshot(
             tasks: [TaskRecord(fixture.generatedTask)],
             taskRecurrenceOccurrences: [
-                TaskRecurrenceOccurrenceRecord(fixture.occurrence)
+                TaskRecurrenceOccurrenceRecord(fixture.occurrence),
             ]
         )
         let context = try makeTestContext()
@@ -247,7 +247,7 @@ struct TaskProgressSnapshotContractTests {
             ),
             SyncDataSnapshot(
                 taskRecurrenceOccurrences: [
-                    TaskRecurrenceOccurrenceRecord(fixture.occurrence)
+                    TaskRecurrenceOccurrenceRecord(fixture.occurrence),
                 ]
             ),
             SyncDataSnapshot(
@@ -280,7 +280,7 @@ struct TaskProgressSnapshotContractTests {
         SyncDataSnapshot(
             taskRecurrenceRules: [TaskRecurrenceRuleRecord(fixture.rule)],
             taskRecurrenceOccurrences: [
-                TaskRecurrenceOccurrenceRecord(fixture.occurrence)
+                TaskRecurrenceOccurrenceRecord(fixture.occurrence),
             ],
             taskQuantityGoals: [TaskQuantityGoalRecord(fixture.goal)],
             taskQuantityEntries: [TaskQuantityEntryRecord(fixture.entry)]

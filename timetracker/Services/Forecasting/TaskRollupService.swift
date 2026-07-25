@@ -85,5 +85,4 @@ struct TaskRollupService {
 
         return ancestors
     }
-
 }

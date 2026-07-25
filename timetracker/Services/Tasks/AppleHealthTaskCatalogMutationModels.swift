@@ -89,7 +89,7 @@ extension AppleHealthTaskCatalogMutationOutcome {
     ) -> AppleHealthTaskCatalogMutationOutcome {
         replacing(
             consumedClearRecoveryTaskIDs:
-                consumedClearRecoveryTaskIDs.union([id])
+            consumedClearRecoveryTaskIDs.union([id])
         )
     }
 
@@ -104,14 +104,14 @@ extension AppleHealthTaskCatalogMutationOutcome {
         AppleHealthTaskCatalogMutationOutcome(
             createdCategoryIDs: createdCategoryIDs ?? self.createdCategoryIDs,
             restoredCategoryIDs:
-                restoredCategoryIDs ?? self.restoredCategoryIDs,
+            restoredCategoryIDs ?? self.restoredCategoryIDs,
             createdTaskIDs: createdTaskIDs ?? self.createdTaskIDs,
             restoredTaskIDs: restoredTaskIDs ?? self.restoredTaskIDs,
             restoredAssignmentIDs:
-                restoredAssignmentIDs ?? self.restoredAssignmentIDs,
+            restoredAssignmentIDs ?? self.restoredAssignmentIDs,
             consumedClearRecoveryTaskIDs:
-                consumedClearRecoveryTaskIDs ??
-                    self.consumedClearRecoveryTaskIDs
+            consumedClearRecoveryTaskIDs ??
+                self.consumedClearRecoveryTaskIDs
         )
     }
 }

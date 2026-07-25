@@ -7,7 +7,7 @@ nonisolated struct DurableLocalFileQuarantinePolicy: Equatable, Sendable {
 
     static let production = Self(
         maximumFileCount: 8,
-        maximumTotalByteCount: 16 * 1_024 * 1_024,
+        maximumTotalByteCount: 16 * 1024 * 1024,
         maximumAge: 14 * 24 * 60 * 60
     )
 
@@ -24,8 +24,11 @@ nonisolated struct DurableLocalFileQuarantinePolicy: Equatable, Sendable {
         self.maximumAge = maximumAge
     }
 }
+
 nonisolated extension DurableLocalFile {
-    private static var quarantineDirectoryName: String { ".TimeTrackerQuarantine" }
+    private static var quarantineDirectoryName: String {
+        ".TimeTrackerQuarantine"
+    }
 
     func quarantineIfPresent(at url: URL, prefix: String) throws -> URL? {
         let directoryURL = url.deletingLastPathComponent()
@@ -45,7 +48,8 @@ nonisolated extension DurableLocalFile {
               prefix.utf8.count <= 128,
               prefix.contains("/") == false,
               prefix.contains(":") == false,
-              prefix.rangeOfCharacter(from: .controlCharacters) == nil else {
+              prefix.rangeOfCharacter(from: .controlCharacters) == nil
+        else {
             throw DurableLocalFileError.invalidQuarantinePrefix
         }
         let paths = try canonicalManagedPaths(at: url, through: durableRootURL)
@@ -155,5 +159,4 @@ nonisolated extension DurableLocalFile {
             throw error
         }
     }
-
 }

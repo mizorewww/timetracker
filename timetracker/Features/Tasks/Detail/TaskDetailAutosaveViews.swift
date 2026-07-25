@@ -4,7 +4,7 @@ struct TaskDetailAutosaveFailureSection: View {
     let controller: TaskDetailAutosaveController
 
     var body: some View {
-        if case .failed(let message) = controller.status {
+        if case let .failed(message) = controller.status {
             Section {
                 VStack(alignment: .leading, spacing: 8) {
                     Label(

@@ -10,7 +10,7 @@ struct TimerPickerUIContractTests {
                 "play.circle.fill",
                 "arrow.left.arrow.right.circle.fill",
                 "checkmark.circle.fill",
-                "stop.circle.fill"
+                "stop.circle.fill",
             ]
         )
         #expect(
@@ -21,7 +21,7 @@ struct TimerPickerUIContractTests {
         #expect(
             TaskPickerPassiveStatus.allCases.map(\.systemImage) == [
                 "timer.circle.fill",
-                "checkmark.circle.fill"
+                "checkmark.circle.fill",
             ]
         )
         #expect(

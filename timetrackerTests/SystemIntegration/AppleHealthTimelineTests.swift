@@ -70,23 +70,24 @@ struct AppleHealthTimelineTests {
 
     @Test
     func projectionBuildsOneEpisodeAcrossSameSourceStagesAndExcludesAwakeDuration()
-        throws {
+        throws
+    {
         let service = AppleHealthTimelineProjectionService()
         let bounds = DateInterval(
             start: Date(timeIntervalSince1970: 0),
-            end: Date(timeIntervalSince1970: 3_000)
+            end: Date(timeIntervalSince1970: 3000)
         )
         let firstID = try fixedID(1)
         let secondID = try fixedID(2)
         let thirdID = try fixedID(3)
         let separateID = try fixedID(4)
         let samples = [
-            sleep(id: UUID(), stage: .inBed, start: 0, end: 1_800, source: "watch"),
+            sleep(id: UUID(), stage: .inBed, start: 0, end: 1800, source: "watch"),
             sleep(id: UUID(), stage: .awake, start: 300, end: 600, source: "watch"),
             sleep(id: firstID, stage: .asleepCore, start: 100, end: 300, source: "watch"),
             sleep(id: secondID, stage: .asleepDeep, start: 600, end: 900, source: "watch"),
-            sleep(id: thirdID, stage: .asleepREM, start: 900, end: 1_200, source: "watch"),
-            sleep(id: separateID, stage: .asleepUnspecified, start: 2_400, end: 2_600, source: "watch"),
+            sleep(id: thirdID, stage: .asleepREM, start: 900, end: 1200, source: "watch"),
+            sleep(id: separateID, stage: .asleepUnspecified, start: 2400, end: 2600, source: "watch"),
         ]
 
         let forward = service.project(
@@ -107,11 +108,11 @@ struct AppleHealthTimelineTests {
         #expect(forward.map(\.interval) == [
             DateInterval(
                 start: Date(timeIntervalSince1970: 100),
-                end: Date(timeIntervalSince1970: 1_200)
+                end: Date(timeIntervalSince1970: 1200)
             ),
             DateInterval(
-                start: Date(timeIntervalSince1970: 2_400),
-                end: Date(timeIntervalSince1970: 2_600)
+                start: Date(timeIntervalSince1970: 2400),
+                end: Date(timeIntervalSince1970: 2600)
             ),
         ])
         #expect(forward.first?.id == .appleHealthSleep(firstID))
@@ -123,14 +124,15 @@ struct AppleHealthTimelineTests {
             ),
             DateInterval(
                 start: Date(timeIntervalSince1970: 600),
-                end: Date(timeIntervalSince1970: 1_200)
+                end: Date(timeIntervalSince1970: 1200)
             ),
         ])
     }
 
     @Test
     func projectionClipsCrossMidnightEpisodeAfterGroupingAndKeepsRawAnchor()
-        throws {
+        throws
+    {
         let service = AppleHealthTimelineProjectionService()
         let bounds = DateInterval(
             start: Date(timeIntervalSince1970: 100),
@@ -156,8 +158,7 @@ struct AppleHealthTimelineTests {
             DateInterval(
                 start: Date(timeIntervalSince1970: 100),
                 end: Date(timeIntervalSince1970: 180)
-            )
-        )
+            ))
         #expect(items.first?.durationIntervals == [
             DateInterval(
                 start: Date(timeIntervalSince1970: 110),
@@ -171,7 +172,7 @@ struct AppleHealthTimelineTests {
         let service = AppleHealthTimelineProjectionService()
         let bounds = DateInterval(
             start: Date(timeIntervalSince1970: 0),
-            end: Date(timeIntervalSince1970: 4_000)
+            end: Date(timeIntervalSince1970: 4000)
         )
         let firstID = try fixedID(6)
         let secondID = try fixedID(7)
@@ -192,23 +193,23 @@ struct AppleHealthTimelineTests {
                         id: UUID(),
                         stage: .awake,
                         start: 600,
-                        end: 2_500,
+                        end: 2500,
                         source: "health",
                         productType: "watch"
                     ),
                     sleep(
                         id: secondID,
                         stage: .asleepREM,
-                        start: 2_500,
-                        end: 3_000,
+                        start: 2500,
+                        end: 3000,
                         source: "health",
                         productType: "watch"
                     ),
                     sleep(
                         id: otherSourceID,
                         stage: .asleepUnspecified,
-                        start: 3_000,
-                        end: 3_600,
+                        start: 3000,
+                        end: 3600,
                         source: "health",
                         productType: "phone"
                     ),
@@ -226,21 +227,22 @@ struct AppleHealthTimelineTests {
 
     @Test
     func projectionUsesInBedOnlyAsShortGapEvidenceWithoutExpandingBounds()
-        throws {
+        throws
+    {
         let service = AppleHealthTimelineProjectionService()
         let firstID = try fixedID(11)
-        let items = service.project(
+        let items = try service.project(
             batch: AppleHealthSampleBatch(
                 workouts: [],
                 sleep: [
                     sleep(id: UUID(), stage: .inBed, start: 0, end: 700),
                     sleep(id: firstID, stage: .asleepCore, start: 100, end: 200),
-                    sleep(id: try fixedID(12), stage: .asleepREM, start: 500, end: 600),
+                    sleep(id: fixedID(12), stage: .asleepREM, start: 500, end: 600),
                 ]
             ),
             visibleInterval: DateInterval(
                 start: Date(timeIntervalSince1970: 0),
-                end: Date(timeIntervalSince1970: 1_000)
+                end: Date(timeIntervalSince1970: 1000)
             )
         )
 
@@ -255,20 +257,20 @@ struct AppleHealthTimelineTests {
     @Test
     func projectionHonorsUnlabeledAndInBedGapBoundaries() throws {
         let service = AppleHealthTimelineProjectionService()
-        let items = service.project(
+        let items = try service.project(
             batch: AppleHealthSampleBatch(
                 workouts: [],
                 sleep: [
-                    sleep(id: try fixedID(30), stage: .asleepCore, start: 0, end: 100),
-                    sleep(id: try fixedID(31), stage: .asleepREM, start: 220, end: 300),
-                    sleep(id: try fixedID(32), stage: .asleepCore, start: 421, end: 500),
-                    sleep(id: UUID(), stage: .inBed, start: 500, end: 1_101),
-                    sleep(id: try fixedID(33), stage: .asleepREM, start: 1_101, end: 1_200),
+                    sleep(id: fixedID(30), stage: .asleepCore, start: 0, end: 100),
+                    sleep(id: fixedID(31), stage: .asleepREM, start: 220, end: 300),
+                    sleep(id: fixedID(32), stage: .asleepCore, start: 421, end: 500),
+                    sleep(id: UUID(), stage: .inBed, start: 500, end: 1101),
+                    sleep(id: fixedID(33), stage: .asleepREM, start: 1101, end: 1200),
                 ]
             ),
             visibleInterval: DateInterval(
                 start: Date(timeIntervalSince1970: 0),
-                end: Date(timeIntervalSince1970: 2_000)
+                end: Date(timeIntervalSince1970: 2000)
             )
         )
 
@@ -282,29 +284,30 @@ struct AppleHealthTimelineTests {
                 end: Date(timeIntervalSince1970: 500)
             ),
             DateInterval(
-                start: Date(timeIntervalSince1970: 1_101),
-                end: Date(timeIntervalSince1970: 1_200)
+                start: Date(timeIntervalSince1970: 1101),
+                end: Date(timeIntervalSince1970: 1200)
             ),
         ])
     }
 
     @Test
     func projectionUnionsOverlappingFractionalAsleepIntervalsBeforeRounding()
-        throws {
+        throws
+    {
         let service = AppleHealthTimelineProjectionService()
         let anchorID = try fixedID(34)
         let item = try #require(
-            service.project(
+            try service.project(
                 batch: AppleHealthSampleBatch(
                     workouts: [],
                     sleep: [
                         sleep(id: anchorID, stage: .asleepCore, start: 100.2, end: 400.8),
-                        sleep(id: try fixedID(35), stage: .asleepDeep, start: 250.4, end: 500.9),
+                        sleep(id: fixedID(35), stage: .asleepDeep, start: 250.4, end: 500.9),
                     ]
                 ),
                 visibleInterval: DateInterval(
                     start: Date(timeIntervalSince1970: 0),
-                    end: Date(timeIntervalSince1970: 1_000)
+                    end: Date(timeIntervalSince1970: 1000)
                 )
             ).first
         )
@@ -324,7 +327,7 @@ struct AppleHealthTimelineTests {
                 ],
                 visibleInterval: DateInterval(
                     start: Date(timeIntervalSince1970: 0),
-                    end: Date(timeIntervalSince1970: 1_000)
+                    end: Date(timeIntervalSince1970: 1000)
                 )
             ).entries.first
         )
@@ -347,19 +350,19 @@ struct AppleHealthTimelineTests {
                         id: firstID,
                         stage: .asleepCore,
                         start: 0,
-                        end: 17 * 3_600
+                        end: 17 * 3600
                     ),
                     sleep(
                         id: secondID,
                         stage: .asleepREM,
-                        start: 17 * 3_600,
-                        end: 19 * 3_600
+                        start: 17 * 3600,
+                        end: 19 * 3600
                     ),
                 ]
             ),
             visibleInterval: DateInterval(
                 start: Date(timeIntervalSince1970: 0),
-                end: Date(timeIntervalSince1970: 20 * 3_600)
+                end: Date(timeIntervalSince1970: 20 * 3600)
             )
         )
 
@@ -371,21 +374,21 @@ struct AppleHealthTimelineTests {
 
     @Test
     func projectionRejectsSingleAsleepSamplesBeyondTheEpisodeLimit() throws {
-        let items = AppleHealthTimelineProjectionService().project(
+        let items = try AppleHealthTimelineProjectionService().project(
             batch: AppleHealthSampleBatch(
                 workouts: [],
                 sleep: [
                     sleep(
-                        id: try fixedID(38),
+                        id: fixedID(38),
                         stage: .asleepUnspecified,
                         start: 0,
-                        end: 19 * 3_600
+                        end: 19 * 3600
                     ),
                 ]
             ),
             visibleInterval: DateInterval(
                 start: Date(timeIntervalSince1970: 0),
-                end: Date(timeIntervalSince1970: 20 * 3_600)
+                end: Date(timeIntervalSince1970: 20 * 3600)
             )
         )
 
@@ -394,7 +397,8 @@ struct AppleHealthTimelineTests {
 
     @Test
     func projectionKeepsAFullSourceWhenDetailedStagesCoverOnlyHalfTheSleep()
-        throws {
+        throws
+    {
         let fullID = try fixedID(39)
         let partialID = try fixedID(40)
         let items = AppleHealthTimelineProjectionService().project(
@@ -405,21 +409,21 @@ struct AppleHealthTimelineTests {
                         id: fullID,
                         stage: .asleepUnspecified,
                         start: 0,
-                        end: 8 * 3_600,
+                        end: 8 * 3600,
                         source: "phone"
                     ),
                     sleep(
                         id: partialID,
                         stage: .asleepCore,
-                        start: 4 * 3_600,
-                        end: 8 * 3_600,
+                        start: 4 * 3600,
+                        end: 8 * 3600,
                         source: "watch"
                     ),
                 ]
             ),
             visibleInterval: DateInterval(
                 start: Date(timeIntervalSince1970: 0),
-                end: Date(timeIntervalSince1970: 9 * 3_600)
+                end: Date(timeIntervalSince1970: 9 * 3600)
             )
         )
 
@@ -431,28 +435,29 @@ struct AppleHealthTimelineTests {
 
     @Test
     func projectionDeduplicatesOverlappingSourcesAndKeepsStableEpisodeID()
-        throws {
+        throws
+    {
         let service = AppleHealthTimelineProjectionService()
         let anchorID = try fixedID(13)
-        let initial = [
-            sleep(id: try fixedID(16), stage: .asleepUnspecified, start: 90, end: 620, source: "phone"),
+        let initial = try [
+            sleep(id: fixedID(16), stage: .asleepUnspecified, start: 90, end: 620, source: "phone"),
             sleep(id: anchorID, stage: .asleepCore, start: 100, end: 300, source: "watch"),
-            sleep(id: try fixedID(14), stage: .asleepDeep, start: 300, end: 550, source: "watch"),
+            sleep(id: fixedID(14), stage: .asleepDeep, start: 300, end: 550, source: "watch"),
         ]
         let bounds = DateInterval(
             start: Date(timeIntervalSince1970: 0),
-            end: Date(timeIntervalSince1970: 1_000)
+            end: Date(timeIntervalSince1970: 1000)
         )
 
         let before = service.project(
             batch: AppleHealthSampleBatch(workouts: [], sleep: initial),
             visibleInterval: bounds
         )
-        let after = service.project(
+        let after = try service.project(
             batch: AppleHealthSampleBatch(
                 workouts: [],
                 sleep: initial + [
-                    sleep(id: try fixedID(15), stage: .asleepREM, start: 550, end: 600, source: "watch"),
+                    sleep(id: fixedID(15), stage: .asleepREM, start: 550, end: 600, source: "watch"),
                 ]
             ),
             visibleInterval: bounds
@@ -509,7 +514,8 @@ struct AppleHealthTimelineTests {
 
     @Test
     func timelineSnapshotUsesEpisodeEnvelopeForLayoutButOnlyAsleepIntervalsForDuration()
-        throws {
+        throws
+    {
         let anchorID = try fixedID(17)
         let seed = TimelinePresentationSeed(
             id: .appleHealthSleep(anchorID),
@@ -602,8 +608,8 @@ struct AppleHealthTimelineTests {
                     AppleHealthWorkoutSample(
                         id: workoutID,
                         kind: .running,
-                        startedAt: now.addingTimeInterval(-1_800),
-                        endedAt: now.addingTimeInterval(-1_200),
+                        startedAt: now.addingTimeInterval(-1800),
+                        endedAt: now.addingTimeInterval(-1200),
                         sourceBundleIdentifier: "test"
                     ),
                 ],
@@ -665,7 +671,8 @@ struct AppleHealthTimelineTests {
 
     @Test @MainActor
     func disabledTimelineRefreshMaterializesVisibleSyncOnlyCatalogWithoutHealthAccess()
-        async throws {
+        async throws
+    {
         let context = try makeTestContext()
         let reader = StubAppleHealthReader(
             isHealthDataAvailable: false,
@@ -711,7 +718,8 @@ struct AppleHealthTimelineTests {
 
     @Test @MainActor
     func enabledRefreshMergesCrossMidnightSleepBeforeVisibleRangeClipping()
-        async throws {
+        async throws
+    {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
         let dayStart = try #require(
@@ -719,22 +727,22 @@ struct AppleHealthTimelineTests {
                 from: DateComponents(year: 2026, month: 7, day: 22)
             )
         )
-        let now = dayStart.addingTimeInterval(3_600)
+        let now = dayStart.addingTimeInterval(3600)
         let coreID = try fixedID(41)
-        let reader = StubAppleHealthReader(
+        let reader = try StubAppleHealthReader(
             batch: AppleHealthSampleBatch(
                 workouts: [],
                 sleep: [
                     AppleHealthSleepSample(
                         id: coreID,
                         stage: .asleepCore,
-                        startedAt: dayStart.addingTimeInterval(-1_800),
+                        startedAt: dayStart.addingTimeInterval(-1800),
                         endedAt: dayStart.addingTimeInterval(-120),
                         sourceBundleIdentifier: "test.sleep",
                         sourceProductType: "watch"
                     ),
                     AppleHealthSleepSample(
-                        id: try fixedID(42),
+                        id: fixedID(42),
                         stage: .awake,
                         startedAt: dayStart.addingTimeInterval(-120),
                         endedAt: dayStart.addingTimeInterval(300),
@@ -742,10 +750,10 @@ struct AppleHealthTimelineTests {
                         sourceProductType: "watch"
                     ),
                     AppleHealthSleepSample(
-                        id: try fixedID(43),
+                        id: fixedID(43),
                         stage: .asleepREM,
                         startedAt: dayStart.addingTimeInterval(300),
-                        endedAt: dayStart.addingTimeInterval(2_400),
+                        endedAt: dayStart.addingTimeInterval(2400),
                         sourceBundleIdentifier: "test.sleep",
                         sourceProductType: "watch"
                     ),
@@ -755,7 +763,7 @@ struct AppleHealthTimelineTests {
         let store = TimeTrackerStore(
             appleHealthDataReader: reader,
             appleHealthTimelinePreferenceStore:
-                StubAppleHealthTimelinePreferences(isTimelineEnabled: true)
+            StubAppleHealthTimelinePreferences(isTimelineEnabled: true)
         )
 
         await store.refreshAppleHealthTimelineIfEnabled(
@@ -777,12 +785,12 @@ struct AppleHealthTimelineTests {
         #expect(item.id == .appleHealthSleep(coreID))
         #expect(item.interval == DateInterval(
             start: dayStart,
-            end: dayStart.addingTimeInterval(2_400)
+            end: dayStart.addingTimeInterval(2400)
         ))
         #expect(item.durationIntervals == [
             DateInterval(
                 start: dayStart.addingTimeInterval(300),
-                end: dayStart.addingTimeInterval(2_400)
+                end: dayStart.addingTimeInterval(2400)
             ),
         ])
         #expect(
@@ -803,21 +811,22 @@ struct AppleHealthTimelineTests {
         #expect(timeline.entries.count == 1)
         #expect(entry.subject == .appleHealthSleep)
         #expect(entry.startedAt == dayStart)
-        #expect(entry.endedAt == dayStart.addingTimeInterval(2_400))
-        #expect(entry.durationSeconds == 2_100)
+        #expect(entry.endedAt == dayStart.addingTimeInterval(2400))
+        #expect(entry.durationSeconds == 2100)
     }
 
     @Test @MainActor
     func enabledAutomaticRefreshReauthorizesBeforeReadingWhenNoSheetIsNeeded()
-        async throws {
+        async throws
+    {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
-        let reader = StubAppleHealthReader(
+        let reader = try StubAppleHealthReader(
             batch: AppleHealthSampleBatch(
                 workouts: [
                     AppleHealthWorkoutSample(
-                        id: try fixedID(21),
+                        id: fixedID(21),
                         kind: .walking,
                         startedAt: now.addingTimeInterval(-600),
                         endedAt: now.addingTimeInterval(-300),
@@ -845,7 +854,8 @@ struct AppleHealthTimelineTests {
         #expect(reader.sampleRequestIntervals.count == 1)
         #expect(store.appleHealthTimelineItems.count == 1)
         guard case let .content(_, refreshedAt, itemCount) =
-            store.appleHealthTimelineState else {
+            store.appleHealthTimelineState
+        else {
             Issue.record(
                 "Expected content, got \(store.appleHealthTimelineState)"
             )
@@ -857,7 +867,8 @@ struct AppleHealthTimelineTests {
 
     @Test @MainActor
     func automaticRefreshWaitsForContextBeforePresentingAuthorizationSheet()
-        async {
+        async
+    {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let reader = StubAppleHealthReader(
             batch: .empty,
@@ -893,7 +904,8 @@ struct AppleHealthTimelineTests {
 
     @Test @MainActor
     func unknownAutomaticAuthorizationStatusClearsStaleHealthContent()
-        async {
+        async
+    {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let reader = StubAppleHealthReader(
             batch: .empty,
@@ -949,7 +961,7 @@ struct AppleHealthTimelineTests {
             await store.refreshAppleHealthTimelineIfEnabled(now: now)
         }
 
-        for _ in 0..<20 where reader.sampleRequestIntervals.isEmpty {
+        for _ in 0 ..< 20 where reader.sampleRequestIntervals.isEmpty {
             await Task.yield()
         }
         #expect(reader.sampleRequestIntervals.count == 1)
@@ -968,13 +980,14 @@ struct AppleHealthTimelineTests {
 
     @Test @MainActor
     func newerRefreshCancelsOlderHealthQueryAndKeepsTheNewestResult()
-        async throws {
+        async throws
+    {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
-        let reader = StubAppleHealthReader(
+        let reader = try StubAppleHealthReader(
             batch: AppleHealthSampleBatch(
                 workouts: [
                     workout(
-                        id: try fixedID(41),
+                        id: fixedID(41),
                         kind: .running,
                         start: now.timeIntervalSince1970 - 600,
                         end: now.timeIntervalSince1970 - 300
@@ -994,7 +1007,7 @@ struct AppleHealthTimelineTests {
         let olderRefresh = Task { @MainActor in
             await store.refreshAppleHealthTimelineIfEnabled(now: now)
         }
-        for _ in 0..<20 where reader.sampleRequestIntervals.isEmpty {
+        for _ in 0 ..< 20 where reader.sampleRequestIntervals.isEmpty {
             await Task.yield()
         }
         #expect(reader.sampleRequestIntervals.count == 1)
@@ -1012,7 +1025,8 @@ struct AppleHealthTimelineTests {
             ]
         )
         guard case let .content(_, _, itemCount) =
-            store.appleHealthTimelineState else {
+            store.appleHealthTimelineState
+        else {
             Issue.record(
                 "Expected content, got \(store.appleHealthTimelineState)"
             )
@@ -1044,7 +1058,8 @@ struct AppleHealthTimelineTests {
 
     @Test @MainActor
     func noReadableSamplesStillCreateTheCompleteStaticTemplateCatalog()
-        async throws {
+        async throws
+    {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let context = try makeTestContext()
         let stateDirectory = FileManager.default.temporaryDirectory
@@ -1098,7 +1113,8 @@ struct AppleHealthTimelineTests {
 
     @Test @MainActor
     func clearRecoveryIdentityReceiptRoundTripsOnlyThroughLocalPreferences()
-        throws {
+        throws
+    {
         let suiteName = "AppleHealthClearRecovery-\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer {
@@ -1124,7 +1140,8 @@ struct AppleHealthTimelineTests {
 
     @Test @MainActor
     func enablingCreatesSyncOnlyTaskLabelsWithoutPersistingHealthRecords()
-        async throws {
+        async throws
+    {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let context = try makeTestContext()
         let stateDirectory = FileManager.default.temporaryDirectory
@@ -1136,22 +1153,22 @@ struct AppleHealthTimelineTests {
         defer {
             try? FileManager.default.removeItem(at: stateDirectory)
         }
-        let reader = StubAppleHealthReader(
+        let reader = try StubAppleHealthReader(
             batch: AppleHealthSampleBatch(
                 workouts: [
                     workout(
-                        id: try fixedID(30),
+                        id: fixedID(30),
                         kind: .running,
-                        start: now.timeIntervalSince1970 - 1_800,
-                        end: now.timeIntervalSince1970 - 1_200
+                        start: now.timeIntervalSince1970 - 1800,
+                        end: now.timeIntervalSince1970 - 1200
                     ),
                 ],
                 sleep: [
                     sleep(
-                        id: try fixedID(31),
+                        id: fixedID(31),
                         stage: .asleepCore,
-                        start: now.timeIntervalSince1970 - 3_600,
-                        end: now.timeIntervalSince1970 - 2_400
+                        start: now.timeIntervalSince1970 - 3600,
+                        end: now.timeIntervalSince1970 - 2400
                     ),
                 ]
             )
@@ -1190,16 +1207,16 @@ struct AppleHealthTimelineTests {
         #expect(store.appleHealthTimelineItems.count == 2)
         #expect(store.appleHealthTaskCatalogErrorMessage == nil)
         #expect(preferences.taskCatalogClearRecoveryTaskIDs.isEmpty)
-        #expect(store.isTaskVisible(try #require(store.task(for: running.id))))
+        #expect(try store.isTaskVisible(#require(store.task(for: running.id))))
         #expect(
-            store.isTaskAvailableForTracking(
-                try #require(store.task(for: running.id))
+            try store.isTaskAvailableForTracking(
+                #require(store.task(for: running.id))
             ) == false
         )
-        #expect(store.isTaskVisible(try #require(store.task(for: sleep.id))))
+        #expect(try store.isTaskVisible(#require(store.task(for: sleep.id))))
         #expect(
-            store.isTaskAvailableForTracking(
-                try #require(store.task(for: sleep.id))
+            try store.isTaskAvailableForTracking(
+                #require(store.task(for: sleep.id))
             ) == false
         )
         store.preferences.quickStartTaskIDs = [running.id, sleep.id]
@@ -1215,7 +1232,8 @@ struct AppleHealthTimelineTests {
 
     @Test @MainActor
     func enabledRefreshRetriesAndConsumesOnlyConfirmedClearRecovery()
-        async throws {
+        async throws
+    {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         let context = try makeTestContext()
         let running = AppleHealthTaskCatalog.taskDefinition(
@@ -1270,7 +1288,8 @@ struct AppleHealthTimelineTests {
 
     @Test
     func healthTimelineUIUsesSharedChartAndRoutesThroughStaticTemplates()
-        throws {
+        throws
+    {
         let home = try sourceText(
             "timetracker/Features/Home/Sections/HomeTimelineViews.swift"
         )
@@ -1441,7 +1460,8 @@ private final class StubAppleHealthReader: AppleHealthDataReading {
     }
 
     func authorizationRequestStatus() async throws
-        -> AppleHealthAuthorizationRequestStatus {
+        -> AppleHealthAuthorizationRequestStatus
+    {
         authorizationRequestStatusCount += 1
         if let authorizationRequestStatusError {
             throw authorizationRequestStatusError
@@ -1482,7 +1502,8 @@ private final class StubAppleHealthReader: AppleHealthDataReading {
 
 @MainActor
 private final class StubAppleHealthTimelinePreferences:
-    AppleHealthTimelinePreferenceStoring {
+    AppleHealthTimelinePreferenceStoring
+{
     var isTimelineEnabled: Bool
     var taskCatalogClearRecoveryTaskIDs: Set<UUID> = []
 

@@ -29,7 +29,7 @@ nonisolated enum LiveActivityProjectionLimits {
 import ActivityKit
 
 nonisolated struct TimeTrackingActivityAttributes: ActivityAttributes, Sendable {
-    public nonisolated struct ContentState: Codable, Hashable, Sendable {
+    nonisolated struct ContentState: Codable, Hashable, Sendable {
         var taskTitle: String
         var taskPath: String
         var taskPathAbbreviated: String?

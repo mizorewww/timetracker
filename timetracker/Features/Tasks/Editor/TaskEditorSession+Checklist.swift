@@ -67,7 +67,8 @@ extension TaskEditorSession {
         }
         if let visualIndex,
            orderedDrafts.indices.contains(visualIndex),
-           orderedDrafts[visualIndex].isCompleted == false {
+           orderedDrafts[visualIndex].isCompleted == false
+        {
             orderedDrafts.insert(newItem, at: visualIndex + 1)
         } else {
             let insertionIndex = orderedDrafts.firstIndex {

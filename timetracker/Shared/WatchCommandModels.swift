@@ -32,9 +32,10 @@ nonisolated extension WatchTimerCommand {
         guard WatchTransportLimits.isFinite(issuedAt),
               deviceID.isEmpty == false,
               WatchTransportLimits.isBounded(
-                deviceID,
-                maximumUTF8Bytes: WatchTransportLimits.maximumDeviceIDBytes
-              ) else {
+                  deviceID,
+                  maximumUTF8Bytes: WatchTransportLimits.maximumDeviceIDBytes
+              )
+        else {
             return false
         }
         switch type {
@@ -70,9 +71,9 @@ nonisolated enum WatchCommandProcessingResult: Equatable, Sendable {
     var isProcessed: Bool {
         switch self {
         case .started, .stopped:
-            return true
+            true
         case .duplicate, .missingTask, .missingSegment, .invalid:
-            return false
+            false
         }
     }
 }
@@ -88,7 +89,9 @@ nonisolated struct WatchCommandResult: Codable, Equatable, Identifiable, Sendabl
     var relatedID: UUID?
     var failureCode: String?
 
-    var id: UUID { commandID }
+    var id: UUID {
+        commandID
+    }
 
     var completesWithoutUserAction: Bool {
         status == .success || status == .duplicate
@@ -141,7 +144,7 @@ nonisolated extension WatchCommandProcessingResult {
         completedAt: Date = Date()
     ) -> WatchCommandResult {
         switch self {
-        case .started(let segmentID), .stopped(let segmentID):
+        case let .started(segmentID), let .stopped(segmentID):
             WatchCommandResult(
                 commandID: commandID,
                 status: .success,
@@ -157,7 +160,7 @@ nonisolated extension WatchCommandProcessingResult {
                 relatedID: nil,
                 failureCode: nil
             )
-        case .missingTask(let taskID):
+        case let .missingTask(taskID):
             WatchCommandResult(
                 commandID: commandID,
                 status: .missingTask,
@@ -165,7 +168,7 @@ nonisolated extension WatchCommandProcessingResult {
                 relatedID: taskID,
                 failureCode: nil
             )
-        case .missingSegment(let segmentID):
+        case let .missingSegment(segmentID):
             WatchCommandResult(
                 commandID: commandID,
                 status: .missingSegment,
@@ -189,7 +192,9 @@ nonisolated struct WatchFailedCommand: Codable, Equatable, Identifiable, Sendabl
     var command: WatchTimerCommand
     var result: WatchCommandResult
 
-    var id: UUID { command.id }
+    var id: UUID {
+        command.id
+    }
 }
 
 /// Pure, codable command lifecycle state shared by the watch UI and unit tests.
@@ -305,7 +310,8 @@ nonisolated struct WatchCommandQueueState: Codable, Equatable, Sendable {
                   $0.command.isStructurallyValid &&
                       $0.result.isStructurallyValid &&
                       $0.command.id == $0.result.commandID
-              }) else {
+              })
+        else {
             return false
         }
         let commands = pendingCommands + failedCommands.map(\.command)

@@ -140,8 +140,12 @@ struct WatchDashboardView: View {
         if !pendingCommands.isEmpty {
             return isReachable && !hasConnectivityError ? .sending : .queued
         }
-        if hasConnectivityError { return .connectionError }
-        if isSnapshotStale { return .stale }
+        if hasConnectivityError {
+            return .connectionError
+        }
+        if isSnapshotStale {
+            return .stale
+        }
         return nil
     }
 
@@ -207,7 +211,8 @@ struct WatchDashboardView: View {
     private var preferredInitialPage: WatchDashboardPage {
         if snapshot.activeTimers.isEmpty == false ||
             status != nil ||
-            failureItems.isEmpty == false {
+            failureItems.isEmpty == false
+        {
             return .activeTimers
         }
         return .quickStart
@@ -216,10 +221,10 @@ struct WatchDashboardView: View {
     private func failureTitle(for failure: WatchFailedCommand) -> String {
         switch failure.command.type {
         case .startTask:
-            return snapshot.recentTasks.first { $0.taskID == failure.command.taskID }?.title
+            snapshot.recentTasks.first { $0.taskID == failure.command.taskID }?.title
                 ?? String(localized: "watch.command.startFallback")
         case .stopSegment:
-            return snapshot.activeTimers.first { $0.id == failure.command.segmentID }?.title
+            snapshot.activeTimers.first { $0.id == failure.command.segmentID }?.title
                 ?? String(localized: "watch.command.stopFallback")
         }
     }

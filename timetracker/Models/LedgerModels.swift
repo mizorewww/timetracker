@@ -16,7 +16,9 @@ enum AggregationMode: String, CaseIterable, Identifiable {
     case gross
     case wallClock
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 }
 
 /// The single boundary policy for persisted tracked time.
@@ -80,21 +82,21 @@ extension TimeSessionSource {
     var displayName: String {
         switch self {
         case .manual:
-            return AppStrings.localized("source.manual")
+            AppStrings.localized("source.manual")
         case .timer:
-            return AppStrings.localized("source.timer")
+            AppStrings.localized("source.timer")
         case .pomodoro:
-            return AppStrings.pomodoro
+            AppStrings.pomodoro
         case .importCalendar:
-            return AppStrings.localized("source.calendar")
+            AppStrings.localized("source.calendar")
         case .shortcut:
-            return AppStrings.localized("source.shortcut")
+            AppStrings.localized("source.shortcut")
         case .watch:
-            return AppStrings.localized("source.watch")
+            AppStrings.localized("source.watch")
         case .widget:
-            return AppStrings.localized("source.widget")
+            AppStrings.localized("source.widget")
         case .liveActivity:
-            return AppStrings.localized("source.liveActivity")
+            AppStrings.localized("source.liveActivity")
         }
     }
 }
@@ -121,15 +123,15 @@ final class TimeSession {
         startedAt: Date = Date(),
         titleSnapshot: String? = nil
     ) {
-        self.id = UUID()
+        id = UUID()
         self.taskID = taskID
         self.titleSnapshot = titleSnapshot
-        self.sourceRaw = source.rawValue
+        sourceRaw = source.rawValue
         self.startedAt = startedAt
         self.deviceID = deviceID
-        self.clientMutationID = UUID()
-        self.createdAt = Date()
-        self.updatedAt = Date()
+        clientMutationID = UUID()
+        createdAt = Date()
+        updatedAt = Date()
     }
 }
 
@@ -165,15 +167,15 @@ final class TimeSegment {
         startedAt: Date = Date(),
         endedAt: Date? = nil
     ) {
-        self.id = UUID()
+        id = UUID()
         self.sessionID = sessionID
         self.taskID = taskID
         self.startedAt = startedAt
         self.endedAt = endedAt
-        self.sourceRaw = source.rawValue
+        sourceRaw = source.rawValue
         self.deviceID = deviceID
-        self.createdAt = Date()
-        self.updatedAt = Date()
+        createdAt = Date()
+        updatedAt = Date()
     }
 }
 

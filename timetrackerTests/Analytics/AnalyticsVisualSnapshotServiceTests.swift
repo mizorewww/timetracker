@@ -30,14 +30,14 @@ struct AnalyticsVisualSnapshotServiceTests {
             taskID: design.id,
             source: .timer,
             deviceID: "test",
-            startedAt: day.addingTimeInterval(8 * 3_600),
+            startedAt: day.addingTimeInterval(8 * 3600),
             titleSnapshot: design.title
         )
         let reviewSession = TimeSession(
             taskID: review.id,
             source: .timer,
             deviceID: "test",
-            startedAt: day.addingTimeInterval(9 * 3_600),
+            startedAt: day.addingTimeInterval(9 * 3600),
             titleSnapshot: review.title
         )
         let segments = [
@@ -46,17 +46,17 @@ struct AnalyticsVisualSnapshotServiceTests {
                 taskID: design.id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: day.addingTimeInterval(8 * 3_600 + 30 * 60),
-                endedAt: day.addingTimeInterval(10 * 3_600)
+                startedAt: day.addingTimeInterval(8 * 3600 + 30 * 60),
+                endedAt: day.addingTimeInterval(10 * 3600)
             ),
             TimeSegment(
                 sessionID: reviewSession.id,
                 taskID: review.id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: day.addingTimeInterval(9 * 3_600 + 15 * 60),
-                endedAt: day.addingTimeInterval(11 * 3_600)
-            )
+                startedAt: day.addingTimeInterval(9 * 3600 + 15 * 60),
+                endedAt: day.addingTimeInterval(11 * 3600)
+            ),
         ]
         let period = try #require(calendar.dateInterval(of: .day, for: now))
         let tasks = [design, review]
@@ -114,7 +114,7 @@ struct AnalyticsVisualSnapshotServiceTests {
             taskID: task.id,
             source: .timer,
             deviceID: "test",
-            startedAt: now.addingTimeInterval(-3_600),
+            startedAt: now.addingTimeInterval(-3600),
             titleSnapshot: task.title
         )
         let segment = TimeSegment(
@@ -122,8 +122,8 @@ struct AnalyticsVisualSnapshotServiceTests {
             taskID: task.id,
             source: .timer,
             deviceID: "test",
-            startedAt: now.addingTimeInterval(-3_600),
-            endedAt: now.addingTimeInterval(-1_800)
+            startedAt: now.addingTimeInterval(-3600),
+            endedAt: now.addingTimeInterval(-1800)
         )
         let input = AnalyticsVisualSnapshotInput(
             range: .today,

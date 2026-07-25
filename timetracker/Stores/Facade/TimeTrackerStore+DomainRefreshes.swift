@@ -46,9 +46,9 @@ extension TimeTrackerStore {
         let previousInboxInstructions = preferences.llmInboxSuggestionInstructions
         let previousChecklistInstructions = preferences.llmChecklistVisualInstructions
         let automaticSuggestionsWereEnabled = preferences.llmAutomaticSuggestionsEnabled
-        preferenceDomainStore.refresh(
-            syncedPreferences: try fetchSyncedPreferences(),
-            localLLMAPIKey: try llmCredentialStore.readAPIKey() ?? "",
+        try preferenceDomainStore.refresh(
+            syncedPreferences: fetchSyncedPreferences(),
+            localLLMAPIKey: llmCredentialStore.readAPIKey() ?? "",
             localLLMAutomaticSuggestionsEnabled: UserDefaults.standard.bool(
                 forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
             )
@@ -70,7 +70,7 @@ extension TimeTrackerStore {
             if previousChecklistInstructions != preferences.llmChecklistVisualInstructions {
                 cancelAllChecklistVisualSuggestionRequests()
             }
-            if automaticSuggestionsWereEnabled && !preferences.llmAutomaticSuggestionsEnabled {
+            if automaticSuggestionsWereEnabled, !preferences.llmAutomaticSuggestionsEnabled {
                 cancelAutomaticInboxSuggestionRequests()
                 cancelAllChecklistVisualSuggestionRequests()
             }
@@ -80,9 +80,9 @@ extension TimeTrackerStore {
     func refreshChecklistDomain(plan: StoreRefreshPlan) throws {
         let scopedTaskIDs = plan.directlyAffectedChecklistTaskIDs
         if scopedTaskIDs.isEmpty || checklistDomainStore.isInitialized == false {
-            checklistDomainStore.refresh(
-                items: try fetchChecklistItems(),
-                visuals: try fetchChecklistItemVisuals()
+            try checklistDomainStore.refresh(
+                items: fetchChecklistItems(),
+                visuals: fetchChecklistItemVisuals()
             )
             checklistItems = checklistDomainStore.items
             checklistItemVisuals = checklistDomainStore.visuals
@@ -91,10 +91,10 @@ extension TimeTrackerStore {
                 scopedTaskIDs.flatMap { checklistDomainStore.items(for: $0) }.map(\.id)
             )
             let scopedItems = try fetchChecklistItems(taskIDs: scopedTaskIDs)
-            checklistDomainStore.refreshTaskScoped(
+            try checklistDomainStore.refreshTaskScoped(
                 taskIDs: scopedTaskIDs,
                 items: scopedItems,
-                visuals: try fetchChecklistItemVisuals(checklistItemIDs: Set(scopedItems.map(\.id)))
+                visuals: fetchChecklistItemVisuals(checklistItemIDs: Set(scopedItems.map(\.id)))
             )
             let currentItemIDs = Set(
                 scopedTaskIDs.flatMap { checklistDomainStore.items(for: $0) }.map(\.id)
@@ -133,14 +133,14 @@ extension TimeTrackerStore {
         let itemReadModels = try fetchInboxItemReadModels()
         inboxDomainStore.refresh(itemReadModels: itemReadModels, suggestions: inboxSuggestions)
         if plan.affectedInboxItemIDs.isEmpty || inboxSuggestions.isEmpty {
-            inboxDomainStore.refresh(
+            try inboxDomainStore.refresh(
                 itemReadModels: itemReadModels,
-                suggestions: try fetchInboxSuggestions()
+                suggestions: fetchInboxSuggestions()
             )
         } else {
-            inboxDomainStore.refreshSuggestionScoped(
+            try inboxDomainStore.refreshSuggestionScoped(
                 inboxItemIDs: plan.affectedInboxItemIDs,
-                suggestions: try fetchInboxSuggestions(inboxItemIDs: plan.affectedInboxItemIDs)
+                suggestions: fetchInboxSuggestions(inboxItemIDs: plan.affectedInboxItemIDs)
             )
         }
         suppressInboxSuggestionIndexRebuild = true

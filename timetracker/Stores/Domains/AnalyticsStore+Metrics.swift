@@ -156,5 +156,4 @@ extension AnalyticsStore {
         }
         return durations[middle]
     }
-
 }

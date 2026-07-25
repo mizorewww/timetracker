@@ -63,7 +63,9 @@ extension InboxCommandHandler {
         let existing = try suggestions(for: winner, context: context)
             .deduplicatedByID()
             .sorted { lhs, rhs in
-                if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt > rhs.updatedAt }
+                if lhs.updatedAt != rhs.updatedAt {
+                    return lhs.updatedAt > rhs.updatedAt
+                }
                 return lhs.id.uuidString > rhs.id.uuidString
             }
         let identity = winner.suggestionIdentity
@@ -157,7 +159,8 @@ extension InboxCommandHandler {
               InboxSuggestionStateService().displaySuggestion(
                   for: winner,
                   suggestion: suggestion
-              ) != nil else {
+              ) != nil
+        else {
             throw InboxCommandIdentityError.staleSuggestion
         }
         let fetchedSuggestions = try suggestions(for: winner, context: context)
@@ -165,12 +168,13 @@ extension InboxCommandHandler {
             items: [winner],
             suggestions: fetchedSuggestions
         )[winner.id],
-              canonicalSuggestion.id == suggestion.id,
-              canonicalSuggestion.destinationKind == .checklist,
-              InboxSuggestionStateService().displaySuggestion(
-                  for: winner,
-                  suggestion: canonicalSuggestion
-              ) != nil else {
+            canonicalSuggestion.id == suggestion.id,
+            canonicalSuggestion.destinationKind == .checklist,
+            InboxSuggestionStateService().displaySuggestion(
+                for: winner,
+                suggestion: canonicalSuggestion
+            ) != nil
+        else {
             throw InboxCommandIdentityError.staleSuggestion
         }
         let preparedItem = try InboxPersistencePolicy.prepareItem(
@@ -244,5 +248,4 @@ extension InboxCommandHandler {
             tombstone(preparedSuggestions, now: now, deviceID: deviceID)
         }
     }
-
 }

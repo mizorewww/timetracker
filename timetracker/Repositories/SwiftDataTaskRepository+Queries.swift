@@ -128,20 +128,26 @@ extension SwiftDataTaskRepository {
     }
 
     private func taskHierarchyOrder(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {
-        if lhs.depth != rhs.depth { return lhs.depth < rhs.depth }
+        if lhs.depth != rhs.depth {
+            return lhs.depth < rhs.depth
+        }
         return taskSiblingOrder(lhs, rhs)
     }
 
     private func taskSiblingOrder(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {
-        if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
-        if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+        if lhs.sortOrder != rhs.sortOrder {
+            return lhs.sortOrder < rhs.sortOrder
+        }
+        if lhs.createdAt != rhs.createdAt {
+            return lhs.createdAt < rhs.createdAt
+        }
         return lhs.id.uuidString < rhs.id.uuidString
     }
 
-    private func persistentIdentityOrder<Model>(
+    private func persistentIdentityOrder<Model: PersistentUUIDModel>(
         _ lhs: Model,
         _ rhs: Model
-    ) -> Bool where Model: PersistentUUIDModel {
+    ) -> Bool {
         lhs.id.uuidString < rhs.id.uuidString
     }
 }

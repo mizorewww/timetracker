@@ -6,7 +6,6 @@ struct TaskSummaryMetadataLine: View {
     let layout: TaskSummaryRowLayout
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    @ViewBuilder
     var body: some View {
         switch layout {
         case .stacked:

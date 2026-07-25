@@ -172,8 +172,8 @@ struct CoreSyncSnapshotPreflightTests {
         try snapshot.validateForRestore()
         try snapshot.restoreAsLocalWinner(context: context)
 
-        let restoredByRaw = Dictionary(
-            uniqueKeysWithValues: try context.fetch(FetchDescriptor<TaskNode>())
+        let restoredByRaw = try Dictionary(
+            uniqueKeysWithValues: context.fetch(FetchDescriptor<TaskNode>())
                 .map { ($0.statusRaw, $0) }
         )
         #expect(Set(restoredByRaw.keys) == LegacyTaskStatusRaw.acceptedValues)
@@ -463,7 +463,7 @@ struct CoreSyncSnapshotPreflightTests {
             inboxItems: [InboxItemRecord(firstItem), InboxItemRecord(secondItem)],
             inboxCaptureReceipts: [
                 InboxCaptureReceiptRecord(firstReceipt),
-                InboxCaptureReceiptRecord(secondReceipt)
+                InboxCaptureReceiptRecord(secondReceipt),
             ]
         )
 

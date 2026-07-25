@@ -21,7 +21,7 @@ extension TimeTrackerStore {
             apiKey: apiKey,
             modelID: modelID
         ), matchesCurrentLLMPrompt(instructions, kind: .inboxRouting),
-           showsErrors || preferences.llmAutomaticSuggestionsEnabled else {
+        showsErrors || preferences.llmAutomaticSuggestionsEnabled else {
             return
         }
 
@@ -75,14 +75,14 @@ extension TimeTrackerStore {
             apiKey: apiKey,
             modelID: modelID
         ), matchesCurrentLLMPrompt(instructions, kind: .inboxRouting),
-           showsErrors || preferences.llmAutomaticSuggestionsEnabled,
-              let item = inboxItems.first(where: { $0.id == itemID }),
-              inboxSuggestionStateService.canStoreGeneratedSuggestion(
-                  readModel: inboxItemReadModel(for: item),
-                  requestedTitle: requestedTitle,
-                  requestedIdentity: requestedIdentity,
-                  currentSuggestion: inboxSuggestionByItemID[itemID]
-              ) else {
+        showsErrors || preferences.llmAutomaticSuggestionsEnabled,
+        let item = inboxItems.first(where: { $0.id == itemID }),
+        inboxSuggestionStateService.canStoreGeneratedSuggestion(
+            readModel: inboxItemReadModel(for: item),
+            requestedTitle: requestedTitle,
+            requestedIdentity: requestedIdentity,
+            currentSuggestion: inboxSuggestionByItemID[itemID]
+        ) else {
             return
         }
         inboxSuggestionFailureByItemID[itemID] = error.localizedDescription

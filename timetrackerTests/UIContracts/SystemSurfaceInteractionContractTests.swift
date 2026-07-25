@@ -7,7 +7,7 @@ struct SystemSurfaceInteractionContractTests {
     @Test
     func liveActivityStopwatchKeepsAThreeFieldSixteenHourClock() {
         let startedAt = Date(timeIntervalSince1970: 0)
-        let currentDate = startedAt.addingTimeInterval(16 * 3_600 + 2 * 60 + 3)
+        let currentDate = startedAt.addingTimeInterval(16 * 3600 + 2 * 60 + 3)
         let style = SystemFormatStyle.Stopwatch(
             startingAt: startedAt,
             showsHours: true,

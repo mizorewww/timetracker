@@ -19,7 +19,7 @@ struct CoreArchitectureBehaviorTests {
     }
 
     @Test
-    func enumDisplayTextUsesLocalizationKeys() throws {
+    func enumDisplayTextUsesLocalizationKeys() {
         #expect(AnalyticsRange.today.displayName == AppStrings.localized("analytics.range.day"))
         #expect(TimeSessionSource.importCalendar.displayName == AppStrings.localized("source.calendar"))
     }
@@ -28,18 +28,18 @@ struct CoreArchitectureBehaviorTests {
     func layoutPoliciesCentralizeResponsiveChoices() {
         #expect(HomeLayoutPolicy(width: 600).isCompact)
         #expect(HomeLayoutPolicy(width: 900).usesTwoColumnContent == false)
-        #expect(HomeLayoutPolicy(width: 1_022).contentWidth == 966)
-        #expect(HomeLayoutPolicy(width: 1_022).usesTwoColumnContent == false)
-        #expect(HomeLayoutPolicy(width: 1_055).usesTwoColumnContent == false)
-        #expect(HomeLayoutPolicy(width: 1_056).contentWidth == 1_000)
-        #expect(HomeLayoutPolicy(width: 1_056).usesTwoColumnContent)
-        #expect(HomeLayoutPolicy(width: 1_236).contentWidth == 1_180)
-        #expect(HomeLayoutPolicy(width: 1_400).contentWidth == 1_180)
-        #expect(HomeLayoutPolicy(width: 1_100).contentMaxWidth == 1_180)
-        #expect(HomeLayoutPolicy(width: 1_100).supportingColumnWidth == 360)
+        #expect(HomeLayoutPolicy(width: 1022).contentWidth == 966)
+        #expect(HomeLayoutPolicy(width: 1022).usesTwoColumnContent == false)
+        #expect(HomeLayoutPolicy(width: 1055).usesTwoColumnContent == false)
+        #expect(HomeLayoutPolicy(width: 1056).contentWidth == 1000)
+        #expect(HomeLayoutPolicy(width: 1056).usesTwoColumnContent)
+        #expect(HomeLayoutPolicy(width: 1236).contentWidth == 1180)
+        #expect(HomeLayoutPolicy(width: 1400).contentWidth == 1180)
+        #expect(HomeLayoutPolicy(width: 1100).contentMaxWidth == 1180)
+        #expect(HomeLayoutPolicy(width: 1100).supportingColumnWidth == 360)
         let narrowToday = HomeLayoutPolicy(width: 799)
         let wideToday = HomeLayoutPolicy(width: 800)
-        let widestToday = HomeLayoutPolicy(width: 1_400)
+        let widestToday = HomeLayoutPolicy(width: 1400)
         #expect(
             narrowToday.usesSideBySideCurrentState(prefersSingleColumn: false) ==
                 false

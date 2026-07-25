@@ -21,7 +21,7 @@ struct TodayActivityHeatmapSnapshotService {
             taskByID: indexes.taskByID,
             childrenByParentID: indexes.childrenByParentID,
             additionalContributingTaskIDsBySelectedTaskID:
-                additionalContributingTaskIDsBySelectedTaskID,
+            additionalContributingTaskIDsBySelectedTaskID,
             segments: segments,
             checklistItems: checklistItems,
             quantityGoals: quantityGoals,
@@ -70,7 +70,8 @@ struct TodayActivityHeatmapSnapshotService {
             guard Task.isCancelled == false else { return snapshots }
             guard seen.insert(selectedTaskID).inserted,
                   let task = taskByID[selectedTaskID],
-                  task.deletedAt == nil else {
+                  task.deletedAt == nil
+            else {
                 continue
             }
             var contributingRootTaskIDs =
@@ -143,7 +144,8 @@ struct TodayActivityHeatmapSnapshotService {
         while let taskID = pending.popLast() {
             guard let task = taskByID[taskID],
                   task.deletedAt == nil,
-                  result.insert(taskID).inserted else {
+                  result.insert(taskID).inserted
+            else {
                 continue
             }
             pending.append(
@@ -152,5 +154,4 @@ struct TodayActivityHeatmapSnapshotService {
         }
         return result
     }
-
 }

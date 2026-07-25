@@ -29,7 +29,7 @@ struct SyncSnapshotContentValidator {
                     ("createdAt", record.createdAt),
                     ("updatedAt", record.updatedAt),
                     ("archivedAt", record.archivedAt),
-                    ("deletedAt", record.deletedAt)
+                    ("deletedAt", record.deletedAt),
                 ],
                 table: .tasks,
                 id: record.id
@@ -68,7 +68,7 @@ struct SyncSnapshotContentValidator {
                     ("endedAt", record.endedAt),
                     ("createdAt", record.createdAt),
                     ("updatedAt", record.updatedAt),
-                    ("deletedAt", record.deletedAt)
+                    ("deletedAt", record.deletedAt),
                 ],
                 table: .sessions,
                 id: record.id
@@ -83,7 +83,7 @@ struct SyncSnapshotContentValidator {
                     ("endedAt", record.endedAt),
                     ("createdAt", record.createdAt),
                     ("updatedAt", record.updatedAt),
-                    ("deletedAt", record.deletedAt)
+                    ("deletedAt", record.deletedAt),
                 ],
                 table: .segments,
                 id: record.id
@@ -100,7 +100,7 @@ struct SyncSnapshotContentValidator {
                     ("endedAt", record.endedAt),
                     ("createdAt", record.createdAt),
                     ("updatedAt", record.updatedAt),
-                    ("deletedAt", record.deletedAt)
+                    ("deletedAt", record.deletedAt),
                 ],
                 table: .pomodoroRuns,
                 id: record.id
@@ -114,7 +114,7 @@ struct SyncSnapshotContentValidator {
                     ("date", record.date),
                     ("createdAt", record.createdAt),
                     ("updatedAt", record.updatedAt),
-                    ("deletedAt", record.deletedAt)
+                    ("deletedAt", record.deletedAt),
                 ],
                 table: .countdownEvents,
                 id: record.id
@@ -149,7 +149,7 @@ struct SyncSnapshotContentValidator {
                     ("completedAt", record.completedAt),
                     ("createdAt", record.createdAt),
                     ("updatedAt", record.updatedAt),
-                    ("deletedAt", record.deletedAt)
+                    ("deletedAt", record.deletedAt),
                 ],
                 table: .checklistItems,
                 id: record.id
@@ -179,7 +179,7 @@ struct SyncSnapshotContentValidator {
                     ("userEditedAt", record.userEditedAt),
                     ("createdAt", record.createdAt),
                     ("updatedAt", record.updatedAt),
-                    ("deletedAt", record.deletedAt)
+                    ("deletedAt", record.deletedAt),
                 ],
                 table: .checklistItemVisuals,
                 id: record.id
@@ -205,7 +205,7 @@ struct SyncSnapshotContentValidator {
                     ("suggestionGeneratedAt", record.suggestionGeneratedAt),
                     ("createdAt", record.createdAt),
                     ("updatedAt", record.updatedAt),
-                    ("deletedAt", record.deletedAt)
+                    ("deletedAt", record.deletedAt),
                 ],
                 table: .inboxItems,
                 id: record.id
@@ -236,7 +236,7 @@ struct SyncSnapshotContentValidator {
                     ("generatedAt", record.generatedAt),
                     ("createdAt", record.createdAt),
                     ("updatedAt", record.updatedAt),
-                    ("deletedAt", record.deletedAt)
+                    ("deletedAt", record.deletedAt),
                 ],
                 table: .inboxSuggestions,
                 id: record.id
@@ -262,7 +262,7 @@ struct SyncSnapshotContentValidator {
                 [
                     ("createdAt", record.createdAt),
                     ("updatedAt", record.updatedAt),
-                    ("deletedAt", record.deletedAt)
+                    ("deletedAt", record.deletedAt),
                 ],
                 table: .inboxCaptureReceipts,
                 id: record.id
@@ -340,7 +340,8 @@ extension SyncSnapshotContentValidator {
             let interval = value.timeIntervalSinceReferenceDate
             guard interval.isFinite,
                   value >= SyncDataSnapshotRestoreLimits.minimumDate,
-                  value < SyncDataSnapshotRestoreLimits.maximumDateExclusive else {
+                  value < SyncDataSnapshotRestoreLimits.maximumDateExclusive
+            else {
                 throw SyncDataSnapshotPreflightError.invalidDate(table: table, id: id, field: field)
             }
         }

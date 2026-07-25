@@ -64,10 +64,10 @@ extension View {
                     )
                 )
         } else {
-            self.appCard(padding: padding)
+            appCard(padding: padding)
         }
         #else
-        self.appCard(padding: padding)
+        appCard(padding: padding)
         #endif
     }
 

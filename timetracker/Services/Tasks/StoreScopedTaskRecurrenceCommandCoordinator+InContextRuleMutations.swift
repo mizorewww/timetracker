@@ -18,7 +18,8 @@ extension StoreScopedTaskRecurrenceCommandCoordinator {
         guard state.templateEligibleTaskIDs.contains(templateTaskID),
               let template = state.taskByID[templateTaskID],
               template.deletedAt == nil,
-              template.isArchivedForLifecycle == false else {
+              template.isArchivedForLifecycle == false
+        else {
             throw TaskRecurrenceMutationError.templateUnavailable
         }
 
@@ -33,10 +34,11 @@ extension StoreScopedTaskRecurrenceCommandCoordinator {
             }
             guard existing.templateTaskID == templateTaskID,
                   existing.cadenceRaw ==
-                    TaskRecurrenceCadence.daily.rawValue,
+                  TaskRecurrenceCadence.daily.rawValue,
                   existing.startDayKey == startDayKey,
                   existing.timeZoneIdentifier ==
-                    timeZoneIdentifier else {
+                  timeZoneIdentifier
+            else {
                 throw TaskRecurrenceMutationError
                     .immutableRuleConfiguration
             }
@@ -99,7 +101,7 @@ extension StoreScopedTaskRecurrenceCommandCoordinator {
         outcome.markRuleChanged(
             templateTaskID: rule.templateTaskID,
             affectedAncestorTaskIDs:
-                state.ancestors(of: rule.templateTaskID)
+            state.ancestors(of: rule.templateTaskID)
         )
         try didReachCheckpoint(.ruleUpdated(rule.id))
 

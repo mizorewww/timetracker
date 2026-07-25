@@ -34,7 +34,8 @@ extension AnalyticsStore {
         let bounded = boundedSegments(segments.deduplicatedByID(), in: interval, now: cutoff)
         let grouped = Dictionary(grouping: bounded) { item -> String in
             guard let task = taskByID[item.segment.taskID],
-                  let root = rootTask(for: task, taskByID: taskByID) else {
+                  let root = rootTask(for: task, taskByID: taskByID)
+            else {
                 return "deleted-\(item.segment.taskID.uuidString)"
             }
             return root.id.uuidString
@@ -104,7 +105,8 @@ extension AnalyticsStore {
             guard let task = taskByID[item.segment.taskID],
                   let root = rootTask(for: task, taskByID: taskByID),
                   let categoryID = categoryIDByRootTaskID[root.id],
-                  categoryByID[categoryID] != nil else {
+                  categoryByID[categoryID] != nil
+            else {
                 return "uncategorized"
             }
             return categoryID.uuidString
@@ -157,7 +159,8 @@ extension AnalyticsStore {
         while let parentID = cursor.parentID,
               !visited.contains(parentID),
               let parent = taskByID[parentID],
-              parent.deletedAt == nil {
+              parent.deletedAt == nil
+        {
             visited.insert(parentID)
             cursor = parent
         }

@@ -105,17 +105,17 @@ struct LLMConfigurationEditor: View {
             .formStyle(.grouped)
             .navigationTitle(AppStrings.localized("settings.llm.configure"))
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+                .navigationBarTitleDisplayMode(.inline)
             #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(AppStrings.cancel, action: requestDismiss)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(AppStrings.cancel, action: requestDismiss)
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(AppStrings.localized("common.save"), action: save)
+                            .disabled(!draft.canSave)
+                    }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(AppStrings.localized("common.save"), action: save)
-                        .disabled(!draft.canSave)
-                }
-            }
         }
         #if os(macOS)
         .frame(minWidth: 520, minHeight: 540)

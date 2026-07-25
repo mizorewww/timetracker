@@ -1,7 +1,6 @@
 import Testing
 @testable import timetracker
 
-@Suite
 struct TimerStopAdmissionPolicyTests {
     private let policy = TimerAdmissionPolicy()
 
@@ -79,11 +78,11 @@ struct TimerStopAdmissionPolicyTests {
             [first, second, other],
             [other, second, first],
             [second, first, other],
-            [other, first, second]
+            [other, first, second],
         ]
         let targets: [TimerStopTarget] = [
             .segment(second.segmentID),
-            .task(first.taskID)
+            .task(first.taskID),
         ]
 
         for target in targets {

@@ -68,9 +68,10 @@ extension SwiftDataTaskRepository {
             guard let parent = try task(id: parentID) else {
                 throw TaskRepositoryError.invalidMove
             }
-            guard TaskTrackingAvailabilityService()
-                .trackableTaskIDs(tasks: try allNodes())
-                .contains(parentID) else {
+            guard try TaskTrackingAvailabilityService()
+                .trackableTaskIDs(tasks: allNodes())
+                .contains(parentID)
+            else {
                 throw TaskRepositoryError.invalidMove
             }
             node.depth = parent.depth + 1

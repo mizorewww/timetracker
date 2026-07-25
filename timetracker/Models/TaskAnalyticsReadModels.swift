@@ -9,7 +9,9 @@ struct TaskAnalyticsPoint: Identifiable {
     let grossSeconds: Int
     let wallSeconds: Int
 
-    var id: UUID { taskID }
+    var id: UUID {
+        taskID
+    }
 }
 
 struct AnalyticsGroupBreakdownPoint: Identifiable {

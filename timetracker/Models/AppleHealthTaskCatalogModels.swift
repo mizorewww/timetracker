@@ -106,7 +106,7 @@ nonisolated enum AppleHealthTaskCatalog {
                 titleLocalizationKey: "health.timeline.exerciseCategory",
                 iconName: "figure.run",
                 colorHex: "FF3B30",
-                sortOrder: 9_000
+                sortOrder: 9000
             )
         case .daily:
             AppleHealthTaskCategoryDefinition(
@@ -115,7 +115,7 @@ nonisolated enum AppleHealthTaskCatalog {
                 titleLocalizationKey: "health.timeline.dailyCategory",
                 iconName: "calendar",
                 colorHex: "5856D6",
-                sortOrder: 9_010
+                sortOrder: 9010
             )
         }
     }
@@ -135,7 +135,7 @@ nonisolated enum AppleHealthTaskCatalog {
             titleLocalizationKey: presentation.titleLocalizationKey,
             iconName: presentation.iconName,
             colorHex: category.colorHex,
-            sortOrder: 9_000 + Double(presentation.sortIndex * 10)
+            sortOrder: 9000 + Double(presentation.sortIndex * 10)
         )
     }
 

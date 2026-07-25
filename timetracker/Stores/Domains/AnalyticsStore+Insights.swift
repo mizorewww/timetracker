@@ -17,7 +17,7 @@ extension AnalyticsStore {
                     body: AppStrings.localized("analytics.insight.noData.body"),
                     severity: .neutral,
                     taskID: nil
-                )
+                ),
             ]
         }
 

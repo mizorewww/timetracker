@@ -16,7 +16,7 @@ struct FocusUIContractTests {
             "pomodoro.resume.unavailable",
             "pomodoro.roundsCompleted",
             "pomodoro.phaseTask.accessibility",
-            "pomodoro.remaining.accessibility"
+            "pomodoro.remaining.accessibility",
         ]
 
         for locale in ["en", "zh-Hans", "zh-Hant"] {
@@ -31,5 +31,4 @@ struct FocusUIContractTests {
             }
         }
     }
-
 }

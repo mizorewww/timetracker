@@ -98,7 +98,6 @@ struct AnalyticsContent: View {
         }
     }
 
-    @ViewBuilder
     private func categoryLinks(
         _ categories: [AnalyticsCategory],
         snapshot: AnalyticsSnapshot

@@ -175,7 +175,7 @@ struct LLMPromptInstructionsEditor: View {
                     VStack(alignment: .leading, spacing: 10) {
                         LazyVGrid(
                             columns: [
-                                GridItem(.adaptive(minimum: 28), spacing: 8)
+                                GridItem(.adaptive(minimum: 28), spacing: 8),
                             ],
                             spacing: 8
                         ) {
@@ -270,7 +270,8 @@ struct LLMPromptInstructionsEditor: View {
 
     private func save() {
         guard let normalized = try? AppPreferenceValueSanitizer
-            .llmPromptInstructions(draft, for: kind) else {
+            .llmPromptInstructions(draft, for: kind)
+        else {
             validationError = Self.validationError(for: draft, kind: kind)
             return
         }

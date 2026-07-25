@@ -90,5 +90,4 @@ struct ChecklistStore {
     func visual(for checklistItemID: UUID) -> ChecklistItemVisual? {
         visualByChecklistItemID[checklistItemID]
     }
-
 }

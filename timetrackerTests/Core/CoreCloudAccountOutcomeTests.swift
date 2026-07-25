@@ -13,7 +13,7 @@ struct CoreCloudAccountOutcomeTests {
             (.noAccount, .unavailable(.noAccount)),
             (.restricted, .unavailable(.restricted)),
             (.couldNotDetermine, .unavailable(.couldNotDetermine)),
-            (.temporarilyUnavailable, .unavailable(.temporarilyUnavailable))
+            (.temporarilyUnavailable, .unavailable(.temporarilyUnavailable)),
         ]
 
         for (status, expectedResult) in expectations {
@@ -90,7 +90,7 @@ struct CoreCloudAccountOutcomeTests {
     func newestStartedAccountCheckOwnsStoreState() async {
         let store = makeTestStore()
         let probe = AccountStatusContinuationProbe()
-        let firstDate = Date(timeIntervalSinceReferenceDate: 1_000)
+        let firstDate = Date(timeIntervalSinceReferenceDate: 1000)
         let secondDate = firstDate.addingTimeInterval(1)
 
         let first = Task { @MainActor in
@@ -123,7 +123,9 @@ struct CoreCloudAccountOutcomeTests {
     private enum ProbeError: LocalizedError {
         case networkUnavailable
 
-        var errorDescription: String? { "Network unavailable" }
+        var errorDescription: String? {
+            "Network unavailable"
+        }
     }
 }
 

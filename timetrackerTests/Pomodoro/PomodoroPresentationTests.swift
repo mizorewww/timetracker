@@ -14,7 +14,7 @@ struct PomodoroPresentationTests {
 
     @Test
     func countdownScheduleStopsAtDeadlineAndIncludesFractionalEnd() {
-        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        let start = Date(timeIntervalSinceReferenceDate: 1000)
         let deadline = start.addingTimeInterval(2.5)
 
         let entries = Array(
@@ -29,13 +29,13 @@ struct PomodoroPresentationTests {
             start,
             start.addingTimeInterval(1),
             start.addingTimeInterval(2),
-            deadline
+            deadline,
         ])
     }
 
     @Test
     func countdownScheduleDoesNotPollWithoutAFutureDeadline() {
-        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        let start = Date(timeIntervalSinceReferenceDate: 1000)
 
         #expect(Array(PomodoroCountdownSchedule.entries(from: start, through: nil)) == [start])
         #expect(
@@ -66,11 +66,11 @@ struct PomodoroPresentationTests {
             prefersSingleColumn: false
         )
         let wide = PomodoroPageLayoutPolicy(
-            viewportWidth: 1_024,
+            viewportWidth: 1024,
             prefersSingleColumn: false
         )
         let accessibility = PomodoroPageLayoutPolicy(
-            viewportWidth: 1_024,
+            viewportWidth: 1024,
             prefersSingleColumn: true
         )
 

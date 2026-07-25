@@ -154,10 +154,10 @@ struct InboxCommandHandler {
         deviceID: String = DeviceIdentity.current
     ) throws {
         guard !orderedItemIDs.isEmpty else { return }
-        let items = InboxSuggestionIdentityService().visibleLogicalItems(
-            from: try context.fetch(FetchDescriptor<InboxItem>())
+        let items = try InboxSuggestionIdentityService().visibleLogicalItems(
+            from: context.fetch(FetchDescriptor<InboxItem>())
         )
-            .filter { $0.isCompleted == false }
+        .filter { $0.isCompleted == false }
         let itemByID = items.latestByID()
         guard orderedItemIDs.count == items.count,
               Set(orderedItemIDs) == Set(itemByID.keys) else { return }

@@ -29,7 +29,8 @@ struct TaskHierarchyRepairPlan: Equatable {
 
             while let currentID = cursor,
                   let current = taskByID[currentID],
-                  !processed.contains(currentID) {
+                  !processed.contains(currentID)
+            {
                 if let cycleStart = indexByID[currentID] {
                     let cycle = path[cycleStart...]
                     if let breaker = cycle.min(by: { $0.uuidString < $1.uuidString }) {

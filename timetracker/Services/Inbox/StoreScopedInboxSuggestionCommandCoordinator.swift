@@ -28,7 +28,8 @@ extension StoreScopedInboxCommandCoordinator {
 
         return try withFreshLockedContext { context in
             guard let item = try visibleItem(id: baseline.itemID, context: context),
-                  item.clientMutationID == baseline.clientMutationID else {
+                  item.clientMutationID == baseline.clientMutationID
+            else {
                 throw StoreScopedInboxMutationError.inboxChanged
             }
             try requireTrackableTask(taskID, context: context)
@@ -78,7 +79,8 @@ extension StoreScopedInboxCommandCoordinator {
                       requestedTitle: requestedTitle,
                       requestedIdentity: requestedIdentity,
                       currentSuggestion: suggestion
-                  ) else {
+                  )
+            else {
                 return InboxMutationOutcome(affectedItemIDs: [item.id], didMutate: false)
             }
             guard try isRouteDestinationAvailable(
@@ -117,7 +119,8 @@ extension StoreScopedInboxCommandCoordinator {
             let item = resolution.winner
             guard item.id == baseline.itemID,
                   item.clientMutationID == baseline.itemMutationID,
-                  item.suggestionIdentity == baseline.itemIdentity else {
+                  item.suggestionIdentity == baseline.itemIdentity
+            else {
                 throw StoreScopedInboxMutationError.inboxChanged
             }
 
@@ -127,13 +130,14 @@ extension StoreScopedInboxCommandCoordinator {
                 items: [item],
                 suggestions: suggestions
             )[item.id],
-            suggestion.id == baseline.suggestionID,
-            suggestion.clientMutationID == baseline.suggestionMutationID,
-            let destination = suggestion.manualRouteDestination,
-            InboxSuggestionStateService().displaySuggestion(
-                for: resolution.readModel,
-                suggestion: suggestion
-            ) != nil else {
+                suggestion.id == baseline.suggestionID,
+                suggestion.clientMutationID == baseline.suggestionMutationID,
+                let destination = suggestion.manualRouteDestination,
+                InboxSuggestionStateService().displaySuggestion(
+                    for: resolution.readModel,
+                    suggestion: suggestion
+                ) != nil
+            else {
                 throw StoreScopedInboxMutationError.inboxChanged
             }
 
@@ -183,8 +187,8 @@ extension StoreScopedInboxCommandCoordinator {
                 $0.id == contextID || $0.suggestionContextID == contextID
             }
         )
-        return InboxSuggestionIdentityService()
-            .visibleLogicalResolutions(from: try context.fetch(descriptor))
+        return try InboxSuggestionIdentityService()
+            .visibleLogicalResolutions(from: context.fetch(descriptor))
             .first { $0.winner.effectiveSuggestionContextID == contextID }
     }
 

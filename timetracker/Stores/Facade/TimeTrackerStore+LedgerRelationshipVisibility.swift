@@ -15,8 +15,8 @@ extension TimeTrackerStore {
             return
         }
 
-        let existingTaskIDs = Set(
-            try modelContext.fetch(FetchDescriptor<TaskNode>())
+        let existingTaskIDs = try Set(
+            modelContext.fetch(FetchDescriptor<TaskNode>())
                 .deduplicatedByID()
                 .map(\.id)
         )
@@ -29,7 +29,8 @@ extension TimeTrackerStore {
 
         readableLedgerSegmentIDs = Set(ledgerDomainStore.allSegments.compactMap { segment in
             guard existingTaskIDs.contains(segment.taskID),
-                  taskIDBySessionID[segment.sessionID] == segment.taskID else {
+                  taskIDBySessionID[segment.sessionID] == segment.taskID
+            else {
                 return nil
             }
             return segment.id

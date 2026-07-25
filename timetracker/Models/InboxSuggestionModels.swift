@@ -42,22 +42,22 @@ final class InboxSuggestion {
         generatedAt: Date = Date(),
         deviceID: String
     ) {
-        self.id = UUID()
+        id = UUID()
         self.inboxItemID = inboxItemID
         self.inboxItemContextID = inboxItemContextID
         self.inboxItemRevisionID = inboxItemRevisionID
         self.taskID = taskID
-        self.destinationKindRaw = destinationKind.rawValue
+        destinationKindRaw = destinationKind.rawValue
         self.reason = reason
         self.iconName = iconName
         self.colorHex = colorHex
         self.modelID = modelID
         self.titleSnapshot = titleSnapshot
         self.generatedAt = generatedAt
-        self.createdAt = Date()
-        self.updatedAt = Date()
+        createdAt = Date()
+        updatedAt = Date()
         self.deviceID = deviceID
-        self.clientMutationID = UUID()
+        clientMutationID = UUID()
     }
 
     var destinationKind: InboxSuggestionDestinationKind? {

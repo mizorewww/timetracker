@@ -8,7 +8,8 @@ import Testing
 struct TaskProgressDraftUpdateRollbackTests {
     @Test
     func quantityGoalUpdateAndRemovalCheckpointFailuresRollBack()
-        throws {
+        throws
+    {
         for operation in QuantityRollbackOperation.allCases {
             let context = try makeTestContext()
             let taskID = try createQuantityTask(
@@ -50,7 +51,8 @@ struct TaskProgressDraftUpdateRollbackTests {
 
     @Test
     func everyResumeCheckpointFailureRollsBackTheExistingGraph()
-        throws {
+        throws
+    {
         for stage in ResumeRollbackStage.allCases {
             let context = try makeTestContext()
             let taskID = try createDailyQuantityTask(
@@ -64,7 +66,7 @@ struct TaskProgressDraftUpdateRollbackTests {
             _ = try coordinator(context.container).save(
                 draft: paused,
                 sanitizedTitle: paused.title,
-                now: try singaporeDate(day: 21, hour: 13)
+                now: singaporeDate(day: 21, hour: 13)
             )
             let before = try graphFingerprint(context.container)
             var resumed = try editorDraft(
@@ -86,7 +88,7 @@ struct TaskProgressDraftUpdateRollbackTests {
                 try command.save(
                     draft: resumed,
                     sanitizedTitle: resumed.title,
-                    now: try singaporeDate(day: 22)
+                    now: singaporeDate(day: 22)
                 )
             }
             #expect(try graphFingerprint(context.container) == before)
@@ -98,7 +100,7 @@ private extension TaskProgressDraftUpdateRollbackTests {
     func coordinator(
         _ container: ModelContainer,
         checkpoint: @escaping
-            (TaskDraftMutationCheckpoint) throws -> Void = { _ in }
+        (TaskDraftMutationCheckpoint) throws -> Void = { _ in }
     ) -> StoreScopedTaskLifecycleCommandCoordinator {
         StoreScopedTaskLifecycleCommandCoordinator(
             container: container,
@@ -153,7 +155,7 @@ private extension TaskProgressDraftUpdateRollbackTests {
         return try coordinator(container).save(
             draft: draft,
             sanitizedTitle: draft.title,
-            now: try singaporeDate(day: 21)
+            now: singaporeDate(day: 21)
         ).savedTaskID
     }
 
@@ -166,16 +168,16 @@ private extension TaskProgressDraftUpdateRollbackTests {
             context: context,
             deviceID: "draft-reader"
         )
-        return TaskEditorDraft(
-            task: try #require(try repository.task(id: taskID)),
+        return try TaskEditorDraft(
+            task: #require(try repository.task(id: taskID)),
             checklistItems: [],
-            quantityGoal: try repository.taskQuantityGoals().first {
+            quantityGoal: repository.taskQuantityGoals().first {
                 $0.taskID == taskID
             },
-            recurrenceRule: try repository.taskRecurrenceRules().first {
+            recurrenceRule: repository.taskRecurrenceRules().first {
                 $0.templateTaskID == taskID
             },
-            quantityEntries: try repository.taskQuantityEntries().filter {
+            quantityEntries: repository.taskQuantityEntries().filter {
                 $0.taskID == taskID
             }
         )

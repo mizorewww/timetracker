@@ -33,8 +33,8 @@ struct TimeTrackerUtilityTests {
 
         let service = TimeAggregationService()
 
-        #expect(service.totalSeconds(segments: [first, second], mode: .gross) == 7_200)
-        #expect(service.totalSeconds(segments: [first, second], mode: .wallClock) == 5_400)
+        #expect(service.totalSeconds(segments: [first, second], mode: .gross) == 7200)
+        #expect(service.totalSeconds(segments: [first, second], mode: .wallClock) == 5400)
     }
 
     @Test @MainActor
@@ -46,15 +46,15 @@ struct TimeTrackerUtilityTests {
             taskID: taskID,
             source: .timer,
             deviceID: "test",
-            startedAt: now.addingTimeInterval(-3_600),
-            endedAt: now.addingTimeInterval(3_600)
+            startedAt: now.addingTimeInterval(-3600),
+            endedAt: now.addingTimeInterval(3600)
         )
         let activeOverlap = TimeSegment(
             sessionID: UUID(),
             taskID: taskID,
             source: .timer,
             deviceID: "test",
-            startedAt: now.addingTimeInterval(-1_800)
+            startedAt: now.addingTimeInterval(-1800)
         )
         let futureOnly = TimeSegment(
             sessionID: UUID(),
@@ -62,12 +62,12 @@ struct TimeTrackerUtilityTests {
             source: .timer,
             deviceID: "test",
             startedAt: now,
-            endedAt: now.addingTimeInterval(7_200)
+            endedAt: now.addingTimeInterval(7200)
         )
         let service = TimeAggregationService()
 
-        #expect(service.grossSeconds([spanningNow, activeOverlap, futureOnly], now: now) == 5_400)
-        #expect(service.wallClockSeconds([spanningNow, activeOverlap, futureOnly], now: now) == 3_600)
+        #expect(service.grossSeconds([spanningNow, activeOverlap, futureOnly], now: now) == 5400)
+        #expect(service.wallClockSeconds([spanningNow, activeOverlap, futureOnly], now: now) == 3600)
         #expect(TrackedTimePolicy.elapsedSeconds(
             startedAt: now,
             endedAt: nil,
@@ -113,8 +113,8 @@ struct TimeTrackerUtilityTests {
         ))
 
         #expect(interval.end == now)
-        #expect(service.grossSeconds([segment], now: now) == 3 * 3_600)
-        #expect(service.secondsByDay(intervals: [interval], calendar: calendar) == [start: 3 * 3_600])
+        #expect(service.grossSeconds([segment], now: now) == 3 * 3600)
+        #expect(service.secondsByDay(intervals: [interval], calendar: calendar) == [start: 3 * 3600])
     }
 
     @Test
@@ -140,13 +140,13 @@ struct TimeTrackerUtilityTests {
     func trackedTimeDisplaySnapshotClipsFutureValuesAndZeroesFutureOnlyRows() {
         let now = Date(timeIntervalSinceReferenceDate: 2_000_000)
         let clipped = TrackedTimeDisplaySnapshot(
-            startedAt: now.addingTimeInterval(-3_600),
-            endedAt: now.addingTimeInterval(3_600),
+            startedAt: now.addingTimeInterval(-3600),
+            endedAt: now.addingTimeInterval(3600),
             now: now
         )
         let futureOnly = TrackedTimeDisplaySnapshot(
             startedAt: now.addingTimeInterval(600),
-            endedAt: now.addingTimeInterval(7_200),
+            endedAt: now.addingTimeInterval(7200),
             now: now
         )
         let futureActive = TrackedTimeDisplaySnapshot(
@@ -156,13 +156,13 @@ struct TimeTrackerUtilityTests {
         )
         let completedEnd = now.addingTimeInterval(-900)
         let completed = TrackedTimeDisplaySnapshot(
-            startedAt: now.addingTimeInterval(-1_800),
+            startedAt: now.addingTimeInterval(-1800),
             endedAt: completedEnd,
             now: now
         )
 
         #expect(clipped.end == now)
-        #expect(clipped.elapsedSeconds == 3_600)
+        #expect(clipped.elapsedSeconds == 3600)
         #expect(clipped.usesCurrentEndLabel)
         #expect(futureOnly.start == now)
         #expect(futureOnly.end == now)

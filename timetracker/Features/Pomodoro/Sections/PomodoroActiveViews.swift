@@ -88,15 +88,15 @@ struct ActivePomodoroCard: View {
     private var phaseIcon: String {
         switch run.state {
         case .shortBreak, .longBreak:
-            return "cup.and.saucer.fill"
+            "cup.and.saucer.fill"
         case .focusing, .interrupted:
-            return "flame.fill"
+            "flame.fill"
         case .planned:
-            return "timer"
+            "timer"
         case .completed:
-            return "checkmark.circle.fill"
+            "checkmark.circle.fill"
         case .cancelled:
-            return "xmark.circle.fill"
+            "xmark.circle.fill"
         }
     }
 }

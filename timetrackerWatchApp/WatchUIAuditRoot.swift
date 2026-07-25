@@ -54,7 +54,7 @@ struct WatchUIAuditRoot: View {
                 segmentID: nil,
                 issuedAt: Date(),
                 deviceID: "watch-ui-audit"
-            )
+            ),
         ]
     }
 
@@ -69,10 +69,10 @@ struct WatchUIAuditRoot: View {
                     taskID: taskID,
                     title: "Prepare quarterly presentation",
                     path: "Work · Planning",
-                    startedAt: Date().addingTimeInterval(-5_423),
+                    startedAt: Date().addingTimeInterval(-5423),
                     colorHex: "0A84FF",
                     iconName: "rectangle.on.rectangle"
-                )
+                ),
             ],
             recentTasks: [
                 WatchRecentTaskSnapshot(
@@ -95,7 +95,7 @@ struct WatchUIAuditRoot: View {
                     path: "Personal",
                     colorHex: "BF5AF2",
                     iconName: "book"
-                )
+                ),
             ]
         )
     }

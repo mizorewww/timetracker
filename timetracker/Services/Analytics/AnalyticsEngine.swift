@@ -55,7 +55,7 @@ struct AnalyticsEngine {
             interval: interval,
             evaluatedAt: now
         ).map { summary in
-            return DailyAnalyticsPoint(
+            DailyAnalyticsPoint(
                 date: summary.date,
                 grossSeconds: summary.grossSeconds,
                 wallSeconds: summary.wallClockSeconds,
@@ -67,10 +67,10 @@ struct AnalyticsEngine {
     func hourlyBreakdown(segments: [TimeSegment], date: Date = Date(), now: Date = Date(), calendar: Calendar = .current) -> [HourlyAnalyticsPoint] {
         let startOfDay = calendar.startOfDay(for: date)
         let dayInterval = calendar.dateInterval(of: .day, for: date)
-            ?? DateInterval(start: startOfDay, duration: 86_400)
+            ?? DateInterval(start: startOfDay, duration: 86400)
         let buckets = hourlyBuckets(segments: segments, dayInterval: dayInterval, now: now, calendar: calendar)
 
-        return (0..<24).map { hour in
+        return (0 ..< 24).map { hour in
             let bucket = buckets[hour]
             let wall = aggregationService.mergeOverlappingIntervals(bucket.wallIntervals).reduce(0) {
                 $0 + Int($1.end.timeIntervalSince($1.start))
@@ -82,11 +82,11 @@ struct AnalyticsEngine {
     private func analyticsInterval(for range: AnalyticsRange, now: Date, calendar: Calendar) -> DateInterval? {
         switch range {
         case .today:
-            return calendar.dateInterval(of: .day, for: now)
+            calendar.dateInterval(of: .day, for: now)
         case .week:
-            return calendar.dateInterval(of: .weekOfYear, for: now)
+            calendar.dateInterval(of: .weekOfYear, for: now)
         case .month:
-            return calendar.dateInterval(of: .month, for: now)
+            calendar.dateInterval(of: .month, for: now)
         }
     }
 
@@ -139,7 +139,7 @@ struct AnalyticsEngine {
             let nextHour = calendar.dateInterval(of: .hour, for: cursor)?.end ?? interval.end
             let end = min(nextHour, interval.end)
             guard end > cursor else { break }
-            if (0..<24).contains(hour) {
+            if (0 ..< 24).contains(hour) {
                 let clipped = DateInterval(start: cursor, end: end)
                 buckets[hour].grossSeconds += max(0, Int(end.timeIntervalSince(cursor)))
                 buckets[hour].wallIntervals.append(clipped)

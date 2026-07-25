@@ -33,7 +33,7 @@ struct CoreSyncActivityOutcomeTests {
 
     @Test
     func initialCloudImportReceiptRequiresCurrentEpochSetupAndMatchingStore() {
-        let epoch = Date(timeIntervalSinceReferenceDate: 50_000)
+        let epoch = Date(timeIntervalSinceReferenceDate: 50000)
         var session = CloudRecoveryImportSession(
             id: UUID(),
             kind: .downloadCloud,
@@ -90,7 +90,7 @@ struct CoreSyncActivityOutcomeTests {
     func cloudRecoveryReceiptsPersistAcrossServiceRecreation() throws {
         let stateURL = temporaryStateURL()
         defer { try? FileManager.default.removeItem(at: stateURL.deletingLastPathComponent()) }
-        let epoch = Date(timeIntervalSinceReferenceDate: 60_000)
+        let epoch = Date(timeIntervalSinceReferenceDate: 60000)
         let firstService = SyncConflictService(stateURL: stateURL)
         try firstService.beginCloudRecoveryImportSession(
             kind: .downloadCloud,
@@ -139,7 +139,7 @@ struct CoreSyncActivityOutcomeTests {
 
     @Test @MainActor
     func failedCloudEventCannotBecomeRecentGreenActivity() throws {
-        let completedAt = Date(timeIntervalSinceReferenceDate: 10_000)
+        let completedAt = Date(timeIntervalSinceReferenceDate: 10000)
         let reason = TimeTrackerStore.SyncRefreshReason.cloudExportFinished(
             eventID: UUID(),
             succeeded: false,
@@ -168,7 +168,7 @@ struct CoreSyncActivityOutcomeTests {
 
     @Test @MainActor
     func onlySuccessfulCompletedCloudEventBecomesRecentActivity() throws {
-        let completedAt = Date(timeIntervalSinceReferenceDate: 20_000)
+        let completedAt = Date(timeIntervalSinceReferenceDate: 20000)
         let reason = TimeTrackerStore.SyncRefreshReason.cloudImportFinished(
             succeeded: true,
             reportsConflict: false,
@@ -192,7 +192,7 @@ struct CoreSyncActivityOutcomeTests {
 
     @Test @MainActor
     func localProcessingFailureOverridesSuccessfulCloudEvent() throws {
-        let completedAt = Date(timeIntervalSinceReferenceDate: 30_000)
+        let completedAt = Date(timeIntervalSinceReferenceDate: 30000)
         let reason = TimeTrackerStore.SyncRefreshReason.cloudImportFinished(
             succeeded: true,
             reportsConflict: false,
@@ -215,7 +215,7 @@ struct CoreSyncActivityOutcomeTests {
 
     @Test @MainActor
     func futureCompletionTimestampDoesNotBecomeRecentActivity() {
-        let now = Date(timeIntervalSinceReferenceDate: 40_000)
+        let now = Date(timeIntervalSinceReferenceDate: 40000)
         let outcome = SyncActivityOutcome(
             kind: .setup,
             completedAt: now.addingTimeInterval(30),
@@ -275,7 +275,7 @@ struct CoreSyncActivityOutcomeTests {
     @Test @MainActor
     func coalescingStateStaysBoundedUnderAContinuousNotificationBurst() throws {
         var batch = TimeTrackerStore.SyncRefreshBatch()
-        for _ in 0..<10_000 {
+        for _ in 0 ..< 10000 {
             batch.insert(.remoteStoreChanged)
         }
         batch.insert(

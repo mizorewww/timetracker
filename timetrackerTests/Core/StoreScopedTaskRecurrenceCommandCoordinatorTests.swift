@@ -8,7 +8,8 @@ import Testing
 struct StoreScopedTaskRecurrenceCommandCoordinatorTests {
     @Test
     func firstCreationMaterializesACompleteCurrentDayGraphWithGoal()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(
             context: context,
@@ -514,7 +515,7 @@ struct StoreScopedTaskRecurrenceCommandCoordinatorTests {
             iconName: "star.fill",
             notes: "User-authored note",
             estimatedSeconds: 900,
-            dueAt: now.addingTimeInterval(3_600)
+            dueAt: now.addingTimeInterval(3600)
         )
         try siblingRepository.archiveTask(taskID: generatedTaskID)
         let editedGoal = try #require(
@@ -642,7 +643,7 @@ private extension StoreScopedTaskRecurrenceCommandCoordinatorTests {
         _ container: ModelContainer,
         deviceID: String = "recurrence-test",
         checkpoint: @escaping
-            (TaskRecurrenceMutationCheckpoint) throws -> Void = { _ in }
+        (TaskRecurrenceMutationCheckpoint) throws -> Void = { _ in }
     ) -> StoreScopedTaskRecurrenceCommandCoordinator {
         StoreScopedTaskRecurrenceCommandCoordinator(
             container: container,
@@ -698,27 +699,27 @@ private extension StoreScopedTaskRecurrenceCommandCoordinatorTests {
         in container: ModelContainer
     ) throws -> RecurrenceRevisionSnapshot {
         let context = ModelContext(container)
-        return RecurrenceRevisionSnapshot(
+        return try RecurrenceRevisionSnapshot(
             ruleMutationIDs: Dictionary(
                 uniqueKeysWithValues:
-                    try context.fetch(FetchDescriptor<TaskRecurrenceRule>())
-                        .map { ($0.id, $0.clientMutationID) }
+                context.fetch(FetchDescriptor<TaskRecurrenceRule>())
+                    .map { ($0.id, $0.clientMutationID) }
             ),
             occurrenceMutationIDs: Dictionary(
                 uniqueKeysWithValues:
-                    try context.fetch(
-                        FetchDescriptor<TaskRecurrenceOccurrence>()
-                    ).map { ($0.id, $0.clientMutationID) }
+                context.fetch(
+                    FetchDescriptor<TaskRecurrenceOccurrence>()
+                ).map { ($0.id, $0.clientMutationID) }
             ),
             taskMutationIDs: Dictionary(
                 uniqueKeysWithValues:
-                    try context.fetch(FetchDescriptor<TaskNode>())
-                        .map { ($0.id, $0.clientMutationID) }
+                context.fetch(FetchDescriptor<TaskNode>())
+                    .map { ($0.id, $0.clientMutationID) }
             ),
             goalMutationIDs: Dictionary(
                 uniqueKeysWithValues:
-                    try context.fetch(FetchDescriptor<TaskQuantityGoal>())
-                        .map { ($0.id, $0.clientMutationID) }
+                context.fetch(FetchDescriptor<TaskQuantityGoal>())
+                    .map { ($0.id, $0.clientMutationID) }
             )
         )
     }

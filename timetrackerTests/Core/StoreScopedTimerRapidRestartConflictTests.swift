@@ -65,10 +65,10 @@ struct StoreScopedTimerRapidRestartConflictTests {
             now: fixture.restartedAt
         )
         #expect(try mergedRepository.activeSegments().map(\.id) == [
-            replacementID
+            replacementID,
         ])
         #expect(try mergedRepository.allSegments().map(\.id) == [
-            replacementID
+            replacementID,
         ])
 
         let stoppedAt = fixture.restartedAt.addingTimeInterval(10)
@@ -132,7 +132,7 @@ struct StoreScopedTimerRapidRestartConflictTests {
             now: fixture.restartedAt
         )
         #expect(try repository.activeSegments().map(\.id) == [newID])
-        #expect(Set(try repository.allSegments().map(\.id)) == [
+        #expect(try Set(repository.allSegments().map(\.id)) == [
             fixture.segment.id,
             newID,
         ])
@@ -169,7 +169,7 @@ struct StoreScopedTimerRapidRestartConflictTests {
         ).start(taskID: fixture.task.id)
 
         #expect(outcome.tombstonedSegments.map(\.segmentID) == [
-            fixture.segment.id
+            fixture.segment.id,
         ])
         #expect(
             try timeRepository(fixture.container, now: fixture.restartedAt)
@@ -211,7 +211,7 @@ struct StoreScopedTimerRapidRestartConflictTests {
         ).start(taskID: fixture.task.id)
 
         #expect(outcome.tombstonedSegments.map(\.segmentID) == [
-            fixture.segment.id
+            fixture.segment.id,
         ])
     }
 
@@ -221,7 +221,7 @@ struct StoreScopedTimerRapidRestartConflictTests {
             title: "Future duplicate",
             base: Date(timeIntervalSinceReferenceDate: 9_000_000)
         )
-        let futureDate = fixture.restartedAt.addingTimeInterval(3_600)
+        let futureDate = fixture.restartedAt.addingTimeInterval(3600)
         insertClosedSessionDuplicate(
             into: fixture.context,
             original: fixture.session,
@@ -278,7 +278,7 @@ struct StoreScopedTimerRapidRestartConflictTests {
             title: "Future stop",
             base: Date(timeIntervalSinceReferenceDate: 9_500_000)
         )
-        let futureDate = fixture.restartedAt.addingTimeInterval(3_600)
+        let futureDate = fixture.restartedAt.addingTimeInterval(3600)
         insertClosedSessionDuplicate(
             into: fixture.context,
             original: fixture.session,

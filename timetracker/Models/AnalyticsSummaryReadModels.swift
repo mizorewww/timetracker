@@ -79,9 +79,17 @@ struct DailyAnalyticsPoint: Identifiable {
     let wallSeconds: Int
     let label: String
 
-    var id: Date { date }
-    var grossMinutes: Double { Double(grossSeconds) / 60 }
-    var wallMinutes: Double { Double(wallSeconds) / 60 }
+    var id: Date {
+        date
+    }
+
+    var grossMinutes: Double {
+        Double(grossSeconds) / 60
+    }
+
+    var wallMinutes: Double {
+        Double(wallSeconds) / 60
+    }
 }
 
 struct HourlyAnalyticsPoint: Identifiable {
@@ -89,7 +97,9 @@ struct HourlyAnalyticsPoint: Identifiable {
     let grossSeconds: Int
     let wallSeconds: Int
 
-    var id: Int { hour }
+    var id: Int {
+        hour
+    }
 
     var label: String {
         hour == 0 ? "00" : "\(hour)"
@@ -100,8 +110,13 @@ nonisolated struct HourTaskActivity: Identifiable, Equatable, Sendable {
     let hour: Int
     let slices: [HourTaskSlice]
 
-    var id: Int { hour }
-    var totalSeconds: Int { slices.reduce(0) { $0 + $1.seconds } }
+    var id: Int {
+        hour
+    }
+
+    var totalSeconds: Int {
+        slices.reduce(0) { $0 + $1.seconds }
+    }
 }
 
 nonisolated struct HourTaskSlice: Identifiable, Equatable, Sendable {
@@ -111,5 +126,7 @@ nonisolated struct HourTaskSlice: Identifiable, Equatable, Sendable {
     let colorHex: String
     let seconds: Int
 
-    var id: UUID { taskID }
+    var id: UUID {
+        taskID
+    }
 }

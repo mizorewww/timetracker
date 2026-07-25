@@ -6,7 +6,8 @@ extension TimeTrackerStore {
         guard let rawRoute = environment["TIMETRACKER_UI_AUDIT_ROUTE"]?
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased(),
-              !rawRoute.isEmpty else {
+            !rawRoute.isEmpty
+        else {
             return
         }
 

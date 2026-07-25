@@ -19,7 +19,8 @@ extension SwiftDataTimeTrackingRepository {
     ) throws -> TimerRapidRestartMutation? {
         let policy = TimerRapidRestartPolicy()
         guard policy.supportsCoalescing(source),
-              hasActiveSegmentForTask == false else {
+              hasActiveSegmentForTask == false
+        else {
             return nil
         }
 
@@ -34,22 +35,23 @@ extension SwiftDataTimeTrackingRepository {
                     ($0.endedAt ?? resumedAt) <= resumedAt
             }
         )
-        let candidateIDs = Set(try context.fetch(descriptor).map(\.id))
+        let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
         let candidates = try canonicalSegments(ids: candidateIDs)
             .filter { $0.taskID == taskID }
             .sorted(by: rapidRestartCandidateOrder)
         guard let predecessor = candidates.first,
               let predecessorSource = TimeSessionSource(rawValue: predecessor.sourceRaw),
               policy.shouldCoalesce(
-                previousTaskID: predecessor.taskID,
-                previousSource: predecessorSource,
-                previousStartedAt: predecessor.startedAt,
-                previousEndedAt: predecessor.endedAt,
-                nextTaskID: taskID,
-                nextSource: source,
-                nextStartedAt: resumedAt
+                  previousTaskID: predecessor.taskID,
+                  previousSource: predecessorSource,
+                  previousStartedAt: predecessor.startedAt,
+                  previousEndedAt: predecessor.endedAt,
+                  nextTaskID: taskID,
+                  nextSource: source,
+                  nextStartedAt: resumedAt
               ),
-              let predecessorEnd = predecessor.endedAt else {
+              let predecessorEnd = predecessor.endedAt
+        else {
             return nil
         }
         let replacementID = policy.replacementSegmentID(
@@ -83,7 +85,8 @@ extension SwiftDataTimeTrackingRepository {
               session.endedAt == predecessorEnd,
               session.sourceRaw == predecessor.sourceRaw,
               TimeSessionSource(rawValue: session.sourceRaw) == predecessorSource,
-              hasLinkedPomodoro == false else {
+              hasLinkedPomodoro == false
+        else {
             return nil
         }
 
@@ -127,7 +130,7 @@ extension SwiftDataTimeTrackingRepository {
         let descriptor = FetchDescriptor<PomodoroRun>(
             predicate: #Predicate { $0.sessionID == targetSessionID }
         )
-        let candidateIDs = Set(try context.fetch(descriptor).map(\.id))
+        let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
         guard candidateIDs.isEmpty == false else { return false }
         let requestedIDs = Array(candidateIDs)
         let duplicateDescriptor = FetchDescriptor<PomodoroRun>(

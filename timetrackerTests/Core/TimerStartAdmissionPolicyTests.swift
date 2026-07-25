@@ -1,7 +1,6 @@
 import Testing
 @testable import timetracker
 
-@Suite
 struct TimerStartAdmissionPolicyTests {
     private let policy = TimerAdmissionPolicy()
 
@@ -181,7 +180,7 @@ struct TimerStartAdmissionPolicyTests {
             [survivor, duplicate, other, duplicate],
             [other, duplicate, survivor, duplicate],
             [duplicate, survivor, duplicate, other],
-            [duplicate, other, duplicate, survivor]
+            [duplicate, other, duplicate, survivor],
         ]
 
         let plans = inputs.map {

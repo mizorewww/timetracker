@@ -30,7 +30,8 @@ struct TaskProgressEditorDraftMutationTests {
 
     @Test
     func recoveredQuantityRemovalRequiresFreshExplicitConfirmation()
-        throws {
+        throws
+    {
         var draft = TaskEditorDraft(parentID: nil)
         draft.baseline = baseline(quantityGoalMutationID: UUID())
         draft.setQuantityGoal(

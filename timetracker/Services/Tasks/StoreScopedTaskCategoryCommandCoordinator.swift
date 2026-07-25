@@ -58,7 +58,8 @@ struct StoreScopedTaskCategoryCommandCoordinator {
             )
             guard currentBaseline == baseline,
                   orderedCategoryIDs.count == categories.count,
-                  Set(orderedCategoryIDs) == Set(categories.map(\.id)) else {
+                  Set(orderedCategoryIDs) == Set(categories.map(\.id))
+            else {
                 throw StoreScopedTaskCategoryMutationError.categoryChanged
             }
             guard currentBaseline.orderedCategoryIDs != orderedCategoryIDs else {
@@ -83,7 +84,8 @@ struct StoreScopedTaskCategoryCommandCoordinator {
         try withFreshRepository { repository in
             if let categoryID = draft.categoryID {
                 guard let baseline = draft.baseline,
-                      baseline.categoryID == categoryID else {
+                      baseline.categoryID == categoryID
+                else {
                     throw StoreScopedTaskCategoryMutationError.categoryChanged
                 }
                 let category = try requireCategory(

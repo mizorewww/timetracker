@@ -1,7 +1,7 @@
 import Foundation
 
 nonisolated enum LLMSecureHTTPTransport {
-    static let maximumResponseByteCount = 2 * 1_024 * 1_024
+    static let maximumResponseByteCount = 2 * 1024 * 1024
     static let resourceTimeoutInterval: TimeInterval = 60
 
     private static let productionSession = URLSession(configuration: productionConfiguration())
@@ -62,7 +62,7 @@ nonisolated enum LLMSecureHTTPTransport {
                         throw LLMModelServiceError.responseTooLarge
                     }
                     data.append(byte)
-                    if data.count.isMultiple(of: 16 * 1_024) {
+                    if data.count.isMultiple(of: 16 * 1024) {
                         try Task.checkCancellation()
                     }
                 }
@@ -94,7 +94,7 @@ nonisolated enum LLMSecureHTTPTransport {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMModelServiceError.invalidResponse
         }
-        guard (200..<300).contains(httpResponse.statusCode) else {
+        guard (200 ..< 300).contains(httpResponse.statusCode) else {
             throw LLMModelServiceError.responseStatus(httpResponse.statusCode)
         }
         guard response.expectedContentLength <= Int64(maximumResponseByteCount) else {
@@ -105,7 +105,7 @@ nonisolated enum LLMSecureHTTPTransport {
 
 private final class LLMRedirectPolicyDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     nonisolated func urlSession(
-        _ session: URLSession,
+        _: URLSession,
         task: URLSessionTask,
         willPerformHTTPRedirection response: HTTPURLResponse,
         newRequest request: URLRequest,
@@ -113,7 +113,8 @@ private final class LLMRedirectPolicyDelegate: NSObject, URLSessionTaskDelegate,
     ) {
         guard let sourceURL = response.url,
               let destinationURL = request.url,
-              LLMModelService.isSafeRedirect(from: sourceURL, to: destinationURL) else {
+              LLMModelService.isSafeRedirect(from: sourceURL, to: destinationURL)
+        else {
             completionHandler(nil)
             return
         }
@@ -121,7 +122,8 @@ private final class LLMRedirectPolicyDelegate: NSObject, URLSessionTaskDelegate,
         var redirectedRequest = request
         if redirectedRequest.value(forHTTPHeaderField: "Authorization") == nil,
            let authorization = task.currentRequest?.value(forHTTPHeaderField: "Authorization") ??
-            task.originalRequest?.value(forHTTPHeaderField: "Authorization") {
+           task.originalRequest?.value(forHTTPHeaderField: "Authorization")
+        {
             redirectedRequest.setValue(authorization, forHTTPHeaderField: "Authorization")
         }
         completionHandler(redirectedRequest)

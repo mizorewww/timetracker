@@ -71,7 +71,8 @@ extension AppCloudSync {
                 )
             }
             if isCloudReconciliationActive,
-               (try? sessionProbe()) == true {
+               (try? sessionProbe()) == true
+            {
                 return true
             }
             requestCloudReconciliationReset()

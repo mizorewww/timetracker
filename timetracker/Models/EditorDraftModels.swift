@@ -46,8 +46,8 @@ nonisolated struct TaskEditorDraft: Codable, Identifiable, Equatable, Sendable {
     var confirmsQuantityProgressReset = false
     var dailyRecurrence: TaskDailyRecurrenceDraft?
 
-    // A destructive confirmation is one-shot authority. Recovery payloads
-    // preserve the draft content but deliberately never persist this flag.
+    /// A destructive confirmation is one-shot authority. Recovery payloads
+    /// preserve the draft content but deliberately never persist this flag.
     private enum CodingKeys: String, CodingKey {
         case id
         case baseline
@@ -67,22 +67,22 @@ nonisolated struct TaskEditorDraft: Codable, Identifiable, Equatable, Sendable {
     }
 
     init(parentID: UUID?, categoryID: UUID? = nil) {
-        self.id = UUID()
-        self.baseline = nil
-        self.taskID = nil
-        self.title = ""
+        id = UUID()
+        baseline = nil
+        taskID = nil
+        title = ""
         self.parentID = parentID
         self.categoryID = parentID == nil ? categoryID : nil
-        self.colorHex = "1677FF"
-        self.iconName = "checkmark.circle"
-        self.notes = ""
-        self.estimatedMinutes = nil
-        self.hasDueDate = false
-        self.dueAt = Date()
-        self.checklistItems = []
-        self.quantityGoal = nil
-        self.confirmsQuantityProgressReset = false
-        self.dailyRecurrence = nil
+        colorHex = "1677FF"
+        iconName = "checkmark.circle"
+        notes = ""
+        estimatedMinutes = nil
+        hasDueDate = false
+        dueAt = Date()
+        checklistItems = []
+        quantityGoal = nil
+        confirmsQuantityProgressReset = false
+        dailyRecurrence = nil
     }
 
     @MainActor
@@ -96,11 +96,11 @@ nonisolated struct TaskEditorDraft: Codable, Identifiable, Equatable, Sendable {
         recurrenceRule: TaskRecurrenceRule? = nil,
         quantityEntries: [TaskQuantityEntry] = []
     ) {
-        self.id = UUID()
+        id = UUID()
         let checklistItemMutationIDs = checklistItems.reduce(into: [UUID: UUID]()) {
             $0[$1.id] = $1.clientMutationID
         }
-        self.baseline = TaskEditorDraftBaseline(
+        baseline = TaskEditorDraftBaseline(
             taskMutationID: task.clientMutationID,
             checklistItemMutationIDs: checklistItemMutationIDs,
             checklistVisualMutationIDs: visualByChecklistID.reduce(into: [UUID: UUID]()) {
@@ -115,22 +115,22 @@ nonisolated struct TaskEditorDraft: Codable, Identifiable, Equatable, Sendable {
                 entries: quantityEntries
             )
         )
-        self.taskID = task.id
-        self.title = task.title
-        self.parentID = task.parentID
+        taskID = task.id
+        title = task.title
+        parentID = task.parentID
         self.categoryID = task.parentID == nil ? categoryID : nil
-        self.colorHex = task.colorHex ?? "1677FF"
-        self.iconName = task.iconName ?? "checkmark.circle"
-        self.notes = task.notes ?? ""
-        self.estimatedMinutes = TaskEstimatePolicy.normalized(seconds: task.estimatedSeconds).map { $0 / 60 }
-        self.hasDueDate = task.dueAt != nil
-        self.dueAt = task.dueAt ?? Date()
+        colorHex = task.colorHex ?? "1677FF"
+        iconName = task.iconName ?? "checkmark.circle"
+        notes = task.notes ?? ""
+        estimatedMinutes = TaskEstimatePolicy.normalized(seconds: task.estimatedSeconds).map { $0 / 60 }
+        hasDueDate = task.dueAt != nil
+        dueAt = task.dueAt ?? Date()
         self.checklistItems = checklistItems.map { item in
             ChecklistEditorDraft(item: item, visual: visualByChecklistID[item.id])
         }
         self.quantityGoal = quantityGoal.map(TaskQuantityGoalDraft.init)
-        self.confirmsQuantityProgressReset = false
-        self.dailyRecurrence = recurrenceRule.map(
+        confirmsQuantityProgressReset = false
+        dailyRecurrence = recurrenceRule.map(
             TaskDailyRecurrenceDraft.init
         )
     }
@@ -174,11 +174,11 @@ struct InboxSuggestionEditorDraft: Identifiable, Equatable {
     var colorHex: String
 
     init(item: InboxItem, suggestion: InboxSuggestion? = nil, fallbackTaskID: UUID? = nil) {
-        self.inboxItemID = item.id
-        self.taskID = suggestion?.taskID ?? item.suggestedTaskID ?? fallbackTaskID
-        self.reason = suggestion?.reason ?? item.suggestionReason ?? ""
-        self.iconName = suggestion?.iconName ?? "checkmark.circle"
-        self.colorHex = suggestion?.colorHex ?? "1677FF"
+        inboxItemID = item.id
+        taskID = suggestion?.taskID ?? item.suggestedTaskID ?? fallbackTaskID
+        reason = suggestion?.reason ?? item.suggestionReason ?? ""
+        iconName = suggestion?.iconName ?? "checkmark.circle"
+        colorHex = suggestion?.colorHex ?? "1677FF"
     }
 }
 
@@ -192,9 +192,9 @@ struct ManualTimeDraft: Identifiable, Equatable {
     init(taskID: UUID?, tasks: [TaskNode]) {
         let end = Date()
         self.taskID = taskID ?? tasks.first?.id
-        self.startedAt = end.addingTimeInterval(-30 * 60)
-        self.endedAt = end
-        self.note = ""
+        startedAt = end.addingTimeInterval(-30 * 60)
+        endedAt = end
+        note = ""
     }
 }
 
@@ -268,16 +268,16 @@ struct SegmentEditorDraft: Identifiable, Equatable {
         sessionMutationID: UUID? = nil,
         pomodoroPhase: PomodoroPhaseToken? = nil
     ) {
-        self.segmentID = segment.id
-        self.taskID = segment.taskID
-        self.startedAt = segment.startedAt
-        self.endedAt = segment.endedAt ?? Date()
+        segmentID = segment.id
+        taskID = segment.taskID
+        startedAt = segment.startedAt
+        endedAt = segment.endedAt ?? Date()
         let isActive = segment.endedAt == nil
-        self.wasActive = isActive
+        wasActive = isActive
         self.isActive = isActive
         self.note = note
-        self.source = segment.source
-        self.baseline = SegmentEditorDraftBaseline(
+        source = segment.source
+        baseline = SegmentEditorDraftBaseline(
             segment: segment,
             sessionMutationID: sessionMutationID,
             pomodoroPhase: pomodoroPhase

@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+
 struct TaskDetailWorkspace: View {
     let store: TimeTrackerStore
     let taskID: UUID
@@ -41,6 +42,7 @@ struct TaskDetailWorkspace: View {
             )
         )
     }
+
     var body: some View {
         Group {
             switch draftRecoveryLoadState {
@@ -123,7 +125,6 @@ struct TaskDetailWorkspace: View {
         }
         .onAppear(perform: registerNavigationGuard)
     }
-
 }
 
 enum TaskDraftRecoveryLoadState: Equatable {

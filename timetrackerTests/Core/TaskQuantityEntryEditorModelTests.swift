@@ -7,7 +7,7 @@ struct TaskQuantityEntryEditorModelTests {
     func addRouteCapturesGoalBaselineAndStableEntryIdentity() {
         let routeID = UUID()
         let entryID = UUID()
-        let now = Date(timeIntervalSinceReferenceDate: 1_000)
+        let now = Date(timeIntervalSinceReferenceDate: 1000)
         let detail = detail(total: 20, target: 50)
 
         let route = TaskQuantityEntryEditorRoute.add(
@@ -47,7 +47,7 @@ struct TaskQuantityEntryEditorModelTests {
             id: entryBaseline.entryID,
             baseline: entryBaseline,
             amount: 20,
-            recordedAt: Date(timeIntervalSinceReferenceDate: 2_000)
+            recordedAt: Date(timeIntervalSinceReferenceDate: 2000)
         )
         let updateID = UUID()
         let deleteID = UUID()

@@ -81,7 +81,8 @@ nonisolated enum TimelineLaneAllocator {
     ) {
         while let candidate = endingLanes.min {
             guard laneEnds.indices.contains(candidate.lane),
-                  laneEnds[candidate.lane] == candidate.end else {
+                  laneEnds[candidate.lane] == candidate.end
+            else {
                 _ = endingLanes.popMin()
                 continue
             }

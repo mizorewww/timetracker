@@ -111,7 +111,9 @@ struct TodayActivityContent: View {
 }
 
 extension HourTaskSlice {
-    var color: Color { Color(hex: colorHex) ?? .blue }
+    var color: Color {
+        Color(hex: colorHex) ?? .blue
+    }
 }
 
 private struct TodayActivityHeader: View {

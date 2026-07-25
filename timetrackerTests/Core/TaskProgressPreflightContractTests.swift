@@ -5,7 +5,7 @@ import Testing
 @Suite(.serialized)
 struct TaskProgressPreflightContractTests {
     @Test @MainActor
-    func deterministicIdentitiesAreStableAndDomainSeparated() throws {
+    func deterministicIdentitiesAreStableAndDomainSeparated() {
         let taskID = TaskProgressPersistenceTestIDs.templateTask
         let ruleID = TaskProgressIdentity.recurrenceRuleID(
             templateTaskID: taskID
@@ -236,10 +236,11 @@ struct TaskProgressPreflightContractTests {
                 field: "timeZoneIdentifier",
                 expected: "Asia/Singapore",
                 actual: "UTC"
-            )) {
+            ))
+        {
             try SyncDataSnapshot(
                 taskRecurrenceRules: [
-                    TaskRecurrenceRuleRecord(timeZoneFixture.rule)
+                    TaskRecurrenceRuleRecord(timeZoneFixture.rule),
                 ],
                 taskRecurrenceOccurrences: [timeZoneRecord]
             ).validateForRestore()
@@ -267,10 +268,11 @@ struct TaskProgressPreflightContractTests {
                 field: "occurrenceDayKey",
                 expected: "on or after 2026-07-20",
                 actual: "2026-07-19"
-            )) {
+            ))
+        {
             try SyncDataSnapshot(
                 taskRecurrenceRules: [
-                    TaskRecurrenceRuleRecord(dayFixture.rule)
+                    TaskRecurrenceRuleRecord(dayFixture.rule),
                 ],
                 taskRecurrenceOccurrences: [dayRecord]
             ).validateForRestore()
@@ -282,7 +284,7 @@ struct TaskProgressPreflightContractTests {
         let fixture = makeTaskProgressPersistenceFixture()
         let snapshot = SyncDataSnapshot(
             taskRecurrenceOccurrences: [
-                TaskRecurrenceOccurrenceRecord(fixture.occurrence)
+                TaskRecurrenceOccurrenceRecord(fixture.occurrence),
             ],
             taskQuantityEntries: [TaskQuantityEntryRecord(fixture.entry)]
         )

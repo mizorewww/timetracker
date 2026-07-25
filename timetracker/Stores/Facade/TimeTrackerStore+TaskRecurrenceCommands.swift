@@ -53,8 +53,9 @@ extension TimeTrackerStore {
                   rule.deletedAt == nil,
                   parentEligibleTaskIDs.contains(rule.templateTaskID),
                   let timeZone = TimeZone(
-                    identifier: rule.timeZoneIdentifier
-                  ) else {
+                      identifier: rule.timeZoneIdentifier
+                  )
+            else {
                 return nil
             }
             var calendar = Calendar(identifier: .gregorian)
@@ -64,7 +65,8 @@ extension TimeTrackerStore {
                 of: .day,
                 for: now
             )?.end,
-            deadline > now else {
+                deadline > now
+            else {
                 return nil
             }
             return deadline

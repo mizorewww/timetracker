@@ -25,15 +25,15 @@ final class ChecklistItem {
         sortOrder: Double = 0,
         deviceID: String
     ) {
-        self.id = UUID()
+        id = UUID()
         self.taskID = taskID
         self.title = title
         self.isCompleted = isCompleted
         self.sortOrder = sortOrder
-        self.completedAt = isCompleted ? Date() : nil
-        self.createdAt = Date()
-        self.updatedAt = Date()
+        completedAt = isCompleted ? Date() : nil
+        createdAt = Date()
+        updatedAt = Date()
         self.deviceID = deviceID
-        self.clientMutationID = UUID()
+        clientMutationID = UUID()
     }
 }

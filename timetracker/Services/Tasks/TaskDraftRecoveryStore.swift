@@ -16,7 +16,7 @@ nonisolated enum TaskDraftRecoveryStoreError: Error, Equatable, Sendable {
 nonisolated struct TaskDraftRecoveryStore: @unchecked Sendable {
     nonisolated static let directoryName = "TimeTrackerDrafts"
     nonisolated static let currentSchemaVersion = 1
-    nonisolated static let maximumEncodedByteCount = 1 * 1_024 * 1_024
+    nonisolated static let maximumEncodedByteCount = 1 * 1024 * 1024
     nonisolated static let defaultRetentionInterval: TimeInterval = 30 * 24 * 60 * 60
 
     struct Locations {
@@ -47,8 +47,8 @@ nonisolated struct TaskDraftRecoveryStore: @unchecked Sendable {
     ) {
         precondition(retentionInterval >= 0)
         precondition(maximumEncodedByteCount > 0)
-        self.directoryURLOverride = directoryURL
-        self.durableRootURLOverride = durableRootURL
+        directoryURLOverride = directoryURL
+        durableRootURLOverride = durableRootURL
         self.retentionInterval = retentionInterval
         self.maximumEncodedByteCount = maximumEncodedByteCount
         self.now = now
@@ -91,7 +91,8 @@ nonisolated struct TaskDraftRecoveryStore: @unchecked Sendable {
         currentDraft: TaskEditorDraft
     ) throws -> TaskEditorDraft? {
         guard currentDraft.taskID == sourceTaskID,
-              currentDraft.baseline != nil else {
+              currentDraft.baseline != nil
+        else {
             throw TaskDraftRecoveryStoreError.invalidExistingTaskDraft
         }
         let locations = try resolvedLocations()
@@ -109,9 +110,10 @@ nonisolated struct TaskDraftRecoveryStore: @unchecked Sendable {
                   envelope.draft.baseline != nil,
                   isExpired(envelope.savedAt) == false,
                   TaskDraftRecoveryCodec.hasSameRecoverableContent(
-                    envelope.draft,
-                    currentDraft
-                  ) == false else {
+                      envelope.draft,
+                      currentDraft
+                  ) == false
+            else {
                 try removeFile(at: url, locations: locations)
                 return nil
             }
@@ -169,7 +171,7 @@ nonisolated struct TaskDraftRecoveryStore: @unchecked Sendable {
     }
 
     func fileURL(for sourceTaskID: UUID) throws -> URL {
-        fileURL(for: sourceTaskID, in: try resolvedLocations().directory)
+        try fileURL(for: sourceTaskID, in: resolvedLocations().directory)
     }
 
     func resolvedLocations() throws -> Locations {

@@ -40,7 +40,8 @@ extension TaskDetailWorkspace {
 
     func cancelPendingNavigationIfNeeded(isDiscardConfirmationPresented: Bool) {
         guard isDiscardConfirmationPresented == false,
-              let requestID = session.navigationConfirmationRequestID else {
+              let requestID = session.navigationConfirmationRequestID
+        else {
             return
         }
         Task { @MainActor in
@@ -51,7 +52,7 @@ extension TaskDetailWorkspace {
             guard session.isDiscardConfirmationPresented == false,
                   session.hasUnsavedChanges,
                   store.taskDetailNavigationGuard.pendingNavigationID
-                    == requestID else { return }
+                  == requestID else { return }
             store.taskDetailNavigationGuard.cancelPendingNavigation(
                 requestID: requestID
             )
@@ -72,7 +73,9 @@ extension TaskDetailWorkspace {
         if let navigationRequestID {
             let completed = store.taskDetailNavigationGuard
                 .discardChangesAndCompletePendingNavigation(requestID: navigationRequestID)
-            if completed { clearInputFocus() }
+            if completed {
+                clearInputFocus()
+            }
             return
         }
 
@@ -157,7 +160,6 @@ extension TaskDetailWorkspace {
             dismissDetail()
         }
     }
-
 }
 
 struct TaskEditorSourceToken: Equatable {

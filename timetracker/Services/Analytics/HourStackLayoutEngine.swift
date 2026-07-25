@@ -1,7 +1,7 @@
 import Foundation
 
 struct HourActivityScale: Equatable {
-    static let minimumUpperBoundSeconds = 3_600
+    static let minimumUpperBoundSeconds = 3600
 
     let upperBoundSeconds: Int
 
@@ -56,13 +56,12 @@ enum HourStackLayoutEngine {
               !sorted.isEmpty
         else { return [] }
 
-        let capacity: Int
-        if let maxItems {
-            capacity = max(0, maxItems)
+        let capacity: Int = if let maxItems {
+            max(0, maxItems)
         } else if minSliceHeight == 0 {
-            capacity = sorted.count
+            sorted.count
         } else {
-            capacity = maxVisibleSliceCount(
+            maxVisibleSliceCount(
                 availableHeight: availableHeight,
                 minSliceHeight: minSliceHeight
             )

@@ -86,7 +86,7 @@ extension SyncConflictService {
         return isCloudActive ? .appliedImmediately : .queuedForNextLaunch
     }
 
-    func acceptCurrentCloudData(context: ModelContext) throws -> SyncRecoveryResult {
+    func acceptCurrentCloudData(context _: ModelContext) throws -> SyncRecoveryResult {
         try requireNoAttachedCloudRecovery()
         return try withExclusiveStateAccess {
             try acceptCurrentCloudDataWithLockedState()
@@ -122,11 +122,13 @@ extension SyncConflictService {
             return currentSnapshot
         }
         if let pendingSnapshot = state.pendingForcedUploadSnapshot,
-           pendingSnapshot.hasProtectableUserContent {
+           pendingSnapshot.hasProtectableUserContent
+        {
             return pendingSnapshot
         }
         if let localSnapshot = state.localSnapshot,
-           localSnapshot.hasProtectableUserContent {
+           localSnapshot.hasProtectableUserContent
+        {
             return localSnapshot
         }
         return currentSnapshot

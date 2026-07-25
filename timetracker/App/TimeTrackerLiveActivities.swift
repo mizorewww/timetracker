@@ -129,11 +129,10 @@ final class LiveActivityCoordinator {
             now: now
         ) else {
             dismissedSegmentID = nil
-            let hasRetainedActiveState: Bool
-            if case .active? = reconciler.desiredState {
-                hasRetainedActiveState = true
+            let hasRetainedActiveState = if case .active? = reconciler.desiredState {
+                true
             } else {
-                hasRetainedActiveState = false
+                false
             }
             let hasWork = lastRequest != nil
                 || reconciler.isReconciling
@@ -172,7 +171,8 @@ final class LiveActivityCoordinator {
             state: state
         )
         if dismissedSegmentID != nil,
-           dismissedSegmentID != request.segmentID {
+           dismissedSegmentID != request.segmentID
+        {
             dismissedSegmentID = nil
         }
         if dismissedSegmentID == request.segmentID {
@@ -196,10 +196,11 @@ final class LiveActivityCoordinator {
         }
 
         guard request != lastRequest
-                || matchingActivity?.state == .stale
-                || matchingActivity?.state.isTerminal == true
-                || matchingActivity == nil
-                || reconciler.isReconciling else {
+            || matchingActivity?.state == .stale
+            || matchingActivity?.state.isTerminal == true
+            || matchingActivity == nil
+            || reconciler.isReconciling
+        else {
             if let matchingActivity {
                 observeActivityState(of: matchingActivity)
                 publishStatus(for: matchingActivity.state)
@@ -227,8 +228,9 @@ final class LiveActivityCoordinator {
             return
         }
         if clearingRemovalSuppression,
-           case .active(let request)? = reconciler.desiredState,
-           dismissedSegmentID == request.segmentID {
+           case let .active(request)? = reconciler.desiredState,
+           dismissedSegmentID == request.segmentID
+        {
             dismissedSegmentID = nil
         }
         status = .synchronizing
@@ -245,7 +247,7 @@ final class LiveActivityCoordinator {
             status = client.areActivitiesEnabled
                 ? .ready
                 : .unavailable(.denied)
-        case .active(let request):
+        case let .active(request):
             if let result = await updateOrStart(request) {
                 guard reconciler.desiredState == desiredState else { return }
                 if result.didApplyRequest {
@@ -312,7 +314,8 @@ final class LiveActivityCoordinator {
                 return nil
             }
             if let current, current.state.isTerminal == false,
-               current.state != .stale {
+               current.state != .stale
+            {
                 for stale in activities where stale.id != current.id {
                     await client.end(activityID: stale.id, content: content)
                     guard dismissedSegmentID != request.segmentID else {
@@ -423,8 +426,9 @@ final class LiveActivityCoordinator {
     ) {
         guard observedActivityID == activityID,
               observedSegmentID == segmentID,
-              case .active(let request)? = reconciler.desiredState,
-              request.segmentID == segmentID else {
+              case let .active(request)? = reconciler.desiredState,
+              request.segmentID == segmentID
+        else {
             return
         }
 

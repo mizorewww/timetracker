@@ -6,7 +6,7 @@ extension TimelineChart {
         placement: TimelineChartBarPlacement,
         lanes: TimelineChartLaneLayout
     ) -> some View {
-        return RoundedRectangle(cornerRadius: 5, style: .continuous)
+        RoundedRectangle(cornerRadius: 5, style: .continuous)
             .fill(Color(hex: entry.colorHex) ?? .blue)
             .frame(width: placement.axisExtent, height: lanes.laneExtent)
             .overlay {

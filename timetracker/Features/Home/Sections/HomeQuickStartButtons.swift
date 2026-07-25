@@ -11,7 +11,7 @@ struct QuickStartTaskGroup: View {
             GridItem(
                 .adaptive(minimum: dynamicTypeSize.isAccessibilitySize ? 360 : 300),
                 spacing: 12
-            )
+            ),
         ]
     }
 

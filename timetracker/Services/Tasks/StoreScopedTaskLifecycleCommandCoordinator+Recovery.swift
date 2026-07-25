@@ -60,7 +60,8 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
         var visited = Set<UUID>()
         var current: TaskNode? = sourceTask
         while let task = current,
-              visited.insert(task.id).inserted {
+              visited.insert(task.id).inserted
+        {
             hierarchy.append(task)
             guard let parentID = task.parentID else { break }
             guard let parent = taskByID[parentID] else {

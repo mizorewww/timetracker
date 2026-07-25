@@ -76,7 +76,7 @@ struct TodayActivityHeatmapTests {
             checklist(taskID: child.id, completedAt: nil),
             checklist(
                 taskID: child.id,
-                completedAt: now.addingTimeInterval(86_400)
+                completedAt: now.addingTimeInterval(86400)
             ),
             checklist(taskID: child.id, completedAt: outsideWindow),
             olderActive,
@@ -201,24 +201,24 @@ struct TodayActivityHeatmapTests {
         let root = task("Root")
         let snapshot = try #require(
             await TodayActivityHeatmapSnapshotService().taskSnapshots(
-            selectedTaskIDs: [root.id, UUID()],
-            tasks: [root],
-            segments: [],
-            checklistItems: [],
-            quantityGoals: [],
-            quantityEntries: [],
-            period: .oneYear,
-            now: now,
-            calendar: calendar
+                selectedTaskIDs: [root.id, UUID()],
+                tasks: [root],
+                segments: [],
+                checklistItems: [],
+                quantityGoals: [],
+                quantityEntries: [],
+                period: .oneYear,
+                now: now,
+                calendar: calendar
             ).first
         )
 
         #expect(snapshot.weeks.count == 53)
         #expect(snapshot.weeks.allSatisfy { $0.days.count == 7 })
         #expect(
-            calendar.component(
+            try calendar.component(
                 .weekday,
-                from: try #require(snapshot.weeks.first?.startDate)
+                from: #require(snapshot.weeks.first?.startDate)
             ) == calendar.firstWeekday
         )
         let cells = snapshot.weeks.flatMap(\.days)
@@ -389,13 +389,13 @@ struct TodayActivityHeatmapTests {
             segments: [
                 segment(
                     taskID: durationRoot.id,
-                    start: yesterday.addingTimeInterval(9 * 3_600),
-                    end: yesterday.addingTimeInterval(10 * 3_600)
+                    start: yesterday.addingTimeInterval(9 * 3600),
+                    end: yesterday.addingTimeInterval(10 * 3600)
                 ),
                 segment(
                     taskID: durationRoot.id,
-                    start: today.addingTimeInterval(8 * 3_600),
-                    end: today.addingTimeInterval(10 * 3_600)
+                    start: today.addingTimeInterval(8 * 3600),
+                    end: today.addingTimeInterval(10 * 3600)
                 ),
             ],
             checklistItems: [
@@ -423,12 +423,12 @@ struct TodayActivityHeatmapTests {
         let duration = try #require(snapshots.first)
         #expect(duration.metric == .trackedDuration)
         #expect(duration.colorHex == "F97316")
-        #expect(duration.totalValue == 3 * 3_600)
-        #expect(duration.maximumDailyValue == 2 * 3_600)
+        #expect(duration.totalValue == 3 * 3600)
+        #expect(duration.maximumDailyValue == 2 * 3600)
         #expect(duration.activeDayCount == 2)
-        #expect(day(yesterday, in: duration, calendar: calendar)?.value == 3_600)
+        #expect(day(yesterday, in: duration, calendar: calendar)?.value == 3600)
         #expect(day(yesterday, in: duration, calendar: calendar)?.intensity == .medium)
-        #expect(day(today, in: duration, calendar: calendar)?.value == 2 * 3_600)
+        #expect(day(today, in: duration, calendar: calendar)?.value == 2 * 3600)
         #expect(day(today, in: duration, calendar: calendar)?.intensity == .maximum)
 
         let checklistSnapshot = try #require(snapshots.last)
@@ -466,18 +466,18 @@ struct TodayActivityHeatmapTests {
             segments: [
                 segment(
                     taskID: root.id,
-                    start: yesterday.addingTimeInterval(23 * 3_600),
-                    end: today.addingTimeInterval(2 * 3_600)
+                    start: yesterday.addingTimeInterval(23 * 3600),
+                    end: today.addingTimeInterval(2 * 3600)
                 ),
                 segment(
                     taskID: root.id,
-                    start: now.addingTimeInterval(-3_600),
+                    start: now.addingTimeInterval(-3600),
                     end: nil
                 ),
                 segment(
                     taskID: root.id,
-                    start: now.addingTimeInterval(3_600),
-                    end: now.addingTimeInterval(7_200)
+                    start: now.addingTimeInterval(3600),
+                    end: now.addingTimeInterval(7200)
                 ),
             ],
             checklistItems: [],
@@ -489,9 +489,9 @@ struct TodayActivityHeatmapTests {
         )
         let snapshot = try #require(snapshots.first)
 
-        #expect(day(yesterday, in: snapshot, calendar: calendar)?.value == 3_600)
-        #expect(day(today, in: snapshot, calendar: calendar)?.value == 3 * 3_600)
-        #expect(snapshot.totalValue == 4 * 3_600)
+        #expect(day(yesterday, in: snapshot, calendar: calendar)?.value == 3600)
+        #expect(day(today, in: snapshot, calendar: calendar)?.value == 3 * 3600)
+        #expect(snapshot.totalValue == 4 * 3600)
         #expect(snapshot.weeks.flatMap(\.days).filter(\.isFuture).allSatisfy {
             $0.value == 0 && $0.intensity == .none
         })
@@ -562,7 +562,7 @@ struct TodayActivityHeatmapTests {
                 segment(
                     taskID: quantityTask.id,
                     start: today,
-                    end: today.addingTimeInterval(10_000)
+                    end: today.addingTimeInterval(10000)
                 ),
             ],
             checklistItems: [
@@ -611,7 +611,7 @@ struct TodayActivityHeatmapTests {
                 quantityEntry(
                     taskID: quantityTask.id,
                     amount: 5,
-                    recordedAt: now.addingTimeInterval(3_600)
+                    recordedAt: now.addingTimeInterval(3600)
                 ),
             ],
             period: .oneYear,
@@ -728,7 +728,7 @@ struct TodayActivityHeatmapTests {
                 selectedTaskIDs: [template.id],
                 tasks: tasks,
                 additionalContributingTaskIDsBySelectedTaskID: [
-                    template.id: Set([generated.id])
+                    template.id: Set([generated.id]),
                 ],
                 segments: [],
                 checklistItems: [],
@@ -787,23 +787,23 @@ struct TodayActivityHeatmapTests {
                 selectedTaskIDs: [template.id],
                 tasks: [template, movedParent, generated, generatedChild],
                 additionalContributingTaskIDsBySelectedTaskID: [
-                    template.id: Set([generated.id])
+                    template.id: Set([generated.id]),
                 ],
                 segments: [
                     segment(
                         taskID: template.id,
-                        start: yesterday.addingTimeInterval(3_600),
-                        end: yesterday.addingTimeInterval(5_400)
+                        start: yesterday.addingTimeInterval(3600),
+                        end: yesterday.addingTimeInterval(5400)
                     ),
                     segment(
                         taskID: generated.id,
-                        start: today.addingTimeInterval(7_200),
-                        end: today.addingTimeInterval(10_800)
+                        start: today.addingTimeInterval(7200),
+                        end: today.addingTimeInterval(10800)
                     ),
                     segment(
                         taskID: generatedChild.id,
-                        start: today.addingTimeInterval(14_400),
-                        end: today.addingTimeInterval(15_300)
+                        start: today.addingTimeInterval(14400),
+                        end: today.addingTimeInterval(15300)
                     ),
                 ],
                 checklistItems: [],
@@ -818,15 +818,15 @@ struct TodayActivityHeatmapTests {
         #expect(snapshot.taskID == template.id)
         #expect(snapshot.title == template.title)
         #expect(snapshot.metric == .trackedDuration)
-        #expect(snapshot.totalValue == 6_300)
+        #expect(snapshot.totalValue == 6300)
         #expect(
-            day(yesterday, in: snapshot, calendar: calendar)?.value == 1_800
+            day(yesterday, in: snapshot, calendar: calendar)?.value == 1800
         )
-        #expect(day(today, in: snapshot, calendar: calendar)?.value == 4_500)
+        #expect(day(today, in: snapshot, calendar: calendar)?.value == 4500)
     }
 
     @Test @MainActor
-    func heatmapSelectionPersistsAcrossContainerReopen() async throws {
+    func heatmapSelectionPersistsAcrossContainerReopen() throws {
         let directory = FileManager.default.temporaryDirectory.appending(
             path: "TodayHeatmapPersistenceTests-\(UUID().uuidString)",
             directoryHint: .isDirectory

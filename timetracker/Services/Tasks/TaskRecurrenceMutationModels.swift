@@ -71,7 +71,7 @@ struct TaskRecurrenceMutationOutcome: Equatable {
                 StoreDomainEvent.taskChanged(
                     taskID: $0,
                     affectedAncestorIDs:
-                        changedRuleAncestorTaskIDsByTemplateID[$0] ?? []
+                    changedRuleAncestorTaskIDsByTemplateID[$0] ?? []
                 )
             }
         )
@@ -80,7 +80,7 @@ struct TaskRecurrenceMutationOutcome: Equatable {
                 .taskChanged(
                     taskID: materialization.generatedTaskID,
                     affectedAncestorIDs:
-                        materialization.affectedAncestorTaskIDs
+                    materialization.affectedAncestorTaskIDs
                 )
             )
         }

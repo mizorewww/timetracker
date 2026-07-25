@@ -77,7 +77,9 @@ nonisolated struct TaskQuantityEntryEditorRoute:
     }
 
     var isEditing: Bool {
-        if case .edit = mode { return true }
+        if case .edit = mode {
+            return true
+        }
         return false
     }
 }

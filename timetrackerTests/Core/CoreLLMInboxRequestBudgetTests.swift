@@ -6,8 +6,8 @@ import Testing
 struct CoreLLMInboxRequestBudgetTests {
     @Test @MainActor
     func storeCandidateWindowKeepsPinnedAndRecentTasksRelevant() {
-        let oldDate = Date(timeIntervalSince1970: 1_000)
-        let regularTasks = (0..<60).map { index in
+        let oldDate = Date(timeIntervalSince1970: 1000)
+        let regularTasks = (0 ..< 60).map { index in
             let task = TaskNode(
                 title: String(format: "A%03d", index),
                 parentID: nil,
@@ -17,9 +17,9 @@ struct CoreLLMInboxRequestBudgetTests {
             return task
         }
         let recentTask = TaskNode(title: "ZZY Recent", parentID: nil, deviceID: "test")
-        recentTask.updatedAt = oldDate.addingTimeInterval(10_000)
+        recentTask.updatedAt = oldDate.addingTimeInterval(10000)
         let pinnedTask = TaskNode(title: "ZZZ Pinned", parentID: nil, deviceID: "test")
-        pinnedTask.updatedAt = oldDate.addingTimeInterval(20_000)
+        pinnedTask.updatedAt = oldDate.addingTimeInterval(20000)
 
         let store = makeTestStore()
         store.tasks = regularTasks + [recentTask, pinnedTask]
@@ -57,7 +57,7 @@ struct CoreLLMInboxRequestBudgetTests {
         let store = makeTestStore()
         let task = TaskNode(title: "Only task", parentID: nil, deviceID: "test")
         store.tasks = [task]
-        store.taskCategories = (0..<60).map { index in
+        store.taskCategories = (0 ..< 60).map { index in
             TaskCategory(
                 title: String(format: "Category %03d", index),
                 deviceID: "test",
@@ -132,14 +132,14 @@ struct CoreLLMInboxRequestBudgetTests {
             repeating: "\\\"",
             count: AppPreferenceValueSanitizer.maximumLLMPromptInstructionsByteCount / 2
         )
-        let tasks = (0..<160).map { index in
+        let tasks = (0 ..< 160).map { index in
             Self.candidate(
                 index: index,
                 title: String(repeating: "\\\"", count: 180),
                 path: String(repeating: "Root/\\\"", count: 100)
             )
         }
-        let categories = (0..<80).map { index in
+        let categories = (0 ..< 80).map { index in
             Self.categoryCandidate(
                 index: index,
                 title: String(repeating: "\\\"", count: 180)
@@ -168,7 +168,7 @@ struct CoreLLMInboxRequestBudgetTests {
 
     @Test
     func candidateBudgetIsDeterministicAndUTF8Safe() throws {
-        var candidates = (0..<120).map { index in
+        var candidates = (0 ..< 120).map { index in
             Self.candidate(
                 index: index,
                 title: "  \(String(repeating: "任务🧭", count: 120)) \(index)  ",
@@ -199,14 +199,14 @@ struct CoreLLMInboxRequestBudgetTests {
 
     @Test
     func taskAndCategoryCandidatesShareBudgetsWithoutCrowdingOutCategories() throws {
-        let tasks = (0..<120).map { index in
+        let tasks = (0 ..< 120).map { index in
             Self.candidate(
                 index: index,
                 title: "  \(String(repeating: "任务🧭", count: 100)) \(index)  ",
                 path: "  \(String(repeating: "Project/工作🚀/", count: 80))\(index)  "
             )
         }
-        let categories = (0..<20).map { index in
+        let categories = (0 ..< 20).map { index in
             Self.categoryCandidate(
                 index: index,
                 title: "  \(String(repeating: "分类🗂️", count: 100)) \(index)  "
@@ -244,7 +244,7 @@ struct CoreLLMInboxRequestBudgetTests {
 
     @Test
     func finalRequestStaysWithinPromptAndBodyBudgets() throws {
-        let candidates = (0..<160).map { index in
+        let candidates = (0 ..< 160).map { index in
             Self.candidate(
                 index: index,
                 title: String(repeating: "\"复杂任务🧠\\", count: 100),
@@ -254,7 +254,7 @@ struct CoreLLMInboxRequestBudgetTests {
         let request = try LLMInboxSuggestionService().suggestionRequest(
             inboxTitle: String(repeating: "  \"整理资料🗂️\\  ", count: 300),
             taskCandidates: candidates,
-            categoryCandidates: (0..<80).map {
+            categoryCandidates: (0 ..< 80).map {
                 Self.categoryCandidate(
                     index: $0,
                     title: String(repeating: "\"分类🧭\\", count: 100)

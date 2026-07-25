@@ -46,15 +46,15 @@ enum StoreDomainEvent: Hashable {
 
     var affectedTaskIDs: Set<UUID> {
         switch self {
-        case .taskChanged(let taskID, let affectedAncestorIDs),
-             .checklistChanged(let taskID, let affectedAncestorIDs):
+        case let .taskChanged(taskID, affectedAncestorIDs),
+             let .checklistChanged(taskID, affectedAncestorIDs):
             var ids = affectedAncestorIDs
             if let taskID {
                 ids.insert(taskID)
             }
             return ids
-        case .ledgerChanged(let taskID, _, _),
-             .pomodoroChanged(_, _, let taskID):
+        case let .ledgerChanged(taskID, _, _),
+             let .pomodoroChanged(_, _, taskID):
             return taskID.map { [$0] } ?? []
         case .preferenceChanged,
              .countdownChanged,
@@ -67,25 +67,25 @@ enum StoreDomainEvent: Hashable {
 
     var directlyAffectedTaskIDs: Set<UUID> {
         switch self {
-        case .taskChanged(let taskID, _),
-             .checklistChanged(let taskID, _),
-             .ledgerChanged(let taskID, _, _),
-             .pomodoroChanged(_, _, let taskID):
-            return taskID.map { [$0] } ?? []
+        case let .taskChanged(taskID, _),
+             let .checklistChanged(taskID, _),
+             let .ledgerChanged(taskID, _, _),
+             let .pomodoroChanged(_, _, taskID):
+            taskID.map { [$0] } ?? []
         case .preferenceChanged,
              .countdownChanged,
              .inboxChanged,
              .remoteImportCompleted,
              .fullSync:
-            return []
+            []
         }
     }
 
     var explicitlyAffectedAncestorTaskIDs: Set<UUID> {
         switch self {
-        case .taskChanged(_, let ancestorIDs),
-             .checklistChanged(_, let ancestorIDs):
-            return ancestorIDs
+        case let .taskChanged(_, ancestorIDs),
+             let .checklistChanged(_, ancestorIDs):
+            ancestorIDs
         case .ledgerChanged,
              .pomodoroChanged,
              .preferenceChanged,
@@ -93,19 +93,19 @@ enum StoreDomainEvent: Hashable {
              .inboxChanged,
              .remoteImportCompleted,
              .fullSync:
-            return []
+            []
         }
     }
 
     var directlyAffectedChecklistTaskIDs: Set<UUID> {
-        guard case .checklistChanged(let taskID, _) = self else { return [] }
+        guard case let .checklistChanged(taskID, _) = self else { return [] }
         return taskID.map { [$0] } ?? []
     }
 
     var affectedLedgerRanges: [StoreInvalidationRange] {
         switch self {
-        case .ledgerChanged(_, let dateInterval, _):
-            return dateInterval.map { [$0] } ?? []
+        case let .ledgerChanged(_, dateInterval, _):
+            dateInterval.map { [$0] } ?? []
         case .taskChanged,
              .pomodoroChanged,
              .checklistChanged,
@@ -114,14 +114,14 @@ enum StoreDomainEvent: Hashable {
              .inboxChanged,
              .remoteImportCompleted,
              .fullSync:
-            return []
+            []
         }
     }
 
     var affectedInboxItemIDs: Set<UUID> {
         switch self {
-        case .inboxChanged(let itemIDs):
-            return itemIDs
+        case let .inboxChanged(itemIDs):
+            itemIDs
         case .taskChanged,
              .checklistChanged,
              .ledgerChanged,
@@ -130,7 +130,7 @@ enum StoreDomainEvent: Hashable {
              .countdownChanged,
              .remoteImportCompleted,
              .fullSync:
-            return []
+            []
         }
     }
 }
@@ -240,7 +240,7 @@ struct StoreRefreshPlanner {
         switch event {
         case .taskChanged:
             return [.tasks, .rollups, .analytics, .liveActivities]
-        case .ledgerChanged(_, _, let isVisible):
+        case let .ledgerChanged(_, _, isVisible):
             if isVisible {
                 return [.ledgerVisible, .pomodoro, .rollups, .analytics, .liveActivities]
             }

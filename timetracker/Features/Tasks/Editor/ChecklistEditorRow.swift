@@ -34,7 +34,7 @@ struct ChecklistEditorRow: View {
                 colorHex: $item.colorHex,
                 showsTitle: false,
                 pickerAccessibilityIdentifier:
-                    "symbol.picker.open.checklist.\(item.id.uuidString)",
+                "symbol.picker.open.checklist.\(item.id.uuidString)",
                 onOpen: {
                     focus.wrappedValue = nil
                 }
@@ -48,9 +48,9 @@ struct ChecklistEditorRow: View {
             ChecklistTitleTextField(
                 title: $item.title,
                 isCompleted: item.isCompleted,
-                lineLimit: 1...4,
+                lineLimit: 1 ... 4,
                 accessibilityIdentifier:
-                    "task.editor.checklist.title.\(item.id.uuidString)",
+                "task.editor.checklist.title.\(item.id.uuidString)",
                 submit: submit
             )
             .focused(focus, equals: item.id)

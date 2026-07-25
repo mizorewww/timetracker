@@ -49,10 +49,10 @@ struct AITaskPlanGeneratorSheet: View {
             (
                 LLMModelService.modelsURL(endpoint: store.preferences.llmEndpoint) != nil &&
                     !store.preferences.llmAPIKey
-                        .trimmingCharacters(in: .whitespacesAndNewlines)
-                        .isEmpty &&
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .isEmpty &&
                     store.preferences.llmAvailableModelIDs
-                        .contains(store.preferences.llmSelectedModel)
+                    .contains(store.preferences.llmSelectedModel)
             )
     }
 
@@ -71,50 +71,50 @@ struct AITaskPlanGeneratorSheet: View {
             }
             .navigationTitle(AppStrings.localized("aiTaskPlan.title"))
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+                .navigationBarTitleDisplayMode(.inline)
             #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(AppStrings.cancel, action: requestDismiss)
-                        .disabled(isCreating)
-                        .accessibilityIdentifier("aiTaskPlan.cancel")
-                }
-
-                if let generatedDraft {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button {
-                            create(generatedDraft)
-                        } label: {
-                            if isCreating {
-                                ProgressView()
-                                    .controlSize(.small)
-                            } else {
-                                Text(.app("aiTaskPlan.create"))
-                            }
-                        }
-                        .disabled(
-                            isCreating ||
-                                generatedDraft.taskCount == 0 ||
-                                generatedDraft.firstValidationMessage != nil
-                        )
-                        .accessibilityIdentifier("aiTaskPlan.create")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(AppStrings.cancel, action: requestDismiss)
+                            .disabled(isCreating)
+                            .accessibilityIdentifier("aiTaskPlan.cancel")
                     }
-                } else if isConfigured {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(
-                            AppStrings.localized("aiTaskPlan.generate"),
-                            action: generate
-                        )
-                        .disabled(
-                            isGenerating ||
-                                requestText
+
+                    if let generatedDraft {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button {
+                                create(generatedDraft)
+                            } label: {
+                                if isCreating {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                } else {
+                                    Text(.app("aiTaskPlan.create"))
+                                }
+                            }
+                            .disabled(
+                                isCreating ||
+                                    generatedDraft.taskCount == 0 ||
+                                    generatedDraft.firstValidationMessage != nil
+                            )
+                            .accessibilityIdentifier("aiTaskPlan.create")
+                        }
+                    } else if isConfigured {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button(
+                                AppStrings.localized("aiTaskPlan.generate"),
+                                action: generate
+                            )
+                            .disabled(
+                                isGenerating ||
+                                    requestText
                                     .trimmingCharacters(in: .whitespacesAndNewlines)
                                     .isEmpty
-                        )
-                        .accessibilityIdentifier("aiTaskPlan.generate")
+                            )
+                            .accessibilityIdentifier("aiTaskPlan.generate")
+                        }
                     }
                 }
-            }
         }
         .platformSheetFrame(width: 680, height: 720)
         .editorDiscardConfirmation(
@@ -453,7 +453,8 @@ private struct AITaskPlanCategoryDraftHeader: View {
         if let categoryID,
            let category = draft.categories.first(where: {
                $0.id == categoryID
-           }) {
+           })
+        {
             HStack(spacing: 8) {
                 TaskIcon(
                     visual: TaskVisualPresentation(
@@ -472,7 +473,7 @@ private struct AITaskPlanCategoryDraftHeader: View {
                     axis: .vertical
                 )
                 .font(.subheadline.weight(.semibold))
-                .lineLimit(1...2)
+                .lineLimit(1 ... 2)
                 .textFieldStyle(.plain)
                 .accessibilityLabel(AppStrings.localized("aiTaskPlan.categoryName"))
 
@@ -532,23 +533,21 @@ private struct AITaskPlanTaskDraftRow: View {
         // Each child of this Group is its own List row, matching the task
         // detail editor: the task header row, then quantity/recurrence
         // toggles as independent rows, then checklist rows.
-        Group {
-            headerRow
+        headerRow
 
-            AITaskPlanTaskProgressDraftEditor(task: $task)
-                .padding(.leading, nestedContentLeadingInset)
+        AITaskPlanTaskProgressDraftEditor(task: $task)
+            .padding(.leading, nestedContentLeadingInset)
 
-            ForEach(task.checklistItems) { item in
-                AITaskPlanChecklistDraftRow(
-                    item: checklistItemBinding(for: item),
-                    remove: {
-                        task.checklistItems.removeAll {
-                            $0.id == item.id
-                        }
+        ForEach(task.checklistItems) { item in
+            AITaskPlanChecklistDraftRow(
+                item: checklistItemBinding(for: item),
+                remove: {
+                    task.checklistItems.removeAll {
+                        $0.id == item.id
                     }
-                )
-                .padding(.leading, nestedContentLeadingInset)
-            }
+                }
+            )
+            .padding(.leading, nestedContentLeadingInset)
         }
     }
 
@@ -577,7 +576,7 @@ private struct AITaskPlanTaskDraftRow: View {
                     axis: .vertical
                 )
                 .font(.body.weight(.semibold))
-                .lineLimit(1...3)
+                .lineLimit(1 ... 3)
                 .textFieldStyle(.plain)
                 .accessibilityLabel(AppStrings.localized("aiTaskPlan.taskName"))
                 .accessibilityIdentifier(
@@ -648,28 +647,26 @@ private struct AITaskPlanTaskProgressDraftEditor: View {
         // Independent List rows, like the task detail quantity and
         // recurrence sections, so the system provides row height, insets,
         // and separators instead of cramped in-row stacking.
-        Group {
-            Toggle(
-                AppStrings.localized("task.quantity.editor.toggle"),
-                isOn: quantityEnabledBinding
-            )
-            .accessibilityIdentifier(
-                "\(accessibilityIdentifierPrefix).quantity.toggle"
-            )
+        Toggle(
+            AppStrings.localized("task.quantity.editor.toggle"),
+            isOn: quantityEnabledBinding
+        )
+        .accessibilityIdentifier(
+            "\(accessibilityIdentifierPrefix).quantity.toggle"
+        )
 
-            if task.quantityGoal != nil {
-                quantityTargetEditor
-                quantityUnitEditor
-            }
-
-            Toggle(
-                AppStrings.localized("task.recurrence.editor.daily"),
-                isOn: dailyRecurrenceEnabledBinding
-            )
-            .accessibilityIdentifier(
-                "\(accessibilityIdentifierPrefix).recurrence.daily"
-            )
+        if task.quantityGoal != nil {
+            quantityTargetEditor
+            quantityUnitEditor
         }
+
+        Toggle(
+            AppStrings.localized("task.recurrence.editor.daily"),
+            isOn: dailyRecurrenceEnabledBinding
+        )
+        .accessibilityIdentifier(
+            "\(accessibilityIdentifierPrefix).recurrence.daily"
+        )
     }
 
     private var quantityTargetEditor: some View {
@@ -681,11 +678,11 @@ private struct AITaskPlanTaskProgressDraftEditor: View {
             )
             .multilineTextAlignment(.trailing)
             #if os(iOS)
-            .keyboardType(.numberPad)
+                .keyboardType(.numberPad)
             #endif
-            .accessibilityIdentifier(
-                "\(accessibilityIdentifierPrefix).quantity.target"
-            )
+                .accessibilityIdentifier(
+                    "\(accessibilityIdentifierPrefix).quantity.target"
+                )
         } label: {
             Text(.app("task.quantity.editor.target"))
         }
@@ -780,7 +777,7 @@ private struct AITaskPlanChecklistDraftRow: View {
                 axis: .vertical
             )
             .font(.subheadline)
-            .lineLimit(1...3)
+            .lineLimit(1 ... 3)
             .textFieldStyle(.plain)
             .focused($isTitleFocused)
             .frame(
@@ -817,7 +814,9 @@ private struct AITaskPlanPreviewRow: Identifiable {
     let taskID: UUID
     let depth: Int
 
-    var id: UUID { taskID }
+    var id: UUID {
+        taskID
+    }
 }
 
 private extension AITaskPlanDraft {
@@ -955,7 +954,8 @@ private extension AITaskPlanDraft {
 
     mutating func removeCategory(_ categoryID: UUID) {
         for index in tasks.indices
-        where tasks[index].parentID == nil && tasks[index].categoryID == categoryID {
+            where tasks[index].parentID == nil && tasks[index].categoryID == categoryID
+        {
             tasks[index].categoryID = nil
         }
         categories.removeAll { $0.id == categoryID }
@@ -984,7 +984,7 @@ private extension AITaskPlanDraft {
                     title: "Reading",
                     iconName: "book",
                     colorHex: "5E5CE6"
-                )
+                ),
             ],
             tasks: [
                 AITaskPlanTaskDraft(
@@ -994,14 +994,14 @@ private extension AITaskPlanDraft {
                     notes: "A faithful large plan.",
                     iconName: "book",
                     colorHex: "5E5CE6",
-                    checklistItems: (1...150).map { index in
+                    checklistItems: (1 ... 150).map { index in
                         AITaskPlanChecklistDraft(
                             title: "Chapter \(index)",
                             iconName: "book",
                             colorHex: "5E5CE6"
                         )
                     }
-                )
+                ),
             ],
             modelID: "uitest-large-fixture"
         )
@@ -1091,7 +1091,7 @@ private extension AITaskPlanDraft {
                     estimatedMinutes: 300,
                     iconName: "book",
                     colorHex: "5E5CE6",
-                    checklistItems: (1...10).map { chapter in
+                    checklistItems: (1 ... 10).map { chapter in
                         AITaskPlanChecklistDraft(
                             title: "Chapter \(chapter)",
                             iconName: "pencil.and.list.clipboard",

@@ -63,6 +63,6 @@ struct HomeWeeklyGrossTimeChart: View {
         ), domainEnd > domainStart else {
             return nil
         }
-        return domainStart...domainEnd
+        return domainStart ... domainEnd
     }
 }

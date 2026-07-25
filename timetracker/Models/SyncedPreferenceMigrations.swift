@@ -18,7 +18,8 @@ extension SyncedPreferenceService {
             let existingKeys = Set(latestByKey(existing.deduplicatedByID()).keys)
 
             for key in AppPreferenceKey.allCases
-            where shouldSyncKey(key.rawValue) && !existingKeys.contains(key.rawValue) {
+                where shouldSyncKey(key.rawValue) && !existingKeys.contains(key.rawValue)
+            {
                 if let valueJSON = legacyValueJSON(for: key, defaults: defaults) {
                     context.insert(
                         SyncedPreference(
@@ -60,7 +61,8 @@ extension SyncedPreferenceService {
 
         if try credentialStore.readAPIKey() == nil,
            let candidate = syncedCandidate ?? legacyLocalCandidate,
-           !candidate.isEmpty {
+           !candidate.isEmpty
+        {
             try credentialStore.writeAPIKey(candidate)
         }
 
@@ -111,7 +113,8 @@ extension SyncedPreferenceService {
             guard let json = defaults.string(forKey: key.rawValue),
                   json.utf8.count <= PreferenceJSON.maximumPayloadByteCount,
                   let data = json.data(using: .utf8),
-                  let plans = try? JSONDecoder().decode(LegacyPomodoroPlans.self, from: data).values else {
+                  let plans = try? JSONDecoder().decode(LegacyPomodoroPlans.self, from: data).values
+            else {
                 return nil
             }
             encodedValue = try? PreferenceJSON.encodeChecked(plans)
@@ -182,7 +185,7 @@ private struct LegacyPomodoroPlans: Decodable {
                     )
                 )
             }
-            values.append(try container.decode(PomodoroPlan.self))
+            try values.append(container.decode(PomodoroPlan.self))
         }
         self.values = values
     }

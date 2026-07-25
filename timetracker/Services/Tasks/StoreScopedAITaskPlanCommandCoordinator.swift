@@ -26,16 +26,16 @@ struct StoreScopedAITaskPlanCommandCoordinator {
     ) throws -> AITaskPlanMutationOutcome {
         try writeAuthorization.requireUserWritesAllowed()
         let prepared = try Self.prepare(draft)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: try TimerStoreScope(container: container),
+        let transaction = try StoreScopedTimerMutationTransaction(
+            scope: TimerStoreScope(container: container),
             container: container
         )
         return try transaction.withFreshContext { context in
-            let persistedCategoryIDs = Set(
-                try context.fetch(FetchDescriptor<TaskCategory>()).map(\.id)
+            let persistedCategoryIDs = try Set(
+                context.fetch(FetchDescriptor<TaskCategory>()).map(\.id)
             )
-            let persistedTaskIDs = Set(
-                try context.fetch(FetchDescriptor<TaskNode>()).map(\.id)
+            let persistedTaskIDs = try Set(
+                context.fetch(FetchDescriptor<TaskNode>()).map(\.id)
             )
             let presentCategoryIDs = prepared.categoryIDs.intersection(persistedCategoryIDs)
             let presentTaskIDs = prepared.taskIDs.intersection(persistedTaskIDs)
@@ -179,7 +179,8 @@ private extension StoreScopedAITaskPlanCommandCoordinator {
               checklistCount <= LLMTaskPlanService.maximumChecklistItemCount,
               draft.tasks.allSatisfy({
                   $0.checklistItems.count <= LLMTaskPlanService.maximumChecklistItemCountPerTask
-              }) else {
+              })
+        else {
             throw LLMTaskPlanServiceError.limitExceeded
         }
 
@@ -214,7 +215,8 @@ private extension StoreScopedAITaskPlanCommandCoordinator {
                 throw LLMTaskPlanServiceError.orphanReference
             }
             if let minutes = task.estimatedMinutes,
-               TaskEstimatePolicy.minuteRange.contains(minutes) == false {
+               TaskEstimatePolicy.minuteRange.contains(minutes) == false
+            {
                 throw LLMTaskPlanServiceError.invalidField
             }
         }
@@ -307,11 +309,10 @@ private extension StoreScopedAITaskPlanCommandCoordinator {
             }
 
             states[taskID] = .visiting
-            let resolvedDepth: Int
-            if let parentID = optionalParentID {
-                resolvedDepth = try depth(for: parentID) + 1
+            let resolvedDepth: Int = if let parentID = optionalParentID {
+                try depth(for: parentID) + 1
             } else {
-                resolvedDepth = 0
+                0
             }
             guard resolvedDepth <= LLMTaskPlanService.maximumTaskDepth else {
                 throw LLMTaskPlanServiceError.depthExceeded

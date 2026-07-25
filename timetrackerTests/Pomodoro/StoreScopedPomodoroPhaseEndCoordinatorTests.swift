@@ -13,7 +13,7 @@ struct StoreScopedPomodoroPhaseEndCoordinatorTests {
         let coordinator = makeCoordinator(context.container)
         let started = try coordinator.start(
             taskID: task.id,
-            focusSeconds: 1_500,
+            focusSeconds: 1500,
             breakSeconds: 300,
             longBreakSeconds: nil,
             targetRounds: 3
@@ -24,7 +24,7 @@ struct StoreScopedPomodoroPhaseEndCoordinatorTests {
             return
         }
         let firstBreak = try phaseToken(runID: firstFocus.runID, container: context.container)
-        guard case .resumed(let resumed) = try coordinator.resume(
+        guard case let .resumed(resumed) = try coordinator.resume(
             phase: firstBreak
         ) else {
             Issue.record("The current break phase should resume")
@@ -94,7 +94,7 @@ struct StoreScopedPomodoroPhaseEndCoordinatorTests {
             container: context.container
         )
 
-        guard case .mutated(let mutation) = try coordinator.cancel(phase: breakPhase) else {
+        guard case let .mutated(mutation) = try coordinator.cancel(phase: breakPhase) else {
             Issue.record("The current break phase should cancel")
             return
         }
@@ -139,7 +139,7 @@ struct StoreScopedPomodoroPhaseEndCoordinatorTests {
         siblingSegment.startedAt = siblingRun.startedAt ?? now
         try siblingContext.save()
 
-        guard case .mutated(let mutation) = try coordinator.cancel(
+        guard case let .mutated(mutation) = try coordinator.cancel(
             phase: started.startedFocus.phaseToken
         ) else {
             Issue.record("The current focus phase should cancel")
@@ -170,7 +170,7 @@ struct StoreScopedPomodoroPhaseEndCoordinatorTests {
             targetRounds: 1
         )
 
-        guard case .mutated(let mutation) = try makeCoordinator(
+        guard case let .mutated(mutation) = try makeCoordinator(
             context.container,
             now: startedAt.addingTimeInterval(120)
         ).cancel(phase: started.startedFocus.phaseToken) else {
@@ -215,7 +215,7 @@ struct StoreScopedPomodoroPhaseEndCoordinatorTests {
         runID: UUID,
         container: ModelContainer
     ) throws -> PomodoroPhaseToken {
-        PomodoroPhaseToken(run: try requiredRun(runID, container: container))
+        try PomodoroPhaseToken(run: requiredRun(runID, container: container))
     }
 
     private func requiredRun(

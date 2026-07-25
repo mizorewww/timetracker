@@ -12,7 +12,7 @@ struct CountdownSettingsContractTests {
             "settings.countdown.title.error.empty",
             "settings.countdown.title.error.tooLong",
             "settings.countdown.title.error.controlCharacters",
-            "settings.countdown.title.error.saveFailed"
+            "settings.countdown.title.error.saveFailed",
         ]
 
         for locale in ["en", "zh-Hans", "zh-Hant"] {
@@ -42,5 +42,4 @@ struct CountdownSettingsContractTests {
             #expect(strings["settings.countdown.empty"] == expected)
         }
     }
-
 }

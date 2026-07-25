@@ -8,10 +8,10 @@ struct TestHostIsolationTests {
     @Test
     func unitTestHostDetectionRecognizesXCTestEnvironment() {
         #expect(timetrackerApp.isUnitTestHost(environment: [
-            "XCTestConfigurationFilePath": "/tmp/timetracker.xctestconfiguration"
+            "XCTestConfigurationFilePath": "/tmp/timetracker.xctestconfiguration",
         ]))
         #expect(timetrackerApp.isUnitTestHost(environment: [
-            "XCTestBundlePath": "/tmp/timetrackerTests.xctest"
+            "XCTestBundlePath": "/tmp/timetrackerTests.xctest",
         ]))
         #expect(timetrackerApp.isUnitTestHost(environment: [:]) == false)
     }
@@ -28,7 +28,7 @@ struct TestHostIsolationTests {
             AppCloudSync.queuedCloudReconciliationKey,
             AppCloudSync.activeCloudReconciliationKey,
             AppCloudSync.cloudRecoveryStoreResetKey,
-            AppCloudSync.activeCloudDownloadRecoveryKey
+            AppCloudSync.activeCloudDownloadRecoveryKey,
         ]
         let defaults = UserDefaults.standard
         let before = defaults.dictionaryWithValues(forKeys: keys) as NSDictionary

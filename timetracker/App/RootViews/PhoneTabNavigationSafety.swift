@@ -31,7 +31,8 @@ private struct PhoneTabNavigationSafetyModifier: ViewModifier {
                 }
             }
             guard isPresented == false,
-                  navigationGuard.pendingNavigationID == requestID else {
+                  navigationGuard.pendingNavigationID == requestID
+            else {
                 return
             }
             navigationGuard.cancelPendingNavigation(requestID: requestID)

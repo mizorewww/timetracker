@@ -91,7 +91,7 @@ struct LocalizationContractTests {
             projectRoot.appending(path: "timetrackerLiveActivityExtension"),
             projectRoot.appending(path: "timetrackerWidgetExtension"),
             projectRoot.appending(path: "timetrackerWatchApp"),
-            projectRoot.appending(path: "SharedLiveActivity")
+            projectRoot.appending(path: "SharedLiveActivity"),
         ]
         let swiftFiles = try sourceRoots.flatMap { sourceRoot -> [URL] in
             let enumerator = try #require(FileManager.default.enumerator(at: sourceRoot, includingPropertiesForKeys: nil))
@@ -101,7 +101,7 @@ struct LocalizationContractTests {
 
         for file in swiftFiles {
             let source = try String(contentsOf: file, encoding: .utf8)
-            let range = NSRange(source.startIndex..<source.endIndex, in: source)
+            let range = NSRange(source.startIndex ..< source.endIndex, in: source)
             #expect(chinesePattern.firstMatch(in: source, range: range) == nil, "Move user-facing Chinese text into Localizable.strings: \(file.lastPathComponent)")
         }
     }

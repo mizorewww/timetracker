@@ -38,7 +38,8 @@ extension TimeTrackerStore {
             let indexed = ledgerDomainStore.recentSegments(forTaskIDs: taskIDs, limit: limit)
             let readable = indexed.filter(isReadableLedgerSegment)
             guard indexed.count == min(limit, LedgerStore.maximumRecentSegmentsPerTask),
-                  readable.count < indexed.count else {
+                  readable.count < indexed.count
+            else {
                 return readable
             }
             return ledgerDomainStore.segments(forTaskIDs: taskIDs)

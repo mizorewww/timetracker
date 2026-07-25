@@ -27,7 +27,8 @@ extension TimeTrackerStore {
         if outcome?.didMutate == true,
            !newTitle.isEmpty,
            newTitle != oldTitle,
-           let updatedItem = inboxItems.first(where: { $0.id == item.id }) {
+           let updatedItem = inboxItems.first(where: { $0.id == item.id })
+        {
             inboxSuggestionFailureByItemID[item.id] = nil
             suggestInboxItem(updatedItem, showsErrors: false)
         }
@@ -70,7 +71,7 @@ extension TimeTrackerStore {
     func performStoreScopedInboxMutation(
         _ action: (StoreScopedInboxCommandCoordinator) throws -> InboxMutationOutcome
     ) -> InboxMutationOutcome? {
-        return performStoreScopedInboxMutation(
+        performStoreScopedInboxMutation(
             refreshScopes: [.inbox],
             eventsForOutcome: { $0.events },
             action

@@ -37,8 +37,9 @@ enum AnalyticsGroupBarLayoutEngine {
 
         while deficit > 0.0001,
               let donorIndex = widths.indices
-                .filter({ widths[$0] > effectiveMinimum })
-                .max(by: { widths[$0] < widths[$1] }) {
+              .filter({ widths[$0] > effectiveMinimum })
+              .max(by: { widths[$0] < widths[$1] })
+        {
             let donation = min(deficit, widths[donorIndex] - effectiveMinimum)
             widths[donorIndex] -= donation
             deficit -= donation

@@ -27,7 +27,7 @@ final class ChecklistItemVisual {
         userEditedAt: Date? = nil,
         deviceID: String
     ) {
-        self.id = UUID()
+        id = UUID()
         self.checklistItemID = checklistItemID
         self.iconName = iconName
         self.colorHex = colorHex
@@ -35,10 +35,10 @@ final class ChecklistItemVisual {
         self.suggestionModelID = suggestionModelID
         self.suggestionGeneratedAt = suggestionGeneratedAt
         self.userEditedAt = userEditedAt
-        self.createdAt = Date()
-        self.updatedAt = Date()
+        createdAt = Date()
+        updatedAt = Date()
         self.deviceID = deviceID
-        self.clientMutationID = UUID()
+        clientMutationID = UUID()
     }
 }
 
@@ -46,10 +46,18 @@ extension ChecklistItemVisual {
     /// Defines a deterministic LWW order for the logical "item has visual"
     /// key. CloudKit can materialize multiple physical UUIDs for one item.
     func isPreferredLogicalWinner(over other: ChecklistItemVisual) -> Bool {
-        if updatedAt != other.updatedAt { return updatedAt > other.updatedAt }
-        if (deletedAt == nil) != (other.deletedAt == nil) { return deletedAt != nil }
-        if createdAt != other.createdAt { return createdAt > other.createdAt }
-        if deviceID != other.deviceID { return deviceID > other.deviceID }
+        if updatedAt != other.updatedAt {
+            return updatedAt > other.updatedAt
+        }
+        if (deletedAt == nil) != (other.deletedAt == nil) {
+            return deletedAt != nil
+        }
+        if createdAt != other.createdAt {
+            return createdAt > other.createdAt
+        }
+        if deviceID != other.deviceID {
+            return deviceID > other.deviceID
+        }
         if clientMutationID != other.clientMutationID {
             return clientMutationID.uuidString > other.clientMutationID.uuidString
         }
@@ -57,7 +65,7 @@ extension ChecklistItemVisual {
     }
 }
 
-extension Sequence where Element == ChecklistItemVisual {
+extension Sequence<ChecklistItemVisual> {
     func logicalWinnersByChecklistItemID() -> [UUID: ChecklistItemVisual] {
         reduce(into: [:]) { winners, visual in
             guard let current = winners[visual.checklistItemID] else {

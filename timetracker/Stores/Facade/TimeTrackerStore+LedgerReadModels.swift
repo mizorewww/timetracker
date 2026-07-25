@@ -91,7 +91,8 @@ extension TimeTrackerStore {
 
     func segmentEditorDraft(for segment: TimeSegment) -> SegmentEditorDraft? {
         guard let session = ledgerDomainStore.session(for: segment.sessionID) ??
-            sessions.first(where: { $0.id == segment.sessionID }) else {
+            sessions.first(where: { $0.id == segment.sessionID })
+        else {
             return nil
         }
         let linkedRuns = pomodoroRuns.filter { run in
@@ -102,7 +103,8 @@ extension TimeTrackerStore {
         guard linkedRuns.count <= 1,
               linkedRuns.allSatisfy({
                   $0.state == .focusing || $0.state == .interrupted
-              }) else {
+              })
+        else {
             return nil
         }
         let run = linkedRuns.first
@@ -180,7 +182,7 @@ extension TimeTrackerStore {
                 evaluatedAt: cutoff,
                 clockReference: clockReference
             )
-                .filter(isReadableLedgerSegment)
+            .filter(isReadableLedgerSegment)
         }
         return allSegments.filter { segment in
             guard segment.deletedAt == nil else { return false }

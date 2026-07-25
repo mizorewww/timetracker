@@ -38,8 +38,8 @@ struct StoreScopedTaskCategoryCommandCoordinatorTests {
         let category = try makeCategory(in: context, title: "Delete elsewhere")
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        var staleDraft = TaskCategoryEditorDraft(
-            category: try #require(store.taskCategory(for: category.id))
+        var staleDraft = try TaskCategoryEditorDraft(
+            category: #require(store.taskCategory(for: category.id))
         )
         staleDraft.title = "Must not return"
         _ = try coordinator(
@@ -51,7 +51,7 @@ struct StoreScopedTaskCategoryCommandCoordinatorTests {
         #expect(store.errorMessage == AppStrings.localized("taskCategory.error.unavailable"))
         #expect(try freshRepository(context.container).category(id: category.id) == nil)
         #expect(store.taskCategory(for: category.id) == nil)
-        #expect(store.deleteTaskCategory(baseline: try #require(staleDraft.baseline)) == false)
+        #expect(try store.deleteTaskCategory(baseline: #require(staleDraft.baseline)) == false)
         #expect(store.errorMessage == AppStrings.localized("taskCategory.error.unavailable"))
     }
 
@@ -118,7 +118,7 @@ struct StoreScopedTaskCategoryCommandCoordinatorTests {
         )
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        var staleTaskDraft = store.editorDraft(for: try #require(store.task(for: task.id)))
+        var staleTaskDraft = try store.editorDraft(for: #require(store.task(for: task.id)))
         staleTaskDraft.categoryID = category.id
         _ = try coordinator(
             container: context.container,
@@ -252,7 +252,7 @@ struct StoreScopedTaskCategoryCommandCoordinatorTests {
         let siblingOrder = [
             categories[1].id,
             categories[2].id,
-            categories[0].id
+            categories[0].id,
         ]
         _ = try coordinator(
             container: context.container,
@@ -270,7 +270,7 @@ struct StoreScopedTaskCategoryCommandCoordinatorTests {
                 orderedCategoryIDs: [
                     categories[2].id,
                     categories[0].id,
-                    categories[1].id
+                    categories[1].id,
                 ],
                 baseline: staleBaseline
             )
@@ -307,7 +307,7 @@ struct StoreScopedTaskCategoryCommandCoordinatorTests {
         let requestedOrder = [
             visibleCategories[2].id,
             visibleCategories[0].id,
-            visibleCategories[1].id
+            visibleCategories[1].id,
         ]
 
         #expect(
@@ -340,7 +340,7 @@ struct StoreScopedTaskCategoryCommandCoordinatorTests {
         let requestedOrder = [
             store.taskCategories[2].id,
             store.taskCategories[0].id,
-            store.taskCategories[1].id
+            store.taskCategories[1].id,
         ]
 
         #expect(
@@ -441,7 +441,7 @@ struct StoreScopedTaskCategoryCommandCoordinatorTests {
                 orderedCategoryIDs: [
                     categories[2].id,
                     categories[0].id,
-                    categories[1].id
+                    categories[1].id,
                 ],
                 baseline: baseline
             )

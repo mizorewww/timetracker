@@ -6,7 +6,7 @@ import Testing
 struct InboxSuggestionSchemaCompatibilityTests {
     @Test @MainActor
     func historicalSuggestionSchemasRemainFrozenBeforeDestinationKind() throws {
-        let expectedLegacyAttributes: Set<String> = [
+        let expectedLegacyAttributes: Set = [
             "id",
             "inboxItemID",
             "inboxItemContextID",
@@ -22,7 +22,7 @@ struct InboxSuggestionSchemaCompatibilityTests {
             "updatedAt",
             "deletedAt",
             "deviceID",
-            "clientMutationID"
+            "clientMutationID",
         ]
         let v10Schema = Schema(versionedSchema: TimeTrackerSchemaV10.self)
         let v11Schema = Schema(versionedSchema: TimeTrackerSchemaV11.self)

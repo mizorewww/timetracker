@@ -12,8 +12,8 @@ struct CountdownTitlePersistenceTests {
                 == SyncDataSnapshotRestoreLimits.maximumTitleByteCount
         )
 
-        let exactLimitTitle = String(repeating: "🙂", count: 1_024)
-        #expect(exactLimitTitle.utf8.count == 4_096)
+        let exactLimitTitle = String(repeating: "🙂", count: 1024)
+        #expect(exactLimitTitle.utf8.count == 4096)
         #expect(try CountdownTitlePolicy.normalized("  \(exactLimitTitle)  ") == exactLimitTitle)
 
         #expect(throws: CountdownTitleValidationError.empty) {
@@ -35,7 +35,7 @@ struct CountdownTitlePersistenceTests {
         let context = try makeTestContext()
         let event = CountdownEvent(
             title: "Original",
-            date: Date(timeIntervalSince1970: 10_000),
+            date: Date(timeIntervalSince1970: 10000),
             deviceID: "original-device"
         )
         context.insert(event)
@@ -44,7 +44,7 @@ struct CountdownTitlePersistenceTests {
         let originalDate = event.date
         let originalUpdatedAt = event.updatedAt
         let originalMutationID = event.clientMutationID
-        let replacementDate = Date(timeIntervalSince1970: 20_000)
+        let replacementDate = Date(timeIntervalSince1970: 20000)
 
         #expect(throws: CountdownTitleValidationError.empty) {
             try CountdownCommandHandler().update(
@@ -52,7 +52,7 @@ struct CountdownTitlePersistenceTests {
                 title: "   ",
                 date: replacementDate,
                 context: context,
-                now: Date(timeIntervalSince1970: 30_000)
+                now: Date(timeIntervalSince1970: 30000)
             )
         }
 
@@ -67,7 +67,7 @@ struct CountdownTitlePersistenceTests {
         let context = try makeTestContext()
         let event = CountdownEvent(
             title: "Original",
-            date: Date(timeIntervalSince1970: 10_000),
+            date: Date(timeIntervalSince1970: 10000),
             deviceID: "test"
         )
         context.insert(event)

@@ -5,7 +5,7 @@ import Testing
 @Suite(.serialized)
 struct TaskTreeReadIndexTests {
     @Test @MainActor
-    func indexedProjectionMatchesExistingHierarchySemanticsAndKeepsStableIdentity() throws {
+    func indexedProjectionMatchesExistingHierarchySemanticsAndKeepsStableIdentity() {
         let service = TaskTreeService()
         let category = TaskCategory(title: "Work", deviceID: "test", sortOrder: 10)
         let root = TaskNode(title: "Project", parentID: nil, deviceID: "test", sortOrder: 10)
@@ -58,7 +58,7 @@ struct TaskTreeReadIndexTests {
         #expect(projection.sections == legacyProjection)
         #expect(projection.sections.map(\.id) == ["category-\(category.id.uuidString)", "uncategorized"])
         #expect(projection.sections.flatMap(\.rows).map(\.id) == [
-            root.id, child.id, grandchild.id, uncategorized.id
+            root.id, child.id, grandchild.id, uncategorized.id,
         ])
         #expect(projection.sections[0].rows.map(\.childCount) == [1, 1, 0])
         #expect(readIndex.visibleTaskCount == 4)
@@ -163,9 +163,9 @@ struct TaskTreeReadIndexTests {
     @Test @MainActor
     func fiveThousandNodeProjectionUsesOneChildLookupPerVisibleTaskAndCachesSearch() throws {
         var tasks: [TaskNode] = []
-        tasks.reserveCapacity(5_000)
+        tasks.reserveCapacity(5000)
         var parentID: UUID?
-        for index in 0..<5_000 {
+        for index in 0 ..< 5000 {
             let task = TaskNode(title: "Level \(index)", parentID: parentID, deviceID: "test")
             tasks.append(task)
             parentID = task.id

@@ -20,7 +20,7 @@ struct StoreScopedTaskQuantityEntryCommandCoordinator {
         deviceID: String = DeviceIdentity.current,
         nowProvider: @escaping () -> Date = Date.init,
         didReachCheckpoint: @escaping
-            (TaskQuantityEntryMutationCheckpoint) throws -> Void = { _ in }
+        (TaskQuantityEntryMutationCheckpoint) throws -> Void = { _ in }
     ) {
         self.container = container
         self.writeAuthorization = writeAuthorization
@@ -61,7 +61,7 @@ struct StoreScopedTaskQuantityEntryCommandCoordinator {
     ) throws -> Result {
         try writeAuthorization.requireUserWritesAllowed()
         return try StoreScopedTimerMutationTransaction(
-            scope: try TimerStoreScope(container: container),
+            scope: TimerStoreScope(container: container),
             container: container
         ).withFreshContext { context in
             try operation(

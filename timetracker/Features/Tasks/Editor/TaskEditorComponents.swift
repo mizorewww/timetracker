@@ -40,9 +40,9 @@ struct TaskEditorForm: View {
         }
         .formStyle(.grouped)
         #if os(iOS)
-        .scrollDismissesKeyboard(.interactively)
+            .scrollDismissesKeyboard(.interactively)
         #endif
-        .accessibilityIdentifier("task.editor")
+            .accessibilityIdentifier("task.editor")
     }
 }
 
@@ -61,46 +61,44 @@ struct TaskEditorSections: View {
     var notesInteractionStyle: TaskNotesInteractionStyle = .editor
 
     var body: some View {
-        Group {
-            TaskInfoEditorSection(
-                store: store,
-                draft: $draft,
-                validation: validation,
-                parentCandidates: parentCandidates,
-                showsTitleField: showsTitleField,
-                focusedTextField: focusedTextField,
-                dismissInputFocus: {
-                    focusedTextField.wrappedValue = nil
-                    focusedChecklistDraftID.wrappedValue = nil
-                }
-            )
-            TaskPlanEditorSection(draft: $draft)
-            TaskQuantityEditorSection(
-                store: store,
-                draft: $draft,
-                focusedTextField: focusedTextField
-            )
-            TaskRecurrenceEditorSection(
-                draft: $draft,
-                isGeneratedTask: isGeneratedRecurrenceTask,
-                isCreationBlockedByActiveWork:
-                    isRecurrenceCreationBlockedByActiveWork
-            )
-            TaskChecklistEditorSection(
-                checklistItems: $draft.checklistItems,
-                focusedChecklistDraftID: focusedChecklistDraftID,
-                orderedChecklistIndices: orderedChecklistIndices,
-                toggleChecklistItem: toggleChecklistItem,
-                moveChecklistItems: moveChecklistItems,
-                addChecklistItem: addChecklistItem
-            )
-            TaskNotesEditorSection(
-                notes: $draft.notes,
-                validationError: validation.notesError,
-                interactionStyle: notesInteractionStyle,
-                focusedTextField: focusedTextField
-            )
-        }
+        TaskInfoEditorSection(
+            store: store,
+            draft: $draft,
+            validation: validation,
+            parentCandidates: parentCandidates,
+            showsTitleField: showsTitleField,
+            focusedTextField: focusedTextField,
+            dismissInputFocus: {
+                focusedTextField.wrappedValue = nil
+                focusedChecklistDraftID.wrappedValue = nil
+            }
+        )
+        TaskPlanEditorSection(draft: $draft)
+        TaskQuantityEditorSection(
+            store: store,
+            draft: $draft,
+            focusedTextField: focusedTextField
+        )
+        TaskRecurrenceEditorSection(
+            draft: $draft,
+            isGeneratedTask: isGeneratedRecurrenceTask,
+            isCreationBlockedByActiveWork:
+            isRecurrenceCreationBlockedByActiveWork
+        )
+        TaskChecklistEditorSection(
+            checklistItems: $draft.checklistItems,
+            focusedChecklistDraftID: focusedChecklistDraftID,
+            orderedChecklistIndices: orderedChecklistIndices,
+            toggleChecklistItem: toggleChecklistItem,
+            moveChecklistItems: moveChecklistItems,
+            addChecklistItem: addChecklistItem
+        )
+        TaskNotesEditorSection(
+            notes: $draft.notes,
+            validationError: validation.notesError,
+            interactionStyle: notesInteractionStyle,
+            focusedTextField: focusedTextField
+        )
     }
 
     private var isGeneratedRecurrenceTask: Bool {
@@ -110,7 +108,8 @@ struct TaskEditorSections: View {
 
     private var isRecurrenceCreationBlockedByActiveWork: Bool {
         guard draft.baseline?.recurrenceRuleMutationID == nil,
-              let taskID = draft.taskID else {
+              let taskID = draft.taskID
+        else {
             return false
         }
         return store.taskHasActiveWork(taskID: taskID)

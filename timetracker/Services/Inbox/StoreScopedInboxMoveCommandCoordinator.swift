@@ -111,7 +111,8 @@ extension StoreScopedInboxCommandCoordinator {
 
             let item = resolution.winner
             guard item.suggestionIdentity == baseline.itemIdentity,
-                  item.isCompleted == false else {
+                  item.isCompleted == false
+            else {
                 throw StoreScopedInboxMutationError.inboxChanged
             }
 

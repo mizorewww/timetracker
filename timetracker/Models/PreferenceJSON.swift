@@ -18,7 +18,7 @@ enum PreferenceJSONError: Error, Equatable, LocalizedError {
 }
 
 enum PreferenceJSON {
-    static let maximumPayloadByteCount = 256 * 1_024
+    static let maximumPayloadByteCount = 256 * 1024
 
     /// Compatibility helper for non-persistence call sites and fixtures.
     /// Persistence boundaries must use `encodeChecked` or canonicalize the
@@ -76,10 +76,10 @@ enum PreferenceJSON {
             return try encodeChecked(AppPreferenceValueSanitizer.pomodoroMode(value))
         case .defaultFocusMinutes, .defaultBreakMinutes:
             let value = try decodeChecked(Int.self, from: valueJSON)
-            return try encodeChecked(value.clamped(to: 1...480))
+            return try encodeChecked(value.clamped(to: 1 ... 480))
         case .defaultPomodoroRounds:
             let value = try decodeChecked(Int.self, from: valueJSON)
-            return try encodeChecked(value.clamped(to: 1...24))
+            return try encodeChecked(value.clamped(to: 1 ... 24))
         case .pomodoroPlans:
             let value = try decodeChecked([PomodoroPlan].self, from: valueJSON)
             return try encodeChecked(AppPreferenceValueSanitizer.pomodoroPlans(value))
@@ -115,17 +115,17 @@ enum PreferenceJSON {
         case .llmInboxSuggestionInstructions:
             let value = try decodeChecked(String.self, from: valueJSON)
             return try encodeChecked(
-                try AppPreferenceValueSanitizer.llmInboxSuggestionInstructions(value)
+                AppPreferenceValueSanitizer.llmInboxSuggestionInstructions(value)
             )
         case .llmChecklistVisualInstructions:
             let value = try decodeChecked(String.self, from: valueJSON)
             return try encodeChecked(
-                try AppPreferenceValueSanitizer.llmChecklistVisualInstructions(value)
+                AppPreferenceValueSanitizer.llmChecklistVisualInstructions(value)
             )
         case .llmTaskPlanInstructions:
             let value = try decodeChecked(String.self, from: valueJSON)
             return try encodeChecked(
-                try AppPreferenceValueSanitizer.llmTaskPlanInstructions(value)
+                AppPreferenceValueSanitizer.llmTaskPlanInstructions(value)
             )
         }
     }

@@ -6,14 +6,13 @@ extension AnalyticsStore {
         currentInterval: DateInterval,
         calendar: Calendar
     ) -> DateInterval? {
-        let component: Calendar.Component
-        switch range {
+        let component: Calendar.Component = switch range {
         case .today:
-            component = .day
+            .day
         case .week:
-            component = .weekOfYear
+            .weekOfYear
         case .month:
-            component = .month
+            .month
         }
         guard let previousStart = calendar.date(
             byAdding: component,

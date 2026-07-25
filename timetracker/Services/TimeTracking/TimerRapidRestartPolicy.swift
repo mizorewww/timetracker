@@ -23,7 +23,8 @@ nonisolated struct TimerRapidRestartPolicy {
               supportsCoalescing(previousSource),
               supportsCoalescing(nextSource),
               let previousEndedAt,
-              previousEndedAt > previousStartedAt else {
+              previousEndedAt > previousStartedAt
+        else {
             return false
         }
 

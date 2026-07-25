@@ -105,7 +105,6 @@ struct TaskTimerActionButton: View {
         }
     }
 
-    @ViewBuilder
     var body: some View {
         if usesIconOnly {
             configuredButton {

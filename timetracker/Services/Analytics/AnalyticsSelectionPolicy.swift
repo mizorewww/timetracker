@@ -43,7 +43,8 @@ enum AnalyticsSelectionPolicy {
         ) { result, session in
             guard session.deletedAt == nil,
                   session.titleSnapshot?.isEmpty == false,
-                  taskIDs?.contains(session.taskID) != false else {
+                  taskIDs?.contains(session.taskID) != false
+            else {
                 return
             }
             guard let existing = result[session.taskID] else {

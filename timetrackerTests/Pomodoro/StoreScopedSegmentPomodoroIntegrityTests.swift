@@ -42,7 +42,7 @@ struct StoreScopedSegmentPomodoroIntegrityTests {
         )
 
         let freshContext = ModelContext(container)
-        let timeRepository = self.timeRepository(freshContext)
+        let timeRepository = timeRepository(freshContext)
         let segments = try timeRepository.segments(
             sessionIDs: [fixture.sessionID]
         )
@@ -120,7 +120,7 @@ struct StoreScopedSegmentPomodoroIntegrityTests {
         let freshContext = ModelContext(container)
         let freshTimeRepository = timeRepository(freshContext)
         #expect(
-            Set(try freshTimeRepository.activeSegments().map(\.id))
+            try Set(freshTimeRepository.activeSegments().map(\.id))
                 == [subject.id, fixture.activeSegmentID]
         )
         let subjectSession = try #require(

@@ -9,7 +9,6 @@ struct TaskDetailQuantitySections: View {
         TaskQuantityEntrySnapshot
     ) -> Void
 
-    @ViewBuilder
     var body: some View {
         switch readModel {
         case .none:
@@ -20,10 +19,10 @@ struct TaskDetailQuantitySections: View {
                     message: TaskProgressDraftMutationError
                         .incompleteQuantityGraph.localizedDescription,
                     accessibilityIdentifier:
-                        "task.detail.quantity.sync.error"
+                    "task.detail.quantity.sync.error"
                 )
             }
-        case .available(let detail):
+        case let .available(detail):
             summarySection(detail)
             historySection(detail)
         }
@@ -66,7 +65,7 @@ struct TaskDetailQuantitySections: View {
             )
             .foregroundStyle(.secondary)
             .accessibilityIdentifier("task.detail.quantity.template")
-        case .generated(let occurrence):
+        case let .generated(occurrence):
             LabeledContent(
                 AppStrings.localized("task.quantity.detail.occurrence"),
                 value: occurrenceDateText(occurrence)

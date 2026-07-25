@@ -36,21 +36,20 @@ struct AnalyticsTimelineTests {
         store.configureIfNeeded(context: context)
 
         let overview = store.analyticsOverview(for: .week, now: now)
-        #expect(overview.grossSeconds == 7_200)
-        #expect(overview.wallSeconds == 5_400)
-        #expect(overview.overlapSeconds == 1_800)
+        #expect(overview.grossSeconds == 7200)
+        #expect(overview.wallSeconds == 5400)
+        #expect(overview.overlapSeconds == 1800)
 
         let tasks = store.taskBreakdown(range: .week, now: now)
         #expect(tasks.count == 2)
-        #expect(tasks.first?.grossSeconds == 3_600)
+        #expect(tasks.first?.grossSeconds == 3600)
         #expect(tasks.map(\.taskID).contains(firstTask.id))
         #expect(tasks.map(\.taskID).contains(secondTask.id))
 
         let overlaps = store.overlapSegments(range: .week, now: now)
-        #expect(overlaps.first?.wallDurationSeconds == 1_800)
-        #expect(overlaps.first?.excessDurationSeconds == 1_800)
+        #expect(overlaps.first?.wallDurationSeconds == 1800)
+        #expect(overlaps.first?.excessDurationSeconds == 1800)
     }
-
 
     @Test @MainActor
     func todayHourlyBreakdownClipsSegmentsIntoHourBuckets() throws {
@@ -64,8 +63,8 @@ struct AnalyticsTimelineTests {
 
         _ = try timeRepository.addManualSegment(
             taskID: task.id,
-            startedAt: startOfDay.addingTimeInterval(9 * 3_600 + 30 * 60),
-            endedAt: startOfDay.addingTimeInterval(10 * 3_600 + 15 * 60),
+            startedAt: startOfDay.addingTimeInterval(9 * 3600 + 30 * 60),
+            endedAt: startOfDay.addingTimeInterval(10 * 3600 + 15 * 60),
             note: nil
         )
 
@@ -92,14 +91,14 @@ struct AnalyticsTimelineTests {
 
         _ = try timeRepository.addManualSegment(
             taskID: firstTask.id,
-            startedAt: startOfDay.addingTimeInterval(9 * 3_600),
-            endedAt: startOfDay.addingTimeInterval(10 * 3_600),
+            startedAt: startOfDay.addingTimeInterval(9 * 3600),
+            endedAt: startOfDay.addingTimeInterval(10 * 3600),
             note: nil
         )
         _ = try timeRepository.addManualSegment(
             taskID: secondTask.id,
-            startedAt: startOfDay.addingTimeInterval(9 * 3_600 + 30 * 60),
-            endedAt: startOfDay.addingTimeInterval(10 * 3_600),
+            startedAt: startOfDay.addingTimeInterval(9 * 3600 + 30 * 60),
+            endedAt: startOfDay.addingTimeInterval(10 * 3600),
             note: nil
         )
 
@@ -121,8 +120,8 @@ struct AnalyticsTimelineTests {
 
         _ = try timeRepository.addManualSegment(
             taskID: task.id,
-            startedAt: now.addingTimeInterval(-3_600),
-            endedAt: now.addingTimeInterval(-1_800),
+            startedAt: now.addingTimeInterval(-3600),
+            endedAt: now.addingTimeInterval(-1800),
             note: "Billable"
         )
         let tombstonedAt = task.updatedAt.addingTimeInterval(1)
@@ -139,7 +138,7 @@ struct AnalyticsTimelineTests {
         #expect(breakdown.count == 1)
         #expect(breakdown.first?.title == "Client Research")
         #expect(breakdown.first?.path == AppStrings.localized("task.unavailable.path"))
-        #expect(breakdown.first?.grossSeconds == 1_800)
+        #expect(breakdown.first?.grossSeconds == 1800)
     }
 
     @Test @MainActor
@@ -148,7 +147,7 @@ struct AnalyticsTimelineTests {
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         let now = try #require(calendar.date(from: DateComponents(year: 2026, month: 4, day: 9, hour: 12)))
         let startOfDay = calendar.startOfDay(for: now)
-        let previousDay = startOfDay.addingTimeInterval(-86_400)
+        let previousDay = startOfDay.addingTimeInterval(-86400)
         let category = TaskCategory(title: "Work", deviceID: "test", colorHex: "1677FF", iconName: "briefcase")
         let root = TaskNode(title: "Client", parentID: nil, deviceID: "test", colorHex: "1677FF", iconName: "folder")
         let child = TaskNode(title: "Review", parentID: root.id, deviceID: "test", colorHex: "34C759", iconName: "doc.text")
@@ -162,33 +161,33 @@ struct AnalyticsTimelineTests {
                 taskID: root.id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: startOfDay.addingTimeInterval(9 * 3_600),
-                endedAt: startOfDay.addingTimeInterval(10 * 3_600)
+                startedAt: startOfDay.addingTimeInterval(9 * 3600),
+                endedAt: startOfDay.addingTimeInterval(10 * 3600)
             ),
             TimeSegment(
                 sessionID: childSession.id,
                 taskID: child.id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: startOfDay.addingTimeInterval(9 * 3_600 + 50 * 60),
-                endedAt: startOfDay.addingTimeInterval(10 * 3_600 + 10 * 60)
+                startedAt: startOfDay.addingTimeInterval(9 * 3600 + 50 * 60),
+                endedAt: startOfDay.addingTimeInterval(10 * 3600 + 10 * 60)
             ),
             TimeSegment(
                 sessionID: childSession.id,
                 taskID: child.id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: startOfDay.addingTimeInterval(11 * 3_600),
-                endedAt: startOfDay.addingTimeInterval(11 * 3_600 + 120)
+                startedAt: startOfDay.addingTimeInterval(11 * 3600),
+                endedAt: startOfDay.addingTimeInterval(11 * 3600 + 120)
             ),
             TimeSegment(
                 sessionID: previousSession.id,
                 taskID: root.id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: previousDay.addingTimeInterval(9 * 3_600),
-                endedAt: previousDay.addingTimeInterval(9 * 3_600 + 30 * 60)
-            )
+                startedAt: previousDay.addingTimeInterval(9 * 3600),
+                endedAt: previousDay.addingTimeInterval(9 * 3600 + 30 * 60)
+            ),
         ]
 
         let snapshot = AnalyticsStore().snapshot(
@@ -204,8 +203,8 @@ struct AnalyticsTimelineTests {
             calendar: calendar
         )
 
-        #expect(snapshot.comparison.previousGrossSeconds == 1_800)
-        #expect(snapshot.comparison.currentGrossSeconds == 4_920)
+        #expect(snapshot.comparison.previousGrossSeconds == 1800)
+        #expect(snapshot.comparison.currentGrossSeconds == 4920)
         #expect(snapshot.rhythm.peakHour == 9)
         #expect(snapshot.quality.shortSegmentCount == 1)
         #expect(snapshot.quality.switchCount >= 1)
@@ -230,17 +229,17 @@ struct AnalyticsTimelineTests {
                 taskID: task.id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: yesterdayStart.addingTimeInterval(9 * 3_600),
-                endedAt: yesterdayStart.addingTimeInterval(10 * 3_600)
+                startedAt: yesterdayStart.addingTimeInterval(9 * 3600),
+                endedAt: yesterdayStart.addingTimeInterval(10 * 3600)
             ),
             TimeSegment(
                 sessionID: session.id,
                 taskID: task.id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: todayStart.addingTimeInterval(9 * 3_600),
-                endedAt: todayStart.addingTimeInterval(9 * 3_600 + 30 * 60)
-            )
+                startedAt: todayStart.addingTimeInterval(9 * 3600),
+                endedAt: todayStart.addingTimeInterval(9 * 3600 + 30 * 60)
+            ),
         ]
 
         let yesterdaySnapshot = AnalyticsStore().snapshot(
@@ -264,8 +263,8 @@ struct AnalyticsTimelineTests {
             calendar: calendar
         )
 
-        #expect(yesterdaySnapshot.overview.grossSeconds == 3_600)
-        #expect(todaySnapshot.overview.grossSeconds == 1_800)
+        #expect(yesterdaySnapshot.overview.grossSeconds == 3600)
+        #expect(todaySnapshot.overview.grossSeconds == 1800)
     }
 
     @Test @MainActor
@@ -284,17 +283,17 @@ struct AnalyticsTimelineTests {
                 taskID: root.id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: startOfDay.addingTimeInterval(8 * 3_600),
-                endedAt: startOfDay.addingTimeInterval(9 * 3_600)
+                startedAt: startOfDay.addingTimeInterval(8 * 3600),
+                endedAt: startOfDay.addingTimeInterval(9 * 3600)
             ),
             TimeSegment(
                 sessionID: childSession.id,
                 taskID: child.id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: startOfDay.addingTimeInterval(10 * 3_600),
-                endedAt: startOfDay.addingTimeInterval(10 * 3_600 + 30 * 60)
-            )
+                startedAt: startOfDay.addingTimeInterval(10 * 3600),
+                endedAt: startOfDay.addingTimeInterval(10 * 3600 + 30 * 60)
+            ),
         ]
 
         let snapshot = AnalyticsStore().taskSnapshot(
@@ -309,9 +308,9 @@ struct AnalyticsTimelineTests {
             calendar: calendar
         )
 
-        #expect(snapshot.overview.grossSeconds == 5_400)
-        #expect(snapshot.directSeconds == 3_600)
-        #expect(snapshot.descendantSeconds == 1_800)
+        #expect(snapshot.overview.grossSeconds == 5400)
+        #expect(snapshot.directSeconds == 3600)
+        #expect(snapshot.descendantSeconds == 1800)
         #expect(snapshot.childBreakdown.map(\.title).contains("Build"))
         #expect(snapshot.childBreakdown.map(\.title).contains("Tests"))
         #expect(snapshot.recentRecords.count == 2)
@@ -335,13 +334,13 @@ struct AnalyticsTimelineTests {
             taskID: child.id,
             source: .timer,
             deviceID: "test",
-            startedAt: now.addingTimeInterval(-1_800)
+            startedAt: now.addingTimeInterval(-1800)
         )
         let unrelatedSession = TimeSession(
             taskID: unrelated.id,
             source: .timer,
             deviceID: "test",
-            startedAt: now.addingTimeInterval(-3_600)
+            startedAt: now.addingTimeInterval(-3600)
         )
         let childSegment = TimeSegment(
             sessionID: childSession.id,
@@ -411,8 +410,8 @@ struct AnalyticsTimelineTests {
         ))
 
         #expect(descendantRequest.liveRefreshBucket == globalBucket)
-        #expect(descendantSnapshot.overview.grossSeconds == 1_800)
-        #expect(descendantSnapshot.descendantSeconds == 1_800)
+        #expect(descendantSnapshot.overview.grossSeconds == 1800)
+        #expect(descendantSnapshot.descendantSeconds == 1800)
         #expect(store.analyticsDomainStore.cachedTaskSnapshot(
             taskID: root.id,
             range: .today,
@@ -421,7 +420,6 @@ struct AnalyticsTimelineTests {
             calendar: calendar
         ) != nil)
     }
-
 
     @Test
     func timelineLayoutUsesMinimumNumberOfLanes() {
@@ -528,7 +526,7 @@ struct AnalyticsTimelineTests {
     @Test
     func horizontalTimelineAssignsLanesFromRenderedFootprints() throws {
         let start = Date(timeIntervalSince1970: 0)
-        let display = DateInterval(start: start, duration: 5_430)
+        let display = DateInterval(start: start, duration: 5430)
         let firstID = UUID(uuidString: "00000000-0000-0000-0000-000000000111")!
         let secondID = UUID(uuidString: "00000000-0000-0000-0000-000000000112")!
         let thirdID = UUID(uuidString: "00000000-0000-0000-0000-000000000113")!
@@ -547,7 +545,7 @@ struct AnalyticsTimelineTests {
                 id: thirdID,
                 start: start.addingTimeInterval(600),
                 end: start.addingTimeInterval(630)
-            )
+            ),
         ]
         let compression = TimelineAxisCompression(
             displayInterval: display,
@@ -1003,7 +1001,7 @@ struct AnalyticsTimelineTests {
                 id: thirdID,
                 start: start.addingTimeInterval(20 * 60),
                 end: start.addingTimeInterval(21 * 60)
-            )
+            ),
         ]
         let compression = TimelineAxisCompression(
             displayInterval: display,
@@ -1052,7 +1050,7 @@ struct AnalyticsTimelineTests {
         )
         let intervals = [
             TimelineLaneInterval(id: firstID, start: 0, end: 20),
-            TimelineLaneInterval(id: secondID, start: 26, end: 30)
+            TimelineLaneInterval(id: secondID, start: 26, end: 30),
         ]
 
         #expect(
@@ -1176,7 +1174,7 @@ struct AnalyticsTimelineTests {
     }
 
     @Test
-    func compactVerticalLanesUseCompressedGapPixelDistance() throws {
+    func compactVerticalLanesUseCompressedGapPixelDistance() {
         let start = Date(timeIntervalSince1970: 0)
         let first = makeTimelineEntry(
             id: UUID(uuidString: "00000000-0000-0000-0000-000000000108")!,
@@ -1339,7 +1337,7 @@ struct AnalyticsTimelineTests {
         let compression = TimelineAxisCompression(displayInterval: display, busyIntervals: [morning, afternoon])
 
         #expect(compression.omittedGaps.count == 1)
-        #expect(abs((compression.omittedGaps.first?.duration ?? 0) - 14_400) < 0.001)
+        #expect(abs((compression.omittedGaps.first?.duration ?? 0) - 14400) < 0.001)
         #expect(compression.compressedDuration < display.duration)
         #expect(compression.ratio(for: afternoon.start) < afternoon.start.timeIntervalSince(display.start) / display.duration)
     }
@@ -1357,13 +1355,12 @@ struct AnalyticsTimelineTests {
         #expect(compression.compressedDuration == display.duration)
     }
 
-
     @Test
     func analyticsTaskDistributionUsesTaskBucketsAndTaskColors() throws {
         let analyticsSource = try sourceText("timetracker/Features/Analytics/Sections/AnalyticsDistributionViews.swift")
         let categorySource = try [
             "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift",
-            "timetracker/Features/Analytics/AnalyticsCategoryDetailContent.swift"
+            "timetracker/Features/Analytics/AnalyticsCategoryDetailContent.swift",
         ].map(sourceText).joined(separator: "\n")
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
@@ -1383,10 +1380,10 @@ struct AnalyticsTimelineTests {
         let entrySource = try [
             "timetracker/Features/Analytics/AnalyticsViews.swift",
             "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift",
-            "timetracker/Features/Analytics/AnalyticsCategoryDetailContent.swift"
+            "timetracker/Features/Analytics/AnalyticsCategoryDetailContent.swift",
         ]
-            .map(sourceText)
-            .joined(separator: "\n")
+        .map(sourceText)
+        .joined(separator: "\n")
         let viewSource = try [
             "timetracker/Features/Analytics/Sections/AnalyticsActivityViews.swift",
             "timetracker/Features/Analytics/Sections/AnalyticsActivityBarViews.swift",
@@ -1396,10 +1393,10 @@ struct AnalyticsTimelineTests {
             "timetracker/SharedUI/Components/TimelineChart.swift",
             "timetracker/SharedUI/Components/TimelineChartLayout.swift",
             "timetracker/SharedUI/Components/TimelineChartGrid.swift",
-            "timetracker/SharedUI/Components/TimelineChartBars.swift"
+            "timetracker/SharedUI/Components/TimelineChartBars.swift",
         ]
-            .map(sourceText)
-            .joined(separator: "\n")
+        .map(sourceText)
+        .joined(separator: "\n")
         let sharedLegendSource = try sourceText(
             "timetracker/SharedUI/Components/TimelineLegendRow.swift"
         )
@@ -1408,10 +1405,10 @@ struct AnalyticsTimelineTests {
             "timetracker/Models/AnalyticsTimelineReadModels.swift",
             "timetracker/Services/Analytics/HourTaskActivityService.swift",
             "timetracker/Services/Analytics/AnalyticsTimelineSnapshotService.swift",
-            "timetracker/Services/Analytics/HourStackLayoutEngine.swift"
+            "timetracker/Services/Analytics/HourStackLayoutEngine.swift",
         ]
-            .map(sourceText)
-            .joined(separator: "\n")
+        .map(sourceText)
+        .joined(separator: "\n")
         let combinedSource = viewSource + "\n" + analyticsSource
         let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
@@ -1443,9 +1440,9 @@ struct AnalyticsTimelineTests {
 
         let layout = HourStackLayoutEngine.layout(
             inputs: [
-                HourStackLayoutInput(id: largeID, seconds: 3_500),
+                HourStackLayoutInput(id: largeID, seconds: 3500),
                 HourStackLayoutInput(id: tinyID, seconds: 10),
-                HourStackLayoutInput(id: smallerID, seconds: 10)
+                HourStackLayoutInput(id: smallerID, seconds: 10),
             ],
             availableHeight: 100,
             minSliceHeight: 8
@@ -1470,7 +1467,7 @@ struct AnalyticsTimelineTests {
             UUID(uuidString: "00000000-0000-0000-0000-000000000013")!,
             UUID(uuidString: "00000000-0000-0000-0000-000000000014")!,
             UUID(uuidString: "00000000-0000-0000-0000-000000000015")!,
-            UUID(uuidString: "00000000-0000-0000-0000-000000000016")!
+            UUID(uuidString: "00000000-0000-0000-0000-000000000016")!,
         ]
 
         let layout = HourStackLayoutEngine.layout(

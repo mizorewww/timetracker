@@ -28,12 +28,13 @@ enum TaskColorPalette {
         "1677FF", "0A84FF", "5E5CE6", "7C3AED", "AF52DE", "BF5AF2",
         "FF2D55", "EF4444", "FF453A", "F97316", "FF9F0A", "F59E0B",
         "FFD60A", "A3E635", "34C759", "16A34A", "30D158", "00C7BE",
-        "0EA5E9", "64D2FF", "06B6D4", "64748B", "8E8E93", "3A3A3C"
+        "0EA5E9", "64D2FF", "06B6D4", "64748B", "8E8E93", "3A3A3C",
     ]
 
     nonisolated static func normalizedHex(_ value: String?) -> String? {
         guard var value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
-              value.isEmpty == false else {
+              value.isEmpty == false
+        else {
             return nil
         }
         if value.hasPrefix("#") {
@@ -43,7 +44,8 @@ enum TaskColorPalette {
             value = value.map { "\($0)\($0)" }.joined()
         }
         guard value.count == 6,
-              UInt32(value, radix: 16) != nil else {
+              UInt32(value, radix: 16) != nil
+        else {
             return nil
         }
         return value.uppercased()
@@ -51,7 +53,8 @@ enum TaskColorPalette {
 
     nonisolated static func sRGBComponents(for hex: String?) -> AccessibleSRGB? {
         guard let normalized = normalizedHex(hex),
-              let value = UInt64(normalized, radix: 16) else {
+              let value = UInt64(normalized, radix: 16)
+        else {
             return nil
         }
         return AccessibleSRGB(
@@ -163,13 +166,17 @@ struct AccessibleSRGB: Equatable {
         // Against the system's near-black/near-white base surfaces these
         // luminance limits satisfy WCAG's 4.5:1 small-text contrast target.
         let target = forDarkBackground ? 0.175 : 0.183
-        if forDarkBackground, relativeLuminance >= target { return self }
-        if !forDarkBackground, relativeLuminance <= target { return self }
+        if forDarkBackground, relativeLuminance >= target {
+            return self
+        }
+        if !forDarkBackground, relativeLuminance <= target {
+            return self
+        }
 
         let blendTarget = forDarkBackground ? 1.0 : 0.0
         var lower = 0.0
         var upper = 1.0
-        for _ in 0..<16 {
+        for _ in 0 ..< 16 {
             let midpoint = (lower + upper) / 2
             let candidate = blended(toward: blendTarget, amount: midpoint)
             let reachedTarget = forDarkBackground
@@ -230,7 +237,9 @@ extension Color {
 #if os(macOS)
 typealias PlatformColor = NSColor
 extension PlatformColor {
-    static var systemGroupedBackground: NSColor { NSColor.windowBackgroundColor }
+    static var systemGroupedBackground: NSColor {
+        NSColor.windowBackgroundColor
+    }
 }
 #else
 typealias PlatformColor = UIColor

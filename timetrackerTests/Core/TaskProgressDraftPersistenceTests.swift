@@ -8,7 +8,8 @@ import Testing
 struct TaskProgressDraftPersistenceTests {
     @Test
     func newDailyQuantityDraftSavesACompleteCurrentDayGraph()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let now = try singaporeDate(day: 21)
         var draft = TaskEditorDraft(parentID: nil)
@@ -76,7 +77,8 @@ struct TaskProgressDraftPersistenceTests {
 
     @Test
     func recoveredProposedIDRetryKeepsOneCompleteProgressGraph()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let proposedTaskID = UUID()
         var draft = TaskEditorDraft(parentID: nil)
@@ -95,13 +97,13 @@ struct TaskProgressDraftPersistenceTests {
             draft: draft,
             sanitizedTitle: draft.title,
             proposedTaskID: proposedTaskID,
-            now: try singaporeDate(day: 21)
+            now: singaporeDate(day: 21)
         )
         let retry = try command.save(
             draft: draft,
             sanitizedTitle: draft.title,
             proposedTaskID: proposedTaskID,
-            now: try singaporeDate(day: 21, hour: 13)
+            now: singaporeDate(day: 21, hour: 13)
         )
 
         let fresh = ModelContext(context.container)
@@ -129,7 +131,8 @@ struct TaskProgressDraftPersistenceTests {
 
     @Test
     func everyCombinedCreationCheckpointRollsBackTheWholeGraph()
-        throws {
+        throws
+    {
         for stage in CombinedCreationFailureStage.allCases {
             let context = try makeTestContext()
             var draft = TaskEditorDraft(parentID: nil)
@@ -155,7 +158,7 @@ struct TaskProgressDraftPersistenceTests {
                 try command.save(
                     draft: draft,
                     sanitizedTitle: draft.title,
-                    now: try singaporeDate(day: 21)
+                    now: singaporeDate(day: 21)
                 )
             }
 
@@ -247,7 +250,8 @@ struct TaskProgressDraftPersistenceTests {
 
     @Test
     func staleRecurrenceMutationCannotBeOverwrittenByAnEditorDraft()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         var newDraft = TaskEditorDraft(parentID: nil)
         newDraft.title = "Daily"
@@ -258,7 +262,7 @@ struct TaskProgressDraftPersistenceTests {
         let created = try coordinator(context.container).save(
             draft: newDraft,
             sanitizedTitle: newDraft.title,
-            now: try singaporeDate(day: 21)
+            now: singaporeDate(day: 21)
         )
         var staleDraft = try editorDraft(
             taskID: created.savedTaskID,
@@ -281,7 +285,7 @@ struct TaskProgressDraftPersistenceTests {
             try coordinator(context.container).save(
                 draft: staleDraft,
                 sanitizedTitle: staleDraft.title,
-                now: try singaporeDate(day: 22)
+                now: singaporeDate(day: 22)
             )
         }
 
@@ -320,7 +324,7 @@ struct TaskProgressDraftPersistenceTests {
         let created = try command.save(
             draft: newDraft,
             sanitizedTitle: newDraft.title,
-            now: try singaporeDate(day: 21)
+            now: singaporeDate(day: 21)
         )
 
         var paused = try editorDraft(
@@ -331,7 +335,7 @@ struct TaskProgressDraftPersistenceTests {
         _ = try command.save(
             draft: paused,
             sanitizedTitle: paused.title,
-            now: try singaporeDate(day: 21, hour: 13)
+            now: singaporeDate(day: 21, hour: 13)
         )
 
         var resumed = try editorDraft(
@@ -342,7 +346,7 @@ struct TaskProgressDraftPersistenceTests {
         _ = try command.save(
             draft: resumed,
             sanitizedTitle: resumed.title,
-            now: try singaporeDate(day: 23)
+            now: singaporeDate(day: 23)
         )
 
         let dayKeys = try ModelContext(context.container).fetch(
@@ -356,7 +360,7 @@ private extension TaskProgressDraftPersistenceTests {
     func coordinator(
         _ container: ModelContainer,
         checkpoint: @escaping
-            (TaskDraftMutationCheckpoint) throws -> Void = { _ in }
+        (TaskDraftMutationCheckpoint) throws -> Void = { _ in }
     ) -> StoreScopedTaskLifecycleCommandCoordinator {
         StoreScopedTaskLifecycleCommandCoordinator(
             container: container,

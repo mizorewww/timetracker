@@ -71,7 +71,8 @@ struct TaskProgressDraftEditingTests {
 
     @Test
     func quantityGoalCannotBeRemovedWithoutExplicitConfirmation()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let taskID = try createQuantityTask(in: context.container)
         let progressContext = ModelContext(context.container)
@@ -483,16 +484,16 @@ private extension TaskProgressDraftEditingTests {
             context: context,
             deviceID: "draft-reader"
         )
-        return TaskEditorDraft(
-            task: try #require(try repository.task(id: taskID)),
+        return try TaskEditorDraft(
+            task: #require(try repository.task(id: taskID)),
             checklistItems: [],
-            quantityGoal: try repository.taskQuantityGoals().first {
+            quantityGoal: repository.taskQuantityGoals().first {
                 $0.taskID == taskID
             },
-            recurrenceRule: try repository.taskRecurrenceRules().first {
+            recurrenceRule: repository.taskRecurrenceRules().first {
                 $0.templateTaskID == taskID
             },
-            quantityEntries: try repository.taskQuantityEntries().filter {
+            quantityEntries: repository.taskQuantityEntries().filter {
                 $0.taskID == taskID
             }
         )

@@ -72,8 +72,8 @@ struct CountdownEventSettingsRow: View {
             isDatePickerPresented = true
         } label: {
             countdownDateLabel
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .settingsRowSeparatorAligned()

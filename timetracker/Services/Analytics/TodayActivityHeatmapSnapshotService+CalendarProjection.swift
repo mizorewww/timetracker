@@ -11,7 +11,7 @@ extension TodayActivityHeatmapSnapshotService {
     ) -> [ActivityHeatmapWeek] {
         var result: [ActivityHeatmapWeek] = []
         result.reserveCapacity(weekCount)
-        for weekIndex in 0..<weekCount {
+        for weekIndex in 0 ..< weekCount {
             guard let weekStart = calendar.date(
                 byAdding: .weekOfYear,
                 value: weekIndex,
@@ -19,7 +19,7 @@ extension TodayActivityHeatmapSnapshotService {
             ) else {
                 continue
             }
-            let days = (0..<Self.daysPerWeek).compactMap { dayIndex in
+            let days = (0 ..< Self.daysPerWeek).compactMap { dayIndex in
                 calendar.date(byAdding: .day, value: dayIndex, to: weekStart).map { date in
                     let day = calendar.startOfDay(for: date)
                     let isFuture = day > dateRange.today

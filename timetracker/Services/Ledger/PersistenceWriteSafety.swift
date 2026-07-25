@@ -8,25 +8,25 @@ enum PersistenceWriteSafety: Equatable {
     var title: String {
         switch self {
         case .ready:
-            return ""
+            ""
         case .cloudRecoveryPending:
-            return AppStrings.localized("persistence.recovery.title")
+            AppStrings.localized("persistence.recovery.title")
         case .ephemeral:
-            return AppStrings.localized("persistence.ephemeral.title")
+            AppStrings.localized("persistence.ephemeral.title")
         }
     }
 
     var message: String {
         switch self {
         case .ready:
-            return ""
+            ""
         case let .cloudRecoveryPending(detail):
-            return Self.message(
+            Self.message(
                 key: "persistence.recovery.message",
                 detail: detail
             )
         case let .ephemeral(detail):
-            return Self.message(
+            Self.message(
                 key: "persistence.ephemeral.message",
                 detail: detail
             )
@@ -36,11 +36,11 @@ enum PersistenceWriteSafety: Equatable {
     var symbolName: String {
         switch self {
         case .ready:
-            return "checkmark.circle"
+            "checkmark.circle"
         case .cloudRecoveryPending:
-            return "arrow.triangle.2.circlepath.icloud"
+            "arrow.triangle.2.circlepath.icloud"
         case .ephemeral:
-            return "externaldrive.badge.exclamationmark"
+            "externaldrive.badge.exclamationmark"
         }
     }
 
@@ -69,7 +69,7 @@ enum PersistenceWriteError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case let .blocked(message):
-            return message
+            message
         }
     }
 }

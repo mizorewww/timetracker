@@ -1,12 +1,12 @@
-import XCTest
 import Vision
+import XCTest
 
 final class LiveActivitySystemSurfaceUITests: XCTestCase {
     private static let auditedDynamicIslandModels: Set<String> = [
         "iPhone15,2", "iPhone15,3", "iPhone15,4", "iPhone15,5",
         "iPhone16,1", "iPhone16,2",
         "iPhone17,1", "iPhone17,2", "iPhone17,3", "iPhone17,4",
-        "iPhone18,1", "iPhone18,2", "iPhone18,3", "iPhone18,4"
+        "iPhone18,1", "iPhone18,2", "iPhone18,3", "iPhone18,4",
     ]
 
     override func setUpWithError() throws {
@@ -38,7 +38,7 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",
             "-TimeTrackerAutomaticDemoDataModeOverride", "replaceOnLaunch",
-            "-TimeTrackerAutomaticDemoSeedingDisabled", "NO"
+            "-TimeTrackerAutomaticDemoSeedingDisabled", "NO",
         ]
         app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
         app.launchEnvironment["TIMETRACKER_UI_AUDIT_ROUTE"] = "today"
@@ -411,7 +411,8 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             if let currentValue = timer.value as? String,
-               currentValue != initialValue {
+               currentValue != initialValue
+            {
                 return true
             }
             RunLoop.current.run(until: Date().addingTimeInterval(0.25))
@@ -428,7 +429,8 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
         let timerFrame = timer.frame
 
         guard hasUsableFrame(leadingFrame, in: screenFrame),
-              hasUsableFrame(timerFrame, in: screenFrame) else {
+              hasUsableFrame(timerFrame, in: screenFrame)
+        else {
             return
         }
 
@@ -447,15 +449,16 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
         let timerFrame = timer.frame
 
         guard hasUsableFrame(titleFrame, in: screenFrame),
-              hasUsableFrame(timerFrame, in: screenFrame) else {
+              hasUsableFrame(timerFrame, in: screenFrame)
+        else {
             return
         }
 
         assertHorizontalOrStackedTimerPlacement(
             titleFrame: titleFrame,
             timerFrame: timerFrame,
-            horizontalGapRange: 8...32,
-            stackedGapRange: 0...44,
+            horizontalGapRange: 8 ... 32,
+            stackedGapRange: 0 ... 44,
             surfaceName: "Lock Screen"
         )
     }
@@ -489,7 +492,7 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
             "Expanded Dynamic Island title and timer must remain in one row."
         )
         XCTAssertTrue(
-            (8...24).contains(titleToTimerGap),
+            (8 ... 24).contains(titleToTimerGap),
             "The expanded timer must stay visually attached to its task title."
         )
     }
@@ -562,5 +565,4 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
         return false
     }
     #endif
-
 }

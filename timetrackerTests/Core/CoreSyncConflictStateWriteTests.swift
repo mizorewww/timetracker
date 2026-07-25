@@ -59,11 +59,11 @@ struct CoreSyncConflictStateWriteTests {
         )
         let oversizedSnapshot = try #require(oversizedState.localSnapshot)
         let snapshotData = try sortedJSON(oversizedSnapshot)
-        let expectedReference = SyncConflictSnapshotReference(
+        let expectedReference = try SyncConflictSnapshotReference(
             slot: .local,
             generation: 0,
             byteCount: snapshotData.count,
-            sha256: try oversizedSnapshot.fingerprint()
+            sha256: oversizedSnapshot.fingerprint()
         )
         let encodedManifest = try sortedJSON(
             SyncConflictStateManifest(
@@ -79,7 +79,7 @@ struct CoreSyncConflictStateWriteTests {
             stateURL: stateURL,
             localStateByteLimits: .init(
                 maximumStateFileByteCount: maximumStateBytes,
-                maximumRecoverySnapshotFileByteCount: 4_096
+                maximumRecoverySnapshotFileByteCount: 4096
             )
         )
 
@@ -111,7 +111,7 @@ struct CoreSyncConflictStateWriteTests {
         let service = SyncConflictService(
             stateURL: stateURL,
             localStateByteLimits: .init(
-                maximumStateFileByteCount: 16_384,
+                maximumStateFileByteCount: 16384,
                 maximumRecoverySnapshotFileByteCount: maximumMirrorBytes
             )
         )
@@ -136,11 +136,11 @@ struct CoreSyncConflictStateWriteTests {
         var newState = SyncConflictState()
         newState.pendingForcedUploadSnapshot = newSnapshot
         let encodedMirror = try sortedJSON(newSnapshot)
-        let expectedReference = SyncConflictSnapshotReference(
+        let expectedReference = try SyncConflictSnapshotReference(
             slot: .pendingForcedUpload,
             generation: 0,
             byteCount: encodedMirror.count,
-            sha256: try newSnapshot.fingerprint()
+            sha256: newSnapshot.fingerprint()
         )
         let encodedManifest = try sortedJSON(
             SyncConflictStateManifest(
@@ -173,9 +173,9 @@ struct CoreSyncConflictStateWriteTests {
     func largeSnapshotsStayOutsideTheBoundedStateManifest() throws {
         let stateURL = temporaryStateURL()
         defer { try? FileManager.default.removeItem(at: stateURL.deletingLastPathComponent()) }
-        let localSnapshot = snapshot(title: String(repeating: "local", count: 1_024))
-        let cloudSnapshot = snapshot(title: String(repeating: "cloud", count: 1_024))
-        let workingSnapshot = snapshot(title: String(repeating: "working", count: 1_024))
+        let localSnapshot = snapshot(title: String(repeating: "local", count: 1024))
+        let cloudSnapshot = snapshot(title: String(repeating: "cloud", count: 1024))
+        let workingSnapshot = snapshot(title: String(repeating: "working", count: 1024))
         var state = SyncConflictState()
         state.localSnapshot = localSnapshot
         state.pendingCloudSnapshot = cloudSnapshot
@@ -184,23 +184,23 @@ struct CoreSyncConflictStateWriteTests {
         let localData = try sortedJSON(localSnapshot)
         let cloudData = try sortedJSON(cloudSnapshot)
         let workingData = try sortedJSON(workingSnapshot)
-        let localReference = SyncConflictSnapshotReference(
+        let localReference = try SyncConflictSnapshotReference(
             slot: .local,
             generation: 0,
             byteCount: localData.count,
-            sha256: try localSnapshot.fingerprint()
+            sha256: localSnapshot.fingerprint()
         )
-        let cloudReference = SyncConflictSnapshotReference(
+        let cloudReference = try SyncConflictSnapshotReference(
             slot: .pendingCloud,
             generation: 0,
             byteCount: cloudData.count,
-            sha256: try cloudSnapshot.fingerprint()
+            sha256: cloudSnapshot.fingerprint()
         )
-        let workingReference = SyncConflictSnapshotReference(
+        let workingReference = try SyncConflictSnapshotReference(
             slot: .pendingConflictWorking,
             generation: 0,
             byteCount: workingData.count,
-            sha256: try workingSnapshot.fingerprint()
+            sha256: workingSnapshot.fingerprint()
         )
         let manifestData = try sortedJSON(
             SyncConflictStateManifest(
@@ -423,7 +423,7 @@ struct CoreSyncConflictStateWriteTests {
         let service = SyncConflictService(
             stateURL: stateURL,
             localStateByteLimits: .init(
-                maximumStateFileByteCount: 16_384,
+                maximumStateFileByteCount: 16384,
                 maximumRecoverySnapshotFileByteCount: maximumMirrorBytes
             )
         )

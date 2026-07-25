@@ -127,13 +127,12 @@ extension AppCloudSync {
             }
         }
 
-        let importKind: CloudRecoveryImportKind?
-        if reset == .download {
-            importKind = .downloadCloud
+        let importKind: CloudRecoveryImportKind? = if reset == .download {
+            .downloadCloud
         } else if UserDefaults.standard.bool(forKey: queuedCloudReconciliationKey) {
-            importKind = .reconcileWithCloud
+            .reconcileWithCloud
         } else {
-            importKind = nil
+            nil
         }
         if let importKind {
             let sessionStarter = beginCloudImportSession ?? { kind in
@@ -161,11 +160,10 @@ extension AppCloudSync {
         client: CloudAccountStatusClient? = nil,
         checkedAt: Date = Date()
     ) async -> CloudAccountCheckOutcome {
-        let resolvedClient: CloudAccountStatusClient
-        if let client {
-            resolvedClient = client
+        let resolvedClient: CloudAccountStatusClient = if let client {
+            client
         } else {
-            resolvedClient = .live(containerIdentifier: containerIdentifier)
+            .live(containerIdentifier: containerIdentifier)
         }
         let result: CloudAccountCheckResult
         do {

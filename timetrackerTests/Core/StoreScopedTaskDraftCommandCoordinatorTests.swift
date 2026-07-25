@@ -17,7 +17,7 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
         )
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        var draft = store.editorDraft(for: try #require(store.task(for: task.id)))
+        var draft = try store.editorDraft(for: #require(store.task(for: task.id)))
 
         _ = try makeTestSystemActionCommandHandler().startTimerMutation(
             taskID: task.id,
@@ -58,7 +58,7 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
         )
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        var draft = store.editorDraft(for: try #require(store.task(for: child.id)))
+        var draft = try store.editorDraft(for: #require(store.task(for: child.id)))
         #expect(store.trackableTaskIDs.contains(destinationParent.id))
 
         destinationParent.statusRaw = LegacyTaskStatusRaw.completed
@@ -94,7 +94,7 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
         try context.save()
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        var draft = store.editorDraft(for: try #require(store.task(for: task.id)))
+        var draft = try store.editorDraft(for: #require(store.task(for: task.id)))
         draft.title = "Updated metadata"
 
         #expect(store.saveTaskDraft(draft))
@@ -116,7 +116,7 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
         )
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        var draft = store.editorDraft(for: try #require(store.task(for: task.id)))
+        var draft = try store.editorDraft(for: #require(store.task(for: task.id)))
 
         let siblingRepository = freshTaskRepository(context.container, deviceID: "sibling")
         let siblingTask = try #require(try siblingRepository.task(id: task.id))
@@ -153,7 +153,7 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
         )
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        var draft = store.editorDraft(for: try #require(store.task(for: task.id)))
+        var draft = try store.editorDraft(for: #require(store.task(for: task.id)))
 
         try ChecklistDraftService().save(
             drafts: [ChecklistEditorDraft(title: "Sibling item")],
@@ -189,7 +189,7 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
         )
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        let draft = store.editorDraft(for: try #require(store.task(for: task.id)))
+        let draft = try store.editorDraft(for: #require(store.task(for: task.id)))
 
         try ChecklistDraftService().save(
             drafts: [],
@@ -218,7 +218,7 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
         )
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        var draft = store.editorDraft(for: try #require(store.task(for: task.id)))
+        var draft = try store.editorDraft(for: #require(store.task(for: task.id)))
         draft.checklistItems = [ChecklistEditorDraft(title: "Must not orphan")]
 
         let siblingContext = ModelContext(context.container)
@@ -256,7 +256,7 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
         )
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        var draft = store.editorDraft(for: try #require(store.task(for: task.id)))
+        var draft = try store.editorDraft(for: #require(store.task(for: task.id)))
 
         let siblingContext = ModelContext(context.container)
         let siblingRepository = SwiftDataTaskRepository(
@@ -294,7 +294,7 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
         )
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        var draft = store.editorDraft(for: try #require(store.task(for: task.id)))
+        var draft = try store.editorDraft(for: #require(store.task(for: task.id)))
 
         let siblingContext = ModelContext(context.container)
         let visuals = try siblingContext.fetch(FetchDescriptor<ChecklistItemVisual>())

@@ -103,7 +103,8 @@ struct PomodoroCommandHandler {
                   let run = try repository.run(id: runID),
                   run.state == expectedState,
                   run.deletedAt == nil,
-                  run.endedAt == nil else {
+                  run.endedAt == nil
+            else {
                 return nil
             }
             let canonicalTasks = try context.fetch(FetchDescriptor<TaskNode>())
@@ -150,7 +151,8 @@ struct PomodoroCommandHandler {
                   let resumedSessionID = resumedRun.sessionID,
                   let resumedSegment = try timeRepository.activeSegments().first(where: {
                       $0.sessionID == resumedSessionID && $0.taskID == resumedRun.taskID
-                  }) else {
+                  })
+            else {
                 throw PomodoroCommandInvariantError.resumedLedgerSegmentMissing
             }
 
@@ -237,16 +239,15 @@ struct PomodoroCommandHandler {
         ) {
             return
         }
-        let shouldDiscard: Bool
-        if discardShortAttempt {
-            shouldDiscard = try shouldDiscardCancelledRun(
+        let shouldDiscard: Bool = if discardShortAttempt {
+            try shouldDiscardCancelledRun(
                 run,
                 sessionID: sessionID,
                 context: context,
                 now: effectiveEndDate
             )
         } else {
-            shouldDiscard = false
+            false
         }
         if shouldDiscard {
             try discardRunAndSession(
@@ -308,9 +309,10 @@ struct PomodoroCommandHandler {
         observedAt: Date,
         mutationDate: Date
     ) throws -> Bool {
-        guard (run.state == .focusing || run.state == .interrupted),
+        guard run.state == .focusing || run.state == .interrupted,
               let deadline = run.phaseDeadline,
-              deadline <= observedAt else {
+              deadline <= observedAt
+        else {
             return false
         }
 
@@ -332,7 +334,8 @@ struct PomodoroCommandHandler {
 
         if let context,
            let session = try session(id: sessionID, context: context),
-           session.deletedAt == nil {
+           session.deletedAt == nil
+        {
             let latestEnd = sessionSegments
                 .filter { $0.deletedAt == nil }
                 .compactMap(\.endedAt)

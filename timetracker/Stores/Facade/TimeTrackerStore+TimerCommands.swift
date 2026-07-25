@@ -58,11 +58,11 @@ extension TimeTrackerStore {
     func performTimerPickerSelection(_ task: TaskNode) -> TimerPickerSelectionOutcome {
         switch timerPickerSelectionCommand(for: task) {
         case .alreadyRunning:
-            return .alreadyRunning
+            .alreadyRunning
         case .start:
-            return startTask(task) ? .started : .failed
+            startTask(task) ? .started : .failed
         case .switchTimer:
-            return startTask(task) ? .switched : .failed
+            startTask(task) ? .switched : .failed
         }
     }
 
@@ -98,7 +98,7 @@ extension TimeTrackerStore {
     func timerStartMutationEvents(taskID: UUID) -> Set<StoreDomainEvent> {
         var events: Set<StoreDomainEvent> = [
             .ledgerChanged(taskID: taskID, dateInterval: nil, isVisible: true),
-            .pomodoroChanged(runID: nil, sessionID: nil, taskID: taskID)
+            .pomodoroChanged(runID: nil, sessionID: nil, taskID: taskID),
         ]
         guard preferences.allowParallelTimers == false else { return events }
 
@@ -115,7 +115,7 @@ extension TimeTrackerStore {
     func timerStopMutationEvents(taskID: UUID, sessionID: UUID) -> Set<StoreDomainEvent> {
         [
             .ledgerChanged(taskID: taskID, dateInterval: nil, isVisible: true),
-            .pomodoroChanged(runID: nil, sessionID: sessionID, taskID: taskID)
+            .pomodoroChanged(runID: nil, sessionID: sessionID, taskID: taskID),
         ]
     }
 }

@@ -25,7 +25,7 @@ extension TimeTrackerStore {
         }
 
         switch action {
-        case .open(let destination):
+        case let .open(destination):
             closeTaskDetailNavigation()
             desktopDestination = destination
             return .handled
@@ -34,7 +34,7 @@ extension TimeTrackerStore {
             closeTaskDetailNavigation()
             desktopDestination = .today
             return .handled
-        case .startTimer(let taskID, let source):
+        case let .startTimer(taskID, source):
             guard startTask(taskID: taskID, source: source) else {
                 return .rejected
             }
@@ -43,15 +43,14 @@ extension TimeTrackerStore {
                 desktopDestination = .today
             }
             return .handled
-        case .stopTimer(let target):
-            let didStop: Bool
-            switch target {
-            case .some(.segment(let segmentID)):
-                didStop = stopTimer(segmentID: segmentID)
-            case .some(.task(let taskID)):
-                didStop = stopTimer(taskID: taskID)
+        case let .stopTimer(target):
+            let didStop: Bool = switch target {
+            case let .some(.segment(segmentID)):
+                stopTimer(segmentID: segmentID)
+            case let .some(.task(taskID)):
+                stopTimer(taskID: taskID)
             case .none:
-                didStop = stopTimer()
+                stopTimer()
             }
             guard didStop else {
                 return .rejected
@@ -71,7 +70,7 @@ extension TimeTrackerStore {
             closeTaskDetailNavigation()
             desktopDestination = .tasks
             return .handled
-        case .openTask(let taskID):
+        case let .openTask(taskID):
             guard isTaskDetailRouteValid(taskID) else {
                 return .rejected
             }

@@ -15,7 +15,7 @@ nonisolated enum DailyTimeSeriesXAxisPolicy {
         let labelCount = min(pointCount, maximumLabelCount)
         guard labelCount > 1 else { return [0] }
 
-        return (0..<labelCount).map { position in
+        return (0 ..< labelCount).map { position in
             position * (pointCount - 1) / (labelCount - 1)
         }
     }
@@ -31,7 +31,6 @@ struct DailyTimeSeriesChart: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.locale) private var locale
 
-    @ViewBuilder
     var body: some View {
         switch mode {
         case .grossBars:
@@ -65,7 +64,7 @@ struct DailyTimeSeriesChart: View {
         configuredChart
             .chartForegroundStyleScale([
                 AppStrings.wallTime: AppColors.wallTime,
-                AppStrings.grossTime: AppColors.grossTime
+                AppStrings.grossTime: AppColors.grossTime,
             ])
             .chartLegend(
                 position: .bottom,
@@ -193,7 +192,7 @@ struct DailyTimeSeriesChart: View {
         }
         let start = points.first?.date ?? .distantPast
         let end = points.last?.date ?? start
-        return start...max(start.addingTimeInterval(1), end)
+        return start ... max(start.addingTimeInterval(1), end)
     }
 
     private var trailingAxisClearance: CGFloat {

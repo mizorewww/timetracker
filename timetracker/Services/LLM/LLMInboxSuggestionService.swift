@@ -10,15 +10,15 @@ enum LLMInboxSuggestionServiceError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .missingModel:
-            return AppStrings.localized("inbox.suggestion.error.missingModel")
+            AppStrings.localized("inbox.suggestion.error.missingModel")
         case .noTaskCandidates:
-            return AppStrings.localized("inbox.suggestion.error.noTaskCandidates")
+            AppStrings.localized("inbox.suggestion.error.noTaskCandidates")
         case .requestTooLarge:
-            return AppStrings.localized("inbox.suggestion.error.requestTooLarge")
+            AppStrings.localized("inbox.suggestion.error.requestTooLarge")
         case .invalidResponse:
-            return AppStrings.localized("settings.llm.error.invalidResponse")
+            AppStrings.localized("settings.llm.error.invalidResponse")
         case .noValidTask:
-            return AppStrings.localized("inbox.suggestion.error.noValidTask")
+            AppStrings.localized("inbox.suggestion.error.noValidTask")
         }
     }
 }
@@ -85,14 +85,15 @@ struct LLMInboxSuggestionService {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMInboxSuggestionServiceError.invalidResponse
         }
-        guard (200..<300).contains(httpResponse.statusCode) else {
+        guard (200 ..< 300).contains(httpResponse.statusCode) else {
             throw LLMModelServiceError.responseStatus(httpResponse.statusCode)
         }
         try LLMSecureHTTPTransport.validateBufferedResponse(data)
 
         let decoded = try JSONDecoder().decode(OpenAIChatCompletionResponse.self, from: data)
         guard let content = decoded.choices.first?.message.content,
-              let contentData = content.data(using: .utf8) else {
+              let contentData = content.data(using: .utf8)
+        else {
             throw LLMInboxSuggestionServiceError.invalidResponse
         }
 
@@ -151,7 +152,8 @@ struct LLMInboxSuggestionService {
         guard !trimmedEndpoint.isEmpty else { throw LLMModelServiceError.missingEndpoint }
         guard !trimmedAPIKey.isEmpty else { throw LLMModelServiceError.missingAPIKey }
         guard trimmedEndpoint.utf8.count <= LLMSuggestionInputPolicy.maximumEndpointByteCount,
-              trimmedAPIKey.utf8.count <= LLMSuggestionInputPolicy.maximumAPIKeyByteCount else {
+              trimmedAPIKey.utf8.count <= LLMSuggestionInputPolicy.maximumAPIKeyByteCount
+        else {
             throw LLMInboxSuggestionServiceError.requestTooLarge
         }
         guard let url = Self.chatCompletionsURL(endpoint: trimmedEndpoint) else {
@@ -176,11 +178,11 @@ struct LLMInboxSuggestionService {
                     ),
                     .init(
                         role: "user",
-                        content: try prompt(
+                        content: prompt(
                             input: input,
                             instructions: preparedInstructions
                         )
-                    )
+                    ),
                 ],
                 temperature: 0.2,
                 responseFormat: .init(type: "json_object")
@@ -235,7 +237,8 @@ struct LLMInboxSuggestionService {
         guard let kind = InboxSuggestionDestinationKind(rawValue: payload.destinationKind),
               let destinationID = LLMSuggestionInputPolicy.sanitizedDestinationID(
                   payload.destinationID
-              ) else {
+              )
+        else {
             throw LLMInboxSuggestionServiceError.noValidTask
         }
 
@@ -294,7 +297,8 @@ struct LLMInboxSuggestionService {
         )
         let data = try JSONEncoder().encode(payload)
         guard data.count <= LLMSuggestionInputPolicy.maximumPromptByteCount,
-              let json = String(data: data, encoding: .utf8) else {
+              let json = String(data: data, encoding: .utf8)
+        else {
             throw LLMInboxSuggestionServiceError.requestTooLarge
         }
         return json

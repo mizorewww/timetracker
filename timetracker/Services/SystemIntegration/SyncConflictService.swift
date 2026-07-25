@@ -27,7 +27,7 @@ struct SyncConflictService {
         localStateByteLimits: SyncConflictLocalStateByteLimits = .production,
         localStateFile: DurableLocalFile = DurableLocalFile()
     ) {
-        self.stateURLOverride = stateURL
+        stateURLOverride = stateURL
         self.localStateByteLimits = localStateByteLimits
         self.localStateFile = localStateFile
     }
@@ -43,7 +43,8 @@ struct SyncConflictService {
     private func bootstrapWithLockedState(context: ModelContext) throws -> SyncConflictPrompt? {
         var state = try loadState()
         if AppCloudSync.isCloudDownloadRecoveryActive,
-           state.cloudDownloadRecoveryCompleted == true {
+           state.cloudDownloadRecoveryCompleted == true
+        {
             AppCloudSync.completeCloudDownloadRecovery()
             state.cloudDownloadRecoveryCompleted = nil
             state.clearCloudRecoveryImportSession()
@@ -69,7 +70,8 @@ struct SyncConflictService {
             return nil
         }
         if state.pendingForcedUploadSnapshot != nil,
-           pendingLocalIntent(from: state) == .reconcileWithCloud {
+           pendingLocalIntent(from: state) == .reconcileWithCloud
+        {
             if state.pendingLocalIntent == nil {
                 state.pendingLocalIntent = .reconcileWithCloud
                 try saveState(state)
@@ -86,7 +88,8 @@ struct SyncConflictService {
         }
 
         if AppCloudSync.isCloudImportRecoveryActive == false,
-           state.cloudRecoveryImportSession != nil {
+           state.cloudRecoveryImportSession != nil
+        {
             state.clearCloudRecoveryImportSession()
             try saveState(state)
         }
@@ -147,7 +150,8 @@ struct SyncConflictService {
     ) -> SyncDataSnapshot? {
         guard pendingLocalIntent(from: state) == .explicitlyReplaceCloud,
               let snapshot = state.pendingForcedUploadSnapshot,
-              snapshot.hasProtectableUserContent else {
+              snapshot.hasProtectableUserContent
+        else {
             return nil
         }
         return snapshot
@@ -166,7 +170,8 @@ struct SyncConflictService {
     func requireNoAttachedCloudRecovery() throws {
         let defaults = UserDefaults.standard
         guard AppCloudSync.isCloudImportRecoveryActive == false,
-              defaults.bool(forKey: AppCloudSync.cloudRecoveryStoreResetKey) == false else {
+              defaults.bool(forKey: AppCloudSync.cloudRecoveryStoreResetKey) == false
+        else {
             throw SyncConflictError.cloudRecoveryAlreadyInProgress
         }
     }
@@ -175,7 +180,8 @@ struct SyncConflictService {
         guard let id = state.pendingConflictID,
               let detectedAt = state.pendingDetectedAt,
               let localSnapshot = state.localSnapshot,
-              let cloudSnapshot = state.pendingCloudSnapshot else {
+              let cloudSnapshot = state.pendingCloudSnapshot
+        else {
             return nil
         }
         return SyncConflictPrompt(

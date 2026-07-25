@@ -10,7 +10,7 @@ struct HourTaskActivityService {
         calendar: Calendar = .current
     ) -> [HourTaskActivity] {
         let dayInterval = calendar.dateInterval(of: .day, for: date)
-            ?? DateInterval(start: calendar.startOfDay(for: date), duration: 86_400)
+            ?? DateInterval(start: calendar.startOfDay(for: date), duration: 86400)
         let taskByID = tasks.latestByID()
         let sessionsByTaskID = Dictionary(grouping: sessions.deduplicatedByID(), by: \.taskID)
         let secondsByHourAndTaskID = secondsByHourAndTask(
@@ -20,7 +20,7 @@ struct HourTaskActivityService {
             calendar: calendar
         )
 
-        return (0..<24).map { hour in
+        return (0 ..< 24).map { hour in
             let slices = secondsByHourAndTaskID[hour].compactMap { taskID, seconds -> HourTaskSlice? in
                 guard seconds > 0 else { return nil }
                 let task = taskByID[taskID]
@@ -72,7 +72,7 @@ struct HourTaskActivityService {
             let nextHour = calendar.dateInterval(of: .hour, for: cursor)?.end ?? interval.end
             let end = min(nextHour, interval.end)
             guard end > cursor else { break }
-            if (0..<24).contains(hour) {
+            if (0 ..< 24).contains(hour) {
                 secondsByHourAndTaskID[hour][taskID, default: 0] += max(0, Int(end.timeIntervalSince(cursor)))
             }
             cursor = end

@@ -5,7 +5,9 @@ nonisolated enum LLMPromptKind: String, CaseIterable, Identifiable, Sendable {
     case checklistVisual
     case taskPlan
 
-    var id: Self { self }
+    var id: Self {
+        self
+    }
 
     var defaultInstructions: String {
         switch self {

@@ -53,7 +53,11 @@ struct PomodoroSettingsSection: View {
             AppStrings.localized("pomodoro.deletePlan.confirm.title"),
             isPresented: Binding(
                 get: { pendingDeletionPlanID != nil },
-                set: { if !$0 { pendingDeletionPlanID = nil } }
+                set: {
+                    if !$0 {
+                        pendingDeletionPlanID = nil
+                    }
+                }
             ),
             titleVisibility: .visible
         ) {
@@ -116,7 +120,7 @@ private struct PomodoroPlanSettingsRows: View {
                 symbolName: $plan.iconName,
                 colorHex: $plan.colorHex,
                 pickerAccessibilityIdentifier:
-                    "symbol.picker.open.pomodoro.\(plan.id.uuidString)"
+                "symbol.picker.open.pomodoro.\(plan.id.uuidString)"
             )
         }
         .settingsRowSeparatorAligned()

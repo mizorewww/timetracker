@@ -204,7 +204,8 @@ final class TaskDetailNavigationRegistrationToken {
 
     func attach(to navigationGuard: TaskDetailNavigationGuard) {
         if let currentGuard = self.navigationGuard,
-           currentGuard !== navigationGuard {
+           currentGuard !== navigationGuard
+        {
             currentGuard.unregister(id: id)
         }
         self.navigationGuard = navigationGuard

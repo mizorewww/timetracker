@@ -14,8 +14,12 @@ struct InboxOrderMutationBaseline: Equatable, Sendable {
 
     private static func ordered(_ items: [InboxItem]) -> [InboxItem] {
         items.sorted { lhs, rhs in
-            if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
-            if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+            if lhs.sortOrder != rhs.sortOrder {
+                return lhs.sortOrder < rhs.sortOrder
+            }
+            if lhs.createdAt != rhs.createdAt {
+                return lhs.createdAt < rhs.createdAt
+            }
             return lhs.id.uuidString < rhs.id.uuidString
         }
     }
@@ -99,7 +103,8 @@ struct StoreScopedInboxCommandCoordinator {
             guard currentMutationIDs == baseline.itemMutationIDs,
                   currentOrder == baseline.orderedItemIDs,
                   orderedItemIDs.count == items.count,
-                  Set(orderedItemIDs) == Set(items.map(\.id)) else {
+                  Set(orderedItemIDs) == Set(items.map(\.id))
+            else {
                 throw StoreScopedInboxMutationError.inboxChanged
             }
 
@@ -202,23 +207,27 @@ struct StoreScopedInboxCommandCoordinator {
     }
 
     func openItems(context: ModelContext) throws -> [InboxItem] {
-        InboxSuggestionIdentityService().visibleLogicalItems(
-            from: try context.fetch(FetchDescriptor<InboxItem>())
+        try InboxSuggestionIdentityService().visibleLogicalItems(
+            from: context.fetch(FetchDescriptor<InboxItem>())
         )
         .filter { $0.isCompleted == false }
     }
 
     func visibleItem(id: UUID, context: ModelContext) throws -> InboxItem? {
-        InboxSuggestionIdentityService().visibleLogicalItems(
-            from: try context.fetch(FetchDescriptor<InboxItem>())
+        try InboxSuggestionIdentityService().visibleLogicalItems(
+            from: context.fetch(FetchDescriptor<InboxItem>())
         )
         .first { $0.id == id }
     }
 
     private static func ordered(_ items: [InboxItem]) -> [InboxItem] {
         items.sorted { lhs, rhs in
-            if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
-            if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+            if lhs.sortOrder != rhs.sortOrder {
+                return lhs.sortOrder < rhs.sortOrder
+            }
+            if lhs.createdAt != rhs.createdAt {
+                return lhs.createdAt < rhs.createdAt
+            }
             return lhs.id.uuidString < rhs.id.uuidString
         }
     }

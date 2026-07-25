@@ -13,7 +13,8 @@ struct PomodoroSetupCard: View {
 
     private var selectedTask: TaskNode? {
         guard let task = focusTaskID.flatMap({ store.task(for: $0) }),
-              store.isTaskAvailableForTracking(task) else {
+              store.isTaskAvailableForTracking(task)
+        else {
             return nil
         }
         return task

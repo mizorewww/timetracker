@@ -4,7 +4,9 @@ struct ForecastDisplayItem: Identifiable, Equatable {
     let taskID: UUID
     let rollup: TaskRollup
 
-    var id: UUID { taskID }
+    var id: UUID {
+        taskID
+    }
 }
 
 struct ForecastDisplayService {
@@ -44,7 +46,8 @@ struct ForecastDisplayService {
                    let sourceID = sourceIDs.first,
                    let sourceTask = taskByID[sourceID],
                    let sourceRollup = rollups[sourceTask.id],
-                    sourceRollup.isDisplayableForecast {
+                   sourceRollup.isDisplayableForecast
+                {
                     append(ForecastDisplayItem(taskID: sourceTask.id, rollup: sourceRollup))
                     continue
                 }
@@ -73,7 +76,8 @@ struct ForecastDisplayService {
     func displayItem(for taskID: UUID, tasks: [TaskNode], rollups: [UUID: TaskRollup]) -> ForecastDisplayItem? {
         let taskByID = tasks.latestByID()
         guard isHierarchyVisible(taskID, taskByID: taskByID),
-              let rollup = rollups[taskID] else {
+              let rollup = rollups[taskID]
+        else {
             return nil
         }
         if rollup.isDisplayableForecast, rollup.checklistProgress.totalCount > 0 {
@@ -83,13 +87,15 @@ struct ForecastDisplayService {
             return nil
         }
         if rollup.isDisplayableForecast,
-           rollup.forecastSourceTaskCount > 1 {
+           rollup.forecastSourceTaskCount > 1
+        {
             return ForecastDisplayItem(taskID: taskID, rollup: rollup)
         }
         if let sourceID = rollup.forecastSourceTaskIDs.first,
            isHierarchyVisible(sourceID, taskByID: taskByID),
            let sourceRollup = rollups[sourceID],
-           sourceRollup.isDisplayableForecast {
+           sourceRollup.isDisplayableForecast
+        {
             return ForecastDisplayItem(taskID: sourceID, rollup: sourceRollup)
         }
         return nil
@@ -109,7 +115,8 @@ struct ForecastDisplayService {
         while let candidateID = currentID {
             guard visited.insert(candidateID).inserted,
                   let task = taskByID[candidateID],
-                  isVisible(task) else {
+                  isVisible(task)
+            else {
                 return false
             }
             currentID = task.parentID

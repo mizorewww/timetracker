@@ -51,9 +51,10 @@ struct AppleHealthTaskAnalyticsTests {
 
     @Test
     func projectionBuildsGrossWallComparisonRhythmAndNamespacedRecentRecords()
-        throws {
+        throws
+    {
         let calendar = utcCalendar()
-        let now = Date(timeIntervalSince1970: 36 * 3_600)
+        let now = Date(timeIntervalSince1970: 36 * 3600)
         let definition = AppleHealthTaskCatalog.taskDefinition(
             for: .workout(.running)
         )
@@ -67,7 +68,7 @@ struct AppleHealthTaskAnalyticsTests {
         let previousUnmatchedID = try fixedID(2)
         let currentEarlyID = try fixedID(3)
         let currentLateID = try fixedID(4)
-        let snapshot = AppleHealthTaskAnalyticsProjectionService().snapshot(
+        let snapshot = try AppleHealthTaskAnalyticsProjectionService().snapshot(
             role: .workout(.running),
             taskID: definition.id,
             title: "Running",
@@ -77,32 +78,32 @@ struct AppleHealthTaskAnalyticsTests {
                     workout(
                         id: previousMatchedID,
                         kind: .running,
-                        start: 3_600,
-                        end: 7_200
+                        start: 3600,
+                        end: 7200
                     ),
                     workout(
                         id: previousUnmatchedID,
                         kind: .running,
-                        start: 13 * 3_600,
-                        end: 14 * 3_600
+                        start: 13 * 3600,
+                        end: 14 * 3600
                     ),
                     workout(
                         id: currentEarlyID,
                         kind: .running,
-                        start: 32 * 3_600,
-                        end: 34 * 3_600
+                        start: 32 * 3600,
+                        end: 34 * 3600
                     ),
                     workout(
                         id: currentLateID,
                         kind: .running,
-                        start: 33 * 3_600,
-                        end: 35 * 3_600
+                        start: 33 * 3600,
+                        end: 35 * 3600
                     ),
                     workout(
-                        id: try fixedID(5),
+                        id: fixedID(5),
                         kind: .walking,
-                        start: 34 * 3_600,
-                        end: 35 * 3_600
+                        start: 34 * 3600,
+                        end: 35 * 3600
                     ),
                 ],
                 sleep: []
@@ -113,23 +114,23 @@ struct AppleHealthTaskAnalyticsTests {
         )
 
         #expect(snapshot.source == .appleHealth)
-        #expect(snapshot.overview.grossSeconds == 4 * 3_600)
-        #expect(snapshot.overview.wallSeconds == 3 * 3_600)
-        #expect(snapshot.overview.overlapSeconds == 3_600)
-        #expect(snapshot.comparison.previousGrossSeconds == 3_600)
-        #expect(snapshot.comparison.previousWallSeconds == 3_600)
+        #expect(snapshot.overview.grossSeconds == 4 * 3600)
+        #expect(snapshot.overview.wallSeconds == 3 * 3600)
+        #expect(snapshot.overview.overlapSeconds == 3600)
+        #expect(snapshot.comparison.previousGrossSeconds == 3600)
+        #expect(snapshot.comparison.previousWallSeconds == 3600)
         #expect(snapshot.directSeconds == snapshot.overview.grossSeconds)
         #expect(snapshot.descendantSeconds == 0)
         #expect(snapshot.childBreakdown.isEmpty)
         #expect(snapshot.rhythm.activeDayCount == 1)
         #expect(snapshot.rhythm.peakHour == 9)
-        #expect(snapshot.rhythm.peakHourSeconds == 2 * 3_600)
+        #expect(snapshot.rhythm.peakHourSeconds == 2 * 3600)
         #expect(snapshot.rhythm.segmentCount == 2)
         #expect(snapshot.quality.overlapRatio == 0.25)
         #expect(snapshot.quality.switchCount == 0)
         #expect(snapshot.daily.count == 1)
-        #expect(snapshot.daily.first?.grossSeconds == 4 * 3_600)
-        #expect(snapshot.daily.first?.wallSeconds == 3 * 3_600)
+        #expect(snapshot.daily.first?.grossSeconds == 4 * 3600)
+        #expect(snapshot.daily.first?.wallSeconds == 3 * 3600)
         #expect(snapshot.recentRecords.map(\.id) == [
             .appleHealthWorkout(currentLateID),
             .appleHealthWorkout(currentEarlyID),
@@ -138,7 +139,8 @@ struct AppleHealthTaskAnalyticsTests {
 
     @Test
     func historicalWeekUsesCompleteSelectedIntervalAndExcludesLiveEvidence()
-        throws {
+        throws
+    {
         let calendar = utcCalendar()
         let liveNow = try #require(
             calendar.date(
@@ -231,33 +233,33 @@ struct AppleHealthTaskAnalyticsTests {
                     workout(
                         id: previousID,
                         kind: .running,
-                        start: previousStart.addingTimeInterval(9 * 3_600)
+                        start: previousStart.addingTimeInterval(9 * 3600)
                             .timeIntervalSince1970,
-                        end: previousStart.addingTimeInterval(10 * 3_600)
+                        end: previousStart.addingTimeInterval(10 * 3600)
                             .timeIntervalSince1970
                     ),
                     workout(
                         id: historicalEarlyID,
                         kind: .running,
-                        start: historicalStart.addingTimeInterval(9 * 3_600)
+                        start: historicalStart.addingTimeInterval(9 * 3600)
                             .timeIntervalSince1970,
-                        end: historicalStart.addingTimeInterval(11 * 3_600)
+                        end: historicalStart.addingTimeInterval(11 * 3600)
                             .timeIntervalSince1970
                     ),
                     workout(
                         id: historicalLateID,
                         kind: .running,
-                        start: historicalStart.addingTimeInterval(10 * 3_600)
+                        start: historicalStart.addingTimeInterval(10 * 3600)
                             .timeIntervalSince1970,
-                        end: historicalStart.addingTimeInterval(12 * 3_600)
+                        end: historicalStart.addingTimeInterval(12 * 3600)
                             .timeIntervalSince1970
                     ),
                     workout(
                         id: liveID,
                         kind: .running,
-                        start: liveNow.addingTimeInterval(-2 * 3_600)
+                        start: liveNow.addingTimeInterval(-2 * 3600)
                             .timeIntervalSince1970,
-                        end: liveNow.addingTimeInterval(-3_600)
+                        end: liveNow.addingTimeInterval(-3600)
                             .timeIntervalSince1970
                     ),
                 ],
@@ -268,10 +270,10 @@ struct AppleHealthTaskAnalyticsTests {
             calendar: calendar
         )
 
-        #expect(snapshot.overview.grossSeconds == 4 * 3_600)
-        #expect(snapshot.overview.wallSeconds == 3 * 3_600)
-        #expect(snapshot.comparison.previousGrossSeconds == 3_600)
-        #expect(snapshot.comparison.previousWallSeconds == 3_600)
+        #expect(snapshot.overview.grossSeconds == 4 * 3600)
+        #expect(snapshot.overview.wallSeconds == 3 * 3600)
+        #expect(snapshot.comparison.previousGrossSeconds == 3600)
+        #expect(snapshot.comparison.previousWallSeconds == 3600)
         #expect(snapshot.recentRecords.map(\.id) == [
             .appleHealthWorkout(historicalLateID),
             .appleHealthWorkout(historicalEarlyID),
@@ -280,10 +282,9 @@ struct AppleHealthTaskAnalyticsTests {
     }
 
     @Test
-    func queryIncludesPreviousPeriodAndSleepContextWhileEmptyHealthStaysTyped()
-        throws {
+    func queryIncludesPreviousPeriodAndSleepContextWhileEmptyHealthStaysTyped() {
         let calendar = utcCalendar()
-        let now = Date(timeIntervalSince1970: 36 * 3_600)
+        let now = Date(timeIntervalSince1970: 36 * 3600)
         let definition = AppleHealthTaskCatalog.taskDefinition(for: .sleep)
         let request = request(
             taskID: definition.id,
@@ -299,14 +300,14 @@ struct AppleHealthTaskAnalyticsTests {
         )
 
         #expect(plan.comparisonWindow.previous.start == Date(timeIntervalSince1970: 0))
-        #expect(plan.comparisonWindow.previous.end == Date(timeIntervalSince1970: 12 * 3_600))
-        #expect(plan.comparisonWindow.current.start == Date(timeIntervalSince1970: 24 * 3_600))
+        #expect(plan.comparisonWindow.previous.end == Date(timeIntervalSince1970: 12 * 3600))
+        #expect(plan.comparisonWindow.current.start == Date(timeIntervalSince1970: 24 * 3600))
         #expect(plan.comparisonWindow.current.end == now)
         #expect(
             plan.queryInterval.start
                 == Date(
                     timeIntervalSince1970:
-                        -AppleHealthSleepEpisodePolicy.queryContextDuration
+                    -AppleHealthSleepEpisodePolicy.queryContextDuration
                 )
         )
         #expect(plan.queryInterval.end == now)
@@ -331,9 +332,10 @@ struct AppleHealthTaskAnalyticsTests {
 
     @Test
     func sleepComparisonUsesContextWhileCurrentRecordKeepsFullEpisode()
-        throws {
+        throws
+    {
         let calendar = utcCalendar()
-        let now = Date(timeIntervalSince1970: 36 * 3_600)
+        let now = Date(timeIntervalSince1970: 36 * 3600)
         let definition = AppleHealthTaskCatalog.taskDefinition(for: .sleep)
         let request = request(
             taskID: definition.id,
@@ -354,8 +356,8 @@ struct AppleHealthTaskAnalyticsTests {
                     AppleHealthSleepSample(
                         id: previousAnchorID,
                         stage: .asleepCore,
-                        startedAt: Date(timeIntervalSince1970: -3_600),
-                        endedAt: Date(timeIntervalSince1970: 3_600),
+                        startedAt: Date(timeIntervalSince1970: -3600),
+                        endedAt: Date(timeIntervalSince1970: 3600),
                         sourceBundleIdentifier: "test.sleep.previous",
                         sourceProductType: "watch"
                     ),
@@ -363,10 +365,10 @@ struct AppleHealthTaskAnalyticsTests {
                         id: currentAnchorID,
                         stage: .asleepCore,
                         startedAt: Date(
-                            timeIntervalSince1970: 23 * 3_600
+                            timeIntervalSince1970: 23 * 3600
                         ),
                         endedAt: Date(
-                            timeIntervalSince1970: 25 * 3_600
+                            timeIntervalSince1970: 25 * 3600
                         ),
                         sourceBundleIdentifier: "test.sleep.current",
                         sourceProductType: "watch"
@@ -378,28 +380,29 @@ struct AppleHealthTaskAnalyticsTests {
             calendar: calendar
         )
 
-        #expect(snapshot.comparison.previousGrossSeconds == 3_600)
-        #expect(snapshot.comparison.previousWallSeconds == 3_600)
-        #expect(snapshot.overview.grossSeconds == 3_600)
+        #expect(snapshot.comparison.previousGrossSeconds == 3600)
+        #expect(snapshot.comparison.previousWallSeconds == 3600)
+        #expect(snapshot.overview.grossSeconds == 3600)
         #expect(snapshot.recentRecords.map(\.id) == [
             .appleHealthSleep(currentAnchorID),
         ])
         #expect(
             snapshot.recentRecords.first?.startedAt
-                == Date(timeIntervalSince1970: 23 * 3_600)
+                == Date(timeIntervalSince1970: 23 * 3600)
         )
         #expect(
             snapshot.recentRecords.first?.endedAt
-                == Date(timeIntervalSince1970: 25 * 3_600)
+                == Date(timeIntervalSince1970: 25 * 3600)
         )
-        #expect(snapshot.recentRecords.first?.durationSeconds == 2 * 3_600)
+        #expect(snapshot.recentRecords.first?.durationSeconds == 2 * 3600)
     }
 
     @Test
     func sleepRecordDurationExcludesAwakeEvidenceInsideEpisodeEnvelope()
-        throws {
+        throws
+    {
         let calendar = utcCalendar()
-        let now = Date(timeIntervalSince1970: 36 * 3_600)
+        let now = Date(timeIntervalSince1970: 36 * 3600)
         let definition = AppleHealthTaskCatalog.taskDefinition(for: .sleep)
         let request = request(
             taskID: definition.id,
@@ -424,10 +427,10 @@ struct AppleHealthTaskAnalyticsTests {
                         id: coreID,
                         stage: .asleepCore,
                         startedAt: Date(
-                            timeIntervalSince1970: 24 * 3_600
+                            timeIntervalSince1970: 24 * 3600
                         ),
                         endedAt: Date(
-                            timeIntervalSince1970: 25 * 3_600
+                            timeIntervalSince1970: 25 * 3600
                         ),
                         sourceBundleIdentifier: source,
                         sourceProductType: product
@@ -436,10 +439,10 @@ struct AppleHealthTaskAnalyticsTests {
                         id: awakeID,
                         stage: .awake,
                         startedAt: Date(
-                            timeIntervalSince1970: 25 * 3_600
+                            timeIntervalSince1970: 25 * 3600
                         ),
                         endedAt: Date(
-                            timeIntervalSince1970: 25 * 3_600 + 20 * 60
+                            timeIntervalSince1970: 25 * 3600 + 20 * 60
                         ),
                         sourceBundleIdentifier: source,
                         sourceProductType: product
@@ -448,10 +451,10 @@ struct AppleHealthTaskAnalyticsTests {
                         id: deepID,
                         stage: .asleepDeep,
                         startedAt: Date(
-                            timeIntervalSince1970: 25 * 3_600 + 20 * 60
+                            timeIntervalSince1970: 25 * 3600 + 20 * 60
                         ),
                         endedAt: Date(
-                            timeIntervalSince1970: 26 * 3_600 + 20 * 60
+                            timeIntervalSince1970: 26 * 3600 + 20 * 60
                         ),
                         sourceBundleIdentifier: source,
                         sourceProductType: product
@@ -463,33 +466,33 @@ struct AppleHealthTaskAnalyticsTests {
             calendar: calendar
         )
 
-        #expect(snapshot.overview.grossSeconds == 2 * 3_600)
+        #expect(snapshot.overview.grossSeconds == 2 * 3600)
         let record = try #require(snapshot.recentRecords.first)
         let endedAt = try #require(record.endedAt)
         #expect(record.id == .appleHealthSleep(coreID))
         #expect(
             endedAt.timeIntervalSince(record.startedAt)
-                == 2 * 3_600 + 20 * 60
+                == 2 * 3600 + 20 * 60
         )
-        #expect(record.durationSeconds == 2 * 3_600)
+        #expect(record.durationSeconds == 2 * 3600)
         #expect(
             record.displayDurationSeconds(
                 source: .appleHealth,
                 now: now
-            ) == 2 * 3_600
+            ) == 2 * 3600
         )
         #expect(
             record.displayDurationSeconds(
                 source: .tracked,
                 now: now
-            ) == 2 * 3_600 + 20 * 60
+            ) == 2 * 3600 + 20 * 60
         )
     }
 
     @Test
     func recentHealthRecordsAreDescendingAndCappedAtEight() throws {
         let calendar = utcCalendar()
-        let now = Date(timeIntervalSince1970: 36 * 3_600)
+        let now = Date(timeIntervalSince1970: 36 * 3600)
         let definition = AppleHealthTaskCatalog.taskDefinition(
             for: .workout(.running)
         )
@@ -499,13 +502,13 @@ struct AppleHealthTaskAnalyticsTests {
             now: now,
             calendar: calendar
         )
-        let ids = try (1...10).map(fixedID)
+        let ids = try (1 ... 10).map(fixedID)
         let workouts = ids.enumerated().map { index, id in
             workout(
                 id: id,
                 kind: .running,
-                start: 24 * 3_600 + Double(index) * 3_600,
-                end: 24 * 3_600 + Double(index) * 3_600 + 600
+                start: 24 * 3600 + Double(index) * 3600,
+                end: 24 * 3600 + Double(index) * 3600 + 600
             )
         }
         let snapshot = AppleHealthTaskAnalyticsProjectionService().snapshot(
@@ -526,9 +529,10 @@ struct AppleHealthTaskAnalyticsTests {
 
     @Test
     func facadeForwardsOrdinaryTasksWithoutConsultingHealthAvailability()
-        async throws {
+        async throws
+    {
         let calendar = utcCalendar()
-        let now = Date(timeIntervalSince1970: 36 * 3_600)
+        let now = Date(timeIntervalSince1970: 36 * 3600)
         let task = TaskNode(
             title: "Ordinary",
             parentID: nil,
@@ -537,7 +541,7 @@ struct AppleHealthTaskAnalyticsTests {
         let store = TimeTrackerStore(
             appleHealthDataReader: UnavailableAppleHealthDataReader(),
             appleHealthTimelinePreferenceStore:
-                TestAppleHealthTimelinePreferenceStore(),
+            TestAppleHealthTimelinePreferenceStore(),
             writeAuthorization: .isolatedTestHarness
         )
         store.tasks = [task]
@@ -561,9 +565,10 @@ struct AppleHealthTaskAnalyticsTests {
 
     @Test
     func facadeAvoidsAnUnpromptedSheetButExplicitDetailAuthorizesAndQueries()
-        async throws {
+        async throws
+    {
         let calendar = utcCalendar()
-        let now = Date(timeIntervalSince1970: 36 * 3_600)
+        let now = Date(timeIntervalSince1970: 36 * 3600)
         let definition = AppleHealthTaskCatalog.taskDefinition(
             for: .workout(.running)
         )
@@ -612,7 +617,7 @@ struct AppleHealthTaskAnalyticsTests {
             reader.sampleIntervals.first?.start
                 == Date(
                     timeIntervalSince1970:
-                        -AppleHealthSleepEpisodePolicy.queryContextDuration
+                    -AppleHealthSleepEpisodePolicy.queryContextDuration
                 )
         )
         #expect(reader.sampleIntervals.first?.end == now)
@@ -621,7 +626,7 @@ struct AppleHealthTaskAnalyticsTests {
     @Test
     func facadePropagatesUnavailableAndCancellation() async throws {
         let calendar = utcCalendar()
-        let now = Date(timeIntervalSince1970: 36 * 3_600)
+        let now = Date(timeIntervalSince1970: 36 * 3600)
         let definition = AppleHealthTaskCatalog.taskDefinition(
             for: .workout(.running)
         )
@@ -672,7 +677,7 @@ struct AppleHealthTaskAnalyticsTests {
                 allowsAuthorizationRequest: true
             )
         }
-        for _ in 0..<100 where reader.sampleIntervals.isEmpty {
+        for _ in 0 ..< 100 where reader.sampleIntervals.isEmpty {
             await Task.yield()
         }
         #expect(reader.sampleIntervals.count == 1)
@@ -695,7 +700,7 @@ struct AppleHealthTaskAnalyticsTests {
         let store = TimeTrackerStore(
             appleHealthDataReader: reader,
             appleHealthTimelinePreferenceStore:
-                TestAppleHealthTimelinePreferenceStore(),
+            TestAppleHealthTimelinePreferenceStore(),
             writeAuthorization: .isolatedTestHarness
         )
         store.tasks = [task]
@@ -781,7 +786,8 @@ private final class TaskAnalyticsAppleHealthReader: AppleHealthDataReading {
     }
 
     func authorizationRequestStatus() async throws
-        -> AppleHealthAuthorizationRequestStatus {
+        -> AppleHealthAuthorizationRequestStatus
+    {
         authorizationStatusCount += 1
         return requestStatus
     }

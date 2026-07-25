@@ -22,5 +22,7 @@ enum StoreMutationBroadcaster {
         notification.userInfo?[eventsUserInfoKey] as? Set<StoreDomainEvent>
     }
 
-    static var notification: Notification.Name { notificationName }
+    static var notification: Notification.Name {
+        notificationName
+    }
 }

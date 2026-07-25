@@ -28,9 +28,10 @@ extension StoreScopedPomodoroCommandCoordinator {
                 expectedState: run.state,
                 repository: pomodoroRepository
             ),
-            run.clientMutationID != phase.mutationID,
-            run.sessionID == nil,
-            run.state == .shortBreak || run.state == .longBreak || run.state == .completed else {
+                run.clientMutationID != phase.mutationID,
+                run.sessionID == nil,
+                run.state == .shortBreak || run.state == .longBreak || run.state == .completed
+            else {
                 throw StoreScopedPomodoroPhaseEndInvariantError.focusCompletionMissing
             }
             return .mutated(
@@ -71,7 +72,8 @@ extension StoreScopedPomodoroCommandCoordinator {
             guard run.clientMutationID != phase.mutationID,
                   run.endedAt != nil,
                   run.state == .cancelled || run.state == .completed,
-                  discardRecord == false || run.deletedAt != nil else {
+                  discardRecord == false || run.deletedAt != nil
+            else {
                 throw StoreScopedPomodoroPhaseEndInvariantError.cancellationMissing
             }
             return .mutated(
@@ -104,9 +106,10 @@ extension StoreScopedPomodoroCommandCoordinator {
                     now: observedAt,
                     repository: pomodoroRepository
                 ),
-                run.clientMutationID != previousPhase.mutationID,
-                run.sessionID == nil,
-                run.state == .shortBreak || run.state == .longBreak || run.state == .completed else {
+                    run.clientMutationID != previousPhase.mutationID,
+                    run.sessionID == nil,
+                    run.state == .shortBreak || run.state == .longBreak || run.state == .completed
+                else {
                     throw StoreScopedPomodoroPhaseEndInvariantError.reconciliationMissing
                 }
                 mutations.append(
@@ -166,7 +169,8 @@ extension StoreScopedPomodoroCommandCoordinator {
               run.clientMutationID == phase.mutationID,
               allowedStates.contains(run.state),
               run.deletedAt == nil,
-              run.endedAt == nil else {
+              run.endedAt == nil
+        else {
             return nil
         }
         return run
@@ -178,7 +182,8 @@ extension StoreScopedPomodoroCommandCoordinator {
         timeRepository: SwiftDataTimeTrackingRepository
     ) throws -> Bool {
         guard run.completedFocusRounds == 0,
-              run.state == .focusing || run.state == .interrupted else {
+              run.state == .focusing || run.state == .interrupted
+        else {
             return false
         }
         let segments = try timeRepository.allSegments().filter { segment in

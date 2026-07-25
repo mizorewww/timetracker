@@ -41,10 +41,11 @@ private struct TaskDetailDraftRecoveryModifier: ViewModifier {
     ) {
         guard request.isReady,
               let ticket = controller.makePersistenceTicket(
-                request.draft,
-                for: sourceTaskID,
-                hasUnsavedChanges: request.hasUnsavedChanges
-              ) else {
+                  request.draft,
+                  for: sourceTaskID,
+                  hasUnsavedChanges: request.hasUnsavedChanges
+              )
+        else {
             controller.invalidatePendingPersistence(for: sourceTaskID)
             cancelPersistenceTask()
             return

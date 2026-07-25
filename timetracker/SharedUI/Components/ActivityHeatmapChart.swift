@@ -33,7 +33,9 @@ nonisolated struct ActivityHeatmapLayoutPolicy: Equatable, Sendable {
         }
     }
 
-    var cellSpacing: CGFloat { 3 }
+    var cellSpacing: CGFloat {
+        3
+    }
 
     var chartWidth: CGFloat {
         let columns = CGFloat(max(1, weekCount))
@@ -112,11 +114,11 @@ struct ActivityHeatmapChart: View {
         }
         .chartLegend(.hidden)
         .chartXScale(
-            domain: -0.5...max(0.5, Double(snapshot.weeks.count) - 0.5),
+            domain: -0.5 ... max(0.5, Double(snapshot.weeks.count) - 0.5),
             range: .plotDimension(startPadding: 1, endPadding: 1)
         )
         .chartYScale(
-            domain: -0.5...6.5,
+            domain: -0.5 ... 6.5,
             range: .plotDimension(startPadding: 1, endPadding: 1)
         )
         .chartXAxis {
@@ -128,7 +130,8 @@ struct ActivityHeatmapChart: View {
                     if let position = value.as(Double.self),
                        let marker = monthMarkers.first(where: {
                            $0.weekPosition == position
-                       }) {
+                       })
+                    {
                         Text(
                             marker.date.formatted(
                                 .dateTime.month(.abbreviated).locale(locale)
@@ -142,7 +145,8 @@ struct ActivityHeatmapChart: View {
             AxisMarks(position: .leading, values: [0.0, 2.0, 4.0, 6.0]) { value in
                 AxisValueLabel {
                     if let position = value.as(Double.self),
-                       let date = weekdayDate(for: position) {
+                       let date = weekdayDate(for: position)
+                    {
                         Text(
                             date.formatted(
                                 .dateTime.weekday(.narrow).locale(locale)
@@ -198,7 +202,8 @@ struct ActivityHeatmapChart: View {
     private func weekdayDate(for position: Double) -> Date? {
         let index = 6 - Int(position.rounded())
         guard let days = snapshot.weeks.first?.days,
-              days.indices.contains(index) else {
+              days.indices.contains(index)
+        else {
             return nil
         }
         return days[index].date
@@ -207,7 +212,6 @@ struct ActivityHeatmapChart: View {
     private func fillColor(for day: ActivityHeatmapDay) -> Color {
         day.isFuture ? .clear : palette.color(for: day.intensity)
     }
-
 }
 
 private struct ActivityHeatmapChartCell: Identifiable {
@@ -215,12 +219,16 @@ private struct ActivityHeatmapChartCell: Identifiable {
     let weekPosition: Double
     let weekdayPosition: Double
 
-    var id: Date { day.id }
+    var id: Date {
+        day.id
+    }
 }
 
 private struct ActivityHeatmapMonthMarker: Identifiable {
     let weekPosition: Double
     let date: Date
 
-    var id: Double { weekPosition }
+    var id: Double {
+        weekPosition
+    }
 }

@@ -71,7 +71,7 @@ extension TimeTrackerStore {
                 phase: phase
             )
             switch outcome {
-            case .resumed(let mutation):
+            case let .resumed(mutation):
                 finishStoreScopedPomodoroMutation(
                     events: mutation.events,
                     referencedTaskIDs: mutation.referencedTaskIDs

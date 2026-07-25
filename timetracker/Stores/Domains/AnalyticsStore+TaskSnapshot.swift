@@ -168,5 +168,4 @@ extension AnalyticsStore {
 
         return points.sorted { $0.grossSeconds > $1.grossSeconds }
     }
-
 }

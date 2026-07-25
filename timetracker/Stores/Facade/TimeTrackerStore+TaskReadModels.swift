@@ -5,7 +5,9 @@ extension TimeTrackerStore {
         tasks
             .filter(isTaskAvailableForTracking)
             .sorted { lhs, rhs in
-                if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt > rhs.updatedAt }
+                if lhs.updatedAt != rhs.updatedAt {
+                    return lhs.updatedAt > rhs.updatedAt
+                }
                 return lhs.id.uuidString < rhs.id.uuidString
             }
             .prefix(4)
@@ -70,7 +72,8 @@ extension TimeTrackerStore {
         var visited: Set<UUID> = [task.id]
         while let parentID = cursor.parentID,
               !visited.contains(parentID),
-              let parent = taskByID[parentID] {
+              let parent = taskByID[parentID]
+        {
             visited.insert(parentID)
             cursor = parent
         }
@@ -200,9 +203,9 @@ extension TimeTrackerStore {
             recurrenceRules: taskRecurrenceRules,
             recurrenceOccurrences: taskRecurrenceOccurrences,
             incompleteTemplateTaskIDs:
-                incompleteRecurrenceTemplateTaskIDs,
+            incompleteRecurrenceTemplateTaskIDs,
             incompleteGeneratedTaskIDs:
-                incompleteRecurrenceGeneratedTaskIDs
+            incompleteRecurrenceGeneratedTaskIDs
         )
         rebuildTaskTreeReadIndex()
         rebuildForecastEligibilityIndex()

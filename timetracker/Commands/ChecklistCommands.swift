@@ -74,7 +74,8 @@ struct ChecklistCommandHandler {
         } else if let lastSiblingSortOrder = existingItems.lazy
             .filter({ $0.id != item.id && $0.taskID == item.taskID })
             .map(\.sortOrder)
-            .max() {
+            .max()
+        {
             item.sortOrder = lastSiblingSortOrder + 10
         }
         item.isCompleted = isCompleted
@@ -96,8 +97,12 @@ struct ChecklistCommandHandler {
             .visibleDeduplicatedByID()
             .filter { $0.taskID == taskID }
             .sorted { lhs, rhs in
-                if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
-                if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+                if lhs.sortOrder != rhs.sortOrder {
+                    return lhs.sortOrder < rhs.sortOrder
+                }
+                if lhs.createdAt != rhs.createdAt {
+                    return lhs.createdAt < rhs.createdAt
+                }
                 return lhs.id.uuidString < rhs.id.uuidString
             }
         let itemByID = items.latestByID()

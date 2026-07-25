@@ -67,11 +67,15 @@ extension StoreScopedInboxCommandCoordinator {
             throw StoreScopedInboxMutationError.externalCommandKeyConflict
         }
         guard receipts[0].payloadFingerprint == expectedPayloadFingerprint else {
-                    throw StoreScopedInboxMutationError.externalCommandPayloadChanged
-                }
+            throw StoreScopedInboxMutationError.externalCommandPayloadChanged
+        }
         return receipts.max { lhs, rhs in
-            if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt < rhs.updatedAt }
-            if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+            if lhs.updatedAt != rhs.updatedAt {
+                return lhs.updatedAt < rhs.updatedAt
+            }
+            if lhs.createdAt != rhs.createdAt {
+                return lhs.createdAt < rhs.createdAt
+            }
             return lhs.id.uuidString < rhs.id.uuidString
         }
     }

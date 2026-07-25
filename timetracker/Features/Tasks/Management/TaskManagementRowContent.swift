@@ -76,7 +76,8 @@ enum TaskManagementRecurrenceRole: Equatable {
             ].append(occurrence)
         }
         for (taskID, rows) in occurrencesByGeneratedTaskID
-            where result[taskID] == nil {
+            where result[taskID] == nil
+        {
             let snapshot = rows.count == 1
                 ? TaskRecurrenceOccurrenceSnapshot(occurrence: rows[0])
                 : nil
@@ -105,9 +106,9 @@ struct TaskManagementRowSupplementProjection {
             rules: store.taskRecurrenceRules,
             occurrences: store.taskRecurrenceOccurrences,
             incompleteTemplateTaskIDs:
-                store.incompleteRecurrenceTemplateTaskIDs,
+            store.incompleteRecurrenceTemplateTaskIDs,
             incompleteGeneratedTaskIDs:
-                store.incompleteRecurrenceGeneratedTaskIDs
+            store.incompleteRecurrenceGeneratedTaskIDs
         )
         quantityProgressByTaskID =
             store.visibleTaskQuantityProgressByTaskID()
@@ -129,8 +130,8 @@ struct TaskManagementRowPresentation {
     let workedSeconds: Int
     let childCount: Int
     let isRunning: Bool
-    var recurrenceRole: TaskManagementRecurrenceRole? = nil
-    var quantityProgress: TaskQuantityProgressSnapshot? = nil
+    var recurrenceRole: TaskManagementRecurrenceRole?
+    var quantityProgress: TaskQuantityProgressSnapshot?
 
     var quantityProgressText: String? {
         guard let quantityProgress else { return nil }
@@ -155,7 +156,7 @@ struct TaskManagementRowContent: View {
                 iconSize: 30,
                 metadata: TaskSummaryRowMetadata(
                     checklistProgress:
-                        presentation.progress.totalCount > 0
+                    presentation.progress.totalCount > 0
                         ? presentation.progress
                         : nil,
                     workedSeconds: presentation.workedSeconds,
@@ -175,10 +176,10 @@ struct TaskManagementRowContent: View {
 private struct TaskManagementProgressContextLine: View {
     let presentation: TaskManagementRowPresentation
 
-    @ViewBuilder
     var body: some View {
         if presentation.recurrenceRole != nil ||
-            presentation.quantityProgressText != nil {
+            presentation.quantityProgressText != nil
+        {
             HStack(spacing: 10) {
                 if let role = presentation.recurrenceRole {
                     Label(role.title, systemImage: role.systemImage)

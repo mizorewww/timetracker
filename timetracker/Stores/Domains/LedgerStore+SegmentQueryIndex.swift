@@ -7,7 +7,8 @@ extension LedgerStore {
         intervals.reduce(into: Set<UUID>()) { result, interval in
             if exceedsDayIndexLimit(interval, calendar: segmentIndexCalendar) {
                 for (id, snapshot) in segmentSnapshotByID
-                    where snapshot.overlaps(interval, at: now) {
+                    where snapshot.overlaps(interval, at: now)
+                {
                     result.insert(id)
                 }
                 return
@@ -59,7 +60,8 @@ extension LedgerStore {
         clockReference: Date
     ) -> Int {
         guard clockReference >= segmentIndexEvaluationDate,
-              exceedsDayIndexLimit(interval, calendar: segmentIndexCalendar) == false else {
+              exceedsDayIndexLimit(interval, calendar: segmentIndexCalendar) == false
+        else {
             return segmentSnapshotByID.count
         }
         let dayBucketCount = dayKeys(

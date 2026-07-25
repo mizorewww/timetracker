@@ -6,7 +6,7 @@ extension SwiftDataTimeTrackingRepository {
         let descriptor = FetchDescriptor<TimeSegment>(
             predicate: #Predicate { $0.endedAt == nil }
         )
-        let candidateIDs = Set(try context.fetch(descriptor).map(\.id))
+        let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
         return try canonicalSegments(ids: candidateIDs)
             .filter { $0.endedAt == nil }
             .sorted(by: segmentStartOrder)
@@ -39,7 +39,7 @@ extension SwiftDataTimeTrackingRepository {
         let descriptor = FetchDescriptor<TimeSegment>(
             predicate: #Predicate { requestedSessionIDs.contains($0.sessionID) }
         )
-        let candidateIDs = Set(try context.fetch(descriptor).map(\.id))
+        let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
         return try canonicalSegments(ids: candidateIDs)
             .filter { sessionIDs.contains($0.sessionID) }
             .sorted(by: segmentStartOrder)
@@ -60,7 +60,7 @@ extension SwiftDataTimeTrackingRepository {
                     ($0.endedAt ?? activeSegmentEnd) > lowerBound
             }
         )
-        let candidateIDs = Set(try context.fetch(descriptor).map(\.id))
+        let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
         return try canonicalSegments(ids: candidateIDs)
             .filter { segment in
                 TrackedTimePolicy.overlaps(
@@ -112,19 +112,24 @@ extension SwiftDataTimeTrackingRepository {
                 recurrenceOccurrences: recurrenceOccurrences
             )
         guard trackableTaskIDs.contains(taskID),
-              let task = tasks.first(where: { $0.id == taskID }) else {
+              let task = tasks.first(where: { $0.id == taskID })
+        else {
             throw TimeTrackingRepositoryError.taskUnavailable
         }
         return try LedgerPersistencePolicy.prepareTitleSnapshot(task.title)
     }
 
     private func segmentStartOrder(_ lhs: TimeSegment, _ rhs: TimeSegment) -> Bool {
-        if lhs.startedAt != rhs.startedAt { return lhs.startedAt < rhs.startedAt }
+        if lhs.startedAt != rhs.startedAt {
+            return lhs.startedAt < rhs.startedAt
+        }
         return lhs.id.uuidString < rhs.id.uuidString
     }
 
     private func sessionStartOrder(_ lhs: TimeSession, _ rhs: TimeSession) -> Bool {
-        if lhs.startedAt != rhs.startedAt { return lhs.startedAt > rhs.startedAt }
+        if lhs.startedAt != rhs.startedAt {
+            return lhs.startedAt > rhs.startedAt
+        }
         return lhs.id.uuidString < rhs.id.uuidString
     }
 }

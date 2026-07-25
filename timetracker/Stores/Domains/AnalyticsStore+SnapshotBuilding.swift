@@ -142,9 +142,8 @@ extension AnalyticsStore {
             interval: period,
             evaluatedAt: cutoff
         )
-        let todayVisualSnapshot: AnalyticsVisualSnapshot?
-        if range == .today {
-            todayVisualSnapshot = visualSnapshot ?? AnalyticsVisualSnapshotService().snapshot(
+        let todayVisualSnapshot: AnalyticsVisualSnapshot? = if range == .today {
+            visualSnapshot ?? AnalyticsVisualSnapshotService().snapshot(
                 AnalyticsVisualSnapshotInput(
                     range: range,
                     period: period,
@@ -157,7 +156,7 @@ extension AnalyticsStore {
                 )
             )
         } else {
-            todayVisualSnapshot = nil
+            nil
         }
         return AnalyticsSnapshot(
             range: range,

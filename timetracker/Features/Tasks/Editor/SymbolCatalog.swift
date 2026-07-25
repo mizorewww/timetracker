@@ -21,14 +21,15 @@ enum SymbolCatalog {
 
     nonisolated static let searchKeywords: [String: [String]] = loadSearchKeywords()
 
-    nonisolated private static func loadSymbolOrder() -> [String] {
+    private nonisolated static func loadSymbolOrder() -> [String] {
         for url in resourceURLs(fileName: "symbol_order", extension: "plist") {
             guard let data = try? Data(contentsOf: url),
                   let names = try? PropertyListSerialization.propertyList(
-                    from: data,
-                    format: nil
+                      from: data,
+                      format: nil
                   ) as? [String],
-                  !names.isEmpty else {
+                  !names.isEmpty
+            else {
                 continue
             }
             return Array(NSOrderedSet(array: names).compactMap { $0 as? String })
@@ -36,13 +37,14 @@ enum SymbolCatalog {
         return []
     }
 
-    nonisolated private static func loadSearchKeywords() -> [String: [String]] {
+    private nonisolated static func loadSearchKeywords() -> [String: [String]] {
         for url in resourceURLs(fileName: "symbol_search", extension: "plist") {
             guard let data = try? Data(contentsOf: url),
                   let keywords = try? PropertyListSerialization.propertyList(
-                    from: data,
-                    format: nil
-                  ) as? [String: [String]] else {
+                      from: data,
+                      format: nil
+                  ) as? [String: [String]]
+            else {
                 continue
             }
             return keywords
@@ -50,7 +52,7 @@ enum SymbolCatalog {
         return [:]
     }
 
-    nonisolated private static func resourceURLs(
+    private nonisolated static func resourceURLs(
         fileName: String,
         extension ext: String
     ) -> [URL] {
@@ -60,14 +62,14 @@ enum SymbolCatalog {
                 : nil,
             fileName == "symbol_search"
                 ? Bundle.main.url(forResource: "SFSymbolSearch", withExtension: ext)
-                : nil
+                : nil,
         ].compactMap(\.self)
 
         let system = [
             "/System/Library/CoreServices/CoreGlyphs.bundle/Contents/Resources",
             "/System/Library/CoreServices/CoreGlyphs.bundle/Resources",
             "/System/Library/PrivateFrameworks/SFSymbols.framework/Versions/A/Resources/CoreGlyphs.bundle/Contents/Resources",
-            "/System/Library/PrivateFrameworks/SFSymbols.framework/Versions/A/Resources/CoreGlyphsPrivate.bundle/Contents/Resources"
+            "/System/Library/PrivateFrameworks/SFSymbols.framework/Versions/A/Resources/CoreGlyphsPrivate.bundle/Contents/Resources",
         ].map {
             URL(fileURLWithPath: $0)
                 .appendingPathComponent(fileName)
@@ -77,7 +79,7 @@ enum SymbolCatalog {
         return bundled + system
     }
 
-    nonisolated private static let fallbackSymbols = [
+    private nonisolated static let fallbackSymbols = [
         "checkmark.circle", "folder", "briefcase", "book", "macwindow",
         "square.grid.2x2", "chevron.left.forwardslash.chevron.right",
         "person.2", "pencil.and.list.clipboard", "target", "calendar",
@@ -85,10 +87,10 @@ enum SymbolCatalog {
         "hammer", "lightbulb", "paperplane", "terminal", "keyboard",
         "graduationcap", "heart", "house", "cart", "creditcard",
         "briefcase.fill", "star", "tag", "tray", "archivebox", "trash",
-        "play.fill", "stop.fill", "plus", "magnifyingglass"
+        "play.fill", "stop.fill", "plus", "magnifyingglass",
     ]
 
-    nonisolated private static let curatedAISuggestionSymbols = [
+    private nonisolated static let curatedAISuggestionSymbols = [
         // Planning and focus
         "checkmark.circle", "target", "calendar", "clock", "timer",
         "alarm", "flag", "bookmark", "tag", "tray", "archivebox",
@@ -110,6 +112,6 @@ enum SymbolCatalog {
         // Hobbies and environment
         "music.note", "film", "photo", "camera", "gamecontroller",
         "star", "sparkles", "bolt", "flame", "drop", "sun.max",
-        "moon", "cloud", "snowflake", "umbrella"
+        "moon", "cloud", "snowflake", "umbrella",
     ]
 }

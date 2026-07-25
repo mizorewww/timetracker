@@ -30,7 +30,7 @@ struct InboxItemRow: View {
                     textStyle: .body,
                     contentAlignment: .center,
                     completionAccessibilityIdentifier:
-                        "inbox.item.completion.\(item.id.uuidString)",
+                    "inbox.item.completion.\(item.id.uuidString)",
                     textFieldAccessibilityIdentifier: "inbox.item.\(item.id.uuidString)",
                     toggle: {
                         toggleCompletion()

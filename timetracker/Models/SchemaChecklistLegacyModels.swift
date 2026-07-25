@@ -25,50 +25,59 @@ extension TimeTrackerSchemaV13 {
             completedAt: Date? = nil,
             deviceID: String
         ) {
-            self.id = UUID()
+            id = UUID()
             self.taskID = taskID
             self.title = title
             self.isCompleted = isCompleted
             self.sortOrder = sortOrder
             self.completedAt = completedAt
-            self.createdAt = Date()
-            self.updatedAt = Date()
-            self.deletedAt = nil
+            createdAt = Date()
+            updatedAt = Date()
+            deletedAt = nil
             self.deviceID = deviceID
-            self.clientMutationID = UUID()
+            clientMutationID = UUID()
         }
     }
 }
 
-// Every schema version that shipped the frozen ChecklistItem shape resolves
-// the unqualified name to the V13 snapshot, so the live model may evolve.
+/// Every schema version that shipped the frozen ChecklistItem shape resolves
+/// the unqualified name to the V13 snapshot, so the live model may evolve.
 extension TimeTrackerSchemaV3 {
     typealias ChecklistItem = TimeTrackerSchemaV13.ChecklistItem
 }
+
 extension TimeTrackerSchemaV4 {
     typealias ChecklistItem = TimeTrackerSchemaV13.ChecklistItem
 }
+
 extension TimeTrackerSchemaV5 {
     typealias ChecklistItem = TimeTrackerSchemaV13.ChecklistItem
 }
+
 extension TimeTrackerSchemaV6 {
     typealias ChecklistItem = TimeTrackerSchemaV13.ChecklistItem
 }
+
 extension TimeTrackerSchemaV7 {
     typealias ChecklistItem = TimeTrackerSchemaV13.ChecklistItem
 }
+
 extension TimeTrackerSchemaV8 {
     typealias ChecklistItem = TimeTrackerSchemaV13.ChecklistItem
 }
+
 extension TimeTrackerSchemaV9 {
     typealias ChecklistItem = TimeTrackerSchemaV13.ChecklistItem
 }
+
 extension TimeTrackerSchemaV10 {
     typealias ChecklistItem = TimeTrackerSchemaV13.ChecklistItem
 }
+
 extension TimeTrackerSchemaV11 {
     typealias ChecklistItem = TimeTrackerSchemaV13.ChecklistItem
 }
+
 extension TimeTrackerSchemaV12 {
     typealias ChecklistItem = TimeTrackerSchemaV13.ChecklistItem
 }
@@ -94,7 +103,7 @@ enum TimeTrackerSchemaV14: VersionedSchema {
             TaskRecurrenceRule.self,
             TaskRecurrenceOccurrence.self,
             TaskQuantityGoal.self,
-            TaskQuantityEntry.self
+            TaskQuantityEntry.self,
         ]
     }
 }

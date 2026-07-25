@@ -10,7 +10,7 @@ extension TimeTrackerStore {
         let dayInterval = calendar.dateInterval(of: .day, for: date)
             ?? DateInterval(
                 start: calendar.startOfDay(for: date),
-                duration: 86_400
+                duration: 86400
             )
         let service = AnalyticsTimelineSnapshotService()
         let trackedSeeds = service.presentationSeeds(

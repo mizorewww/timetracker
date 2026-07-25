@@ -51,7 +51,7 @@ struct CoreDeviceIdentityTests {
             "ios-\(canonicalUUID.uuidString)",
             String(repeating: "x", count: DeviceIdentityPolicy.maximumIdentifierByteCount + 1),
             "mac-\u{0000}\(canonicalUUID.uuidString.dropFirst())",
-            "mac-01234567-89AB-CDEF-0123-456789ABCDEG"
+            "mac-01234567-89AB-CDEF-0123-456789ABCDEG",
         ]
         let expected = DeviceIdentityPolicy.identifier(platform: .mac, uuid: replacementUUID)
 

@@ -39,7 +39,7 @@ struct CoreActiveSegmentIndexTests {
         let files = [
             "timetracker/Features/Tasks/Management/TaskManagementRowViews.swift",
             "timetracker/Features/Tasks/Management/TaskRowComponents.swift",
-            "timetracker/Features/Tasks/Detail/TaskDetailView.swift"
+            "timetracker/Features/Tasks/Detail/TaskDetailView.swift",
         ]
         let source = try files.map(sourceText).joined(separator: "\n")
 

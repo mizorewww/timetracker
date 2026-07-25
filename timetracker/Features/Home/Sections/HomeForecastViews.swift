@@ -43,14 +43,16 @@ private struct ForecastPresentationRow: Identifiable {
     let item: ForecastDisplayItem
     let task: TaskNode
 
-    var id: UUID { item.taskID }
+    var id: UUID {
+        item.taskID
+    }
 }
 
 struct ForecastSummaryRow: View {
     let store: TimeTrackerStore
     let task: TaskNode
     let rollup: TaskRollup
-    var openTaskDetail: ((UUID) -> Void)? = nil
+    var openTaskDetail: ((UUID) -> Void)?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {

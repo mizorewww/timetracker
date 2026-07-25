@@ -8,7 +8,8 @@ func path(for state: TimeTrackingActivityAttributes.ContentState) -> String {
 
 func abbreviatedPath(for state: TimeTrackingActivityAttributes.ContentState) -> String {
     guard let abbreviated = state.taskPathAbbreviated,
-          abbreviated.isEmpty == false else {
+          abbreviated.isEmpty == false
+    else {
         return path(for: state)
     }
     return abbreviated

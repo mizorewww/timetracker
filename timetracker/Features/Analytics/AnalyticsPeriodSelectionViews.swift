@@ -146,7 +146,8 @@ enum AnalyticsPeriodText {
                 return AppStrings.localized("analytics.period.today")
             }
             if let yesterday = calendar.date(byAdding: .day, value: -1, to: liveNow),
-               calendar.isDate(date, inSameDayAs: yesterday) {
+               calendar.isDate(date, inSameDayAs: yesterday)
+            {
                 return AppStrings.localized("analytics.period.yesterday")
             }
             return formattedDate(date, dateStyle: .medium, calendar: calendar)
@@ -206,11 +207,12 @@ enum AnalyticsPeriodNavigation {
             to: referenceDate,
             calendar: calendar
         ),
-              let targetMonth = range.interval(
-                  containing: targetMonthStart,
-                  calendar: calendar
-              ),
-              let currentMonth = range.interval(containing: liveNow, calendar: calendar) else {
+            let targetMonth = range.interval(
+                containing: targetMonthStart,
+                calendar: calendar
+            ),
+            let currentMonth = range.interval(containing: liveNow, calendar: calendar)
+        else {
             return min(referenceDate, liveNow)
         }
 
@@ -253,16 +255,17 @@ nonisolated struct AnalyticsMonthNavigationAnchor: Hashable, Sendable {
             value: clampedDay - validDays.lowerBound,
             to: month.start
         ),
-              let anchoredDate = calendar.date(
-                  bySettingHour: hour,
-                  minute: minute,
-                  second: second,
-                  of: targetDay,
-                  matchingPolicy: .nextTimePreservingSmallerComponents,
-                  repeatedTimePolicy: .first,
-                  direction: .forward
-              ),
-              month.contains(anchoredDate) else {
+            let anchoredDate = calendar.date(
+                bySettingHour: hour,
+                minute: minute,
+                second: second,
+                of: targetDay,
+                matchingPolicy: .nextTimePreservingSmallerComponents,
+                repeatedTimePolicy: .first,
+                direction: .forward
+            ),
+            month.contains(anchoredDate)
+        else {
             return nil
         }
         return anchoredDate
@@ -306,7 +309,9 @@ struct TaskAnalyticsSnapshotRequest: Hashable {
     let evaluationKey: AnalyticsEvaluationCacheKey
     let revision: UInt
 
-    var liveRefreshBucket: Int? { evaluationKey.liveRefreshBucket }
+    var liveRefreshBucket: Int? {
+        evaluationKey.liveRefreshBucket
+    }
 
     init(
         taskID: UUID,

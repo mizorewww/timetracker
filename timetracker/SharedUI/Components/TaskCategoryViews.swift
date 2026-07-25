@@ -7,13 +7,13 @@ struct TaskCategorySectionHeader: View {
     var addTask: (() -> Void)?
     var editCategory: (() -> Void)?
     var deleteCategory: (() -> Void)?
-    var isExpanded: Bool? = nil
-    var toggleExpansion: (() -> Void)? = nil
-    var disclosureAccessibilityIdentifier: String? = nil
+    var isExpanded: Bool?
+    var toggleExpansion: (() -> Void)?
+    var disclosureAccessibilityIdentifier: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-#if os(iOS)
+    #if os(iOS)
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-#endif
+    #endif
 
     var body: some View {
         VStack(spacing: 5) {
@@ -31,7 +31,7 @@ struct TaskCategorySectionHeader: View {
     @ViewBuilder
     private var headerContent: some View {
         #if os(iOS)
-        if dynamicTypeSize.isAccessibilitySize && !compact {
+        if dynamicTypeSize.isAccessibilitySize, !compact {
             accessibilityHeader
         } else {
             standardHeader
@@ -83,7 +83,8 @@ struct TaskCategorySectionHeader: View {
     ) -> some View {
         if let isExpanded,
            let toggleExpansion,
-           let disclosureAccessibilityIdentifier {
+           let disclosureAccessibilityIdentifier
+        {
             Button {
                 withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) {
                     toggleExpansion()
@@ -135,7 +136,7 @@ struct TaskCategorySectionHeader: View {
             categorySymbol
             categoryTitle
 
-            if showsForecastIndicator && !section.includesInForecast {
+            if showsForecastIndicator, !section.includesInForecast {
                 Image(systemName: "chart.line.downtrend.xyaxis")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -180,7 +181,7 @@ struct TaskCategorySectionHeader: View {
 
     @ViewBuilder
     private var categoryActionsMenu: some View {
-        if !compact && (addTask != nil || editCategory != nil || deleteCategory != nil) {
+        if !compact, addTask != nil || editCategory != nil || deleteCategory != nil {
             Menu {
                 if let addTask {
                     Button(action: addTask) {

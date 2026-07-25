@@ -35,7 +35,6 @@ struct ActiveTimerWidgetView: View {
             SmallWidgetContent(snapshot: snapshot, now: entry.date)
         }
     }
-
 }
 
 struct SmallWidgetContent: View {

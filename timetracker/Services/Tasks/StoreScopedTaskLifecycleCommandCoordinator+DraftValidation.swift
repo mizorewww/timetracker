@@ -13,14 +13,15 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
             guard let baseline = draft.baseline,
                   baseline.taskMutationID == existingTask.clientMutationID,
                   try baselineMatchesCurrentRelatedModels(
-                    baseline,
-                    taskID: existingTask.id,
-                    quantityGoalDraft: draft.quantityGoal,
-                    confirmsQuantityProgressReset:
-                        draft.confirmsQuantityProgressReset,
-                    taskRepository: taskRepository,
-                    context: context
-                  ) else {
+                      baseline,
+                      taskID: existingTask.id,
+                      quantityGoalDraft: draft.quantityGoal,
+                      confirmsQuantityProgressReset:
+                      draft.confirmsQuantityProgressReset,
+                      taskRepository: taskRepository,
+                      context: context
+                  )
+            else {
                 throw TaskLifecycleMutationError.staleDraft
             }
         }
@@ -28,20 +29,23 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
         let parentIsChanging = existingTask?.parentID != draft.parentID
         if let existingTask, parentIsChanging,
            let blocker = TaskTrackingAvailabilityService()
-            .parentChangeBlocker(for: existingTask) {
+           .parentChangeBlocker(for: existingTask)
+        {
             throw TaskLifecycleMutationError.parentChangeBlocked(blocker)
         }
         if let parentID = draft.parentID,
            parentIsChanging,
            TaskTrackingAvailabilityService()
-            .trackableTaskIDs(tasks: tasks)
-            .contains(parentID) == false {
+           .trackableTaskIDs(tasks: tasks)
+           .contains(parentID) == false
+        {
             throw TaskLifecycleMutationError.parentUnavailable
         }
 
         if draft.parentID == nil,
            let categoryID = draft.categoryID,
-           try taskRepository.category(id: categoryID) == nil {
+           try taskRepository.category(id: categoryID) == nil
+        {
             throw TaskLifecycleMutationError.staleDraft
         }
     }
@@ -66,16 +70,16 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
             $0[$1.id] = $1.clientMutationID
         }
         guard checklistItemMutationIDs ==
-                baseline.checklistItemMutationIDs else {
+            baseline.checklistItemMutationIDs
+        else {
             return false
         }
 
         let checklistItemIDs = Array(checklistItemMutationIDs.keys)
-        let visualMutationIDs: [UUID: UUID]
-        if checklistItemIDs.isEmpty {
-            visualMutationIDs = [:]
+        let visualMutationIDs: [UUID: UUID] = if checklistItemIDs.isEmpty {
+            [:]
         } else {
-            visualMutationIDs = try context.fetch(
+            try context.fetch(
                 FetchDescriptor<ChecklistItemVisual>(
                     predicate: #Predicate {
                         checklistItemIDs.contains($0.checklistItemID)
@@ -90,7 +94,8 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
             }
         }
         guard visualMutationIDs ==
-                baseline.checklistVisualMutationIDs else {
+            baseline.checklistVisualMutationIDs
+        else {
             return false
         }
 
@@ -101,7 +106,8 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
             ? categoryAssignment?.clientMutationID
             : nil
         guard categoryAssignmentMutationID ==
-                baseline.categoryAssignmentMutationID else {
+            baseline.categoryAssignmentMutationID
+        else {
             return false
         }
 
@@ -110,7 +116,8 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
             context: context
         )
         guard quantityGoalState.activeMutationID ==
-                baseline.quantityGoalMutationID else {
+            baseline.quantityGoalMutationID
+        else {
             return false
         }
         let willTombstoneEntries = (
@@ -161,5 +168,4 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
         ]
         return rule?.deletedAt == nil ? rule?.clientMutationID : nil
     }
-
 }

@@ -102,7 +102,7 @@ private struct TaskDetailRecentRecordRow: View {
                     )
                 )
             )
-                .font(.subheadline.monospacedDigit())
+            .font(.subheadline.monospacedDigit())
             Text(timeRangeText(display: display))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)

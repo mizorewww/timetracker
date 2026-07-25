@@ -476,5 +476,4 @@ private extension TodayHeatmapRecurrenceProjectionTests {
         )
         #expect(store.preferences.todayHeatmapTaskIDs == [template.id])
     }
-
 }

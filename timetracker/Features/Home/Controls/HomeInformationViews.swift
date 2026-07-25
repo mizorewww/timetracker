@@ -56,14 +56,14 @@ extension HomeSectionInformationButton {
                     icon: "square.stack.3d.up",
                     title: AppStrings.grossTime,
                     body: AppStrings.localized("analytics.glossary.gross")
-                )
+                ),
             ] + (showsWallTime ? [
                 HomeInformationItem(
                     id: "home.info.overview.wall",
                     icon: "timeline.selection",
                     title: AppStrings.wallTime,
                     body: AppStrings.localized("analytics.glossary.wall")
-                )
+                ),
             ] : [])
         )
     }
@@ -79,7 +79,7 @@ extension HomeSectionInformationButton {
                     icon: "chart.bar.xaxis",
                     title: AppStrings.localized("home.weeklyGross.title"),
                     body: AppStrings.localized("home.weeklyGross.footer")
-                )
+                ),
             ]
         )
     }
@@ -116,7 +116,7 @@ extension HomeSectionInformationButton {
                     icon: "number",
                     title: AppStrings.localized("home.heatmap.info.quantity.title"),
                     body: AppStrings.localized("home.heatmap.info.quantity")
-                )
+                ),
             ] + snapshots.map { snapshot in
                 HomeInformationItem(
                     id: "home.info.heatmaps.task.\(snapshot.taskID.uuidString)",
@@ -140,14 +140,13 @@ extension HomeSectionInformationButton {
             metric: snapshot.metric,
             locale: locale
         )
-        let key: String
-        switch snapshot.metric {
+        let key = switch snapshot.metric {
         case .trackedDuration:
-            key = "home.heatmap.footer.durationFormat"
+            "home.heatmap.footer.durationFormat"
         case .checklistCompletions:
-            key = "home.heatmap.footer.checklistFormat"
+            "home.heatmap.footer.checklistFormat"
         case .quantity:
-            key = "home.heatmap.footer.quantityFormat"
+            "home.heatmap.footer.quantityFormat"
         }
         return String.localizedStringWithFormat(
             AppStrings.localized(key),
@@ -166,7 +165,7 @@ extension HomeSectionInformationButton {
                     icon: "bolt.fill",
                     title: AppStrings.quickStart,
                     body: AppStrings.localized("quickStart.defaultHint")
-                )
+                ),
             ]
         )
     }
@@ -192,16 +191,16 @@ private struct HomeSectionInformationView: View {
             .accessibilityIdentifier(viewIdentifier)
             .navigationTitle(title)
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+                .navigationBarTitleDisplayMode(.inline)
             #endif
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(AppStrings.done) {
-                        dismiss()
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(AppStrings.done) {
+                            dismiss()
+                        }
+                        .accessibilityIdentifier("home.info.done")
                     }
-                    .accessibilityIdentifier("home.info.done")
                 }
-            }
         }
         #if os(iOS)
         .presentationDetents([.medium, .large])

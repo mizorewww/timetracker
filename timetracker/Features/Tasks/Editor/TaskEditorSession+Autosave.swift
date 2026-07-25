@@ -82,14 +82,16 @@ extension TaskEditorSession {
         matching savedDraft: TaskEditorDraft
     ) -> [UUID: UUID]? {
         guard persistedDraft.checklistItems.count ==
-                savedDraft.checklistItems.count else {
+            savedDraft.checklistItems.count
+        else {
             return nil
         }
 
         let persistedIDs = persistedDraft.checklistItems.compactMap(\.existingID)
         let persistedIDSet = Set(persistedIDs)
         guard persistedIDs.count == persistedDraft.checklistItems.count,
-              persistedIDSet.count == persistedIDs.count else {
+              persistedIDSet.count == persistedIDs.count
+        else {
             return nil
         }
 
@@ -98,7 +100,8 @@ extension TaskEditorSession {
         for item in savedDraft.checklistItems {
             guard let existingID = item.existingID else { continue }
             guard persistedIDSet.contains(existingID),
-                  claimedPersistedIDs.insert(existingID).inserted else {
+                  claimedPersistedIDs.insert(existingID).inserted
+            else {
                 return nil
             }
             persistedIDByDraftID[item.id] = existingID
@@ -123,7 +126,8 @@ extension TaskEditorSession {
         }
 
         guard persistedIDByDraftID.count == savedDraft.checklistItems.count,
-              Set(persistedIDByDraftID.values) == persistedIDSet else {
+              Set(persistedIDByDraftID.values) == persistedIDSet
+        else {
             return nil
         }
         return persistedIDByDraftID

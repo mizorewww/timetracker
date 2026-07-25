@@ -64,4 +64,3 @@ struct PhoneSummaryMetric: View {
         .accessibilityElement(children: .combine)
     }
 }
-

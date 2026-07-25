@@ -38,7 +38,8 @@ extension TimeTrackerStore {
         guard item.deletedAt == nil,
               item.isCompleted == false,
               inboxSuggestionInFlightIDs.contains(item.id) == false,
-              inboxSuggestion(for: item) == nil else {
+              inboxSuggestion(for: item) == nil
+        else {
             return nil
         }
         return inboxSuggestionFailureByItemID[item.id]

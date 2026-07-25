@@ -27,11 +27,11 @@ nonisolated enum LLMSuggestionInputPolicy {
     static let maximumCandidateCount = 48
     // Candidate JSON is embedded as a JSON string in the outer chat request.
     // Leave enough headroom for the second escaping pass and fixed prompt data.
-    static let maximumCandidateJSONByteCount = 12 * 1_024
+    static let maximumCandidateJSONByteCount = 12 * 1024
     static let maximumInboxTitleByteCount = 512
     static let maximumChecklistTitleByteCount = 512
     static let maximumTaskTitleByteCount = 512
-    static let maximumTaskPathByteCount = 1_024
+    static let maximumTaskPathByteCount = 1024
     static let maximumCandidateTitleByteCount = 256
     static let maximumCandidatePathByteCount = 512
     static let maximumIconNameByteCount = 128
@@ -41,14 +41,14 @@ nonisolated enum LLMSuggestionInputPolicy {
     // suggestions always remain restorable.
     static let maximumModelIDByteCount = 256
     static let maximumReasonByteCount = 512
-    static let maximumPromptByteCount = 24 * 1_024
+    static let maximumPromptByteCount = 24 * 1024
     // The prompt is embedded as a JSON string in the outer request. A valid
     // prompt made entirely of quotes or backslashes can nearly double during
     // that second encoding pass, so keep a bounded envelope with enough room
     // for the full prompt plus the fixed system message and request metadata.
-    static let maximumRequestBodyByteCount = 64 * 1_024
-    static let maximumEndpointByteCount = 4 * 1_024
-    static let maximumAPIKeyByteCount = 8 * 1_024
+    static let maximumRequestBodyByteCount = 64 * 1024
+    static let maximumEndpointByteCount = 4 * 1024
+    static let maximumAPIKeyByteCount = 8 * 1024
     static let maximumTaskIDByteCount = 64
 
     static func prepare(
@@ -197,7 +197,7 @@ nonisolated enum LLMSuggestionInputPolicy {
         let candidates = [
             boundedTrimmedUTF8(colorHex, maximumByteCount: maximumColorByteCount),
             fallback,
-            ChecklistVisualSanitizer.defaultColor
+            ChecklistVisualSanitizer.defaultColor,
         ]
         return candidates
             .lazy
@@ -296,10 +296,18 @@ nonisolated enum LLMSuggestionInputPolicy {
     }
 
     private static func candidateSortsBefore(_ lhs: RankedCandidate, _ rhs: RankedCandidate) -> Bool {
-        if lhs.pathKey != rhs.pathKey { return lhs.pathKey < rhs.pathKey }
-        if lhs.candidate.path != rhs.candidate.path { return lhs.candidate.path < rhs.candidate.path }
-        if lhs.titleKey != rhs.titleKey { return lhs.titleKey < rhs.titleKey }
-        if lhs.candidate.title != rhs.candidate.title { return lhs.candidate.title < rhs.candidate.title }
+        if lhs.pathKey != rhs.pathKey {
+            return lhs.pathKey < rhs.pathKey
+        }
+        if lhs.candidate.path != rhs.candidate.path {
+            return lhs.candidate.path < rhs.candidate.path
+        }
+        if lhs.titleKey != rhs.titleKey {
+            return lhs.titleKey < rhs.titleKey
+        }
+        if lhs.candidate.title != rhs.candidate.title {
+            return lhs.candidate.title < rhs.candidate.title
+        }
         if lhs.candidate.iconName != rhs.candidate.iconName {
             return lhs.candidate.iconName < rhs.candidate.iconName
         }
@@ -340,7 +348,9 @@ nonisolated enum LLMSuggestionInputPolicy {
         _ lhs: RankedCategoryCandidate,
         _ rhs: RankedCategoryCandidate
     ) -> Bool {
-        if lhs.titleKey != rhs.titleKey { return lhs.titleKey < rhs.titleKey }
+        if lhs.titleKey != rhs.titleKey {
+            return lhs.titleKey < rhs.titleKey
+        }
         if lhs.candidate.title != rhs.candidate.title {
             return lhs.candidate.title < rhs.candidate.title
         }

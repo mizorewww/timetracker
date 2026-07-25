@@ -2,11 +2,10 @@ import Foundation
 import Testing
 @testable import timetracker
 
-@Suite
 struct TimerRapidRestartPolicyTests {
     private let policy = TimerRapidRestartPolicy()
     private let taskID = UUID()
-    private let start = Date(timeIntervalSinceReferenceDate: 10_000)
+    private let start = Date(timeIntervalSinceReferenceDate: 10000)
 
     @Test
     func gapMustBeNonnegativeAndStrictlyLessThanOneMinute() {

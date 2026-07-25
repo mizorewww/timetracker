@@ -46,12 +46,12 @@ extension SeedData {
                 colorHex: "64748B",
                 iconName: "checkmark.circle"
             )
-            context.insert(
+            try context.insert(
                 SyncedPreference(
                     key: AppPreferenceKey.quickStartTaskIDs.rawValue,
-                    valueJSON: try PreferenceJSON.encodeChecked([
+                    valueJSON: PreferenceJSON.encodeChecked([
                         app.id.uuidString,
-                        design.id.uuidString
+                        design.id.uuidString,
                     ]),
                     deviceID: "demo"
                 )
@@ -109,7 +109,7 @@ extension SeedData {
                     byAdding: .day,
                     value: -1,
                     to: startOfToday
-                ) ?? startOfToday.addingTimeInterval(-86_400)
+                ) ?? startOfToday.addingTimeInterval(-86400)
                 let recurrenceTimeZone = calendar.timeZone
                 let yesterdayDayKey = TaskRecurrenceDayKey.value(
                     for: yesterday,
@@ -201,13 +201,13 @@ extension SeedData {
                     ),
                 ]
                 quantityEntries.forEach(context.insert)
-                context.insert(
+                try context.insert(
                     SyncedPreference(
                         key: AppPreferenceKey.todayHeatmapTaskIDs.rawValue,
-                        valueJSON: try PreferenceJSON.encodeChecked([
+                        valueJSON: PreferenceJSON.encodeChecked([
                             app.id.uuidString,
                             client.id.uuidString,
-                            todayTask.id.uuidString
+                            todayTask.id.uuidString,
                         ]),
                         deviceID: "demo"
                     )
@@ -547,15 +547,14 @@ extension SeedData {
             note: "Task 24 compressed-gap context"
         )
 
-        for index in 0..<burstTaskCount {
-            let iconName: String
-            switch index {
+        for index in 0 ..< burstTaskCount {
+            let iconName = switch index {
             case 0:
-                iconName = "bolt.fill"
+                "bolt.fill"
             case 1:
-                iconName = "star.fill"
+                "star.fill"
             default:
-                iconName = "circle.fill"
+                "circle.fill"
             }
             let task = try taskRepository.createTask(
                 title: String(format: "Timeline Burst %02d", index + 1),
@@ -665,7 +664,7 @@ extension SeedData {
     ) {
         let calendar = Calendar.current
         let completionReference = Date().addingTimeInterval(-60)
-        let resolvedCompletedIndices = completedIndices ?? Set(0..<completed)
+        let resolvedCompletedIndices = completedIndices ?? Set(0 ..< completed)
         var completionIndex = 0
         for (index, title) in titles.enumerated() {
             let isCompleted = resolvedCompletedIndices.contains(index)
@@ -701,7 +700,7 @@ extension SeedData {
 }
 #else
 extension SeedData {
-    static func buildDemoData(context: ModelContext) throws {
+    static func buildDemoData(context _: ModelContext) throws {
         throw SeedDataError.demoDataCreationUnavailable
     }
 }

@@ -134,7 +134,7 @@ struct StoreScopedSegmentCommandCoordinator {
             )
             let before = try mutationState(
                 sessionIDs: [canonical.segment.sessionID],
-                activeRuns: try pomodoroRepository.activeRuns(),
+                activeRuns: pomodoroRepository.activeRuns(),
                 timeRepository: timeRepository
             )
             try LedgerCommandHandler(
@@ -193,5 +193,4 @@ struct StoreScopedSegmentCommandCoordinator {
             return try operation(context, now, timeRepository, pomodoroRepository)
         }
     }
-
 }

@@ -72,7 +72,7 @@ struct WatchCommandProcessor {
     }
 
     init(writeAuthorization: StoreWriteAuthorization = .applicationState) {
-        self.receiptStore = UserDefaultsWatchCommandReceiptStore()
+        receiptStore = UserDefaultsWatchCommandReceiptStore()
         self.writeAuthorization = writeAuthorization
     }
 

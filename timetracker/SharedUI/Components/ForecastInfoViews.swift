@@ -94,16 +94,16 @@ struct ForecastInfoView: View {
             .accessibilityIdentifier("home.info.forecast")
             .navigationTitle(AppStrings.localized("forecast.info.title"))
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+                .navigationBarTitleDisplayMode(.inline)
             #endif
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(AppStrings.done) {
-                        dismiss()
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(AppStrings.done) {
+                            dismiss()
+                        }
+                        .accessibilityIdentifier("home.info.done")
                     }
-                    .accessibilityIdentifier("home.info.done")
                 }
-            }
         }
         #if os(iOS)
         .presentationDetents([.medium, .large])

@@ -12,7 +12,8 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
             return nil
         }
         guard entry.taskID == command.taskID,
-              entry.quantityGoalID == command.goalBaseline.goalID else {
+              entry.quantityGoalID == command.goalBaseline.goalID
+        else {
             throw TaskQuantityEntryMutationError.entryChanged
         }
         guard entry.deletedAt == nil else {
@@ -20,7 +21,8 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
         }
         guard entry.clientMutationID == command.proposedEntryID,
               entry.amount == command.amount,
-              entry.recordedAt == command.recordedAt else {
+              entry.recordedAt == command.recordedAt
+        else {
             throw TaskQuantityEntryMutationError.entryChanged
         }
         return outcome(
@@ -43,13 +45,13 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
             entryID: entryID,
             didMutate: didMutate,
             affectedAncestorTaskIDs:
-                state.affectedAncestorTaskIDs(for: taskID),
+            state.affectedAncestorTaskIDs(for: taskID),
             progressSnapshot: TaskQuantityProgressService().snapshot(
                 taskID: taskID,
                 goals: state.quantityGoals,
                 entries: entries ?? state.quantityEntries,
                 isRecordingAllowed:
-                    state.directWorkTaskIDs.contains(taskID)
+                state.directWorkTaskIDs.contains(taskID)
             )
         )
     }

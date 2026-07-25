@@ -69,7 +69,7 @@ struct AnalyticsStore {
         taskPathByID: [UUID: String],
         taskParentPathByID: [UUID: String],
         evaluatedAt cutoff: Date,
-        liveRefreshBucket: Int? = nil,
+        liveRefreshBucket _: Int? = nil,
         evaluationKey: AnalyticsEvaluationCacheKey,
         visualSnapshot: AnalyticsVisualSnapshot? = nil,
         calendar: Calendar = .current

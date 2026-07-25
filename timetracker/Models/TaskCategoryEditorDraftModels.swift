@@ -20,20 +20,20 @@ struct TaskCategoryEditorDraft: Identifiable, Equatable {
     var includesInForecast: Bool
 
     init() {
-        self.baseline = nil
-        self.categoryID = nil
-        self.title = ""
-        self.colorHex = "1677FF"
-        self.iconName = "square.grid.2x2"
-        self.includesInForecast = true
+        baseline = nil
+        categoryID = nil
+        title = ""
+        colorHex = "1677FF"
+        iconName = "square.grid.2x2"
+        includesInForecast = true
     }
 
     init(category: TaskCategory) {
-        self.baseline = TaskCategoryMutationBaseline(category: category)
-        self.categoryID = category.id
-        self.title = category.title
-        self.colorHex = category.colorHex ?? "1677FF"
-        self.iconName = category.iconName ?? "square.grid.2x2"
-        self.includesInForecast = category.includesInForecast
+        baseline = TaskCategoryMutationBaseline(category: category)
+        categoryID = category.id
+        title = category.title
+        colorHex = category.colorHex ?? "1677FF"
+        iconName = category.iconName ?? "square.grid.2x2"
+        includesInForecast = category.includesInForecast
     }
 }

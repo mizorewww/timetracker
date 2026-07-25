@@ -8,7 +8,9 @@ nonisolated enum ActivityHeatmapPeriod: String, CaseIterable, Identifiable, Equa
 
     static let standard = ActivityHeatmapPeriod.oneYear
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var weekCount: Int {
         switch self {
@@ -41,7 +43,6 @@ nonisolated enum ActivityHeatmapIntensity: Int, CaseIterable, Equatable, Sendabl
         let level = min(4, max(1, (boundedValue * 4 + reference - 1) / reference))
         self = ActivityHeatmapIntensity(rawValue: Int(level)) ?? .maximum
     }
-
 }
 
 nonisolated enum ActivityHeatmapMetric: Equatable, Sendable {
@@ -58,15 +59,18 @@ nonisolated struct ActivityHeatmapDay: Identifiable, Equatable, Sendable {
     let isFuture: Bool
     let isToday: Bool
 
-    var id: Date { date }
-
+    var id: Date {
+        date
+    }
 }
 
 nonisolated struct ActivityHeatmapWeek: Identifiable, Equatable, Sendable {
     let startDate: Date
     let days: [ActivityHeatmapDay]
 
-    var id: Date { startDate }
+    var id: Date {
+        startDate
+    }
 }
 
 nonisolated struct TaskActivityHeatmapSnapshot: Identifiable, Equatable, Sendable {
@@ -82,7 +86,9 @@ nonisolated struct TaskActivityHeatmapSnapshot: Identifiable, Equatable, Sendabl
     let activeDayCount: Int
     let maximumDailyValue: Int
 
-    var id: UUID { taskID }
+    var id: UUID {
+        taskID
+    }
 
     var hasActivity: Bool {
         totalValue > 0

@@ -18,7 +18,7 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
             TimeTrackerSchemaV11.self,
             TimeTrackerSchemaV12.self,
             TimeTrackerSchemaV13.self,
-            TimeTrackerSchemaV14.self
+            TimeTrackerSchemaV14.self,
         ]
     }
 
@@ -35,7 +35,8 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
                     LegacyTaskCategoryMigrationBuffer.replace(tasks.compactMap { task in
                         guard task.parentID == nil,
                               task.deletedAt == nil,
-                              let categoryID = task.categoryID else {
+                              let categoryID = task.categoryID
+                        else {
                             return nil
                         }
                         return LegacyTaskCategoryAssignment(
@@ -46,10 +47,11 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
                     })
                 },
                 didMigrate: { context in
-                    let tasks = Set(try context.fetch(FetchDescriptor<TaskNode>()).map(\.id))
-                    let categories = Set(try context.fetch(FetchDescriptor<TaskCategory>()).map(\.id))
+                    let tasks = try Set(context.fetch(FetchDescriptor<TaskNode>()).map(\.id))
+                    let categories = try Set(context.fetch(FetchDescriptor<TaskCategory>()).map(\.id))
                     for assignment in LegacyTaskCategoryMigrationBuffer.consume()
-                    where tasks.contains(assignment.taskID) && categories.contains(assignment.categoryID) {
+                        where tasks.contains(assignment.taskID) && categories.contains(assignment.categoryID)
+                    {
                         context.insert(TaskCategoryAssignment(
                             taskID: assignment.taskID,
                             categoryID: assignment.categoryID,
@@ -72,7 +74,7 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
             .lightweight(fromVersion: TimeTrackerSchemaV10.self, toVersion: TimeTrackerSchemaV11.self),
             .lightweight(fromVersion: TimeTrackerSchemaV11.self, toVersion: TimeTrackerSchemaV12.self),
             .lightweight(fromVersion: TimeTrackerSchemaV12.self, toVersion: TimeTrackerSchemaV13.self),
-            .lightweight(fromVersion: TimeTrackerSchemaV13.self, toVersion: TimeTrackerSchemaV14.self)
+            .lightweight(fromVersion: TimeTrackerSchemaV13.self, toVersion: TimeTrackerSchemaV14.self),
         ]
     }
 
@@ -91,7 +93,8 @@ enum TimeTrackerMigrationPlan: SchemaMigrationPlan {
         for item in items {
             item.materializeSuggestionIdentity()
             if item.suggestionGeneratedAt != nil,
-               activeSuggestionItemIDs.contains(item.id) == false {
+               activeSuggestionItemIDs.contains(item.id) == false
+            {
                 item.dismissedSuggestionRevisionID = item.effectiveSuggestionRevisionID
             }
         }

@@ -69,7 +69,9 @@ nonisolated struct TimelineLayoutEntry: Identifiable, Equatable, Sendable {
     let item: TimelineLayoutItem
     let lane: Int
 
-    var id: TimelineEntryID { item.id }
+    var id: TimelineEntryID {
+        item.id
+    }
 }
 
 nonisolated struct TimelineLayoutResult: Equatable, Sendable {

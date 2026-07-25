@@ -23,11 +23,10 @@ extension SwiftDataTimeTrackingRepository {
         }
         let isRebindingTask = liveSessionSegments.contains { $0.taskID != taskID } ||
             linkedSession.map { $0.taskID != taskID } == true
-        let reboundTitleSnapshot: String?
-        if isRebindingTask {
-            reboundTitleSnapshot = try preparedTrackableTitleSnapshot(for: taskID)
+        let reboundTitleSnapshot: String? = if isRebindingTask {
+            try preparedTrackableTitleSnapshot(for: taskID)
         } else {
-            reboundTitleSnapshot = nil
+            nil
         }
         let mutationDate = PersistentLWWMutationDate.strictlyDominating(
             preferred: now,
@@ -37,7 +36,8 @@ extension SwiftDataTimeTrackingRepository {
 
         try context.performAtomicMutation {
             for sessionSegment in liveSessionSegments where
-                sessionSegment.id == segment.id || sessionSegment.taskID != taskID {
+                sessionSegment.id == segment.id || sessionSegment.taskID != taskID
+            {
                 sessionSegment.taskID = taskID
                 sessionSegment.updatedAt = mutationDate
                 sessionSegment.deviceID = deviceID
@@ -56,7 +56,7 @@ extension SwiftDataTimeTrackingRepository {
                     : max(
                         linkedSession.startedAt,
                         liveSessionSegments.compactMap(\.endedAt).max() ?? linkedSession.startedAt
-                )
+                    )
                 linkedSession.note = preparedNote
                 linkedSession.markMutated(
                     at: mutationDate,
@@ -123,9 +123,9 @@ extension SwiftDataTimeTrackingRepository {
                 segment.updatedAt = mutationDate
                 segment.deviceID = deviceID
             }
-            session.endedAt = max(
+            session.endedAt = try max(
                 session.startedAt,
-                try latestEndedAt(for: sessionID) ?? now
+                latestEndedAt(for: sessionID) ?? now
             )
             session.markMutated(at: mutationDate, deviceID: deviceID)
         }
@@ -140,11 +140,13 @@ extension SwiftDataTimeTrackingRepository {
         let descriptor = FetchDescriptor<TimeSegment>(
             predicate: #Predicate { $0.sessionID == targetSessionID }
         )
-        let candidateIDs = Set(try context.fetch(descriptor).map(\.id))
+        let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
         return try canonicalSegments(ids: candidateIDs)
             .filter { $0.sessionID == targetSessionID }
             .sorted { lhs, rhs in
-                if lhs.startedAt != rhs.startedAt { return lhs.startedAt < rhs.startedAt }
+                if lhs.startedAt != rhs.startedAt {
+                    return lhs.startedAt < rhs.startedAt
+                }
                 return lhs.id.uuidString < rhs.id.uuidString
             }
     }

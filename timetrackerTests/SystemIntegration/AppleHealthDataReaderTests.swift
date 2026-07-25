@@ -160,7 +160,7 @@ struct AppleHealthDataReaderTests {
         let calendar = Calendar.current
         let dayStart = calendar.startOfDay(for: Date())
 
-        for elapsed in [1.0, 60.0, 6 * 3_600.0] {
+        for elapsed in [1.0, 60.0, 6 * 3600.0] {
             let visibleEnd = dayStart.addingTimeInterval(elapsed)
             let visibleInterval = DateInterval(
                 start: dayStart,

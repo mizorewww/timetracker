@@ -84,14 +84,13 @@ extension TimeTrackerStore {
             let inboxRequestSnapshot = inboxSuggestionTasksByItemID.mapValues(\.requestID)
             let checklistRequestSnapshot = checklistVisualSuggestionTasksByItemID
                 .mapValues(\.requestID)
-            let preferenceKey: AppPreferenceKey
-            switch kind {
+            let preferenceKey: AppPreferenceKey = switch kind {
             case .inboxRouting:
-                preferenceKey = .llmInboxSuggestionInstructions
+                .llmInboxSuggestionInstructions
             case .checklistVisual:
-                preferenceKey = .llmChecklistVisualInstructions
+                .llmChecklistVisualInstructions
             case .taskPlan:
-                preferenceKey = .llmTaskPlanInstructions
+                .llmTaskPlanInstructions
             }
             let didSet = setPreference(
                 preferenceKey,
@@ -134,7 +133,8 @@ extension TimeTrackerStore {
         let normalizedModels = AppPreferenceValueSanitizer.llmModelIDs(availableModelIDs)
         guard LLMModelService.modelsURL(endpoint: normalizedEndpoint) != nil,
               !normalizedAPIKey.isEmpty,
-              normalizedModels.contains(normalizedSelectedModel) else {
+              normalizedModels.contains(normalizedSelectedModel)
+        else {
             errorMessage = AppStrings.localized("settings.llm.needsSetup")
             return false
         }
@@ -157,7 +157,7 @@ extension TimeTrackerStore {
                 values: [
                     (.llmEndpoint, PreferenceJSON.encode(normalizedEndpoint)),
                     (.llmAvailableModelIDs, PreferenceJSON.encode(normalizedModels)),
-                    (.llmSelectedModel, PreferenceJSON.encode(normalizedSelectedModel))
+                    (.llmSelectedModel, PreferenceJSON.encode(normalizedSelectedModel)),
                 ],
                 applyingLocalMutation: {
                     previousAPIKey = try llmCredentialStore.readAPIKey()

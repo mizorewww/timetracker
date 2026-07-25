@@ -19,8 +19,8 @@ nonisolated struct ChecklistEditorDraft:
         iconName: String = "checkmark.circle",
         colorHex: String = "1677FF"
     ) {
-        self.id = UUID()
-        self.existingID = nil
+        id = UUID()
+        existingID = nil
         self.title = title
         self.isCompleted = isCompleted
         self.iconName = iconName
@@ -47,11 +47,11 @@ nonisolated struct ChecklistEditorDraft:
         item: ChecklistItem,
         visual: ChecklistItemVisual? = nil
     ) {
-        self.id = item.id
-        self.existingID = item.id
-        self.title = item.title
-        self.isCompleted = item.isCompleted
-        self.iconName = visual?.iconName ?? "checkmark.circle"
-        self.colorHex = visual?.colorHex ?? "1677FF"
+        id = item.id
+        existingID = item.id
+        title = item.title
+        isCompleted = item.isCompleted
+        iconName = visual?.iconName ?? "checkmark.circle"
+        colorHex = visual?.colorHex ?? "1677FF"
     }
 }

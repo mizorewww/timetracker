@@ -16,7 +16,8 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
     ) throws {
         guard goalBaseline.taskID == taskID,
               goalBaseline.goalID ==
-                TaskProgressIdentity.quantityGoalID(taskID: taskID) else {
+              TaskProgressIdentity.quantityGoalID(taskID: taskID)
+        else {
             throw TaskQuantityEntryMutationError.quantityGoalChanged
         }
     }
@@ -56,7 +57,8 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
 
         guard let goal = goalWinners[expectedGoalID] else {
             if connectedVisibleGoals.isEmpty == false ||
-                connectedVisibleEntries.isEmpty == false {
+                connectedVisibleEntries.isEmpty == false
+            {
                 throw TaskQuantityEntryMutationError
                     .incompleteQuantityGraph
             }
@@ -64,7 +66,8 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
         }
         if goal.deletedAt != nil {
             guard connectedVisibleGoals.isEmpty,
-                  connectedVisibleEntries.isEmpty else {
+                  connectedVisibleEntries.isEmpty
+            else {
                 throw TaskQuantityEntryMutationError
                     .incompleteQuantityGraph
             }
@@ -74,7 +77,8 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
             throw TaskQuantityEntryMutationError.quantityGoalUnavailable
         }
         guard goal.taskID == taskID,
-              TaskQuantityProgressService().goalIsCanonical(goal) else {
+              TaskQuantityProgressService().goalIsCanonical(goal)
+        else {
             throw TaskQuantityEntryMutationError.incompleteQuantityGraph
         }
 
@@ -90,7 +94,8 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
                 PersistentDatePolicy.contains($0.updatedAt) == false
         }
         guard hasVisibleConflictingGoal == false,
-              hasInvalidOrConflictingEntry == false else {
+              hasInvalidOrConflictingEntry == false
+        else {
             throw TaskQuantityEntryMutationError.incompleteQuantityGraph
         }
         guard goal.clientMutationID == baseline.clientMutationID else {
@@ -109,7 +114,8 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
             throw TaskQuantityEntryMutationError.entryUnavailable
         }
         guard entry.taskID == baseline.taskID,
-              entry.quantityGoalID == baseline.quantityGoalID else {
+              entry.quantityGoalID == baseline.quantityGoalID
+        else {
             throw TaskQuantityEntryMutationError.entryChanged
         }
         if entry.clientMutationID == replayOperationID {

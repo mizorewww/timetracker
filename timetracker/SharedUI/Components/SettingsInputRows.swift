@@ -44,10 +44,10 @@ struct SettingsTextFieldRow: View {
         .labelsHidden()
         .accessibilityLabel(title)
         #if os(iOS)
-        .textInputAutocapitalization(usesSentenceCapitalization ? .sentences : .never)
+            .textInputAutocapitalization(usesSentenceCapitalization ? .sentences : .never)
         #endif
-        .autocorrectionDisabled(!usesSentenceCapitalization)
-        .multilineTextAlignment(textAlignment)
+            .autocorrectionDisabled(!usesSentenceCapitalization)
+            .multilineTextAlignment(textAlignment)
     }
 }
 

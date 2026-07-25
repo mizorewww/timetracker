@@ -93,7 +93,8 @@ final class UITestAppleHealthDataReader: AppleHealthDataReading {
     let isHealthDataAvailable = true
 
     func authorizationRequestStatus() async throws
-        -> AppleHealthAuthorizationRequestStatus {
+        -> AppleHealthAuthorizationRequestStatus
+    {
         try Task.checkCancellation()
         return .unnecessary
     }
@@ -120,11 +121,12 @@ final class UITestAppleHealthDataReader: AppleHealthDataReading {
     ) async throws -> AppleHealthSampleBatch {
         try Task.checkCancellation()
 
-        if shouldInjectReadFailure && isTaskDetailHistoryQuery(interval) {
+        if shouldInjectReadFailure, isTaskDetailHistoryQuery(interval) {
             throw UITestAppleHealthFixtureError.injectedFirstReadFailure
         }
-        if shouldReturnEmptyUntilSceneReactivation &&
-            isTaskDetailHistoryQuery(interval) {
+        if shouldReturnEmptyUntilSceneReactivation,
+           isTaskDetailHistoryQuery(interval)
+        {
             return .empty
         }
         guard returnsEmpty == false, interval.duration > 0 else {
@@ -145,13 +147,14 @@ final class UITestAppleHealthDataReader: AppleHealthDataReading {
         // The Home timeline reads at most Today plus sleep context. Task detail
         // starts on Week and includes its matched comparison period, so this
         // keeps one-shot states owned by the screen under test.
-        return interval.duration >= 3 * 24 * 3_600
+        return interval.duration >= 3 * 24 * 3600
     }
 
     /// Preserves the original fixture's single-day behavior for existing UI
     /// tests while the explicit history argument opts into the richer batch.
     private func currentDayBatch(endingAt visibleEnd: Date)
-        -> AppleHealthSampleBatch {
+        -> AppleHealthSampleBatch
+    {
         let calendar = Calendar.current
         let dayStart = calendar.startOfDay(for: visibleEnd)
         let availableDuration = visibleEnd.timeIntervalSince(dayStart)
@@ -163,7 +166,7 @@ final class UITestAppleHealthDataReader: AppleHealthDataReading {
         // time of day. At normal review times they retain realistic durations;
         // shortly after midnight they scale down instead of disappearing.
         let sleepDuration = min(
-            6.5 * 3_600,
+            6.5 * 3600,
             max(availableDuration * 0.65, min(availableDuration, 60))
         )
         let workoutDuration = min(
@@ -533,7 +536,8 @@ private enum UITestAppleHealthFixtureError: LocalizedError, Sendable {
 
 @MainActor
 private final class UITestAppleHealthTimelinePreferenceStore:
-    AppleHealthTimelinePreferenceStoring {
+    AppleHealthTimelinePreferenceStoring
+{
     var isTimelineEnabled = false
     var taskCatalogClearRecoveryTaskIDs: Set<UUID> = []
 }

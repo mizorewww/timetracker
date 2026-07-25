@@ -34,7 +34,8 @@ struct KeychainLLMCredentialStore: LLMCredentialStoring {
             throw KeychainCredentialError(status: status)
         }
         guard let data = result as? Data,
-              let value = String(data: data, encoding: .utf8) else {
+              let value = String(data: data, encoding: .utf8)
+        else {
             throw KeychainCredentialError.invalidData
         }
         let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -56,7 +57,7 @@ struct KeychainLLMCredentialStore: LLMCredentialStoring {
             baseQuery as CFDictionary,
             [
                 kSecValueData as String: data,
-                kSecAttrAccessible as String: Self.credentialAccessibility
+                kSecAttrAccessible as String: Self.credentialAccessibility,
             ] as CFDictionary
         )
         if updateStatus == errSecSuccess {
@@ -80,7 +81,7 @@ struct KeychainLLMCredentialStore: LLMCredentialStoring {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
-            kSecAttrSynchronizable as String: kCFBooleanFalse as Any
+            kSecAttrSynchronizable as String: kCFBooleanFalse as Any,
         ]
     }
 }

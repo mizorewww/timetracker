@@ -20,5 +20,4 @@ struct TaskCategoryPickerTests {
         #expect(context.emptyStateTitle.isEmpty == false)
         #expect(context.emptyStateDescription.isEmpty == false)
     }
-
 }

@@ -15,7 +15,8 @@ extension SyncConflictService {
         _ = state.pruneCloudExportCheckpoints(now: now)
         var checkpoints = state.pendingCloudExportCheckpoints ?? [:]
         if checkpoints.count >= 16,
-           let oldestEventID = checkpoints.min(by: { $0.value.startedAt < $1.value.startedAt })?.key {
+           let oldestEventID = checkpoints.min(by: { $0.value.startedAt < $1.value.startedAt })?.key
+        {
             checkpoints.removeValue(forKey: oldestEventID)
         }
         checkpoints[eventID.uuidString] = SyncCloudExportCheckpoint(
@@ -43,7 +44,8 @@ extension SyncConflictService {
 
         guard succeeded,
               checkpoint.epoch == (state.syncEpoch ?? 0),
-              checkpoint.generation >= (state.baseAcknowledgedGeneration ?? 0) else {
+              checkpoint.generation >= (state.baseAcknowledgedGeneration ?? 0)
+        else {
             try saveState(state)
             return
         }
@@ -53,12 +55,12 @@ extension SyncConflictService {
         state.baseFingerprint = checkpoint.fingerprint
         state.baseAcknowledgedGeneration = checkpoint.generation
 
-        let completedExplicitReplacement: Bool
-        if state.pendingLocalIntent == .explicitlyReplaceCloud,
-           let pendingSnapshot = state.pendingForcedUploadSnapshot {
-            completedExplicitReplacement = try pendingSnapshot.fingerprint() == checkpoint.fingerprint
+        let completedExplicitReplacement: Bool = if state.pendingLocalIntent == .explicitlyReplaceCloud,
+                                                    let pendingSnapshot = state.pendingForcedUploadSnapshot
+        {
+            try pendingSnapshot.fingerprint() == checkpoint.fingerprint
         } else {
-            completedExplicitReplacement = false
+            false
         }
         if completedExplicitReplacement {
             state.clearPendingLocalRecovery()

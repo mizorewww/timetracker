@@ -76,7 +76,7 @@ struct LedgerCommandHandler {
             runs: pomodoroRuns,
             context: context
         )
-        if draft.wasActive && draft.isActive == false {
+        if draft.wasActive, draft.isActive == false {
             try PomodoroCommandHandler(
                 deviceID: deviceID,
                 nowProvider: nowProvider

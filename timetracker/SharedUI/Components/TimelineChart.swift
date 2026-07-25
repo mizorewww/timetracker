@@ -55,7 +55,6 @@ struct TimelineChart: View {
         false
         #endif
     }
-
 }
 
 extension TimelineChart {
@@ -262,7 +261,7 @@ private struct TimelineChartVerticalSizingLayout: Layout {
     func sizeThatFits(
         proposal: ProposedViewSize,
         subviews: Subviews,
-        cache: inout ()
+        cache _: inout ()
     ) -> CGSize {
         guard subviews.isEmpty == false else { return .zero }
         let width = proposal.width.flatMap { $0.isFinite ? max(0, $0) : nil } ?? 320
@@ -277,9 +276,9 @@ private struct TimelineChartVerticalSizingLayout: Layout {
 
     func placeSubviews(
         in bounds: CGRect,
-        proposal: ProposedViewSize,
+        proposal _: ProposedViewSize,
         subviews: Subviews,
-        cache: inout ()
+        cache _: inout ()
     ) {
         guard let subview = subviews.first else { return }
         subview.place(
@@ -293,7 +292,7 @@ private struct TimelineChartVerticalSizingLayout: Layout {
     }
 }
 
-nonisolated private enum TimelineChartLayoutSubviewRole: Hashable {
+private nonisolated enum TimelineChartLayoutSubviewRole: Hashable {
     case content
     case viewport
     case plot
@@ -302,7 +301,7 @@ nonisolated private enum TimelineChartLayoutSubviewRole: Hashable {
     case gapConnector(String)
 }
 
-nonisolated private struct TimelineChartLayoutSubviewRoleKey: LayoutValueKey {
+private nonisolated struct TimelineChartLayoutSubviewRoleKey: LayoutValueKey {
     static let defaultValue = TimelineChartLayoutSubviewRole.content
 }
 
@@ -322,7 +321,7 @@ private struct TimelineChartHorizontalViewportLayout: Layout {
     func sizeThatFits(
         proposal: ProposedViewSize,
         subviews: Subviews,
-        cache: inout ()
+        cache _: inout ()
     ) -> CGSize {
         guard subviews.isEmpty == false else { return .zero }
         let availableWidth = finiteDimension(proposal.width, fallback: 640)
@@ -338,9 +337,9 @@ private struct TimelineChartHorizontalViewportLayout: Layout {
 
     func placeSubviews(
         in bounds: CGRect,
-        proposal: ProposedViewSize,
+        proposal _: ProposedViewSize,
         subviews: Subviews,
-        cache: inout ()
+        cache _: inout ()
     ) {
         guard let viewport = subviews.first(where: {
             $0[TimelineChartLayoutSubviewRoleKey.self] == .viewport
@@ -366,7 +365,7 @@ private struct TimelineChartHorizontalLayout: Layout {
     func sizeThatFits(
         proposal: ProposedViewSize,
         subviews: Subviews,
-        cache: inout ()
+        cache _: inout ()
     ) -> CGSize {
         guard subviews.isEmpty == false else { return .zero }
         let width = finiteDimension(proposal.width, fallback: 0)
@@ -376,9 +375,9 @@ private struct TimelineChartHorizontalLayout: Layout {
 
     func placeSubviews(
         in bounds: CGRect,
-        proposal: ProposedViewSize,
+        proposal _: ProposedViewSize,
         subviews: Subviews,
-        cache: inout ()
+        cache _: inout ()
     ) {
         let metrics = metrics(width: bounds.width, subviews: subviews)
 
@@ -406,7 +405,7 @@ private struct TimelineChartHorizontalLayout: Layout {
                         height: TimelineChartLayout.horizontalAxisLabelHeight
                     )
                 )
-            case .gapLabel(let id):
+            case let .gapLabel(id):
                 guard let placement = metrics.gapLayout.placements.first(
                     where: { $0.id == id }
                 ), let size = metrics.labelSizes[id] else {
@@ -458,7 +457,7 @@ private struct TimelineChartVerticalLayout: Layout {
     func sizeThatFits(
         proposal: ProposedViewSize,
         subviews: Subviews,
-        cache: inout ()
+        cache _: inout ()
     ) -> CGSize {
         guard subviews.isEmpty == false else { return .zero }
         let metrics = metrics(
@@ -471,9 +470,9 @@ private struct TimelineChartVerticalLayout: Layout {
 
     func placeSubviews(
         in bounds: CGRect,
-        proposal: ProposedViewSize,
+        proposal _: ProposedViewSize,
         subviews: Subviews,
-        cache: inout ()
+        cache _: inout ()
     ) {
         let metrics = metrics(
             proposedWidth: bounds.width,
@@ -504,7 +503,7 @@ private struct TimelineChartVerticalLayout: Layout {
                         height: metrics.height
                     )
                 )
-            case .gapLabel(let id):
+            case let .gapLabel(id):
                 guard let placement = metrics.gapLayout.placements.first(
                     where: { $0.id == id }
                 ), let size = metrics.labelSizes[id] else {
@@ -522,7 +521,7 @@ private struct TimelineChartVerticalLayout: Layout {
                         height: size.height
                     )
                 )
-            case .gapConnector(let id):
+            case let .gapConnector(id):
                 guard let placement = metrics.gapLayout.placements.first(
                     where: { $0.id == id }
                 ), let size = metrics.labelSizes[id] else {
@@ -660,8 +659,9 @@ private func measuredGapLabelSizes(
     in subviews: LayoutSubviews
 ) -> [String: CGSize] {
     subviews.reduce(into: [:]) { result, subview in
-        guard case .gapLabel(let id) =
-                subview[TimelineChartLayoutSubviewRoleKey.self] else {
+        guard case let .gapLabel(id) =
+            subview[TimelineChartLayoutSubviewRoleKey.self]
+        else {
             return
         }
         let measured = subview.sizeThatFits(.unspecified)

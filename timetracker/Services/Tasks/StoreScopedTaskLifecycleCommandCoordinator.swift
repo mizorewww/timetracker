@@ -17,7 +17,7 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
         writeAuthorization: StoreWriteAuthorization = .applicationState,
         deviceID: String? = nil,
         didReachDraftCheckpoint: @escaping
-            (TaskDraftMutationCheckpoint) throws -> Void = { _ in }
+        (TaskDraftMutationCheckpoint) throws -> Void = { _ in }
     ) {
         self.container = container
         self.writeAuthorization = writeAuthorization
@@ -149,7 +149,8 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
         var parentID = task.parentID
         while let currentID = parentID,
               visited.insert(currentID).inserted,
-              let parent = taskByID[currentID] {
+              let parent = taskByID[currentID]
+        {
             related.insert(currentID)
             parentID = parent.parentID
         }

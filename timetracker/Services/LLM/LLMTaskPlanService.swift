@@ -150,9 +150,9 @@ enum LLMTaskPlanServiceError: LocalizedError, Equatable {
 struct LLMTaskPlanService {
     typealias Transport = (URLRequest) async throws -> (Data, URLResponse)
 
-    static let maximumRequestByteCount = 4 * 1_024
-    static let maximumInstructionsByteCount = 4 * 1_024
-    static let maximumResponseContentByteCount = 128 * 1_024
+    static let maximumRequestByteCount = 4 * 1024
+    static let maximumInstructionsByteCount = 4 * 1024
+    static let maximumResponseContentByteCount = 128 * 1024
     static let maximumCategoryCount = 16
     static let maximumTaskCount = 128
     static let maximumChecklistItemCountPerTask = 256
@@ -184,7 +184,7 @@ struct LLMTaskPlanService {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMTaskPlanServiceError.invalidResponse
         }
-        guard (200..<300).contains(httpResponse.statusCode) else {
+        guard (200 ..< 300).contains(httpResponse.statusCode) else {
             throw LLMModelServiceError.responseStatus(httpResponse.statusCode)
         }
         try LLMSecureHTTPTransport.validateBufferedResponse(data)
@@ -239,7 +239,8 @@ struct LLMTaskPlanService {
             throw LLMModelServiceError.missingAPIKey
         }
         guard trimmedEndpoint.utf8.count <= LLMSuggestionInputPolicy.maximumEndpointByteCount,
-              trimmedAPIKey.utf8.count <= LLMSuggestionInputPolicy.maximumAPIKeyByteCount else {
+              trimmedAPIKey.utf8.count <= LLMSuggestionInputPolicy.maximumAPIKeyByteCount
+        else {
             throw LLMTaskPlanServiceError.requestTooLarge
         }
         guard let url = LLMInboxSuggestionService.chatCompletionsURL(
@@ -256,7 +257,8 @@ struct LLMTaskPlanService {
         )
         let promptData = try JSONEncoder().encode(prompt)
         guard promptData.count <= LLMSuggestionInputPolicy.maximumPromptByteCount,
-              let promptJSON = String(data: promptData, encoding: .utf8) else {
+              let promptJSON = String(data: promptData, encoding: .utf8)
+        else {
             throw LLMTaskPlanServiceError.requestTooLarge
         }
 
@@ -265,7 +267,7 @@ struct LLMTaskPlanService {
                 model: preparedModelID,
                 messages: [
                     .init(role: "system", content: Self.systemContract),
-                    .init(role: "user", content: promptJSON)
+                    .init(role: "user", content: promptJSON),
                 ],
                 temperature: 0.2,
                 responseFormat: .init(type: "json_object")
@@ -296,7 +298,8 @@ struct LLMTaskPlanService {
         }
         guard payload.categories.count <= maximumCategoryCount,
               payload.tasks.count <= maximumTaskCount,
-              payload.checklistItems.count <= maximumChecklistItemCount else {
+              payload.checklistItems.count <= maximumChecklistItemCount
+        else {
             throw LLMTaskPlanServiceError.limitExceeded
         }
 
@@ -324,11 +327,13 @@ struct LLMTaskPlanService {
                 throw LLMTaskPlanServiceError.childCategory
             }
             if let categoryReference,
-               categoryIDByReference[categoryReference] == nil {
+               categoryIDByReference[categoryReference] == nil
+            {
                 throw LLMTaskPlanServiceError.orphanReference
             }
             if let parentReference,
-               taskIDByReference[parentReference] == nil {
+               taskIDByReference[parentReference] == nil
+            {
                 throw LLMTaskPlanServiceError.orphanReference
             }
             normalizedTaskRelationships[reference] = (
@@ -348,7 +353,8 @@ struct LLMTaskPlanService {
             }
             checklistPayloadByTaskReference[taskReference, default: []].append(checklistItem)
             if checklistPayloadByTaskReference[taskReference, default: []].count >
-                maximumChecklistItemCountPerTask {
+                maximumChecklistItemCountPerTask
+            {
                 throw LLMTaskPlanServiceError.limitExceeded
             }
         }
@@ -397,7 +403,7 @@ struct LLMTaskPlanService {
                     now: now,
                     timeZone: timeZone
                 )
-                return AITaskPlanTaskDraft(
+                return try AITaskPlanTaskDraft(
                     id: taskIDByReference[reference]!,
                     categoryID: relationship.categoryReference.flatMap {
                         categoryIDByReference[$0]
@@ -407,7 +413,7 @@ struct LLMTaskPlanService {
                     },
                     title: prepared.title,
                     notes: prepared.notes ?? "",
-                    estimatedMinutes: try preparedEstimatedMinutes(task.estimatedMinutes),
+                    estimatedMinutes: preparedEstimatedMinutes(task.estimatedMinutes),
                     iconName: prepared.iconName ?? ChecklistVisualSanitizer.defaultIcon,
                     colorHex: prepared.colorHex ?? ChecklistVisualSanitizer.defaultColor,
                     quantityGoal: progress.quantityGoal,
@@ -611,11 +617,10 @@ private extension LLMTaskPlanService {
             }
 
             states[reference] = .visiting
-            let resolvedDepth: Int
-            if let parentReference = relationship.parentReference {
-                resolvedDepth = try depth(for: parentReference) + 1
+            let resolvedDepth: Int = if let parentReference = relationship.parentReference {
+                try depth(for: parentReference) + 1
             } else {
-                resolvedDepth = 0
+                0
             }
             guard resolvedDepth <= maximumTaskDepth else {
                 throw LLMTaskPlanServiceError.depthExceeded
@@ -649,7 +654,7 @@ private extension LLMTaskPlanService {
                 title: payload.title,
                 iconName: sanitizedIcon(payload.iconName),
                 colorHex: sanitizedColor(payload.colorHex)
-            )
+            ),
         ])[0]
         return AITaskPlanChecklistDraft(
             title: prepared.title,

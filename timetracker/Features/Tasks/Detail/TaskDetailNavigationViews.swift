@@ -14,14 +14,14 @@ private struct TaskDetailNavigationModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .navigationTitle(store.task(for: taskID)?.title ?? AppStrings.localized("task.detail.title"))
-            #if os(iOS)
+        #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
-            #endif
+        #endif
             .navigationBarBackButtonHidden(
                 isSourceUnavailable && session.hasUnsavedChanges
             )
             .toolbar {
-                if isSourceUnavailable && session.hasUnsavedChanges {
+                if isSourceUnavailable, session.hasUnsavedChanges {
                     if isAwaitingRecoveryCleanup == false {
                         ToolbarItem(placement: .cancellationAction) {
                             Button(AppStrings.cancel, action: requestDiscard)

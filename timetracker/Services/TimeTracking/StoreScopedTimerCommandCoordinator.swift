@@ -173,14 +173,15 @@ struct StoreScopedTimerCommandCoordinator {
                 deviceID: deviceID
             )
             let tasks = try taskRepository.allNodes()
-            guard TaskTrackingAvailabilityService()
+            guard try TaskTrackingAvailabilityService()
                 .directWorkTaskIDs(
                     tasks: tasks,
-                    recurrenceRules: try taskRepository.taskRecurrenceRules(),
+                    recurrenceRules: taskRepository.taskRecurrenceRules(),
                     recurrenceOccurrences:
-                        try taskRepository.taskRecurrenceOccurrences()
+                    taskRepository.taskRecurrenceOccurrences()
                 )
-                .contains(taskID) else {
+                .contains(taskID)
+            else {
                 throw SystemActionCommandError.taskNotFound
             }
 
@@ -220,7 +221,7 @@ struct StoreScopedTimerCommandCoordinator {
             )
 
             switch plan.decision {
-            case .reuse(let survivor):
+            case let .reuse(survivor):
                 guard let segment = activeByID[survivor.segmentID] else {
                     throw StoreScopedTimerCommandCoordinatorError
                         .inconsistentAdmissionPlan
@@ -243,7 +244,8 @@ struct StoreScopedTimerCommandCoordinator {
                        hasActiveSegmentForTask: activeSegments.contains {
                            $0.taskID == taskID
                        }
-                   ) {
+                   )
+                {
                     segment = mutation.replacement
                     tombstonedSegments = [mutation.tombstonedSegment]
                 } else {
@@ -305,7 +307,8 @@ struct StoreScopedTimerCommandCoordinator {
                 stopPlan = candidatePlan
             } else {
                 guard admissionSegments.count == 1,
-                      let onlySegment = admissionSegments.first else {
+                      let onlySegment = admissionSegments.first
+                else {
                     return Self.noOpOutcome
                 }
                 stopPlan = TimerAdmissionPolicy().stopPlan(
@@ -318,7 +321,8 @@ struct StoreScopedTimerCommandCoordinator {
                   let target = stopPlan.segmentsToStop.first,
                   let segment = activeSegments.first(where: {
                       $0.id == target.segmentID
-                  }) else {
+                  })
+            else {
                 return Self.noOpOutcome
             }
 
@@ -333,7 +337,7 @@ struct StoreScopedTimerCommandCoordinator {
                 nowProvider: { mutationDate }
             ).stop(
                 segment: segment,
-                pomodoroRuns: try pomodoroRepository.openRuns(
+                pomodoroRuns: pomodoroRepository.openRuns(
                     sessionIDs: [segment.sessionID]
                 ),
                 timeRepository: timeRepository,

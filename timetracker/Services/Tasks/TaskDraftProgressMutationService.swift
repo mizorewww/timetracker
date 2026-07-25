@@ -17,7 +17,7 @@ struct TaskDraftProgressMutationService {
         try saveQuantityGoal(
             draft.quantityGoal,
             confirmsProgressReset:
-                draft.confirmsQuantityProgressReset,
+            draft.confirmsQuantityProgressReset,
             taskID: taskID,
             now: now
         )
@@ -56,7 +56,8 @@ struct TaskDraftProgressMutationService {
         )
         if let existing, existing.deletedAt == nil {
             guard existing.startDayKey == draft.startDayKey,
-                  existing.timeZoneIdentifier == draft.timeZoneIdentifier else {
+                  existing.timeZoneIdentifier == draft.timeZoneIdentifier
+            else {
                 throw TaskRecurrenceMutationError
                     .immutableRuleConfiguration
             }

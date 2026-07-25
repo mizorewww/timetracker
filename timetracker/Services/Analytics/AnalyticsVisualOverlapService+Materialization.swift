@@ -38,8 +38,12 @@ nonisolated extension AnalyticsVisualOverlapService {
             if lhs.wallDurationSeconds != rhs.wallDurationSeconds {
                 return lhs.wallDurationSeconds > rhs.wallDurationSeconds
             }
-            if lhs.start != rhs.start { return lhs.start < rhs.start }
-            if lhs.end != rhs.end { return lhs.end < rhs.end }
+            if lhs.start != rhs.start {
+                return lhs.start < rhs.start
+            }
+            if lhs.end != rhs.end {
+                return lhs.end < rhs.end
+            }
             if lhs.concurrentSegmentCount != rhs.concurrentSegmentCount {
                 return lhs.concurrentSegmentCount > rhs.concurrentSegmentCount
             }

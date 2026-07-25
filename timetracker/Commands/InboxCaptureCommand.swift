@@ -19,7 +19,8 @@ struct ExternalCommandKey: Equatable, Hashable, Sendable {
         let normalizedOrigin = origin.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !normalizedOrigin.isEmpty,
               normalizedOrigin.utf8.count <= 128,
-              !normalizedOrigin.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
+              !normalizedOrigin.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains)
+        else {
             throw ExternalCommandKeyError.invalidOrigin
         }
         self.origin = normalizedOrigin

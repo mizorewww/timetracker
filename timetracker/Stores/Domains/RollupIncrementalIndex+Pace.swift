@@ -16,7 +16,8 @@ extension RollupIncrementalIndex {
         for day in expiredDays {
             for taskID in taskIDsByRecentDay.removeValue(forKey: day) ?? [] {
                 guard let seconds = ownRecentDaySecondsByTaskID[taskID]?.removeValue(forKey: day),
-                      seconds != 0 else {
+                      seconds != 0
+                else {
                     continue
                 }
                 ownDayDeltasByTaskID[taskID, default: [:]][day, default: 0] -= seconds
@@ -141,7 +142,7 @@ extension RollupIncrementalIndex {
             byAdding: .day,
             value: -(Self.historicalPaceDayCount - 1),
             to: today
-        ) ?? today.addingTimeInterval(-Double(Self.historicalPaceDayCount - 1) * 86_400)
+        ) ?? today.addingTimeInterval(-Double(Self.historicalPaceDayCount - 1) * 86400)
     }
 
     func mergeDayDeltas(

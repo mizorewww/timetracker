@@ -8,7 +8,7 @@ struct CoreLLMResponseTransportTests {
     func productionSessionIsEphemeralAndResourceBounded() {
         let configuration = LLMSecureHTTPTransport.productionConfiguration()
 
-        #expect(LLMSecureHTTPTransport.maximumResponseByteCount == 2 * 1_024 * 1_024)
+        #expect(LLMSecureHTTPTransport.maximumResponseByteCount == 2 * 1024 * 1024)
         #expect(configuration.timeoutIntervalForResource == 60)
         #expect(configuration.requestCachePolicy == .reloadIgnoringLocalCacheData)
         #expect(configuration.urlCache == nil)
@@ -35,7 +35,7 @@ struct CoreLLMResponseTransportTests {
     }
 
     @Test
-    func streamingTransportCancelsAtTheFirstByteBeyondTheLimit() async throws {
+    func streamingTransportCancelsAtTheFirstByteBeyondTheLimit() async {
         let exchange = LLMTransportTestExchange(
             behavior: .complete(statusCode: 200, headers: [:], body: Data(repeating: 0x42, count: 65))
         )
@@ -91,7 +91,7 @@ struct CoreLLMResponseTransportTests {
     }
 
     @Test
-    func cancellationPropagatesWhileWaitingForResponseHeaders() async throws {
+    func cancellationPropagatesWhileWaitingForResponseHeaders() async {
         let exchange = LLMTransportTestExchange(behavior: .pending)
         let fixture = Self.fixture(exchange: exchange)
         defer { fixture.session.invalidateAndCancel() }
@@ -128,7 +128,7 @@ struct CoreLLMResponseTransportTests {
     }
 
     @Test
-    func modelServiceDefendsAgainstOversizedInjectedTransportData() async throws {
+    func modelServiceDefendsAgainstOversizedInjectedTransportData() async {
         let service = LLMModelService(transport: Self.oversizedInjectedTransport)
 
         await Self.expectResponseTooLarge {
@@ -159,7 +159,7 @@ struct CoreLLMResponseTransportTests {
     }
 
     @Test
-    func inboxServiceDefendsAgainstOversizedInjectedTransportData() async throws {
+    func inboxServiceDefendsAgainstOversizedInjectedTransportData() async {
         let service = LLMInboxSuggestionService(transport: Self.oversizedInjectedTransport)
         let candidate = LLMTaskCandidate(
             id: UUID(),
@@ -182,7 +182,7 @@ struct CoreLLMResponseTransportTests {
     }
 
     @Test
-    func checklistServiceDefendsAgainstOversizedInjectedTransportData() async throws {
+    func checklistServiceDefendsAgainstOversizedInjectedTransportData() async {
         let service = LLMChecklistVisualSuggestionService(transport: Self.oversizedInjectedTransport)
 
         await Self.expectResponseTooLarge {
@@ -260,14 +260,16 @@ struct CoreLLMResponseTransportTests {
         let clock = ContinuousClock()
         let deadline = clock.now.advanced(by: timeout)
         while clock.now < deadline {
-            if condition() { return true }
+            if condition() {
+                return true
+            }
             try? await Task.sleep(for: .milliseconds(10))
         }
         return condition()
     }
 }
 
-nonisolated private final class LLMTransportTestExchange: @unchecked Sendable {
+private final nonisolated class LLMTransportTestExchange: @unchecked Sendable {
     enum Behavior: Sendable {
         case complete(statusCode: Int, headers: [String: String], body: Data)
         case pending
@@ -284,9 +286,17 @@ nonisolated private final class LLMTransportTestExchange: @unchecked Sendable {
         self.behavior = behavior
     }
 
-    var didStart: Bool { lock.withLock { started } }
-    var didDeliverResponse: Bool { lock.withLock { responseDelivered } }
-    var wasStopped: Bool { lock.withLock { stopped } }
+    var didStart: Bool {
+        lock.withLock { started }
+    }
+
+    var didDeliverResponse: Bool {
+        lock.withLock { responseDelivered }
+    }
+
+    var wasStopped: Bool {
+        lock.withLock { stopped }
+    }
 
     func markStarted() {
         lock.withLock { started = true }
@@ -301,7 +311,7 @@ nonisolated private final class LLMTransportTestExchange: @unchecked Sendable {
     }
 }
 
-nonisolated private final class LLMTransportTestRegistry: @unchecked Sendable {
+private final nonisolated class LLMTransportTestRegistry: @unchecked Sendable {
     private let lock = NSLock()
     private var exchanges: [URL: LLMTransportTestExchange] = [:]
 
@@ -314,11 +324,11 @@ nonisolated private final class LLMTransportTestRegistry: @unchecked Sendable {
     }
 }
 
-nonisolated private final class LLMTransportTestURLProtocol: URLProtocol, @unchecked Sendable {
+private final nonisolated class LLMTransportTestURLProtocol: URLProtocol, @unchecked Sendable {
     static let registry = LLMTransportTestRegistry()
     private var exchange: LLMTransportTestExchange?
 
-    override class func canInit(with request: URLRequest) -> Bool {
+    override class func canInit(with _: URLRequest) -> Bool {
         true
     }
 
@@ -328,7 +338,8 @@ nonisolated private final class LLMTransportTestURLProtocol: URLProtocol, @unche
 
     override func startLoading() {
         guard let url = request.url,
-              let exchange = Self.registry.exchange(for: url) else {
+              let exchange = Self.registry.exchange(for: url)
+        else {
             client?.urlProtocol(self, didFailWithError: URLError(.badURL))
             return
         }
@@ -362,7 +373,8 @@ nonisolated private final class LLMTransportTestURLProtocol: URLProtocol, @unche
                   statusCode: statusCode,
                   httpVersion: "HTTP/1.1",
                   headerFields: headers
-              ) else {
+              )
+        else {
             client?.urlProtocol(self, didFailWithError: URLError(.badServerResponse))
             return
         }

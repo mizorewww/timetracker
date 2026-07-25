@@ -28,13 +28,13 @@ struct CoreWidgetSnapshotTests {
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        let generatedAt = Date(timeIntervalSinceReferenceDate: 10_000)
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 10000)
         let taskID = UUID()
         let segmentID = UUID()
         let snapshot = WidgetSnapshot(
             generatedAt: generatedAt,
-            todayGrossSeconds: 3_600,
-            todayWallSeconds: 2_400,
+            todayGrossSeconds: 3600,
+            todayWallSeconds: 2400,
             activeTimers: [
                 WidgetTimerSnapshot(
                     id: segmentID,
@@ -44,7 +44,7 @@ struct CoreWidgetSnapshotTests {
                     startedAt: generatedAt.addingTimeInterval(-600),
                     colorHex: "#0A84FF",
                     iconName: "timer"
-                )
+                ),
             ],
             recentTasks: [
                 WidgetRecentTaskSnapshot(
@@ -53,7 +53,7 @@ struct CoreWidgetSnapshotTests {
                     path: "Work",
                     colorHex: "#0A84FF",
                     iconName: "doc.text"
-                )
+                ),
             ]
         )
         let cache = SharedWidgetSnapshotStore(defaults: defaults)
@@ -90,7 +90,7 @@ struct CoreWidgetSnapshotTests {
         )
 
         store.syncWidgetSnapshotIfAvailable(
-            now: Date(timeIntervalSinceReferenceDate: 12_000),
+            now: Date(timeIntervalSinceReferenceDate: 12000),
             cache: unavailableCache
         )
 
@@ -122,8 +122,8 @@ struct CoreWidgetSnapshotTests {
 
         var invalidSnapshot = WidgetSnapshot.empty
         invalidSnapshot.todayWallSeconds = -1
-        defaults.set(
-            try JSONEncoder().encode(invalidSnapshot),
+        try defaults.set(
+            JSONEncoder().encode(invalidSnapshot),
             forKey: SharedWidgetSnapshotStore.snapshotKey
         )
         #expect(cache.loadResult() == .corrupted)
@@ -134,10 +134,10 @@ struct CoreWidgetSnapshotTests {
         let suiteName = "WidgetSnapshotClockAdjustmentTests-\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
-        let now = Date(timeIntervalSinceReferenceDate: 20_000)
+        let now = Date(timeIntervalSinceReferenceDate: 20000)
         var snapshot = WidgetSnapshot.empty
         snapshot.generatedAt = now.addingTimeInterval(
-            WidgetSnapshotLimits.maximumFutureClockSkew + 3_600
+            WidgetSnapshotLimits.maximumFutureClockSkew + 3600
         )
         let cache = SharedWidgetSnapshotStore(defaults: defaults)
 
@@ -151,7 +151,7 @@ struct CoreWidgetSnapshotTests {
 
     @Test
     func widgetSnapshotFreshnessUsesTheSharedFifteenMinuteBoundary() {
-        let generatedAt = Date(timeIntervalSinceReferenceDate: 10_000)
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 10000)
         var snapshot = WidgetSnapshot.empty
         snapshot.generatedAt = generatedAt
 
@@ -169,7 +169,7 @@ struct CoreWidgetSnapshotTests {
     @Test
     func widgetTimelinePolicyAvoidsUnproductivePolling() {
         let policy = WidgetSnapshotTimelinePolicy()
-        let generatedAt = Date(timeIntervalSinceReferenceDate: 25_000)
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 25000)
         var snapshot = WidgetSnapshot.empty
         snapshot.generatedAt = generatedAt
 
@@ -182,7 +182,7 @@ struct CoreWidgetSnapshotTests {
         let staleResult = WidgetSnapshotLoadResult.snapshot(snapshot, freshness: .stale)
         #expect(policy.reloadDecision(for: staleResult, at: staleNow) == .never)
 
-        snapshot.generatedAt = generatedAt.addingTimeInterval(3_600)
+        snapshot.generatedAt = generatedAt.addingTimeInterval(3600)
         let adjustedResult = WidgetSnapshotLoadResult.snapshot(snapshot, freshness: .clockAdjusted)
         #expect(policy.reloadDecision(for: adjustedResult, at: generatedAt) == .after(
             snapshot.generatedAt.addingTimeInterval(-WidgetSnapshotLimits.maximumFutureClockSkew)
@@ -203,7 +203,7 @@ struct CoreWidgetSnapshotTests {
 
     @Test
     func untrustedWidgetSnapshotFreezesElapsedTimeAtTheSnapshotBoundary() {
-        let generatedAt = Date(timeIntervalSinceReferenceDate: 40_000)
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 40000)
         let timer = WidgetTimerSnapshot(
             id: UUID(),
             taskID: UUID(),
@@ -230,7 +230,7 @@ struct CoreWidgetSnapshotTests {
 
     @Test
     func widgetSnapshotValidationRejectsUnboundedAndDuplicateProjectionData() {
-        let generatedAt = Date(timeIntervalSinceReferenceDate: 30_000)
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 30000)
         let timerID = UUID()
         let taskID = UUID()
         let timer = WidgetTimerSnapshot(
@@ -274,7 +274,7 @@ struct CoreWidgetSnapshotTests {
         let widget = try [
             "timetrackerWidgetExtension/TimeTrackerWidget.swift",
             "timetrackerWidgetExtension/ActiveTimerWidgetView.swift",
-            "timetrackerWidgetExtension/WidgetSupplementaryViews.swift"
+            "timetrackerWidgetExtension/WidgetSupplementaryViews.swift",
         ].map(sourceText).joined(separator: "\n")
         let cache = try sourceText("timetracker/Services/SystemIntegration/WidgetSnapshotCache.swift")
 
@@ -343,12 +343,12 @@ struct CoreWidgetSnapshotTests {
             taskByID: [first.id: first, second.id: second],
             taskParentPathByID: [
                 first.id: "Work",
-                second.id: "Study"
+                second.id: "Study",
             ],
             recentTasks: [first, second],
             todayGrossSeconds: 0,
             todayWallSeconds: 0,
-            generatedAt: Date(timeIntervalSinceReferenceDate: 20_000)
+            generatedAt: Date(timeIntervalSinceReferenceDate: 20000)
         )
 
         #expect(snapshot.recentTasks.map(\.taskID) == [first.id, second.id])
@@ -360,10 +360,10 @@ struct CoreWidgetSnapshotTests {
 
     @Test @MainActor
     func widgetSnapshotProjectionFitsTransportLimitsWithoutBreakingUnicode() throws {
-        let generatedAt = Date(timeIntervalSinceReferenceDate: 40_000)
-        let longTitle = String(repeating: "🧑🏽‍💻", count: 1_000)
-        let longPath = String(repeating: "工作／项目／", count: 2_000)
-        let longStyle = String(repeating: "x", count: 1_000)
+        let generatedAt = Date(timeIntervalSinceReferenceDate: 40000)
+        let longTitle = String(repeating: "🧑🏽‍💻", count: 1000)
+        let longPath = String(repeating: "工作／项目／", count: 2000)
+        let longStyle = String(repeating: "x", count: 1000)
         let task = TaskNode(
             title: longTitle,
             parentID: nil,
@@ -371,17 +371,16 @@ struct CoreWidgetSnapshotTests {
             colorHex: longStyle,
             iconName: longStyle
         )
-        let segments = (0...WidgetSnapshotLimits.maximumActiveTimers).map { index in
-            let startedAt: Date
-            switch index {
+        let segments = (0 ... WidgetSnapshotLimits.maximumActiveTimers).map { index in
+            let startedAt: Date = switch index {
             case 0:
-                startedAt = generatedAt.addingTimeInterval(60)
+                generatedAt.addingTimeInterval(60)
             case 1:
-                startedAt = generatedAt.addingTimeInterval(
+                generatedAt.addingTimeInterval(
                     -WidgetSnapshotLimits.maximumActiveTimerAge - 60
                 )
             default:
-                startedAt = generatedAt.addingTimeInterval(-60)
+                generatedAt.addingTimeInterval(-60)
             }
             return TimeSegment(
                 sessionID: UUID(),
@@ -433,7 +432,7 @@ struct CoreWidgetSnapshotTests {
         #expect(encodedSnapshot.count <= WidgetSnapshotLimits.maximumEncodedBytes)
 
         var textHeavySnapshot = snapshot
-        textHeavySnapshot.recentTasks = (0..<WidgetSnapshotLimits.maximumRecentTasks).map { _ in
+        textHeavySnapshot.recentTasks = (0 ..< WidgetSnapshotLimits.maximumRecentTasks).map { _ in
             WidgetRecentTaskSnapshot(
                 taskID: UUID(),
                 title: String(repeating: "t", count: WidgetSnapshotLimits.maximumProjectedTitleBytes),

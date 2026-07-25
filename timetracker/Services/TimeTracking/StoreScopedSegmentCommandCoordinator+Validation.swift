@@ -25,7 +25,8 @@ extension StoreScopedSegmentCommandCoordinator {
         pomodoroRepository: SwiftDataPomodoroRepository
     ) throws -> (segment: TimeSegment, linkedRun: PomodoroRun?) {
         guard let segment = try timeRepository.segments(ids: [segmentID]).first,
-              let session = try timeRepository.sessions(ids: [segment.sessionID]).first else {
+              let session = try timeRepository.sessions(ids: [segment.sessionID]).first
+        else {
             throw SegmentMutationError.staleDraft
         }
         let linkedRuns = try pomodoroRepository.activeRuns().filter { run in
@@ -34,7 +35,8 @@ extension StoreScopedSegmentCommandCoordinator {
         guard linkedRuns.count <= 1,
               linkedRuns.allSatisfy({
                   $0.state == .focusing || $0.state == .interrupted
-              }) else {
+              })
+        else {
             throw SegmentMutationError.inconsistentSession
         }
         let linkedRun = linkedRuns.first
@@ -45,7 +47,8 @@ extension StoreScopedSegmentCommandCoordinator {
                       segment: segment,
                       sessionMutationID: session.clientMutationID,
                       pomodoroPhase: phase
-                  ) else {
+                  )
+            else {
                 throw SegmentMutationError.staleDraft
             }
         }
@@ -89,14 +92,15 @@ extension StoreScopedSegmentCommandCoordinator {
             deviceID: resolvedDeviceID
         )
         let tasks = try taskRepository.allNodes()
-        guard TaskTrackingAvailabilityService()
+        guard try TaskTrackingAvailabilityService()
             .directWorkTaskIDs(
                 tasks: tasks,
-                recurrenceRules: try taskRepository.taskRecurrenceRules(),
+                recurrenceRules: taskRepository.taskRecurrenceRules(),
                 recurrenceOccurrences:
-                    try taskRepository.taskRecurrenceOccurrences()
+                taskRepository.taskRecurrenceOccurrences()
             )
-            .contains(taskID) else {
+            .contains(taskID)
+        else {
             throw TimeTrackingRepositoryError.taskUnavailable
         }
     }
@@ -136,7 +140,8 @@ extension StoreScopedSegmentCommandCoordinator {
             guard runs.count <= 1,
                   runs.allSatisfy({
                       $0.state == .focusing || $0.state == .interrupted
-                  }) else {
+                  })
+            else {
                 throw SegmentMutationError.inconsistentSession
             }
             result[sessionID] = runs.first

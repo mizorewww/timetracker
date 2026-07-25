@@ -148,7 +148,7 @@ struct HomeActivityHeatmapSection: View {
                             TaskActivityHeatmapCard(snapshot: snapshot)
                                 .homeVisualizationListCard(
                                     accessibilityIdentifier:
-                                        "home.heatmap.card.\(snapshot.taskID.uuidString)"
+                                    "home.heatmap.card.\(snapshot.taskID.uuidString)"
                                 )
                         } header: {
                             if snapshot.id == snapshots.first?.id {

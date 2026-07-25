@@ -57,7 +57,7 @@ struct CoreSyncConflictStoreSerializationTests {
             (
                 "func forceUploadLocalData(context: ModelContext)",
                 "timetracker/Services/SystemIntegration/SyncConflictService+Recovery.swift"
-            )
+            ),
         ]
 
         for (signature, path) in entrypoints {
@@ -92,10 +92,10 @@ struct CoreSyncConflictStoreSerializationTests {
         let start = try #require(source.range(of: signature))
         let nextFunction = source.range(
             of: "\n    func ",
-            range: start.upperBound..<source.endIndex
+            range: start.upperBound ..< source.endIndex
         )
         let end = nextFunction?.lowerBound ?? source.endIndex
-        return source[start.lowerBound..<end]
+        return source[start.lowerBound ..< end]
     }
 
     private func temporaryStateURL() -> URL {

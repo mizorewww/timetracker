@@ -3,7 +3,7 @@ import SwiftUI
 struct TimelineRow: View {
     let store: TimeTrackerStore
     let segment: TimeSegment
-    var openTaskDetail: ((UUID) -> Void)? = nil
+    var openTaskDetail: ((UUID) -> Void)?
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -15,9 +15,9 @@ struct TimelineRow: View {
 
     private var tag: String {
         switch segment.source {
-        case .pomodoro: return AppStrings.pomodoro
-        case .manual: return AppStrings.localized("source.manual")
-        default: return AppStrings.localized("source.timer")
+        case .pomodoro: AppStrings.pomodoro
+        case .manual: AppStrings.localized("source.manual")
+        default: AppStrings.localized("source.timer")
         }
     }
 
@@ -45,7 +45,6 @@ struct TimelineRow: View {
             )
         }
         .contextMenu { segmentActions }
-
         .confirmationDialog(
             pendingDeletionImpact.confirmationTitle,
             isPresented: deletionPresentation,
@@ -233,17 +232,17 @@ struct TimelineRow: View {
 
     private var durationText: some View {
         DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
-        .font(.subheadline.monospacedDigit())
-        .foregroundStyle(segment.endedAt == nil ? Color.blue : Color.secondary)
-        .lineLimit(1)
-        .minimumScaleFactor(0.82)
+            .font(.subheadline.monospacedDigit())
+            .foregroundStyle(segment.endedAt == nil ? Color.blue : Color.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
     }
 
     private var tagColor: Color {
         switch segment.source {
-        case .pomodoro: return .blue
-        case .manual: return .orange
-        default: return .secondary
+        case .pomodoro: .blue
+        case .manual: .orange
+        default: .secondary
         }
     }
 

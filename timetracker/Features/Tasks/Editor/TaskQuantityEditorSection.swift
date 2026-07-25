@@ -20,11 +20,12 @@ struct TaskQuantityEditorSection: View {
                 unitEditor
 
                 if let error = TaskProgressDraftPersistencePolicy
-                    .quantityValidationError(for: draft.quantityGoal) {
+                    .quantityValidationError(for: draft.quantityGoal)
+                {
                     TaskEditorInlineErrorMessage(
                         message: error.localizedDescription,
                         accessibilityIdentifier:
-                            "task.editor.quantity.error"
+                        "task.editor.quantity.error"
                     )
                 }
             }
@@ -34,7 +35,7 @@ struct TaskQuantityEditorSection: View {
                     message: TaskProgressDraftMutationError
                         .incompleteQuantityGraph.localizedDescription,
                     accessibilityIdentifier:
-                        "task.editor.quantity.sync.error"
+                    "task.editor.quantity.sync.error"
                 )
             }
         } header: {
@@ -69,16 +70,15 @@ struct TaskQuantityEditorSection: View {
             )
             .multilineTextAlignment(.trailing)
             #if os(iOS)
-            .keyboardType(.numberPad)
+                .keyboardType(.numberPad)
             #endif
-            .focused(focusedTextField, equals: .quantityTarget)
-            .accessibilityIdentifier("task.editor.quantity.target")
+                .focused(focusedTextField, equals: .quantityTarget)
+                .accessibilityIdentifier("task.editor.quantity.target")
         } label: {
             Text(.app("task.quantity.editor.target"))
         }
     }
 
-    @ViewBuilder
     private var unitEditor: some View {
         LabeledContent {
             if isUnitLocked {
@@ -126,17 +126,19 @@ struct TaskQuantityEditorSection: View {
         return store.taskQuantityProgressReadState(
             for: taskID,
             expectedGoalMutationID:
-                draft.baseline?.quantityGoalMutationID
+            draft.baseline?.quantityGoalMutationID
         )
     }
 
     private var isReadModelIncomplete: Bool {
-        if case .incomplete = quantityReadState { return true }
+        if case .incomplete = quantityReadState {
+            return true
+        }
         return false
     }
 
     private var isUnitLocked: Bool {
-        guard case .available(let progress) = quantityReadState else {
+        guard case let .available(progress) = quantityReadState else {
             return false
         }
         return progress.entryCount > 0

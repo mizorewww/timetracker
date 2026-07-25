@@ -18,12 +18,12 @@ struct ForecastingService {
         let interval = DateInterval(start: start, end: end)
         let recent = segments.filter { segment in
             segment.deletedAt == nil &&
-            TrackedTimePolicy.overlaps(
-                startedAt: segment.startedAt,
-                endedAt: segment.endedAt,
-                interval: interval,
-                now: now
-            )
+                TrackedTimePolicy.overlaps(
+                    startedAt: segment.startedAt,
+                    endedAt: segment.endedAt,
+                    interval: interval,
+                    now: now
+                )
         }
         guard !recent.isEmpty else { return 0 }
 

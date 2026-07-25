@@ -20,7 +20,7 @@ enum WidgetDataIssue: Equatable {
 }
 
 struct ActiveTimerProvider: TimelineProvider {
-    func placeholder(in context: Context) -> ActiveTimerEntry {
+    func placeholder(in _: Context) -> ActiveTimerEntry {
         ActiveTimerEntry(date: Date(), state: .placeholder(Self.previewSnapshot()))
     }
 
@@ -32,13 +32,13 @@ struct ActiveTimerProvider: TimelineProvider {
         }
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<ActiveTimerEntry>) -> Void) {
+    func getTimeline(in _: Context, completion: @escaping (Timeline<ActiveTimerEntry>) -> Void) {
         let now = Date()
         let result = SharedWidgetSnapshotStore().loadResult(at: now)
         let current = entry(at: now, result: result)
 
         switch WidgetSnapshotTimelinePolicy().reloadDecision(for: result, at: now) {
-        case .after(let date):
+        case let .after(date):
             completion(Timeline(entries: [current], policy: .after(date)))
         case .never:
             // Missing or structurally corrupted data requires a new host snapshot.
@@ -54,16 +54,15 @@ struct ActiveTimerProvider: TimelineProvider {
         at date: Date,
         result: WidgetSnapshotLoadResult
     ) -> ActiveTimerEntry {
-        let state: WidgetEntryState
-        switch result {
+        let state: WidgetEntryState = switch result {
         case let .snapshot(snapshot, _):
-            state = .snapshot(snapshot)
+            .snapshot(snapshot)
         case .sharedContainerUnavailable:
-            state = .unavailable(.sharedContainerUnavailable)
+            .unavailable(.sharedContainerUnavailable)
         case .missing:
-            state = .unavailable(.missing)
+            .unavailable(.missing)
         case .corrupted:
-            state = .unavailable(.corrupted)
+            .unavailable(.corrupted)
         }
         return ActiveTimerEntry(date: date, state: state)
     }
@@ -71,8 +70,8 @@ struct ActiveTimerProvider: TimelineProvider {
     private static func previewSnapshot(now: Date = Date()) -> WidgetSnapshot {
         WidgetSnapshot(
             generatedAt: now,
-            todayGrossSeconds: 3_900,
-            todayWallSeconds: 5_100,
+            todayGrossSeconds: 3900,
+            todayWallSeconds: 5100,
             activeTimers: [
                 WidgetTimerSnapshot(
                     id: UUID(uuidString: "E13DC2F2-4F2B-46A0-8FF0-7BA77252B86B")!,
@@ -82,7 +81,7 @@ struct ActiveTimerProvider: TimelineProvider {
                     startedAt: now.addingTimeInterval(-15 * 60),
                     colorHex: "3478F6",
                     iconName: "hammer.fill"
-                )
+                ),
             ],
             recentTasks: []
         )

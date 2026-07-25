@@ -27,7 +27,7 @@ struct InboxMutationIdentityTests {
         try handler.toggle(
             toggleItem,
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 1_000),
+            now: Date(timeIntervalSinceReferenceDate: 1000),
             deviceID: localDeviceID
         )
         #expect(toggleItem.deviceID == localDeviceID)
@@ -41,11 +41,11 @@ struct InboxMutationIdentityTests {
             editedItem,
             title: "After",
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 2_000),
+            now: Date(timeIntervalSinceReferenceDate: 2000),
             deviceID: localDeviceID
         )
         #expect(editedItem.deviceID == localDeviceID)
-        #expect(editedSuggestion.deletedAt == Date(timeIntervalSinceReferenceDate: 2_000))
+        #expect(editedSuggestion.deletedAt == Date(timeIntervalSinceReferenceDate: 2000))
         #expect(editedSuggestion.deviceID == localDeviceID)
 
         let discardedItem = InboxItem(title: "Discard", deviceID: remoteDeviceID)
@@ -56,7 +56,7 @@ struct InboxMutationIdentityTests {
         try handler.discardSuggestion(
             discardedItem,
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 3_000),
+            now: Date(timeIntervalSinceReferenceDate: 3000),
             deviceID: localDeviceID
         )
         #expect(discardedItem.deviceID == localDeviceID)
@@ -70,7 +70,7 @@ struct InboxMutationIdentityTests {
         try handler.softDelete(
             deletedItem,
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 4_000),
+            now: Date(timeIntervalSinceReferenceDate: 4000),
             deviceID: localDeviceID
         )
         #expect(deletedItem.deviceID == localDeviceID)
@@ -83,10 +83,10 @@ struct InboxMutationIdentityTests {
             blankTitleItem,
             title: " \n ",
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 5_000),
+            now: Date(timeIntervalSinceReferenceDate: 5000),
             deviceID: localDeviceID
         )
-        #expect(blankTitleItem.deletedAt == Date(timeIntervalSinceReferenceDate: 5_000))
+        #expect(blankTitleItem.deletedAt == Date(timeIntervalSinceReferenceDate: 5000))
         #expect(blankTitleItem.deviceID == localDeviceID)
     }
 
@@ -112,7 +112,7 @@ struct InboxMutationIdentityTests {
         try handler.reorderOpenItems(
             orderedItemIDs: [first.id, UUID()],
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 6_000),
+            now: Date(timeIntervalSinceReferenceDate: 6000),
             deviceID: localDeviceID
         )
         try context.save()
@@ -124,7 +124,7 @@ struct InboxMutationIdentityTests {
         try handler.reorderOpenItems(
             orderedItemIDs: [first.id, first.id],
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 7_000),
+            now: Date(timeIntervalSinceReferenceDate: 7000),
             deviceID: localDeviceID
         )
         #expect(first.sortOrder == 10)
@@ -135,7 +135,7 @@ struct InboxMutationIdentityTests {
         try handler.reorderOpenItems(
             orderedItemIDs: [second.id, first.id],
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 8_000),
+            now: Date(timeIntervalSinceReferenceDate: 8000),
             deviceID: localDeviceID
         )
         #expect(second.sortOrder == 10)
@@ -176,7 +176,7 @@ struct InboxMutationIdentityTests {
         context.insert(second)
         try context.save()
 
-        let reorderedAt = Date(timeIntervalSinceReferenceDate: 9_000)
+        let reorderedAt = Date(timeIntervalSinceReferenceDate: 9000)
         try InboxCommandHandler().reorderOpenItems(
             orderedItemIDs: [second.id, first.id],
             context: context,
@@ -193,8 +193,8 @@ struct InboxMutationIdentityTests {
         #expect(sameIdentifierSibling.updatedAt == reorderedAt.addingTimeInterval(-1))
         #expect(sameIdentifierSibling.deviceID == localDeviceID)
         var store = InboxStore()
-        store.refresh(
-            items: try context.fetch(FetchDescriptor<InboxItem>()),
+        try store.refresh(
+            items: context.fetch(FetchDescriptor<InboxItem>()),
             suggestions: []
         )
         #expect(store.items.map(\.id) == [second.id, first.id])
@@ -226,7 +226,7 @@ struct InboxMutationIdentityTests {
         try InboxCommandHandler().reorderOpenItems(
             orderedItemIDs: [newer.id, UUID()],
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 9_500),
+            now: Date(timeIntervalSinceReferenceDate: 9500),
             deviceID: localDeviceID
         )
 
@@ -263,7 +263,7 @@ struct InboxMutationIdentityTests {
                 modelID: "test-model"
             ),
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 9_000),
+            now: Date(timeIntervalSinceReferenceDate: 9000),
             deviceID: localDeviceID
         )
 
@@ -271,7 +271,7 @@ struct InboxMutationIdentityTests {
         #expect(newer.taskID == replacementTaskID)
         #expect(newer.deletedAt == nil)
         #expect(newer.deviceID == localDeviceID)
-        #expect(older.deletedAt == Date(timeIntervalSinceReferenceDate: 9_000))
+        #expect(older.deletedAt == Date(timeIntervalSinceReferenceDate: 9000))
         #expect(older.deviceID == localDeviceID)
 
         item.deviceID = remoteDeviceID
@@ -285,7 +285,7 @@ struct InboxMutationIdentityTests {
             item: item,
             draft: draft,
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 10_000),
+            now: Date(timeIntervalSinceReferenceDate: 10000),
             deviceID: localDeviceID
         )
         #expect(item.deviceID == localDeviceID)
@@ -305,7 +305,7 @@ struct InboxMutationIdentityTests {
                 modelID: "test-model"
             ),
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 11_000),
+            now: Date(timeIntervalSinceReferenceDate: 11000),
             deviceID: localDeviceID
         )
         let insertedSuggestion = try #require(
@@ -330,7 +330,7 @@ struct InboxMutationIdentityTests {
             suggestion: suggestion,
             existingChecklistItems: [],
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 12_000),
+            now: Date(timeIntervalSinceReferenceDate: 12000),
             deviceID: localDeviceID
         )
         let visual = try #require(
@@ -338,9 +338,9 @@ struct InboxMutationIdentityTests {
                 .first { $0.checklistItemID == checklistItem.id }
         )
 
-        #expect(item.deletedAt == Date(timeIntervalSinceReferenceDate: 12_000))
+        #expect(item.deletedAt == Date(timeIntervalSinceReferenceDate: 12000))
         #expect(item.deviceID == localDeviceID)
-        #expect(suggestion.deletedAt == Date(timeIntervalSinceReferenceDate: 12_000))
+        #expect(suggestion.deletedAt == Date(timeIntervalSinceReferenceDate: 12000))
         #expect(suggestion.deviceID == localDeviceID)
         #expect(checklistItem.deviceID == localDeviceID)
         #expect(visual.deviceID == localDeviceID)
@@ -364,7 +364,7 @@ struct InboxMutationIdentityTests {
             item,
             title: "  Unchanged  ",
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 13_000),
+            now: Date(timeIntervalSinceReferenceDate: 13000),
             deviceID: localDeviceID
         )
         #expect(item.deviceID == remoteDeviceID)
@@ -378,7 +378,7 @@ struct InboxMutationIdentityTests {
             item: item,
             draft: invalidDraft,
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 14_000),
+            now: Date(timeIntervalSinceReferenceDate: 14000),
             deviceID: localDeviceID
         )
         #expect(item.deviceID == remoteDeviceID)
@@ -391,7 +391,7 @@ struct InboxMutationIdentityTests {
                     item,
                     title: "Must roll back",
                     context: context,
-                    now: Date(timeIntervalSinceReferenceDate: 15_000),
+                    now: Date(timeIntervalSinceReferenceDate: 15000),
                     deviceID: localDeviceID
                 )
                 throw ForcedInboxMutationFailure.expected

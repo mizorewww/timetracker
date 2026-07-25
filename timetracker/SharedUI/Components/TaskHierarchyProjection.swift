@@ -49,8 +49,13 @@ struct TaskHierarchyProjection: Equatable {
         let unavailableReason: String?
         let timerCommand: TimerPickerSelectionCommand
 
-        var id: UUID { identity.id }
-        var hasChildren: Bool { childCount > 0 }
+        var id: UUID {
+            identity.id
+        }
+
+        var hasChildren: Bool {
+            childCount > 0
+        }
     }
 
     let sections: [Section]
@@ -92,7 +97,7 @@ struct TaskHierarchyProjection: Equatable {
                         isExpanded: row.isExpanded,
                         availableTaskIDs: availableTaskIDs,
                         availableAncestorTaskIDs:
-                            availableAncestorTaskIDs
+                        availableAncestorTaskIDs
                     )
                 }
                 guard items.isEmpty == false else { return nil }
@@ -117,7 +122,7 @@ struct TaskHierarchyProjection: Equatable {
                     isExpanded: false,
                     availableTaskIDs: availableTaskIDs,
                     availableAncestorTaskIDs:
-                        availableAncestorTaskIDs
+                    availableAncestorTaskIDs
                 )
             }
             sections = items.isEmpty
@@ -132,7 +137,7 @@ struct TaskHierarchyProjection: Equatable {
                         includesInForecast: true,
                         kind: .searchResults,
                         items: items
-                    )
+                    ),
                 ]
         }
     }
@@ -146,14 +151,16 @@ struct TaskHierarchyProjection: Equatable {
         var seenTaskIDs = Set<UUID>()
         return store.activeSegments.compactMap { segment in
             guard seenTaskIDs.insert(segment.taskID).inserted,
-                  let task = store.task(for: segment.taskID) else {
+                  let task = store.task(for: segment.taskID)
+            else {
                 return nil
             }
             let identity = store.taskIdentityPresentation(for: task)
             guard query.isEmpty ||
-                    task.title.localizedCaseInsensitiveContains(query) ||
-                    identity.fullPath.localizedCaseInsensitiveContains(query) ||
-                    (task.notes?.localizedCaseInsensitiveContains(query) ?? false) else {
+                task.title.localizedCaseInsensitiveContains(query) ||
+                identity.fullPath.localizedCaseInsensitiveContains(query) ||
+                (task.notes?.localizedCaseInsensitiveContains(query) ?? false)
+            else {
                 return nil
             }
             return item(
@@ -188,7 +195,7 @@ struct TaskHierarchyProjection: Equatable {
             isExpanded: isExpanded,
             isAvailable: isAvailable,
             hasAvailableDescendant:
-                availableAncestorTaskIDs.contains(taskID),
+            availableAncestorTaskIDs.contains(taskID),
             isRunning: store.activeSegment(for: task.id) != nil,
             checklistProgress: checklistProgress.totalCount > 0
                 ? checklistProgress

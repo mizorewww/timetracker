@@ -18,7 +18,7 @@ struct PreferenceCommandValidationTests {
                 .llmEndpoint,
                 String(repeating: "x", count: PreferenceJSON.maximumPayloadByteCount + 1),
                 .payloadTooLarge
-            )
+            ),
         ]
 
         for (key, valueJSON, expectedError) in invalidValues {
@@ -78,7 +78,7 @@ struct PreferenceCommandValidationTests {
             try PreferenceCommandHandler().set(
                 values: [
                     (.defaultFocusMinutes, PreferenceJSON.encode(55)),
-                    (.defaultBreakMinutes, PreferenceJSON.encode("wrong-type"))
+                    (.defaultBreakMinutes, PreferenceJSON.encode("wrong-type")),
                 ],
                 context: context,
                 now: originalDate.addingTimeInterval(100)
@@ -111,9 +111,9 @@ struct PreferenceCommandValidationTests {
                     PreferenceJSON.encode([
                         validTaskID.uuidString,
                         "not-a-uuid",
-                        validTaskID.uuidString.lowercased()
+                        validTaskID.uuidString.lowercased(),
                     ])
-                )
+                ),
             ],
             context: context
         )
@@ -288,7 +288,7 @@ struct PreferenceCommandValidationTests {
             AppPreferenceValueSanitizer.llmModelIDs([
                 exactBoundary,
                 oversizedUnicode,
-                controlCharacter
+                controlCharacter,
             ]) == [exactBoundary]
         )
         #expect(!AppPreferenceValueSanitizer.llmModelIDs([oversizedUnicode]).contains {
@@ -348,7 +348,7 @@ struct PreferenceCommandValidationTests {
 }
 
 private struct FailingEncodable: Encodable {
-    func encode(to encoder: Encoder) throws {
+    func encode(to _: Encoder) throws {
         throw FailingEncodingError()
     }
 }

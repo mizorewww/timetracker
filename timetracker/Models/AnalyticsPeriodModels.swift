@@ -5,16 +5,18 @@ enum AnalyticsRange: String, CaseIterable, Identifiable, Sendable {
     case week = "Week"
     case month = "Month"
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var displayName: String {
         switch self {
         case .today:
-            return AppStrings.localized("analytics.range.day")
+            AppStrings.localized("analytics.range.day")
         case .week:
-            return AppStrings.localized("analytics.range.week")
+            AppStrings.localized("analytics.range.week")
         case .month:
-            return AppStrings.localized("analytics.range.month")
+            AppStrings.localized("analytics.range.month")
         }
     }
 }
@@ -76,11 +78,11 @@ nonisolated extension AnalyticsRange {
     ) -> DateInterval? {
         switch self {
         case .today:
-            return calendar.dateInterval(of: .day, for: date)
+            calendar.dateInterval(of: .day, for: date)
         case .week:
-            return calendar.dateInterval(of: .weekOfYear, for: date)
+            calendar.dateInterval(of: .weekOfYear, for: date)
         case .month:
-            return calendar.dateInterval(of: .month, for: date)
+            calendar.dateInterval(of: .month, for: date)
         }
     }
 
@@ -91,16 +93,15 @@ nonisolated extension AnalyticsRange {
     ) -> AnalyticsPeriodEvaluation {
         let selectedInterval = interval(containing: referenceDate, calendar: calendar)
             ?? DateInterval(start: referenceDate, duration: 0)
-        let cutoff: Date
-        if selectedInterval.contains(liveNow) {
-            cutoff = liveNow
+        let cutoff: Date = if selectedInterval.contains(liveNow) {
+            liveNow
         } else if selectedInterval.end <= liveNow {
             // DateInterval is half-open. Evaluating a completed period exactly
             // at its end preserves every instant before the boundary.
-            cutoff = selectedInterval.end
+            selectedInterval.end
         } else {
             // A future period must remain empty until its start arrives.
-            cutoff = selectedInterval.start
+            selectedInterval.start
         }
         return AnalyticsPeriodEvaluation(
             interval: selectedInterval,
@@ -115,7 +116,8 @@ nonisolated extension AnalyticsRange {
         calendar: Calendar = .current
     ) -> Bool {
         guard let selected = interval(containing: date, calendar: calendar),
-              let current = interval(containing: liveNow, calendar: calendar) else {
+              let current = interval(containing: liveNow, calendar: calendar)
+        else {
             return false
         }
         return selected.start == current.start

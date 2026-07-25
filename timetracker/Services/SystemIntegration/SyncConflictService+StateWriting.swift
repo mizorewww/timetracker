@@ -8,7 +8,7 @@ nonisolated struct SyncConflictLocalStateByteLimits: Equatable, Sendable {
         Self(
             maximumStateFileByteCount: SyncConflictService.maximumStateFileByteCount,
             maximumRecoverySnapshotFileByteCount:
-                SyncConflictService.maximumRecoverySnapshotFileByteCount
+            SyncConflictService.maximumRecoverySnapshotFileByteCount
         )
     }
 
@@ -82,10 +82,11 @@ extension SyncConflictService {
         for state: SyncConflictState
     ) throws -> PendingForcedUploadMirrorMutation {
         guard let snapshot = state.pendingForcedUploadSnapshot,
-              snapshot.hasProtectableUserContent else {
+              snapshot.hasProtectableUserContent
+        else {
             return .remove
         }
-        return .save(try encodedRecoverySnapshotForWrite(snapshot))
+        return try .save(encodedRecoverySnapshotForWrite(snapshot))
     }
 
     private func encodedRecoverySnapshotForWrite(

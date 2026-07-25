@@ -58,7 +58,7 @@ struct TaskEditorSessionTests {
     }
 
     @Test
-    func checklistCommandsKeepIncompleteWorkBeforeCompletedWork() throws {
+    func checklistCommandsKeepIncompleteWorkBeforeCompletedWork() {
         let store = makeTestStore()
         var initialDraft = TaskEditorDraft(parentID: nil)
         let completed = ChecklistEditorDraft(
@@ -77,7 +77,7 @@ struct TaskEditorSessionTests {
         #expect(session.draft.checklistItems.map(\.id) == [
             incomplete.id,
             insertedID,
-            completed.id
+            completed.id,
         ])
 
         session.moveChecklistItems(
@@ -87,7 +87,7 @@ struct TaskEditorSessionTests {
         #expect(session.draft.checklistItems.map(\.id) == [
             insertedID,
             incomplete.id,
-            completed.id
+            completed.id,
         ])
     }
 
@@ -322,8 +322,8 @@ struct TaskEditorSessionTests {
         )
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        let initialDraft = store.editorDraft(
-            for: try #require(store.task(for: task.id))
+        let initialDraft = try store.editorDraft(
+            for: #require(store.task(for: task.id))
         )
         let session = TaskEditorSession(
             store: store,
@@ -406,7 +406,7 @@ struct TaskEditorSessionTests {
         draft.notes = "Keep this"
         draft.estimatedMinutes = 25
         draft.hasDueDate = true
-        draft.dueAt = Date(timeIntervalSince1970: 1_234)
+        draft.dueAt = Date(timeIntervalSince1970: 1234)
         let checklist = ChecklistEditorDraft(
             title: "Preserve item",
             isCompleted: true,
@@ -536,13 +536,13 @@ struct TaskEditorSessionTests {
         #expect(session.draft.checklistItems.first?.id == visibleChecklistID)
         #expect(session.draft.checklistItems.first?.existingID != nil)
         #expect(
-            session.draft.baseline ==
-                store.editorDraft(for: try #require(store.task(for: created.id)))
-                    .baseline
+            try session.draft.baseline ==
+                store.editorDraft(for: #require(store.task(for: created.id)))
+                .baseline
         )
 
-        let sourceDraft = store.editorDraft(
-            for: try #require(store.task(for: created.id))
+        let sourceDraft = try store.editorDraft(
+            for: #require(store.task(for: created.id))
         )
         session.synchronizeWithStoreIfClean(
             taskID: created.id,
@@ -622,7 +622,7 @@ struct TaskEditorSessionTests {
         #expect(session.draft.checklistItems[1].existingID == nil)
         #expect(session.sessionBaseline.title == "Saved prefix")
         #expect(session.sessionBaseline.checklistItems.map(\.id) == [
-            savedItemID
+            savedItemID,
         ])
         #expect(session.hasUnsavedChanges)
 
@@ -670,8 +670,8 @@ struct TaskEditorSessionTests {
             store.saveTaskDraftResult(savedDraft) ==
                 .saved(taskID: created.id)
         )
-        var externallyChangedDraft = store.editorDraft(
-            for: try #require(store.task(for: created.id))
+        var externallyChangedDraft = try store.editorDraft(
+            for: #require(store.task(for: created.id))
         )
         externallyChangedDraft.checklistItems = []
         #expect(
@@ -693,7 +693,8 @@ struct TaskEditorSessionTests {
 
     @Test
     func autosaveConsumesQuantityResetConfirmationExactlyOnce()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
@@ -705,16 +706,16 @@ struct TaskEditorSessionTests {
         )
         let taskID: UUID
         switch store.saveTaskDraftResult(newDraft) {
-        case .saved(let savedTaskID):
+        case let .saved(savedTaskID):
             taskID = savedTaskID
         case .stale, .failed:
             Issue.record("Quantity task creation should succeed")
             return
         }
-        let session = TaskEditorSession(
+        let session = try TaskEditorSession(
             store: store,
             initialDraft: store.editorDraft(
-                for: try #require(store.task(for: taskID))
+                for: #require(store.task(for: taskID))
             )
         )
         session.draft.quantityGoal = nil

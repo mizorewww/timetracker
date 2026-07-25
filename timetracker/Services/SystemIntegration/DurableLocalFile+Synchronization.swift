@@ -54,12 +54,16 @@ nonisolated extension DurableLocalFile {
     func synchronizeDescriptor(_ descriptor: Int32) throws {
         while Darwin.fsync(descriptor) != 0 {
             let errorCode = errno
-            if errorCode == EINTR { continue }
+            if errorCode == EINTR {
+                continue
+            }
             throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO)
         }
         while Darwin.fcntl(descriptor, F_FULLFSYNC) != 0 {
             let errorCode = errno
-            if errorCode == EINTR { continue }
+            if errorCode == EINTR {
+                continue
+            }
             throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO)
         }
     }

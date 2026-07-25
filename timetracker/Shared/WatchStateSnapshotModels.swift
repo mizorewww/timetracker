@@ -7,13 +7,13 @@ nonisolated enum WatchTransportLimits {
     static let maximumFutureClockSkew: TimeInterval = 5 * 60
     static let maximumDeviceIDBytes = 256
     static let maximumFailureCodeBytes = 256
-    static let maximumTitleBytes = 4 * 1_024
-    static let maximumPathBytes = 16 * 1_024
+    static let maximumTitleBytes = 4 * 1024
+    static let maximumPathBytes = 16 * 1024
     static let maximumStyleValueBytes = 256
     static let maximumProjectedTitleBytes = 512
-    static let maximumProjectedPathBytes = 1_024
+    static let maximumProjectedPathBytes = 1024
     static let maximumProjectedStyleValueBytes = 128
-    static let maximumSnapshotTextBytes = 128 * 1_024
+    static let maximumSnapshotTextBytes = 128 * 1024
     static let maximumActiveTimers = 64
     static let maximumRecentTasks = 256
     static let maximumQuickStartTasks = 24
@@ -23,7 +23,7 @@ nonisolated enum WatchTransportLimits {
     static let maximumIncomingCommands = 64
     static let maximumPersistedPendingCommands = 64
     static let maximumPersistedFailedCommands = 64
-    static let maximumQueueEncodedBytes = 512 * 1_024
+    static let maximumQueueEncodedBytes = 512 * 1024
 
     static func isBounded(_ value: String, maximumUTF8Bytes: Int) -> Bool {
         value.utf8.count <= maximumUTF8Bytes
@@ -102,10 +102,10 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
     }
 
     nonisolated init(widgetSnapshot: WidgetSnapshot) {
-        self.generatedAt = widgetSnapshot.generatedAt
-        self.todayGrossSeconds = widgetSnapshot.todayGrossSeconds
-        self.todayWallSeconds = widgetSnapshot.todayWallSeconds
-        self.activeTimers = widgetSnapshot.activeTimers.map {
+        generatedAt = widgetSnapshot.generatedAt
+        todayGrossSeconds = widgetSnapshot.todayGrossSeconds
+        todayWallSeconds = widgetSnapshot.todayWallSeconds
+        activeTimers = widgetSnapshot.activeTimers.map {
             WatchActiveTimerSnapshot(
                 id: $0.id,
                 taskID: $0.taskID,
@@ -116,7 +116,7 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
                 iconName: $0.iconName
             )
         }
-        self.recentTasks = widgetSnapshot.recentTasks.map {
+        recentTasks = widgetSnapshot.recentTasks.map {
             WatchRecentTaskSnapshot(
                 taskID: $0.taskID,
                 title: $0.title,
@@ -142,11 +142,11 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
         let quickStartRanks = recentTasks.compactMap(\.quickStartRank)
         let allTasksRanks = recentTasks.compactMap(\.allTasksRank)
         let hasValidQuickStartRanks = quickStartRanks.isEmpty ||
-            Set(quickStartRanks) == Set(0..<quickStartRanks.count)
+            Set(quickStartRanks) == Set(0 ..< quickStartRanks.count)
         let hasValidAllTasksRanks = allTasksRanks.isEmpty ||
             (
                 allTasksRanks.count == recentTasks.count &&
-                Set(allTasksRanks) == Set(0..<recentTasks.count)
+                    Set(allTasksRanks) == Set(0 ..< recentTasks.count)
             )
         let textByteCount = activeTimers.reduce(into: 0) { total, timer in
             total += WatchTransportLimits.textByteCount(
@@ -166,8 +166,8 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
         guard WatchTransportLimits.isFinite(now),
               WatchTransportLimits.isFinite(generatedAt),
               generatedAt.timeIntervalSince(now) <= WatchTransportLimits.maximumFutureClockSkew,
-              (0...WatchTransportLimits.maximumSummarySeconds).contains(todayGrossSeconds),
-              (0...WatchTransportLimits.maximumSummarySeconds).contains(todayWallSeconds),
+              (0 ... WatchTransportLimits.maximumSummarySeconds).contains(todayGrossSeconds),
+              (0 ... WatchTransportLimits.maximumSummarySeconds).contains(todayWallSeconds),
               activeTimers.count <= WatchTransportLimits.maximumActiveTimers,
               recentTasks.count <= WatchTransportLimits.maximumRecentTasks,
               textByteCount <= WatchTransportLimits.maximumSnapshotTextBytes,
@@ -176,7 +176,8 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
               Set(activeTimers.map(\.id)).count == activeTimers.count,
               Set(recentTasks.map(\.taskID)).count == recentTasks.count,
               hasValidQuickStartRanks,
-              hasValidAllTasksRanks else {
+              hasValidAllTasksRanks
+        else {
             return false
         }
         return true
@@ -189,13 +190,13 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
             .sorted { lhs, rhs in
                 switch (lhs.element.allTasksRank, rhs.element.allTasksRank) {
                 case let (lhsRank?, rhsRank?) where lhsRank != rhsRank:
-                    return lhsRank < rhsRank
+                    lhsRank < rhsRank
                 case (_?, nil):
-                    return true
+                    true
                 case (nil, _?):
-                    return false
+                    false
                 default:
-                    return lhs.offset < rhs.offset
+                    lhs.offset < rhs.offset
                 }
             }
             .map(\.element)
@@ -241,15 +242,16 @@ nonisolated struct WatchActiveTimerSnapshot: Codable, Equatable, Identifiable, S
         guard WatchTransportLimits.isFinite(startedAt),
               WatchTransportLimits.isFinite(generatedAt),
               WatchTransportLimits.isBounded(
-                title,
-                maximumUTF8Bytes: WatchTransportLimits.maximumTitleBytes
+                  title,
+                  maximumUTF8Bytes: WatchTransportLimits.maximumTitleBytes
               ),
               WatchTransportLimits.isBounded(
-                path,
-                maximumUTF8Bytes: WatchTransportLimits.maximumPathBytes
+                  path,
+                  maximumUTF8Bytes: WatchTransportLimits.maximumPathBytes
               ),
               WatchTransportLimits.isValidStyleValue(colorHex),
-              WatchTransportLimits.isValidStyleValue(iconName) else {
+              WatchTransportLimits.isValidStyleValue(iconName)
+        else {
             return false
         }
         let age = generatedAt.timeIntervalSince(startedAt)
@@ -268,7 +270,9 @@ nonisolated struct WatchRecentTaskSnapshot: Codable, Equatable, Identifiable, Se
     var quickStartRank: Int? = nil
     var allTasksRank: Int? = nil
 
-    nonisolated var id: UUID { taskID }
+    nonisolated var id: UUID {
+        taskID
+    }
 
     var isStructurallyValid: Bool {
         WatchTransportLimits.isBounded(
@@ -282,10 +286,10 @@ nonisolated struct WatchRecentTaskSnapshot: Codable, Equatable, Identifiable, Se
             WatchTransportLimits.isValidStyleValue(colorHex) &&
             WatchTransportLimits.isValidStyleValue(iconName) &&
             quickStartRank.map {
-                (0..<WatchTransportLimits.maximumQuickStartTasks).contains($0)
+                (0 ..< WatchTransportLimits.maximumQuickStartTasks).contains($0)
             } != false &&
             allTasksRank.map {
-                (0..<WatchTransportLimits.maximumRecentTasks).contains($0)
+                (0 ..< WatchTransportLimits.maximumRecentTasks).contains($0)
             } != false
     }
 }

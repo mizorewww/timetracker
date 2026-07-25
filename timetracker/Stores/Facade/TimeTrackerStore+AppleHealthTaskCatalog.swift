@@ -7,7 +7,8 @@ extension TimeTrackerStore {
     ) {
         guard hasCompletedStartupConfiguration,
               effectivePersistenceWriteSafety == .ready,
-              let modelContext else {
+              let modelContext
+        else {
             return
         }
 
@@ -55,7 +56,7 @@ extension TimeTrackerStore {
         let catalogTaskIDs = Set(AppleHealthTaskCatalog.plan(
             for: AppleHealthTaskCatalog.allRoles
         ).tasks.map(\.id))
-        return Set(try modelContext.fetch(
+        return try Set(modelContext.fetch(
             FetchDescriptor<TaskNode>()
         ).visibleDeduplicatedByID().compactMap {
             catalogTaskIDs.contains($0.id) ? $0.id : nil

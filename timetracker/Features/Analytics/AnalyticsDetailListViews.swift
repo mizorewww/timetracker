@@ -140,26 +140,26 @@ private struct AnalyticsInsightRow: View {
     private var iconName: String {
         switch insight.severity {
         case .positive:
-            return "checkmark.seal"
+            "checkmark.seal"
         case .neutral:
-            return "target"
+            "target"
         case .warning:
-            return "exclamationmark.triangle"
+            "exclamationmark.triangle"
         case .critical:
-            return "exclamationmark.octagon"
+            "exclamationmark.octagon"
         }
     }
 
     private var tint: Color {
         switch insight.severity {
         case .positive:
-            return .green
+            .green
         case .neutral:
-            return .blue
+            .blue
         case .warning:
-            return .orange
+            .orange
         case .critical:
-            return .red
+            .red
         }
     }
 }

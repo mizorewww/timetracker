@@ -1,4 +1,5 @@
 import SwiftUI
+
 extension TimelineChart {
     func horizontalHourGrid(
         axisLength: CGFloat,
@@ -116,6 +117,7 @@ extension TimelineChart {
             }
         }
     }
+
     func horizontalGapLine(
         _ gap: TimelineOmittedGap,
         axisLength: CGFloat,
@@ -316,6 +318,7 @@ private struct DashedTimelineLine: Shape {
         return path
     }
 }
+
 private struct TimelineGridLine: Shape {
     let position: CGFloat
     let isVertical: Bool

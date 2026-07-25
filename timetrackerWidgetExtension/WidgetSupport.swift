@@ -44,7 +44,7 @@ struct WidgetStopTimerIntent: AppIntent {
 enum WidgetElapsedFormatter {
     nonisolated static func clock(_ seconds: Int) -> String {
         let safeSeconds = max(0, seconds)
-        let pattern: Duration.TimeFormatStyle.Pattern = safeSeconds >= 3_600
+        let pattern: Duration.TimeFormatStyle.Pattern = safeSeconds >= 3600
             ? .hourMinuteSecond
             : .minuteSecond
         return Duration.seconds(safeSeconds).formatted(

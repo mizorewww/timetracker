@@ -97,7 +97,8 @@ struct TaskTrackingAvailabilityService {
         while taskIDsToDisplayAsRoots.contains(cursor.id) == false,
               let currentID = cursor.parentID,
               visited.insert(currentID).inserted,
-              let parent = taskByID[currentID] {
+              let parent = taskByID[currentID]
+        {
             if parent.isArchivedForLifecycle {
                 return true
             }

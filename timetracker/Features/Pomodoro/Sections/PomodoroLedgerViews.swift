@@ -85,22 +85,22 @@ private struct PomodoroRunRow: View {
 
     private func iconName(for state: PomodoroState) -> String {
         switch state {
-        case .completed: return "checkmark.circle.fill"
-        case .cancelled: return "xmark.circle.fill"
-        case .focusing: return "flame.fill"
-        case .shortBreak, .longBreak: return "cup.and.saucer.fill"
-        case .planned: return "timer"
-        case .interrupted: return "exclamationmark.circle.fill"
+        case .completed: "checkmark.circle.fill"
+        case .cancelled: "xmark.circle.fill"
+        case .focusing: "flame.fill"
+        case .shortBreak, .longBreak: "cup.and.saucer.fill"
+        case .planned: "timer"
+        case .interrupted: "exclamationmark.circle.fill"
         }
     }
 
     private func color(for state: PomodoroState) -> Color {
         switch state {
-        case .completed: return .green
-        case .cancelled: return .red
-        case .focusing: return .blue
-        case .shortBreak, .longBreak: return .orange
-        case .planned, .interrupted: return .secondary
+        case .completed: .green
+        case .cancelled: .red
+        case .focusing: .blue
+        case .shortBreak, .longBreak: .orange
+        case .planned, .interrupted: .secondary
         }
     }
 }

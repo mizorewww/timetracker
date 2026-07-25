@@ -5,7 +5,7 @@ enum TasksRoute: Hashable, Sendable {
 
     var taskID: UUID {
         switch self {
-        case .detail(let taskID):
+        case let .detail(taskID):
             taskID
         }
     }

@@ -38,8 +38,8 @@ struct TombstoneQueryTests {
             taskID: taskID,
             source: .timer,
             deviceID: "new",
-            startedAt: base.addingTimeInterval(10_000),
-            endedAt: base.addingTimeInterval(10_060)
+            startedAt: base.addingTimeInterval(10000),
+            endedAt: base.addingTimeInterval(10060)
         )
         deletedSegment.id = segmentID
         deletedSegment.createdAt = base
@@ -100,8 +100,8 @@ struct TombstoneQueryTests {
         #expect(try timeRepository.allSegments().isEmpty)
         #expect(try timeRepository.segments(
             from: base,
-            to: base.addingTimeInterval(3_600),
-            now: base.addingTimeInterval(1_800)
+            to: base.addingTimeInterval(3600),
+            now: base.addingTimeInterval(1800)
         ).isEmpty)
 
         let pomodoroRepository = SwiftDataPomodoroRepository(

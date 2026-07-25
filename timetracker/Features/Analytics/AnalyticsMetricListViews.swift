@@ -109,9 +109,9 @@ struct AnalyticsMetricList: View {
     private var deltaFootnoteFormatKey: String {
         switch comparison.window.basis {
         case .matchedProgress:
-            return "analytics.metric.deltaMatchedFootnoteFormat"
+            "analytics.metric.deltaMatchedFootnoteFormat"
         case .completePeriods:
-            return "analytics.metric.deltaCompleteFootnoteFormat"
+            "analytics.metric.deltaCompleteFootnoteFormat"
         }
     }
 

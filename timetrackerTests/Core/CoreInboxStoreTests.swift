@@ -117,11 +117,12 @@ struct CoreInboxStoreTests {
 
             guard let url = request.url,
                   let response = HTTPURLResponse(
-                    url: url,
-                    statusCode: 200,
-                    httpVersion: nil,
-                    headerFields: nil
-                  ) else {
+                      url: url,
+                      statusCode: 200,
+                      httpVersion: nil,
+                      headerFields: nil
+                  )
+            else {
                 throw InboxSuggestionTestError.invalidResponse
             }
             return (Data("{\"choices\":[]}".utf8), response)
@@ -132,7 +133,7 @@ struct CoreInboxStoreTests {
             checklistVisualSuggestionService: service
         )
         let task = TaskNode(title: "Study", parentID: nil, deviceID: "test")
-        let items = (0..<8).map {
+        let items = (0 ..< 8).map {
             ChecklistItem(taskID: task.id, title: "Checklist item \($0)", deviceID: "test")
         }
         store.tasks = [task]
@@ -144,9 +145,10 @@ struct CoreInboxStoreTests {
 
         store.autoSuggestChecklistVisualsIfNeeded()
 
-        for _ in 0..<100 {
+        for _ in 0 ..< 100 {
             if await probe.completedRequestCount == items.count,
-               store.checklistVisualSuggestionInFlightIDs.isEmpty {
+               store.checklistVisualSuggestionInFlightIDs.isEmpty
+            {
                 break
             }
             try await Task.sleep(for: .milliseconds(20))
@@ -172,11 +174,12 @@ struct CoreInboxStoreTests {
 
             guard let url = request.url,
                   let response = HTTPURLResponse(
-                    url: url,
-                    statusCode: 200,
-                    httpVersion: nil,
-                    headerFields: nil
-                  ) else {
+                      url: url,
+                      statusCode: 200,
+                      httpVersion: nil,
+                      headerFields: nil
+                  )
+            else {
                 throw InboxSuggestionTestError.invalidResponse
             }
             return (Data("{\"choices\":[]}".utf8), response)
@@ -186,7 +189,7 @@ struct CoreInboxStoreTests {
             inboxSuggestionService: service
         )
         let task = TaskNode(title: "Study", parentID: nil, deviceID: "test")
-        let items = (0..<8).map { InboxItem(title: "Inbox item \($0)", deviceID: "test") }
+        let items = (0 ..< 8).map { InboxItem(title: "Inbox item \($0)", deviceID: "test") }
         store.tasks = [task]
         store.inboxItems = items
         store.preferences.llmEndpoint = "https://example.test/v1"
@@ -201,10 +204,11 @@ struct CoreInboxStoreTests {
         store.suggestInboxItem(items[0], showsErrors: false)
         let expectedRequestCount = items.count + 1
 
-        for _ in 0..<100 {
+        for _ in 0 ..< 100 {
             if await probe.completedRequestCount == expectedRequestCount,
                store.inboxSuggestionInFlightIDs.isEmpty,
-               store.inboxSuggestionPendingIDs.isEmpty {
+               store.inboxSuggestionPendingIDs.isEmpty
+            {
                 break
             }
             try await Task.sleep(for: .milliseconds(20))
@@ -224,11 +228,12 @@ struct CoreInboxStoreTests {
             await probe.endRequest()
             guard let url = request.url,
                   let response = HTTPURLResponse(
-                    url: url,
-                    statusCode: 200,
-                    httpVersion: nil,
-                    headerFields: nil
-                  ) else {
+                      url: url,
+                      statusCode: 200,
+                      httpVersion: nil,
+                      headerFields: nil
+                  )
+            else {
                 throw InboxSuggestionTestError.invalidResponse
             }
             return (Data("{\"choices\":[]}".utf8), response)
@@ -314,11 +319,12 @@ struct CoreInboxStoreTests {
             """
             guard let url = request.url,
                   let response = HTTPURLResponse(
-                    url: url,
-                    statusCode: 200,
-                    httpVersion: nil,
-                    headerFields: nil
-                  ) else {
+                      url: url,
+                      statusCode: 200,
+                      httpVersion: nil,
+                      headerFields: nil
+                  )
+            else {
                 throw InboxSuggestionTestError.invalidResponse
             }
             return (Data(payload.utf8), response)
@@ -353,7 +359,7 @@ struct CoreInboxStoreTests {
             deviceID: "sibling"
         ).archive(taskID: parent.id)
 
-        for _ in 0..<50 where !store.checklistVisualSuggestionInFlightIDs.isEmpty {
+        for _ in 0 ..< 50 where !store.checklistVisualSuggestionInFlightIDs.isEmpty {
             try await Task.sleep(for: .milliseconds(10))
         }
 
@@ -388,7 +394,7 @@ struct CoreInboxStoreTests {
         #expect(service.state(for: item, suggestion: readySuggestion, isInFlight: false) == .ready)
         #expect(service.displaySuggestion(for: item, suggestion: readySuggestion)?.id == readySuggestion.id)
 
-        item.suggestionGeneratedAt = Date(timeIntervalSince1970: 1_000)
+        item.suggestionGeneratedAt = Date(timeIntervalSince1970: 1000)
         #expect(service.state(for: item, suggestion: nil, isInFlight: false) == .dismissed)
         #expect(service.shouldAutoSuggest(item: item, suggestion: nil, isInFlight: false) == false)
 
@@ -579,8 +585,11 @@ private actor LLMSuggestionConcurrencyProbe {
 }
 
 private final class InboxTestCredentialStore: LLMCredentialStoring {
-    func readAPIKey() throws -> String? { nil }
-    func writeAPIKey(_ apiKey: String) throws {}
+    func readAPIKey() throws -> String? {
+        nil
+    }
+
+    func writeAPIKey(_: String) throws {}
 }
 
 private enum InboxSuggestionTestError: Error {

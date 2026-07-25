@@ -18,9 +18,9 @@ struct DesktopMainView: View {
                 openTask: openTask,
                 startTimer: { presentationRouter.presentStartTaskPicker() }
             )
-                .frame(width: layout.contentWidth, alignment: .leading)
-                .padding(.vertical, layout.pagePadding)
-                .frame(maxWidth: .infinity, alignment: .center)
+            .frame(width: layout.contentWidth, alignment: .leading)
+            .padding(.vertical, layout.pagePadding)
+            .frame(maxWidth: .infinity, alignment: .center)
         }
         .onGeometryChange(for: CGFloat.self) { proxy in
             proxy.size.width
@@ -62,7 +62,7 @@ private struct DesktopTodayContent: View {
                 startTimer: startTimer
             )
 
-            if layout.usesTwoColumnContent && content.hasSupportingContent {
+            if layout.usesTwoColumnContent, content.hasSupportingContent {
                 HStack(alignment: .top, spacing: layout.contentSpacing) {
                     primarySections
                         .frame(maxWidth: .infinity, alignment: .topLeading)

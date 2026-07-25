@@ -67,5 +67,4 @@ extension TimeTrackerStore {
     func affectedAncestorIDs(for taskID: UUID?, parentID: UUID? = nil) -> Set<UUID> {
         selectionCoordinator.affectedAncestorIDs(for: taskID, parentID: parentID, taskByID: taskByID)
     }
-
 }

@@ -22,7 +22,8 @@ extension timetrackerApp {
             "--uitesting-persistent-store"
         )
         if arguments.contains("--uitesting-reset-persistent-store") ||
-            arguments.contains("--uitesting-clean-persistent-store") {
+            arguments.contains("--uitesting-clean-persistent-store")
+        {
             try removePersistentUITestStoreFiles()
         }
 

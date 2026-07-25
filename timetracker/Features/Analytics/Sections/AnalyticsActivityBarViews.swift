@@ -85,7 +85,8 @@ struct HourTaskActivityBar: View {
                             .frame(height: rendered.height)
                             .overlay(alignment: .top) {
                                 if rendered.id != slices.last?.id,
-                                   rendered.height > separatorHeight * 2 {
+                                   rendered.height > separatorHeight * 2
+                                {
                                     Color.primary.opacity(0.15)
                                         .frame(height: separatorHeight)
                                 }
@@ -138,7 +139,9 @@ private struct RenderedHourTaskSlice: Identifiable {
     let slice: HourTaskSlice
     let height: CGFloat
 
-    var id: UUID { slice.id }
+    var id: UUID {
+        slice.id
+    }
 }
 
 struct AnalyticsLegendSwatch: View {

@@ -101,16 +101,16 @@ extension timetrackerApp {
 
         let completedRecovery: AppCloudSync.CompletedCloudRecovery
         switch recoveryGate {
-        case .completed(let recovery):
+        case let .completed(recovery):
             completedRecovery = recovery
-        case .deferred(let reason):
+        case let .deferred(reason):
             return makeLocalFallbackModelContainer(
                 schema: schema,
                 localConfiguration: localConfiguration,
                 emergencyConfiguration: emergencyConfiguration,
                 error: reason
             )
-        case .failed(let failure):
+        case let .failed(failure):
             return makeLocalFallbackModelContainer(
                 schema: schema,
                 localConfiguration: localConfiguration,
@@ -121,7 +121,8 @@ extension timetrackerApp {
 
         if UserDefaults.standard.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) ||
             AppCloudSync.isCloudImportRecoveryActive ||
-            completedRecovery.reset == .download {
+            completedRecovery.reset == .download
+        {
             CloudRecoveryImportBuffer.shared.startIfNeeded()
         }
         do {

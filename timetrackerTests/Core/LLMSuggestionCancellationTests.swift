@@ -570,7 +570,7 @@ struct LLMSuggestionCancellationTests {
     }
 
     @Test @MainActor
-    func inFlightRequestDoesNotRetainStoreAndIsCancelledOnDeinit() async throws {
+    func inFlightRequestDoesNotRetainStoreAndIsCancelledOnDeinit() async {
         let task = TaskNode(title: "Personal", parentID: nil, deviceID: "test")
         let inboxItem = InboxItem(title: "Plan the weekend", deviceID: "test")
         let gate = ControlledLLMTransport(payload: .inbox(taskID: task.id))
@@ -660,7 +660,9 @@ struct LLMSuggestionCancellationTests {
         let clock = ContinuousClock()
         let deadline = clock.now.advanced(by: timeout)
         while clock.now < deadline {
-            if await condition() { return true }
+            if await condition() {
+                return true
+            }
             try? await Task.sleep(for: .milliseconds(10))
         }
         return await condition()
@@ -697,26 +699,25 @@ private actor ControlledLLMTransport {
             throw ControlledLLMTransportError.intentionalFailure
         }
 
-        let content: String
-        switch payload {
+        let content = switch payload {
         case let .inbox(taskID):
-            content = """
+            """
             {"destinationKind":"checklist","destinationID":"\(taskID.uuidString)","reason":"Matched","iconName":"checkmark.circle","colorHex":"1677FF"}
             """
         case let .failureThenInbox(taskID):
-            content = """
+            """
             {"destinationKind":"checklist","destinationID":"\(taskID.uuidString)","reason":"Matched","iconName":"checkmark.circle","colorHex":"1677FF"}
             """
         case .checklist:
-            content = """
+            """
             {"iconName":"paintbrush","colorHex":"16A34A","reason":"Visual match"}
             """
         }
         let data = try JSONSerialization.data(
             withJSONObject: [
                 "choices": [
-                    ["message": ["content": content]]
-                ]
+                    ["message": ["content": content]],
+                ],
             ]
         )
         guard let url = request.url,
@@ -725,7 +726,8 @@ private actor ControlledLLMTransport {
                   statusCode: 200,
                   httpVersion: nil,
                   headerFields: nil
-              ) else {
+              )
+        else {
             throw ControlledLLMTransportError.invalidResponse
         }
         return (data, response)

@@ -4,7 +4,8 @@ extension TimeTrackerStore {
     var cancelledPomodoroSessionIDs: Set<UUID> {
         Set(pomodoroRuns.compactMap { run in
             guard run.deletedAt == nil,
-                  run.state == .cancelled else {
+                  run.state == .cancelled
+            else {
                 return nil
             }
             return run.sessionID
@@ -14,8 +15,8 @@ extension TimeTrackerStore {
     var activePomodoroRun: PomodoroRun? {
         pomodoroRuns.first { run in
             run.deletedAt == nil &&
-            run.endedAt == nil &&
-            [.planned, .focusing, .shortBreak, .longBreak, .interrupted].contains(run.state)
+                run.endedAt == nil &&
+                [.planned, .focusing, .shortBreak, .longBreak, .interrupted].contains(run.state)
         }
     }
 
@@ -23,8 +24,8 @@ extension TimeTrackerStore {
         let today = Calendar.current.dateInterval(of: .day, for: Date())
         return pomodoroRuns.filter { run in
             run.state == .completed &&
-            run.deletedAt == nil &&
-            today?.contains(run.endedAt ?? run.updatedAt) == true
+                run.deletedAt == nil &&
+                today?.contains(run.endedAt ?? run.updatedAt) == true
         }.count
     }
 
@@ -50,9 +51,9 @@ extension TimeTrackerStore {
     func activePomodoroRun(for taskID: UUID) -> PomodoroRun? {
         pomodoroRuns.first { run in
             run.taskID == taskID &&
-            run.deletedAt == nil &&
-            run.endedAt == nil &&
-            [.planned, .focusing, .shortBreak, .longBreak, .interrupted].contains(run.state)
+                run.deletedAt == nil &&
+                run.endedAt == nil &&
+                [.planned, .focusing, .shortBreak, .longBreak, .interrupted].contains(run.state)
         }
     }
 
@@ -77,19 +78,19 @@ extension TimeTrackerStore {
     func pomodoroStateLabel(for run: PomodoroRun) -> String {
         switch run.state {
         case .planned:
-            return AppStrings.localized("pomodoro.state.ready")
+            AppStrings.localized("pomodoro.state.ready")
         case .focusing:
-            return AppStrings.localized("pomodoro.state.focus")
+            AppStrings.localized("pomodoro.state.focus")
         case .shortBreak:
-            return AppStrings.localized("pomodoro.state.shortBreak")
+            AppStrings.localized("pomodoro.state.shortBreak")
         case .longBreak:
-            return AppStrings.localized("pomodoro.state.longBreak")
+            AppStrings.localized("pomodoro.state.longBreak")
         case .completed:
-            return AppStrings.localized("pomodoro.state.completed")
+            AppStrings.localized("pomodoro.state.completed")
         case .cancelled:
-            return AppStrings.localized("pomodoro.state.cancelled")
+            AppStrings.localized("pomodoro.state.cancelled")
         case .interrupted:
-            return AppStrings.localized("pomodoro.state.interrupted")
+            AppStrings.localized("pomodoro.state.interrupted")
         }
     }
 
@@ -101,9 +102,9 @@ extension TimeTrackerStore {
             : allSegments.visibleDeduplicatedByID()
         let segments = candidates.filter { segment in
             (!usesRelationshipIndex || isReadableLedgerSegment(segment)) &&
-            segment.sessionID == sessionID &&
-            segment.source == .pomodoro &&
-            segment.deletedAt == nil
+                segment.sessionID == sessionID &&
+                segment.source == .pomodoro &&
+                segment.deletedAt == nil
         }
         return aggregationService.grossSeconds(segments, now: now)
     }
@@ -111,11 +112,11 @@ extension TimeTrackerStore {
     private func pomodoroPlannedSeconds(for run: PomodoroRun) -> Int {
         switch run.state {
         case .shortBreak:
-            return run.breakSecondsPlanned
+            run.breakSecondsPlanned
         case .longBreak:
-            return run.longBreakSecondsPlanned ?? run.breakSecondsPlanned
+            run.longBreakSecondsPlanned ?? run.breakSecondsPlanned
         case .planned, .focusing, .completed, .cancelled, .interrupted:
-            return run.focusSecondsPlanned
+            run.focusSecondsPlanned
         }
     }
 }

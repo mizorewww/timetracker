@@ -34,20 +34,20 @@ extension TimeTrackerSchemaV4 {
             iconName: String? = nil,
             sortOrder: Double = 0
         ) {
-            self.id = UUID()
+            id = UUID()
             self.title = title
             self.parentID = parentID
             self.categoryID = categoryID
             self.sortOrder = sortOrder
-            self.path = ""
-            self.depth = 0
-            self.statusRaw = LegacyTaskStatusRaw.active
+            path = ""
+            depth = 0
+            statusRaw = LegacyTaskStatusRaw.active
             self.colorHex = colorHex
             self.iconName = iconName
-            self.createdAt = Date()
-            self.updatedAt = Date()
+            createdAt = Date()
+            updatedAt = Date()
             self.deviceID = deviceID
-            self.clientMutationID = UUID()
+            clientMutationID = UUID()
         }
     }
 
@@ -73,16 +73,16 @@ extension TimeTrackerSchemaV4 {
             includesInForecast: Bool = true,
             sortOrder: Double = 0
         ) {
-            self.id = UUID()
+            id = UUID()
             self.title = title
             self.colorHex = colorHex
             self.iconName = iconName
             self.includesInForecast = includesInForecast
             self.sortOrder = sortOrder
-            self.createdAt = Date()
-            self.updatedAt = Date()
+            createdAt = Date()
+            updatedAt = Date()
             self.deviceID = deviceID
-            self.clientMutationID = UUID()
+            clientMutationID = UUID()
         }
     }
 }
@@ -106,14 +106,14 @@ extension TimeTrackerSchemaV7 {
             colorHex: String = "1677FF",
             deviceID: String
         ) {
-            self.id = UUID()
+            id = UUID()
             self.checklistItemID = checklistItemID
             self.iconName = iconName
             self.colorHex = colorHex
-            self.createdAt = Date()
-            self.updatedAt = Date()
+            createdAt = Date()
+            updatedAt = Date()
             self.deviceID = deviceID
-            self.clientMutationID = UUID()
+            clientMutationID = UUID()
         }
     }
 }
@@ -137,12 +137,12 @@ extension TimeTrackerSchemaV9 {
         var clientMutationID: UUID = UUID()
 
         init(title: String, deviceID: String) {
-            self.id = UUID()
+            id = UUID()
             self.title = title
-            self.createdAt = Date()
-            self.updatedAt = Date()
+            createdAt = Date()
+            updatedAt = Date()
             self.deviceID = deviceID
-            self.clientMutationID = UUID()
+            clientMutationID = UUID()
         }
     }
 
@@ -164,15 +164,15 @@ extension TimeTrackerSchemaV9 {
         var clientMutationID: UUID = UUID()
 
         init(inboxItemID: UUID, taskID: UUID, titleSnapshot: String, deviceID: String) {
-            self.id = UUID()
+            id = UUID()
             self.inboxItemID = inboxItemID
             self.taskID = taskID
             self.titleSnapshot = titleSnapshot
-            self.generatedAt = Date()
-            self.createdAt = Date()
-            self.updatedAt = Date()
+            generatedAt = Date()
+            createdAt = Date()
+            updatedAt = Date()
             self.deviceID = deviceID
-            self.clientMutationID = UUID()
+            clientMutationID = UUID()
         }
     }
 }

@@ -85,18 +85,18 @@ nonisolated struct TimerStoreScope: Hashable, Sendable {
     }
 
     var persistentStoreURL: URL? {
-        guard case .persistent(let storeURL) = storage else { return nil }
+        guard case let .persistent(storeURL) = storage else { return nil }
         return storeURL
     }
 
     var mutationLockURL: URL {
         switch storage {
-        case .persistent(let storeURL):
-            return storeURL.deletingLastPathComponent().appendingPathComponent(
+        case let .persistent(storeURL):
+            storeURL.deletingLastPathComponent().appendingPathComponent(
                 storeURL.lastPathComponent + StoreScopedTimerMutationLock.fileSuffix
             )
-        case .inMemory(let identity):
-            return FileManager.default.temporaryDirectory.appendingPathComponent(
+        case let .inMemory(identity):
+            FileManager.default.temporaryDirectory.appendingPathComponent(
                 "timetracker-\(identity.uuidString.lowercased())"
                     + StoreScopedTimerMutationLock.fileSuffix
             )

@@ -123,11 +123,11 @@ enum SyncDataSnapshotPreflightError: LocalizedError, Equatable {
 enum SyncDataSnapshotRestoreLimits {
     static let maximumRecordsPerTable = 100_000
     static let maximumTotalRecords = 250_000
-    static let maximumTitleByteCount = 4 * 1_024
-    static let maximumNoteByteCount = 64 * 1_024
+    static let maximumTitleByteCount = 4 * 1024
+    static let maximumNoteByteCount = 64 * 1024
     static let maximumCompactFieldByteCount = 256
-    static let maximumPreferenceValueByteCount = 256 * 1_024
-    static let maximumTotalTextByteCount = 32 * 1_024 * 1_024
+    static let maximumPreferenceValueByteCount = 256 * 1024
+    static let maximumTotalTextByteCount = 32 * 1024 * 1024
     static let minimumDate = PersistentDatePolicy.minimumDate
     static let maximumDateExclusive =
         PersistentDatePolicy.maximumDateExclusive
@@ -161,7 +161,7 @@ extension SyncDataSnapshot {
             (.taskRecurrenceRules, (taskRecurrenceRules ?? []).count),
             (.taskRecurrenceOccurrences, (taskRecurrenceOccurrences ?? []).count),
             (.taskQuantityGoals, (taskQuantityGoals ?? []).count),
-            (.taskQuantityEntries, (taskQuantityEntries ?? []).count)
+            (.taskQuantityEntries, (taskQuantityEntries ?? []).count),
         ]
 
         for (table, count) in tableCounts where count > SyncDataSnapshotRestoreLimits.maximumRecordsPerTable {

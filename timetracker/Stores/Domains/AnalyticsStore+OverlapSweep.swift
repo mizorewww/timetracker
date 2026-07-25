@@ -18,7 +18,7 @@ extension AnalyticsStore {
                     kind: .end,
                     segmentID: item.segment.id,
                     taskID: item.segment.taskID
-                )
+                ),
             ]
         }
         events.sort(by: overlapEventPrecedes)
@@ -54,7 +54,8 @@ extension AnalyticsStore {
                    previous.end == start,
                    previous.concurrentSegmentCount == window.concurrentSegmentCount,
                    previous.participantCount == window.participantCount,
-                   previous.visibleParticipants == window.visibleParticipants {
+                   previous.visibleParticipants == window.visibleParticipants
+                {
                     rawWindows[rawWindows.count - 1].end = date
                 } else {
                     rawWindows.append(window)
@@ -91,7 +92,8 @@ extension AnalyticsStore {
                     activeSegmentCountByTaskID[event.taskID, default: 0] += 1
                     if wasInactive,
                        residentParticipantIDs.insert(event.taskID).inserted,
-                       let participant = participantsByTaskID[event.taskID] {
+                       let participant = participantsByTaskID[event.taskID]
+                    {
                         participantHeap.insert(participant)
                     }
                 }

@@ -35,7 +35,7 @@ extension TimeTrackerSchemaV10 {
             generatedAt: Date = Date(),
             deviceID: String
         ) {
-            self.id = UUID()
+            id = UUID()
             self.inboxItemID = inboxItemID
             self.inboxItemContextID = inboxItemContextID
             self.inboxItemRevisionID = inboxItemRevisionID
@@ -46,10 +46,10 @@ extension TimeTrackerSchemaV10 {
             self.modelID = modelID
             self.titleSnapshot = titleSnapshot
             self.generatedAt = generatedAt
-            self.createdAt = Date()
-            self.updatedAt = Date()
+            createdAt = Date()
+            updatedAt = Date()
             self.deviceID = deviceID
-            self.clientMutationID = UUID()
+            clientMutationID = UUID()
         }
     }
 }

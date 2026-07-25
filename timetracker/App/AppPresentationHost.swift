@@ -26,7 +26,6 @@ private struct AppPresentationSheet: View {
     let feedbackRouter: AppSceneFeedbackRouter
     let presentation: AppPresentation
 
-    @ViewBuilder
     var body: some View {
         switch presentation.content {
         case let .taskEditor(draft, returnDestination):

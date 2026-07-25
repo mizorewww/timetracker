@@ -30,27 +30,25 @@ extension SyncConflictService {
         }
 
         guard expectedConflictID != nil else {
-            let recoveryResult: SyncRecoveryResult
-            switch resolution {
+            let recoveryResult: SyncRecoveryResult = switch resolution {
             case .uploadLocal:
-                recoveryResult = try forceUploadLocalDataWithLockedState(
+                try forceUploadLocalDataWithLockedState(
                     context: context
                 )
             case .downloadCloud:
-                recoveryResult = try acceptCurrentCloudDataWithLockedState()
+                try acceptCurrentCloudDataWithLockedState()
             }
             return Self.resolutionResult(for: recoveryResult)
         }
 
         guard AppCloudSync.persistenceMode == AppCloudSync.modeICloud else {
-            let recoveryResult: SyncRecoveryResult
-            switch resolution {
+            let recoveryResult: SyncRecoveryResult = switch resolution {
             case .uploadLocal:
-                recoveryResult = try forceUploadLocalDataWithLockedState(
+                try forceUploadLocalDataWithLockedState(
                     context: context
                 )
             case .downloadCloud:
-                recoveryResult = try acceptCurrentCloudDataWithLockedState()
+                try acceptCurrentCloudDataWithLockedState()
             }
             return Self.resolutionResult(for: recoveryResult)
         }

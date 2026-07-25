@@ -13,7 +13,7 @@ struct LLMSettingsTests {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
-            kSecAttrSynchronizable as String: kCFBooleanFalse as Any
+            kSecAttrSynchronizable as String: kCFBooleanFalse as Any,
         ]
         SecItemDelete(baseQuery as CFDictionary)
         defer { try? store.writeAPIKey("") }
@@ -80,8 +80,8 @@ struct LLMSettingsTests {
                 exactASCII
         )
 
-        let exactUnicode = String(repeating: "🧭", count: 1_024)
-        #expect(exactUnicode.utf8.count == 4 * 1_024)
+        let exactUnicode = String(repeating: "🧭", count: 1024)
+        #expect(exactUnicode.utf8.count == 4 * 1024)
         #expect(
             try AppPreferenceValueSanitizer.llmTaskPlanInstructions(exactUnicode) ==
                 exactUnicode
@@ -213,9 +213,9 @@ struct LLMSettingsTests {
             (.llmChecklistVisualInstructions, checklistInstructions),
         ]
         let stored = try values.map { key, value in
-            SyncedPreference(
+            try SyncedPreference(
                 key: key.rawValue,
-                valueJSON: try PreferenceJSON.canonicalValueJSON(
+                valueJSON: PreferenceJSON.canonicalValueJSON(
                     for: key,
                     from: PreferenceJSON.encode(value)
                 ),
@@ -324,7 +324,7 @@ struct LLMSettingsTests {
 
     @Test
     func modelListResponseKeepsTheExactMaximumModelCount() throws {
-        let modelIDs = (0..<AppPreferenceValueSanitizer.maximumLLMModelCount).map {
+        let modelIDs = (0 ..< AppPreferenceValueSanitizer.maximumLLMModelCount).map {
             String(format: "model-%03d", $0)
         }
 
@@ -334,7 +334,7 @@ struct LLMSettingsTests {
     @Test
     func modelListResponseTruncatesToTheSortedPreferenceBoundary() throws {
         let limit = AppPreferenceValueSanitizer.maximumLLMModelCount
-        let modelIDs = (1...limit).map {
+        let modelIDs = (1 ... limit).map {
             String(format: "model-%03d", $0)
         } + ["model-999", "model-000"]
 
@@ -364,7 +364,7 @@ struct LLMSettingsTests {
             oversizedUnicode,
             "   ",
             exactByteBoundary,
-            exactUnicodeByteBoundary
+            exactUnicodeByteBoundary,
         ]
 
         let decoded = try decodedModelIDs(modelIDs)
@@ -373,7 +373,7 @@ struct LLMSettingsTests {
             exactByteBoundary,
             exactUnicodeByteBoundary,
             "gpt-z",
-            "模型-α"
+            "模型-α",
         ].sorted())
         #expect(decoded == AppPreferenceValueSanitizer.llmModelIDs(modelIDs))
     }
@@ -401,7 +401,7 @@ struct LLMSettingsTests {
 
     private func decodedModelIDs(_ modelIDs: [String]) throws -> [String] {
         let payload = [
-            "data": modelIDs.map { ["id": $0] }
+            "data": modelIDs.map { ["id": $0] },
         ]
         let data = try JSONSerialization.data(withJSONObject: payload)
         return try JSONDecoder().decode(LLMModelListResponse.self, from: data).modelIDs
@@ -451,7 +451,7 @@ struct LLMSettingsTests {
                     path: "Work / Design",
                     iconName: "paintbrush",
                     colorHex: "16A34A"
-                )
+                ),
             ],
             categoryCandidates: [],
             modelID: "gpt-test"
@@ -473,7 +473,7 @@ struct LLMSettingsTests {
                 path: "Work / Design",
                 iconName: "paintbrush",
                 colorHex: "16A34A"
-            )
+            ),
         ]
 
         do {
@@ -545,7 +545,7 @@ struct LLMSettingsTests {
                         path: "Study / UX",
                         iconName: "book",
                         colorHex: "16A34A"
-                    )
+                    ),
                 ],
                 categoryCandidates: [],
                 endpoint: "https://example.test/v1",
@@ -594,7 +594,7 @@ struct LLMSettingsTests {
                         path: "Study / UX",
                         iconName: "book",
                         colorHex: "16A34A"
-                    )
+                    ),
                 ],
                 categoryCandidates: [],
                 endpoint: "https://example.test/v1",
@@ -643,7 +643,7 @@ struct LLMSettingsTests {
                     path: "Study / UX",
                     iconName: "book",
                     colorHex: "16A34A"
-                )
+                ),
             ],
             categoryCandidates: [],
             endpoint: "https://example.test/v1",

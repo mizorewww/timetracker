@@ -219,7 +219,7 @@ struct StoreScopedInboxCommandCoordinatorTests {
             title: "Target capture",
             externalCommandKey: targetKey
         ))
-        for index in 0..<32 {
+        for index in 0 ..< 32 {
             _ = try coordinator.add(command: InboxCaptureCommand(
                 title: "Other capture \(index)",
                 externalCommandKey: ExternalCommandKey(origin: "test.integration", id: UUID())
@@ -249,7 +249,7 @@ struct StoreScopedInboxCommandCoordinatorTests {
 
         #expect(try allVisibleItems(in: context.container).map(\.title) == [
             "Legitimate duplicate",
-            "Legitimate duplicate"
+            "Legitimate duplicate",
         ])
         #expect(try ModelContext(context.container).fetch(FetchDescriptor<InboxCaptureReceipt>()).count == 2)
     }
@@ -386,15 +386,19 @@ struct StoreScopedInboxCommandCoordinatorTests {
         try allVisibleItems(in: container)
             .filter { $0.isCompleted == false }
             .sorted { lhs, rhs in
-                if lhs.sortOrder != rhs.sortOrder { return lhs.sortOrder < rhs.sortOrder }
-                if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+                if lhs.sortOrder != rhs.sortOrder {
+                    return lhs.sortOrder < rhs.sortOrder
+                }
+                if lhs.createdAt != rhs.createdAt {
+                    return lhs.createdAt < rhs.createdAt
+                }
                 return lhs.id.uuidString < rhs.id.uuidString
             }
     }
 
     private func allVisibleItems(in container: ModelContainer) throws -> [InboxItem] {
-        InboxSuggestionIdentityService().visibleLogicalItems(
-            from: try ModelContext(container).fetch(FetchDescriptor<InboxItem>())
+        try InboxSuggestionIdentityService().visibleLogicalItems(
+            from: ModelContext(container).fetch(FetchDescriptor<InboxItem>())
         )
     }
 }

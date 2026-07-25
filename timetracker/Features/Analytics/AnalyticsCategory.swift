@@ -13,82 +13,85 @@ enum AnalyticsCategory: String, CaseIterable, Hashable, Identifiable {
         .time,
         .tasks,
         .pomodoro,
-        .overview
+        .overview,
     ]
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var destinationTitle: String {
         switch self {
         case .overview:
-            return AppStrings.localized("analytics.category.overview.title")
+            AppStrings.localized("analytics.category.overview.title")
         case .time:
-            return AppStrings.localized("analytics.category.time.title")
+            AppStrings.localized("analytics.category.time.title")
         case .tasks:
-            return AppStrings.localized("analytics.category.tasks.title")
+            AppStrings.localized("analytics.category.tasks.title")
         case .pomodoro:
-            return AppStrings.localized("analytics.category.pomodoro.title")
+            AppStrings.localized("analytics.category.pomodoro.title")
         case .decisions:
-            return AppStrings.localized("analytics.category.decisions.title")
+            AppStrings.localized("analytics.category.decisions.title")
         case .quality:
-            return AppStrings.localized("analytics.category.quality.title")
+            AppStrings.localized("analytics.category.quality.title")
         }
     }
 
     var questionTitle: String {
         switch self {
         case .overview:
-            return AppStrings.localized("analytics.question.overview")
+            AppStrings.localized("analytics.question.overview")
         case .time:
-            return AppStrings.localized("analytics.question.time")
+            AppStrings.localized("analytics.question.time")
         case .tasks:
-            return AppStrings.localized("analytics.question.tasks")
+            AppStrings.localized("analytics.question.tasks")
         case .pomodoro:
-            return AppStrings.localized("analytics.question.pomodoro")
+            AppStrings.localized("analytics.question.pomodoro")
         case .decisions:
-            return AppStrings.localized("analytics.question.decisions")
+            AppStrings.localized("analytics.question.decisions")
         case .quality:
-            return AppStrings.localized("analytics.question.quality")
+            AppStrings.localized("analytics.question.quality")
         }
     }
 
     var systemImage: String {
         switch self {
         case .overview:
-            return "chart.bar.doc.horizontal"
+            "chart.bar.doc.horizontal"
         case .time:
-            return "clock"
+            "clock"
         case .tasks:
-            return "chart.pie"
+            "chart.pie"
         case .pomodoro:
-            return "timer"
+            "timer"
         case .decisions:
-            return "lightbulb"
+            "lightbulb"
         case .quality:
-            return "waveform.path.ecg"
+            "waveform.path.ecg"
         }
     }
 
     var tint: Color {
         switch self {
         case .overview:
-            return .blue
+            .blue
         case .time:
-            return .cyan
+            .cyan
         case .tasks:
-            return .purple
+            .purple
         case .pomodoro:
-            return .orange
+            .orange
         case .decisions:
-            return .yellow
+            .yellow
         case .quality:
-            return .green
+            .green
         }
     }
 
     func answerPreview(from snapshot: AnalyticsSnapshot) -> String {
         guard snapshot.overview.grossSeconds > 0 ||
-            (self == .pomodoro && snapshot.overview.pomodoroCount > 0) else {
+            (self == .pomodoro && snapshot.overview.pomodoroCount > 0)
+        else {
             return AppStrings.localized("analytics.question.answer.noRecordedTime")
         }
 

@@ -13,7 +13,8 @@ struct TaskManagementRowAccessibilitySnapshot {
 
         var components: [String] = []
         if presentation.identity.fullPath
-            .localizedCaseInsensitiveCompare(task.title) != .orderedSame {
+            .localizedCaseInsensitiveCompare(task.title) != .orderedSame
+        {
             components.append(presentation.identity.fullPath)
         }
         if let recurrenceRole = presentation.recurrenceRole {
@@ -41,7 +42,8 @@ struct TaskManagementRowAccessibilitySnapshot {
             )
         }
         if presentation.rollup?.isDisplayableForecast == true,
-           let remainingSeconds = presentation.rollup?.remainingSeconds {
+           let remainingSeconds = presentation.rollup?.remainingSeconds
+        {
             components.append(
                 String(
                     format: AppStrings.localized("forecast.remainingFormat"),
@@ -49,7 +51,8 @@ struct TaskManagementRowAccessibilitySnapshot {
                 )
             )
             if presentation.rollup?.projectedDays != nil,
-               let projectedDaysText = presentation.rollup?.projectedDaysDisplayText {
+               let projectedDaysText = presentation.rollup?.projectedDaysDisplayText
+            {
                 components.append(projectedDaysText)
             }
         }

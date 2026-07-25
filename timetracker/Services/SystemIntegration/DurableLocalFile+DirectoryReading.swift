@@ -26,7 +26,9 @@ nonisolated extension DurableLocalFile {
         }
         guard descriptor >= 0 else {
             let errorCode = errno
-            if errorCode == ENOENT { return [] }
+            if errorCode == ENOENT {
+                return []
+            }
             if errorCode == ELOOP {
                 throw DurableLocalFileError.symbolicLinkNotAllowed
             }

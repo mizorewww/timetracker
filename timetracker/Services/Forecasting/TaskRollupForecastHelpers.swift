@@ -116,8 +116,12 @@ extension TaskRollupService {
     func confidence(ownForecast: OwnChecklistForecast?, childRollups: [TaskRollup], estimate: Int?) -> ForecastConfidence {
         guard estimate != nil else { return .none }
         let candidates = ([ownForecast?.confidence].compactMap { $0 } + childRollups.map(\.confidence)).filter { $0 != .none }
-        if candidates.contains(.high) { return .high }
-        if candidates.contains(.medium) { return .medium }
+        if candidates.contains(.high) {
+            return .high
+        }
+        if candidates.contains(.medium) {
+            return .medium
+        }
         return candidates.isEmpty ? .none : .low
     }
 }

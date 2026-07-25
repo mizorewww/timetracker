@@ -256,7 +256,7 @@ struct StoreScopedTimerRapidRestartTests {
             .stopSegment(segmentID: first.id)
         let run = PomodoroRun(
             taskID: task.id,
-            focus: 1_500,
+            focus: 1500,
             breakSeconds: 300,
             targetRounds: 1,
             deviceID: "fixture"

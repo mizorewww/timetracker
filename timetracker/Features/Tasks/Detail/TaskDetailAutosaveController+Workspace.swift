@@ -21,7 +21,7 @@ extension TaskDetailAutosaveController {
                 draft,
                 returnDestination: returnDestination
             ) {
-            case .saved(let savedTaskID):
+            case let .saved(savedTaskID):
                 guard session.acceptAutosavedDraft(
                     draft,
                     for: savedTaskID
@@ -35,7 +35,7 @@ extension TaskDetailAutosaveController {
                 return .saved
             case .stale:
                 return .conflicted
-            case .failed(let message):
+            case let .failed(message):
                 return .failed(message: message)
             }
         }
@@ -50,7 +50,8 @@ extension TaskDetailAutosaveController {
            ],
            let milliseconds = Int(rawValue),
            milliseconds >= 0,
-           milliseconds <= 60_000 {
+           milliseconds <= 60000
+        {
             return .milliseconds(milliseconds)
         }
         #endif

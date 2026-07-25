@@ -47,7 +47,8 @@ extension TimeTrackerStore {
         let configuresSyncConflictState = writeAuthorization.usesApplicationState ||
             syncConflictService.stateURLOverride != nil
         if configuresSyncConflictState,
-           pendingSyncConflict == nil {
+           pendingSyncConflict == nil
+        {
             pendingSyncConflict = try? syncConflictService.prompt()
         }
         if pendingSyncConflict != nil {
@@ -99,7 +100,8 @@ extension TimeTrackerStore {
             ? AppCloudSync.persistenceWriteSafety
             : .ready
         if writeAuthorization.usesApplicationState,
-           timetrackerApp.isUnitTestHost() == false {
+           timetrackerApp.isUnitTestHost() == false
+        {
             Task {
                 await refreshCloudAccountStatus()
             }
@@ -129,7 +131,8 @@ extension TimeTrackerStore {
             errorMessage = firstError.localizedDescription
         }
         if persistenceWriteSafety == .ready,
-           pendingSyncConflict == nil {
+           pendingSyncConflict == nil
+        {
             configureIfNeeded(context: context)
         }
     }
@@ -143,7 +146,7 @@ extension TimeTrackerStore {
         startupErrors: inout [Error]
     ) {
         guard hasBootstrappedSyncConflictState == false else { return }
-        for _ in 0..<2 {
+        for _ in 0 ..< 2 {
             do {
                 pendingSyncConflict = try syncConflictService.bootstrap(context: context)
                 hasBootstrappedSyncConflictState = true
@@ -160,7 +163,7 @@ extension TimeTrackerStore {
     /// they can refresh Widget, Watch, and Live Activity state while the app is closed.
     func configureRepositoriesIfNeeded(context: ModelContext) {
         guard taskRepository == nil else { return }
-        self.modelContext = context
+        modelContext = context
         let taskRepository = SwiftDataTaskRepository(context: context)
         let timeRepository = SwiftDataTimeTrackingRepository(context: context)
         self.taskRepository = taskRepository

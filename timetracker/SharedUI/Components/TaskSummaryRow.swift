@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct TaskSummaryRowMetadata {
-    var checklistProgress: ChecklistProgress? = nil
-    var workedSeconds: Int? = nil
+    var checklistProgress: ChecklistProgress?
+    var workedSeconds: Int?
     var isRunning = false
     var showsNavigationChevron = false
     var accessory: TaskSummaryRowAccessory = .none

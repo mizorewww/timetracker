@@ -205,7 +205,7 @@ struct InboxSuggestionIdentityTests {
         context.insert(rebuiltSuggestion)
         try context.save()
 
-        let discardedAt = Date(timeIntervalSinceReferenceDate: 1_000)
+        let discardedAt = Date(timeIntervalSinceReferenceDate: 1000)
         try handler.discardSuggestion(
             rebuilt,
             context: context,
@@ -218,10 +218,10 @@ struct InboxSuggestionIdentityTests {
         #expect(originalSuggestion.deletedAt == discardedAt)
         #expect(rebuiltSuggestion.deletedAt == discardedAt)
 
-        let deletedAt = Date(timeIntervalSinceReferenceDate: 2_000)
+        let deletedAt = Date(timeIntervalSinceReferenceDate: 2000)
         try handler.softDelete(rebuilt, context: context, now: deletedAt, deviceID: "local")
-        let visible = InboxSuggestionIdentityService().visibleLogicalItems(
-            from: try context.fetch(FetchDescriptor<InboxItem>())
+        let visible = try InboxSuggestionIdentityService().visibleLogicalItems(
+            from: context.fetch(FetchDescriptor<InboxItem>())
         )
         #expect(visible.isEmpty)
     }
@@ -277,8 +277,8 @@ struct InboxSuggestionIdentityTests {
         try handler.toggle(stale, context: context, now: toggledAt, deviceID: "local")
 
         let winner = try #require(
-            InboxSuggestionIdentityService().visibleLogicalItems(
-                from: try context.fetch(FetchDescriptor<InboxItem>())
+            try InboxSuggestionIdentityService().visibleLogicalItems(
+                from: context.fetch(FetchDescriptor<InboxItem>())
             ).first
         )
         #expect(winner === current)
@@ -312,8 +312,8 @@ struct InboxSuggestionIdentityTests {
         )
 
         let winner = try #require(
-            InboxSuggestionIdentityService().visibleLogicalItems(
-                from: try context.fetch(FetchDescriptor<InboxItem>())
+            try InboxSuggestionIdentityService().visibleLogicalItems(
+                from: context.fetch(FetchDescriptor<InboxItem>())
             ).first
         )
         #expect(winner === current)
@@ -370,8 +370,8 @@ struct InboxSuggestionIdentityTests {
         )
         #expect(original.deletedAt == generatedAt.addingTimeInterval(-1))
         #expect(
-            InboxSuggestionIdentityService().visibleLogicalItems(
-                from: try context.fetch(FetchDescriptor<InboxItem>())
+            try InboxSuggestionIdentityService().visibleLogicalItems(
+                from: context.fetch(FetchDescriptor<InboxItem>())
             ).first?.id == rebuilt.id
         )
 

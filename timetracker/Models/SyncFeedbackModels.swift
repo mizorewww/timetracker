@@ -18,17 +18,17 @@ struct SyncStatus {
     var storageStatusText: String {
         switch mode {
         case AppCloudSync.modeICloud:
-            return AppStrings.localized("sync.storage.iCloud")
+            AppStrings.localized("sync.storage.iCloud")
         case AppCloudSync.modeLocal:
-            return AppStrings.localized("sync.storage.local")
+            AppStrings.localized("sync.storage.local")
         case AppCloudSync.modeLocalFallback:
-            return AppStrings.localized("sync.storage.localFallback")
+            AppStrings.localized("sync.storage.localFallback")
         case AppCloudSync.modeInMemoryFallback:
-            return AppStrings.localized("sync.storage.temporary")
+            AppStrings.localized("sync.storage.temporary")
         case AppCloudSync.modeUITest:
-            return AppStrings.localized("sync.storage.uiTest")
+            AppStrings.localized("sync.storage.uiTest")
         default:
-            return mode
+            mode
         }
     }
 
@@ -109,7 +109,7 @@ struct SyncStatus {
                     title: AppStrings.localized("sync.state.failed.title"),
                     message: message
                 )
-            case .succeeded where (0...120).contains(now.timeIntervalSince(activity.completedAt)):
+            case .succeeded where (0 ... 120).contains(now.timeIntervalSince(activity.completedAt)):
                 let time = DateFormatter.localizedString(
                     from: activity.completedAt,
                     dateStyle: .none,
@@ -158,23 +158,23 @@ nonisolated enum SyncFeedbackState: Equatable, Sendable {
     var symbolName: String {
         switch self {
         case .available:
-            return "icloud"
+            "icloud"
         case .syncing:
-            return "arrow.triangle.2.circlepath.icloud"
+            "arrow.triangle.2.circlepath.icloud"
         case .recentlySynced:
-            return "checkmark.icloud"
+            "checkmark.icloud"
         case .offline:
-            return "icloud.slash"
+            "icloud.slash"
         case .needsRestart:
-            return "arrow.clockwise.circle"
+            "arrow.clockwise.circle"
         case .failed:
-            return "exclamationmark.icloud"
+            "exclamationmark.icloud"
         case .localOnly:
-            return "externaldrive"
+            "externaldrive"
         case .temporaryStore:
-            return "externaldrive.badge.exclamationmark"
+            "externaldrive.badge.exclamationmark"
         case .conflict:
-            return "exclamationmark.triangle"
+            "exclamationmark.triangle"
         }
     }
 }

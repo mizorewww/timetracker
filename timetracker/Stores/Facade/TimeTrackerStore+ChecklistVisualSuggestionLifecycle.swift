@@ -19,16 +19,17 @@ extension TimeTrackerStore {
         }
 
         guard matchesCurrentLLMConfiguration(
-                  endpoint: request.endpoint,
-                  apiKey: request.apiKey,
-                  modelID: request.modelID
-              ),
-              matchesCurrentLLMPrompt(
-                  request.instructions,
-                  kind: .checklistVisual
-              ),
-              preferences.llmAutomaticSuggestionsEnabled,
-              let modelContext else {
+            endpoint: request.endpoint,
+            apiKey: request.apiKey,
+            modelID: request.modelID
+        ),
+            matchesCurrentLLMPrompt(
+                request.instructions,
+                kind: .checklistVisual
+            ),
+            preferences.llmAutomaticSuggestionsEnabled,
+            let modelContext
+        else {
             return
         }
 
@@ -81,7 +82,7 @@ extension TimeTrackerStore {
             apiKey: request.apiKey,
             modelID: request.modelID
         ), matchesCurrentLLMPrompt(request.instructions, kind: .checklistVisual),
-           showsErrors || preferences.llmAutomaticSuggestionsEnabled else {
+        showsErrors || preferences.llmAutomaticSuggestionsEnabled else {
             return
         }
         if showsErrors {
@@ -133,7 +134,7 @@ struct ChecklistVisualSuggestionRequest {
             instructions,
             endpoint.trimmingCharacters(in: .whitespacesAndNewlines),
             modelID.trimmingCharacters(in: .whitespacesAndNewlines),
-            String(apiKey.hashValue)
+            String(apiKey.hashValue),
         ].joined(separator: "|")
     }
 }

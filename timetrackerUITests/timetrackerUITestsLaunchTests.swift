@@ -8,7 +8,6 @@
 import XCTest
 
 final class timetrackerUITestsLaunchTests: XCTestCase {
-
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true
     }
@@ -22,7 +21,7 @@ final class timetrackerUITestsLaunchTests: XCTestCase {
     }
 
     @MainActor
-    func testLaunch() throws {
+    func testLaunch() {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting", "-ApplePersistenceIgnoreState", "YES"]
         app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"

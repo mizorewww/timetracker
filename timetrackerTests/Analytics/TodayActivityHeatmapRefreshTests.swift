@@ -5,7 +5,7 @@ import Testing
 @Suite(.serialized)
 struct TodayActivityHeatmapRefreshTests {
     @Test @MainActor
-    func refreshIdentityAdvancesByMinuteOnlyWhileATimerIsRunning() async throws {
+    func refreshIdentityAdvancesByMinuteOnlyWhileATimerIsRunning() throws {
         let calendar = testCalendar()
         let now = try testDate(calendar: calendar)
         let later = now.addingTimeInterval(60)
@@ -36,8 +36,8 @@ struct TodayActivityHeatmapRefreshTests {
                 taskID: taskID,
                 source: .timer,
                 deviceID: "test",
-                startedAt: now.addingTimeInterval(-3_600)
-            )
+                startedAt: now.addingTimeInterval(-3600)
+            ),
         ]
         let runningNow = HomeActivityHeatmapRefreshRequest(
             store: store,
@@ -60,7 +60,7 @@ struct TodayActivityHeatmapRefreshTests {
     }
 
     @Test @MainActor
-    func refreshIdentityTracksTheSelectedPeriod() async throws {
+    func refreshIdentityTracksTheSelectedPeriod() throws {
         let calendar = testCalendar()
         let now = try testDate(calendar: calendar)
         let store = TimeTrackerStore()
@@ -101,7 +101,7 @@ struct TodayActivityHeatmapRefreshTests {
             taskID: task.id,
             source: .timer,
             deviceID: "test",
-            startedAt: now.addingTimeInterval(-3_600)
+            startedAt: now.addingTimeInterval(-3600)
         )
         let store = TimeTrackerStore()
         store.tasks = [task]
@@ -126,8 +126,8 @@ struct TodayActivityHeatmapRefreshTests {
         )
 
         #expect(initial.metric == .trackedDuration)
-        #expect(initial.totalValue == 3_600)
-        #expect(refreshed.totalValue == 3_660)
+        #expect(initial.totalValue == 3600)
+        #expect(refreshed.totalValue == 3660)
     }
 
     private func testCalendar() -> Calendar {

@@ -347,7 +347,7 @@ struct PomodoroTests {
                 segmentID: secondOtherSegment.id,
                 sessionID: secondOtherSegment.sessionID,
                 taskID: secondOtherSegment.taskID
-            )
+            ),
         ]
 
         #expect(Set(outcome.stoppedSegments) == expectedStops)
@@ -378,7 +378,7 @@ struct PomodoroTests {
                 runID: run.id,
                 sessionID: outcome.resumedSessionID,
                 taskID: pomodoroTask.id
-            )
+            ),
         ]
         for stoppedSegment in expectedStops {
             expectedEvents.insert(
@@ -561,7 +561,7 @@ struct PomodoroTests {
 
         store.startTask(otherTask)
         let otherSegment = try #require(store.activeSegment(for: otherTask.id))
-        let segmentIDsBeforeResume = Set(try timeRepository.allSegments().map(\.id))
+        let segmentIDsBeforeResume = try Set(timeRepository.allSegments().map(\.id))
         pomodoroTask.statusRaw = LegacyTaskStatusRaw.completed
         try context.save()
 
@@ -646,7 +646,7 @@ struct PomodoroTests {
 
         store.startTask(otherTask)
         let otherSegment = try #require(store.activeSegment(for: otherTask.id))
-        let segmentIDsBeforeResume = Set(try timeRepository.allSegments().map(\.id))
+        let segmentIDsBeforeResume = try Set(timeRepository.allSegments().map(\.id))
 
         switch mutation {
         case .archived:
@@ -671,7 +671,7 @@ struct PomodoroTests {
         #expect(canonicalRun.sessionID == nil)
         #expect(otherSegment.endedAt == nil)
         #expect(try timeRepository.activeSegments().map(\.id) == [otherSegment.id])
-        #expect(Set(try timeRepository.allSegments().map(\.id)) == segmentIDsBeforeResume)
+        #expect(try Set(timeRepository.allSegments().map(\.id)) == segmentIDsBeforeResume)
         #expect(store.analyticsRevision > analyticsRevision)
         #expect(store.trackableTaskIDs.contains(pomodoroTaskID) == false)
         #expect(store.errorMessage == errorMessage)
@@ -974,7 +974,7 @@ struct PomodoroTests {
         let sessionID = try #require(run.sessionID)
         let segment = try #require(try timeRepository.activeSegments().first { $0.sessionID == sessionID })
         let session = try #require(try timeRepository.sessions().first { $0.id == sessionID })
-        let futureStart = Date().addingTimeInterval(3_600)
+        let futureStart = Date().addingTimeInterval(3600)
         run.startedAt = futureStart
         segment.startedAt = futureStart
         session.startedAt = futureStart
@@ -1019,7 +1019,7 @@ struct PomodoroTests {
         let segment = try #require(try timeRepository.activeSegments().first { $0.sessionID == sessionID })
         let session = try #require(try timeRepository.sessions().first { $0.id == sessionID })
         let observedAt = Date()
-        let phaseStartedAt = observedAt.addingTimeInterval(-3_600)
+        let phaseStartedAt = observedAt.addingTimeInterval(-3600)
         let deadline = phaseStartedAt.addingTimeInterval(60)
         let originalSessionMutationID = session.clientMutationID
         run.startedAt = phaseStartedAt
@@ -1070,7 +1070,7 @@ struct PomodoroTests {
         try context.save()
         let focusDeadline = phaseStartedAt.addingTimeInterval(60)
         try pomodoroRepository.completeFocus(runID: run.id, endedAt: focusDeadline)
-        let longAfterBreak = focusDeadline.addingTimeInterval(3_600)
+        let longAfterBreak = focusDeadline.addingTimeInterval(3600)
 
         #expect(try pomodoroRepository.reconcileExpiredPhase(runID: run.id, now: longAfterBreak) == false)
         let waitingRun = try #require(try pomodoroRepository.runs().first { $0.id == run.id })
@@ -1084,7 +1084,7 @@ struct PomodoroTests {
     func storeStartupReconcilesExpiredFocusWithoutOpeningPomodoroView() throws {
         let context = try makeTestContext()
         let task = TaskNode(title: "Startup Focus", parentID: nil, deviceID: "test")
-        let phaseStartedAt = Date().addingTimeInterval(-3_600)
+        let phaseStartedAt = Date().addingTimeInterval(-3600)
         let session = TimeSession(
             taskID: task.id,
             source: .pomodoro,

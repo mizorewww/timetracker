@@ -9,13 +9,13 @@ nonisolated enum SyncActivityKind: Equatable, Sendable {
     var recentMessageKey: String {
         switch self {
         case .importData:
-            return "sync.activity.import.completed"
+            "sync.activity.import.completed"
         case .exportData:
-            return "sync.activity.export.completed"
+            "sync.activity.export.completed"
         case .setup:
-            return "sync.activity.setup.completed"
+            "sync.activity.setup.completed"
         case .remoteRefresh:
-            return "sync.activity.remote.completed"
+            "sync.activity.remote.completed"
         }
     }
 }

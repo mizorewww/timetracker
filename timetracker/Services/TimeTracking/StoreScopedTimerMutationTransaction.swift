@@ -55,7 +55,7 @@ struct StoreScopedTimerMutationTransaction {
         _ operation: (ModelContext) throws -> Result
     ) throws -> Result {
         try withFreshReadContext { context in
-            return try context.performAtomicMutation {
+            try context.performAtomicMutation {
                 try operation(context)
             }
         }

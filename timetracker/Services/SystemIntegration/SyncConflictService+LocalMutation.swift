@@ -40,13 +40,12 @@ extension SyncConflictService {
             return prompt(from: state)
         }
         let previousLocalFingerprint = state.localFingerprint
-        let baseline: SyncDataSnapshot?
-        if state.pendingConflictID != nil {
-            baseline = state.pendingConflictWorkingSnapshot ??
+        let baseline: SyncDataSnapshot? = if state.pendingConflictID != nil {
+            state.pendingConflictWorkingSnapshot ??
                 state.pendingCloudSnapshot ??
                 state.localSnapshot
         } else {
-            baseline = state.localSnapshot ?? state.pendingForcedUploadSnapshot
+            state.localSnapshot ?? state.pendingForcedUploadSnapshot
         }
         let snapshot = try SyncDataSnapshot.capture(
             context: context,
@@ -57,7 +56,8 @@ extension SyncConflictService {
         if isCloudActive {
             if state.pendingConflictID != nil,
                var localSnapshot = state.localSnapshot,
-               let workingSnapshot = state.pendingConflictWorkingSnapshot ?? state.pendingCloudSnapshot {
+               let workingSnapshot = state.pendingConflictWorkingSnapshot ?? state.pendingCloudSnapshot
+            {
                 localSnapshot.applyChanges(from: workingSnapshot, to: snapshot)
                 state.localSnapshot = localSnapshot
                 state.localFingerprint = try localSnapshot.fingerprint()
@@ -78,7 +78,7 @@ extension SyncConflictService {
         }
 
         if snapshot.hasProtectableUserContent {
-            if shouldStageForCloudRecovery && !hasPendingUploadRecovery {
+            if shouldStageForCloudRecovery, !hasPendingUploadRecovery {
                 state.advanceSyncEpoch()
             }
             state.localSnapshot = snapshot
@@ -89,7 +89,7 @@ extension SyncConflictService {
                 state.pendingLocalIntent = .reconcileWithCloud
             }
             try saveState(state)
-            if shouldStageForCloudRecovery && !hasPendingUploadRecovery {
+            if shouldStageForCloudRecovery, !hasPendingUploadRecovery {
                 AppCloudSync.requestCloudReconciliationReset()
             }
         }

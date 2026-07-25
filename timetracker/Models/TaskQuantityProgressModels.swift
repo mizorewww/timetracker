@@ -145,7 +145,8 @@ nonisolated struct TaskRecurrenceOccurrenceSnapshot:
               let localDate = TaskRecurrenceDayKey.date(
                   from: occurrence.occurrenceDayKey,
                   timeZoneIdentifier: occurrence.timeZoneIdentifier
-              ) else {
+              )
+        else {
             return nil
         }
         id = occurrence.id

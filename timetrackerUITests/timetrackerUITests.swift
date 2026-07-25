@@ -24,7 +24,7 @@ final class timetrackerUITests: XCTestCase {
             for: .documentDirectory,
             in: .userDomainMask
         )[0]
-        .appendingPathComponent("UITestScreenshots", isDirectory: true)
+            .appendingPathComponent("UITestScreenshots", isDirectory: true)
         let testDirectoryName = name.map { character in
             character.isLetter || character.isNumber ? character : "-"
         }
@@ -48,7 +48,7 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testLaunchSmokeShowsHome() throws {
+    func testLaunchSmokeShowsHome() {
         let app = launchApp()
 
         XCTAssertTrue(homeIsReady(in: app))
@@ -61,7 +61,7 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(homeIsReady(in: app))
         XCTAssertTrue(
             app.descendants(matching: .any)["home.activeTimers"].waitForExistence(timeout: 2) ||
-            anyStaticText(["正在计时", "正在計時", "Active Timers"], in: app)
+                anyStaticText(["正在计时", "正在計時", "Active Timers"], in: app)
         )
 
         openSection("Analytics", tabIdentifier: "phone.tab.analytics", sidebarIdentifier: "sidebar.Analytics", in: app)
@@ -327,16 +327,19 @@ final class timetrackerUITests: XCTestCase {
         ].firstMatch
 
         if !sidebarCategory.waitForExistence(timeout: 2) ||
-            !sidebarCategory.isHittable {
+            !sidebarCategory.isHittable
+        {
             let identifiedToggle = app.descendants(matching: .any)[
                 "sidebar.show"
             ].firstMatch
             let systemToggle = app.buttons["Show Sidebar"].firstMatch
             if identifiedToggle.waitForExistence(timeout: 2),
-               identifiedToggle.isHittable {
+               identifiedToggle.isHittable
+            {
                 activate(identifiedToggle)
             } else if systemToggle.waitForExistence(timeout: 2),
-                      systemToggle.isHittable {
+                      systemToggle.isHittable
+            {
                 activate(systemToggle)
             }
         }
@@ -511,7 +514,8 @@ final class timetrackerUITests: XCTestCase {
         ].firstMatch
 
         if studyMoveUp.waitForExistence(timeout: 3),
-           studyMoveUp.isHittable {
+           studyMoveUp.isHittable
+        {
             activate(studyMoveUp)
         } else {
             XCTAssertTrue(
@@ -537,7 +541,7 @@ final class timetrackerUITests: XCTestCase {
                     reorderedStudyRow.isHittable &&
                     reorderedWorkRow.isHittable &&
                     reorderedStudyRow.frame.minY <
-                        reorderedWorkRow.frame.minY
+                    reorderedWorkRow.frame.minY
             },
             "Moving Study up must immediately update the sorter order."
         )
@@ -580,7 +584,7 @@ final class timetrackerUITests: XCTestCase {
                     refreshedStudySection.isHittable &&
                     refreshedWorkSection.isHittable &&
                     refreshedStudySection.frame.minY <
-                        refreshedWorkSection.frame.minY
+                    refreshedWorkSection.frame.minY
             },
             "Tasks must render the persisted Study-before-Work Category order."
         )
@@ -594,13 +598,15 @@ final class timetrackerUITests: XCTestCase {
                 studySidebarID
             ].firstMatch
             if !studySidebar.waitForExistence(timeout: 2) ||
-                !studySidebar.isHittable {
+                !studySidebar.isHittable
+            {
                 let identifiedToggle = app.descendants(matching: .any)[
                     "sidebar.show"
                 ].firstMatch
                 let systemToggle = app.buttons["Show Sidebar"].firstMatch
                 if identifiedToggle.waitForExistence(timeout: 2),
-                   identifiedToggle.isHittable {
+                   identifiedToggle.isHittable
+                {
                     activate(identifiedToggle)
                 } else {
                     XCTAssertTrue(
@@ -633,7 +639,7 @@ final class timetrackerUITests: XCTestCase {
                         refreshedStudySidebar.isHittable &&
                         refreshedWorkSidebar.isHittable &&
                         refreshedStudySidebar.frame.minY <
-                            refreshedWorkSidebar.frame.minY
+                        refreshedWorkSidebar.frame.minY
                 },
                 "The persistent Sidebar must mirror the Tasks Category order."
             )
@@ -1037,7 +1043,7 @@ final class timetrackerUITests: XCTestCase {
                 "--uitesting-today-heatmap",
                 "--uitesting-reset-demo-preferences",
                 "--uitesting-persistent-store",
-                "--uitesting-reset-persistent-store"
+                "--uitesting-reset-persistent-store",
             ]
         )
         #if os(macOS)
@@ -1248,7 +1254,7 @@ final class timetrackerUITests: XCTestCase {
             route: "settings",
             additionalLaunchArguments: [
                 "--uitesting-today-heatmap",
-                "--uitesting-persistent-store"
+                "--uitesting-persistent-store",
             ]
         )
         #if os(macOS)
@@ -1307,7 +1313,7 @@ final class timetrackerUITests: XCTestCase {
             route: "today",
             additionalLaunchArguments: [
                 "--uitesting-today-heatmap",
-                "--uitesting-persistent-store"
+                "--uitesting-persistent-store",
             ]
         )
         #if os(macOS)
@@ -1411,7 +1417,7 @@ final class timetrackerUITests: XCTestCase {
         let app = launchApp(
             seedsDemoData: false,
             additionalLaunchArguments: [
-                "--uitesting-clean-persistent-store"
+                "--uitesting-clean-persistent-store",
             ]
         )
         app.terminate()
@@ -1425,7 +1431,8 @@ final class timetrackerUITests: XCTestCase {
         guard let discoveredSettingsWindow = app.windows.allElementsBoundByIndex
             .first(where: { window in
                 window.descendants(matching: .any)["settings.view"].exists
-            }) else {
+            })
+        else {
             XCTFail("The macOS Settings window must exist before dismissal.")
             return
         }
@@ -1583,7 +1590,8 @@ final class timetrackerUITests: XCTestCase {
         )
         let screenshotPrefix = platformScreenshotPrefix(in: app)
         if app.descendants(matching: .any)["tasks.view"]
-            .waitForExistence(timeout: 3) == false {
+            .waitForExistence(timeout: 3) == false
+        {
             openSection(
                 "Tasks",
                 tabIdentifier: "phone.tab.tasks",
@@ -1808,7 +1816,7 @@ final class timetrackerUITests: XCTestCase {
             replacesDemoDataOnLaunch: true,
             additionalLaunchArguments: [
                 "--uitesting-today-heatmap",
-                "--uitesting-reset-demo-preferences"
+                "--uitesting-reset-demo-preferences",
             ]
         )
         XCTAssertTrue(initialConfigurationIsReady(in: app))
@@ -2240,7 +2248,7 @@ final class timetrackerUITests: XCTestCase {
             route: "tasks",
             replacesDemoDataOnLaunch: true,
             taskTitle: "Read Apple HIG",
-            autosaveDelayMilliseconds: 60_000
+            autosaveDelayMilliseconds: 60000
         )
         ensureTaskDetailIsReady(named: "Read Apple HIG", in: app)
         let screenshotPrefix = platformScreenshotPrefix(in: app)
@@ -2352,14 +2360,15 @@ final class timetrackerUITests: XCTestCase {
             route: "task-detail",
             replacesDemoDataOnLaunch: true,
             taskTitle: "Read Apple HIG",
-            autosaveDelayMilliseconds: 30_000
+            autosaveDelayMilliseconds: 30000
         )
         ensureTaskDetailIsReady(named: "Read Apple HIG", in: app)
         let screenshotPrefix = platformScreenshotPrefix(in: app)
 
         #if os(iOS)
         guard app.descendants(matching: .any)["ipad.splitNavigation"]
-            .waitForExistence(timeout: 5) else {
+            .waitForExistence(timeout: 5)
+        else {
             throw XCTSkip("Sidebar navigation is available on iPad and macOS.")
         }
         #endif
@@ -2420,12 +2429,13 @@ final class timetrackerUITests: XCTestCase {
             route: "task-detail",
             replacesDemoDataOnLaunch: true,
             taskTitle: "Read Apple HIG",
-            autosaveDelayMilliseconds: 30_000
+            autosaveDelayMilliseconds: 30000
         )
 
         ensureTaskDetailIsReady(named: "Read Apple HIG", in: app)
         if app.descendants(matching: .any)["ipad.splitNavigation"]
-            .waitForExistence(timeout: 2) {
+            .waitForExistence(timeout: 2)
+        {
             throw XCTSkip("Phone tab navigation is available on iPhone.")
         }
         XCTAssertTrue(
@@ -2557,7 +2567,8 @@ final class timetrackerUITests: XCTestCase {
         #else
         let app = launchApp(route: "tasks")
         if app.descendants(matching: .any)["tasks.view"]
-            .waitForExistence(timeout: 8) == false {
+            .waitForExistence(timeout: 8) == false
+        {
             openSection(
                 "Tasks",
                 tabIdentifier: "phone.tab.tasks",
@@ -2623,7 +2634,8 @@ final class timetrackerUITests: XCTestCase {
         #else
         let app = launchApp(route: "tasks")
         if app.descendants(matching: .any)["tasks.view"]
-            .waitForExistence(timeout: 8) == false {
+            .waitForExistence(timeout: 8) == false
+        {
             openSection(
                 "Tasks",
                 tabIdentifier: "phone.tab.tasks",
@@ -2987,15 +2999,15 @@ final class timetrackerUITests: XCTestCase {
         )
         XCTAssertTrue(
             childRoute.waitForExistence(timeout: 3) &&
-            childRoute.isHittable
+                childRoute.isHittable
         )
         XCTAssertTrue(
             categoryRoute.waitForExistence(timeout: 3) &&
-            categoryRoute.isHittable
+                categoryRoute.isHittable
         )
         XCTAssertTrue(
             checklistRoute.waitForExistence(timeout: 3) &&
-            checklistRoute.isHittable
+                checklistRoute.isHittable
         )
         try capture("mac-inbox-manual-route-menu", app: app)
         activate(childRoute)
@@ -3024,7 +3036,7 @@ final class timetrackerUITests: XCTestCase {
         )
         XCTAssertTrue(
             secondCategoryRoute.waitForExistence(timeout: 3) &&
-            secondCategoryRoute.isHittable
+                secondCategoryRoute.isHittable
         )
         activate(secondCategoryRoute)
         try completeInboxPickerRoute(
@@ -3052,7 +3064,7 @@ final class timetrackerUITests: XCTestCase {
         )
         XCTAssertTrue(
             secondChecklistRoute.waitForExistence(timeout: 3) &&
-            secondChecklistRoute.isHittable
+                secondChecklistRoute.isHittable
         )
         activate(secondChecklistRoute)
         try completeInboxPickerRoute(
@@ -3203,7 +3215,7 @@ final class timetrackerUITests: XCTestCase {
                 summary: "Add to Design System checklist",
                 applyTitle: "Add Checklist Item",
                 screenshotName: "inbox-ai-checklist-item"
-            )
+            ),
         ]
 
         for (index, destination) in destinations.enumerated() {
@@ -3760,7 +3772,7 @@ final class timetrackerUITests: XCTestCase {
         let lastChapter = app.textFields.matching(
             NSPredicate(format: "value == %@", "Chapter 150")
         ).firstMatch
-        for _ in 0..<12 {
+        for _ in 0 ..< 12 {
             app.swipeUp(velocity: .fast)
         }
         scrollUntilHittable(lastChapter, direction: .up, maximumScrolls: 30, in: app)
@@ -4163,12 +4175,14 @@ final class timetrackerUITests: XCTestCase {
         let request = app.descendants(matching: .any)["aiTaskPlan.request"].firstMatch
         if !request.waitForExistence(timeout: 5) {
             if generatePlan.waitForExistence(timeout: 2),
-               generatePlan.isHittable {
+               generatePlan.isHittable
+            {
                 activate(generatePlan)
             } else if addMenu.waitForExistence(timeout: 2), addMenu.isHittable {
                 activate(addMenu)
                 if generatePlan.waitForExistence(timeout: 2),
-                   generatePlan.isHittable {
+                   generatePlan.isHittable
+                {
                     activate(generatePlan)
                 }
             }
@@ -4413,7 +4427,7 @@ final class timetrackerUITests: XCTestCase {
         let petalOffsets = [
             CGVector(dx: 0.5, dy: 0.32),
             CGVector(dx: 0.68, dy: 0.5),
-            CGVector(dx: 0.5, dy: 0.40)
+            CGVector(dx: 0.5, dy: 0.40),
         ]
         var previousColorName = initialColorName
         for offset in petalOffsets {
@@ -4569,7 +4583,7 @@ final class timetrackerUITests: XCTestCase {
             replacesDemoDataOnLaunch: true,
             additionalLaunchArguments: [
                 "--uitesting-today-heatmap",
-                "--uitesting-reset-demo-preferences"
+                "--uitesting-reset-demo-preferences",
             ]
         )
         XCTAssertTrue(analyticsIsReady(in: app))
@@ -4763,7 +4777,7 @@ final class timetrackerUITests: XCTestCase {
                 "How much time did I spend?",
                 "across all task timers",
                 "Totals & Definitions"
-            )
+            ),
         ]
 
         for expectation in exploreExpectations {
@@ -4825,7 +4839,8 @@ final class timetrackerUITests: XCTestCase {
         #else
         let app = launchApp(route: "analytics")
         if app.descendants(matching: .any)["analytics.view"]
-            .waitForExistence(timeout: 5) == false {
+            .waitForExistence(timeout: 5) == false
+        {
             openSection(
                 "Analytics",
                 tabIdentifier: "phone.tab.analytics",
@@ -4978,7 +4993,7 @@ final class timetrackerUITests: XCTestCase {
             app.descendants(matching: .any)["analytics.definition.gross"].firstMatch,
             app.descendants(matching: .any)["analytics.definition.wall"].firstMatch,
             app.descendants(matching: .any)["analytics.definition.overlap"].firstMatch,
-            app.descendants(matching: .any)["analytics.definition.example"].firstMatch
+            app.descendants(matching: .any)["analytics.definition.example"].firstMatch,
         ]
         for definition in definitions {
             scrollUntilHittable(definition, direction: .up, in: app)
@@ -5101,7 +5116,8 @@ final class timetrackerUITests: XCTestCase {
 
         XCTAssertTrue(homeIsReady(in: app))
         if app.descendants(matching: .any)["ipad.splitNavigation"]
-            .waitForExistence(timeout: 1) {
+            .waitForExistence(timeout: 1)
+        {
             throw XCTSkip("The Task 23 fixture is phone-only.")
         }
 
@@ -5116,7 +5132,7 @@ final class timetrackerUITests: XCTestCase {
                 [
                     "Timeline Short Blue",
                     "Timeline Short Orange",
-                    "Timeline Terminal Green"
+                    "Timeline Terminal Green",
                 ]
             )
         )
@@ -5324,7 +5340,7 @@ final class timetrackerUITests: XCTestCase {
         let app = launchApp(
             additionalLaunchArguments: [
                 "-AppleHealthTimelineEnabled",
-                "NO"
+                "NO",
             ]
         )
         XCTAssertTrue(homeIsReady(in: app))
@@ -5374,7 +5390,7 @@ final class timetrackerUITests: XCTestCase {
             additionalLaunchArguments: [
                 "--uitesting-apple-health",
                 "-AppleHealthTimelineEnabled",
-                "NO"
+                "NO",
             ]
         )
         XCTAssertTrue(homeIsReady(in: app))
@@ -5382,7 +5398,7 @@ final class timetrackerUITests: XCTestCase {
         let timelineAccess = app.buttons[
             "Show Apple Health in Timeline"
         ].firstMatch
-        for _ in 0..<8 {
+        for _ in 0 ..< 8 {
             if timelineAccess.exists, timelineAccess.isHittable {
                 break
             }
@@ -5407,7 +5423,7 @@ final class timetrackerUITests: XCTestCase {
         let sleepEntries = healthEntries("Sleep")
         let sleep = sleepEntries.firstMatch
         let running = healthEntries("Running").firstMatch
-        for _ in 0..<8 {
+        for _ in 0 ..< 8 {
             if sleep.exists, sleep.isHittable {
                 break
             }
@@ -5438,7 +5454,8 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     func testAppleHealthTasksStayOutOfQuickStartAndExplainSyncOnlyDetail()
-        throws {
+        throws
+    {
         #if os(macOS)
         throw XCTSkip("Apple Health sync-only UI requires an iOS simulator.")
         #else
@@ -5448,7 +5465,7 @@ final class timetrackerUITests: XCTestCase {
             additionalLaunchArguments: [
                 "--uitesting-apple-health",
                 "-AppleHealthTimelineEnabled",
-                "NO"
+                "NO",
             ]
         )
         XCTAssertTrue(homeIsReady(in: app))
@@ -5461,7 +5478,7 @@ final class timetrackerUITests: XCTestCase {
         let tasksTab = app.descendants(matching: .any)[
             "phone.tab.tasks"
         ].firstMatch
-        for _ in 0..<5 where !tasksTab.isHittable {
+        for _ in 0 ..< 5 where !tasksTab.isHittable {
             app.swipeDown()
         }
 
@@ -5543,7 +5560,7 @@ final class timetrackerUITests: XCTestCase {
         let todayTab = app.descendants(matching: .any)[
             "phone.tab.today"
         ].firstMatch
-        for _ in 0..<5 where !todayTab.isHittable {
+        for _ in 0 ..< 5 where !todayTab.isHittable {
             app.swipeDown()
         }
 
@@ -5627,7 +5644,7 @@ final class timetrackerUITests: XCTestCase {
             additionalLaunchArguments: [
                 "--uitesting-apple-health-history",
                 "-AppleHealthTimelineEnabled",
-                "NO"
+                "NO",
             ]
         )
         ensureTaskDetailIsReady(named: "Running", in: app)
@@ -5670,7 +5687,8 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     func testAppleHealthHistoryLoadsAcrossRangesAndIPadOrientations()
-        throws {
+        throws
+    {
         #if os(iOS)
         XCUIDevice.shared.orientation = .portrait
         defer { XCUIDevice.shared.orientation = .portrait }
@@ -5981,7 +5999,8 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     func testAppleHealthHistoryFailureUsesNativeRetryThenShowsContent()
-        throws {
+        throws
+    {
         #if os(macOS)
         throw XCTSkip("The injected Apple Health reader is iOS-only.")
         #else
@@ -6543,7 +6562,8 @@ final class timetrackerUITests: XCTestCase {
         let app = launchApp()
         XCTAssertTrue(homeIsReady(in: app))
         if app.descendants(matching: .any)["ipad.splitNavigation"]
-            .waitForExistence(timeout: 1) {
+            .waitForExistence(timeout: 1)
+        {
             throw XCTSkip("The compact Quick Start action is verified on iPhone.")
         }
 
@@ -6594,7 +6614,7 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(homeIsReady(in: app))
         let phoneTabView = app.descendants(matching: .any)["phone.tabView"].firstMatch
         let todayTab = app.descendants(matching: .any)["phone.tab.today"].firstMatch
-        if phoneTabView.exists && todayTab.exists {
+        if phoneTabView.exists, todayTab.exists {
             XCTAssertTrue(todayTab.isSelected)
         }
         XCTAssertFalse(app.descendants(matching: .any)["tasks.view"].exists)
@@ -6606,7 +6626,7 @@ final class timetrackerUITests: XCTestCase {
     func testTodayQuickStartSystemBackFlushesAutosave() throws {
         let app = launchApp(
             replacesDemoDataOnLaunch: true,
-            autosaveDelayMilliseconds: 30_000
+            autosaveDelayMilliseconds: 30000
         )
         XCTAssertTrue(homeIsReady(in: app))
         let screenshotPrefix = platformScreenshotPrefix(in: app)
@@ -6833,7 +6853,7 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(quickStartSummary.waitForExistence(timeout: 3))
         let quickStartCopy = [
             quickStartSummary.label,
-            quickStartSummary.value as? String ?? ""
+            quickStartSummary.value as? String ?? "",
         ].joined(separator: " ")
         XCTAssertTrue(
             quickStartCopy.localizedCaseInsensitiveContains("pinned tasks"),
@@ -6927,7 +6947,7 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(headerText.waitForExistence(timeout: 3))
         let aggregateCopy = [
             headerText.label,
-            headerText.value as? String ?? ""
+            headerText.value as? String ?? "",
         ].joined(separator: " ")
         XCTAssertNotEqual(
             aggregateCopy,
@@ -7001,7 +7021,7 @@ final class timetrackerUITests: XCTestCase {
         )
         let explanation = [
             summary.label,
-            summary.value as? String ?? ""
+            summary.value as? String ?? "",
         ].joined(separator: " ").lowercased()
         XCTAssertTrue(
             explanation.contains("overlap") &&
@@ -7056,7 +7076,7 @@ final class timetrackerUITests: XCTestCase {
             replacesDemoDataOnLaunch: true,
             additionalLaunchArguments: [
                 "--uitesting-today-heatmap",
-                "--uitesting-reset-demo-preferences"
+                "--uitesting-reset-demo-preferences",
             ]
         )
         XCTAssertTrue(initialConfigurationIsReady(in: app))
@@ -7148,7 +7168,7 @@ final class timetrackerUITests: XCTestCase {
                 "--uitesting-today-heatmap",
                 "--uitesting-today-heatmap-template-id",
                 quantityTemplateTaskID,
-                "--uitesting-reset-demo-preferences"
+                "--uitesting-reset-demo-preferences",
             ]
         )
         #if os(macOS)
@@ -7236,7 +7256,7 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(checklistHeader.waitForExistence(timeout: 3))
         let checklistHeaderCopy = [
             checklistHeader.label,
-            checklistHeader.value as? String ?? ""
+            checklistHeader.value as? String ?? "",
         ].joined(separator: " ")
         XCTAssertTrue(checklistHeaderCopy.contains("9 completed"))
         #if os(iOS)
@@ -7263,7 +7283,7 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(durationHeader.waitForExistence(timeout: 3))
         let durationHeaderCopy = [
             durationHeader.label,
-            durationHeader.value as? String ?? ""
+            durationHeader.value as? String ?? "",
         ].joined(separator: " ")
         XCTAssertTrue(durationHeaderCopy.contains("Tracked Time"))
         XCTAssertTrue(durationHeaderCopy.contains("hr"))
@@ -7297,7 +7317,7 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(quantityHeader.waitForExistence(timeout: 3))
         let quantityHeaderCopy = [
             quantityHeader.label,
-            quantityHeader.value as? String ?? ""
+            quantityHeader.value as? String ?? "",
         ].joined(separator: " ")
         XCTAssertTrue(quantityHeaderCopy.contains("75"))
         #if os(iOS)
@@ -7353,8 +7373,9 @@ final class timetrackerUITests: XCTestCase {
                 maximumScrolls: 14,
                 in: app
             )
-            if refreshedInfo.waitForExistence(timeout: 1) &&
-                refreshedInfo.isHittable {
+            if refreshedInfo.waitForExistence(timeout: 1),
+               refreshedInfo.isHittable
+            {
                 #if os(iOS)
                 _ = scrollUntilFullyVisibleBelowNavigationBar(
                     refreshedInfo,
@@ -7369,7 +7390,7 @@ final class timetrackerUITests: XCTestCase {
                     in: app
                 )
                 waitForScreenshotTransition()
-                if refreshedInfo.exists && refreshedInfo.isHittable {
+                if refreshedInfo.exists, refreshedInfo.isHittable {
                     #if os(iOS)
                     refreshedInfo.coordinate(
                         withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)
@@ -7400,7 +7421,7 @@ final class timetrackerUITests: XCTestCase {
             )
             let copy = [
                 row.label,
-                row.value as? String ?? ""
+                row.value as? String ?? "",
             ].joined(separator: " ").lowercased()
             for term in informationRow.requiredTerms {
                 XCTAssertTrue(
@@ -7413,8 +7434,8 @@ final class timetrackerUITests: XCTestCase {
             "home.info.heatmaps.task.\(quantityTemplateTaskID)"
         ].firstMatch
         #if os(iOS)
-        for _ in 0..<8 {
-            if quantityTaskExplanation.exists && quantityTaskExplanation.isHittable {
+        for _ in 0 ..< 8 {
+            if quantityTaskExplanation.exists, quantityTaskExplanation.isHittable {
                 break
             }
             let appFrame = app.frame
@@ -7443,7 +7464,7 @@ final class timetrackerUITests: XCTestCase {
             start.press(forDuration: 0.05, thenDragTo: end)
         }
         #else
-        for _ in 0..<8 where !quantityTaskExplanation.exists {
+        for _ in 0 ..< 8 where !quantityTaskExplanation.exists {
             informationView.scroll(byDeltaX: 0, deltaY: -240)
         }
         #endif
@@ -7453,7 +7474,7 @@ final class timetrackerUITests: XCTestCase {
         )
         let quantityExplanationCopy = [
             quantityTaskExplanation.label,
-            quantityTaskExplanation.value as? String ?? ""
+            quantityTaskExplanation.value as? String ?? "",
         ].joined(separator: " ")
         XCTAssertTrue(
             quantityExplanationCopy.localizedCaseInsensitiveContains("peak 45 reps"),
@@ -7462,7 +7483,7 @@ final class timetrackerUITests: XCTestCase {
         try capture("\(prefix)-home-today-heatmap-info", app: app)
 
         let done = app.descendants(matching: .any)["home.info.done"].firstMatch
-        if done.waitForExistence(timeout: 3) && done.isHittable {
+        if done.waitForExistence(timeout: 3), done.isHittable {
             activate(done)
             XCTAssertTrue(
                 informationView.waitForNonExistence(timeout: 3),
@@ -7723,7 +7744,7 @@ final class timetrackerUITests: XCTestCase {
         #else
         XCTAssertGreaterThanOrEqual(stopButtons.count, 1)
         #endif
-        for index in 0..<stopButtons.count {
+        for index in 0 ..< stopButtons.count {
             let stop = stopButtons.element(boundBy: index)
             #if os(macOS)
             XCTAssertTrue(stop.isEnabled)
@@ -7893,7 +7914,8 @@ final class timetrackerUITests: XCTestCase {
 
         let app = launchApp(replacesDemoDataOnLaunch: true)
         guard app.descendants(matching: .any)["ipad.splitNavigation"]
-            .waitForExistence(timeout: 5) else {
+            .waitForExistence(timeout: 5)
+        else {
             throw XCTSkip("This layout audit only runs on iPad.")
         }
         XCTAssertTrue(homeIsReady(in: app))
@@ -8069,7 +8091,8 @@ final class timetrackerUITests: XCTestCase {
 
         let app = launchApp()
         guard app.descendants(matching: .any)["ipad.splitNavigation"]
-            .waitForExistence(timeout: 5) else {
+            .waitForExistence(timeout: 5)
+        else {
             throw XCTSkip("This shell audit only runs on iPad.")
         }
         XCTAssertTrue(homeIsReady(in: app))
@@ -8084,7 +8107,7 @@ final class timetrackerUITests: XCTestCase {
 
         let home = app.descendants(matching: .any)["home.view"].firstMatch
         XCTAssertTrue(home.waitForExistence(timeout: 3))
-        for _ in 0..<3 where navigationBar.frame.height >= expandedHeight - 12 {
+        for _ in 0 ..< 3 where navigationBar.frame.height >= expandedHeight - 12 {
             home.swipeUp()
         }
         XCTAssertTrue(navigationBar.waitForExistence(timeout: 3))
@@ -8364,7 +8387,7 @@ final class timetrackerUITests: XCTestCase {
         }
         XCTAssertTrue(
             choice.waitForExistence(timeout: 3) &&
-            choice.isHittable
+                choice.isHittable
         )
         waitForScreenshotTransition()
         try capture(screenshotName, app: app)
@@ -8417,11 +8440,13 @@ final class timetrackerUITests: XCTestCase {
         let modelIdentifier = environment["SIMULATOR_MODEL_IDENTIFIER"]
         let deviceName = environment["SIMULATOR_DEVICE_NAME"]
         if modelIdentifier?.hasPrefix("iPad") == true ||
-            deviceName?.localizedCaseInsensitiveContains("iPad") == true {
+            deviceName?.localizedCaseInsensitiveContains("iPad") == true
+        {
             return "ipad"
         }
         if modelIdentifier?.hasPrefix("iPhone") == true ||
-            deviceName?.localizedCaseInsensitiveContains("iPhone") == true {
+            deviceName?.localizedCaseInsensitiveContains("iPhone") == true
+        {
             return "iphone"
         }
         let windowFrame = app.windows.firstMatch.frame
@@ -8636,13 +8661,12 @@ final class timetrackerUITests: XCTestCase {
         autosaveDelayMilliseconds: Int? = nil
     ) -> XCUIApplication {
         let app = XCUIApplication()
-        let demoDataMode: String
-        if seedsDemoData == false {
-            demoDataMode = "off"
+        let demoDataMode = if seedsDemoData == false {
+            "off"
         } else if replacesDemoDataOnLaunch {
-            demoDataMode = "replaceOnLaunch"
+            "replaceOnLaunch"
         } else {
-            demoDataMode = "seedIfEmpty"
+            "seedIfEmpty"
         }
         app.launchArguments = [
             "--uitesting",
@@ -8652,7 +8676,7 @@ final class timetrackerUITests: XCTestCase {
             "-TimeTrackerAutomaticDemoDataModeOverride",
             demoDataMode,
             "-TimeTrackerAutomaticDemoSeedingDisabled",
-            seedsDemoData ? "NO" : "YES"
+            seedsDemoData ? "NO" : "YES",
         ]
         app.launchArguments.append(contentsOf: additionalLaunchArguments)
         if additionalLaunchArguments.contains(where: {
@@ -8665,7 +8689,7 @@ final class timetrackerUITests: XCTestCase {
         if let contentSizeCategory {
             app.launchArguments += [
                 "-UIPreferredContentSizeCategoryName",
-                contentSizeCategory
+                contentSizeCategory,
             ]
         }
         app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
@@ -8779,7 +8803,7 @@ final class timetrackerUITests: XCTestCase {
         usesHorizontalTimeAxis: Bool
     ) throws {
         let expectedTitles = ["Timeline Overlap Context"] +
-            (1...10).map { String(format: "Timeline Burst %02d", $0) }
+            (1 ... 10).map { String(format: "Timeline Burst %02d", $0) }
         let query = app.descendants(matching: .any).matching(
             NSPredicate(
                 format: "identifier BEGINSWITH %@ AND label IN %@",
@@ -9168,7 +9192,8 @@ final class timetrackerUITests: XCTestCase {
     private func analyticsIsReady(in app: XCUIApplication) -> Bool {
         guard app.descendants(matching: .any)["analytics.view"].waitForExistence(timeout: 8),
               app.descendants(matching: .any)["analytics.periodFilter"]
-                .waitForExistence(timeout: 8) else {
+              .waitForExistence(timeout: 8)
+        else {
             return false
         }
         return app.descendants(matching: .any)["analytics.summary"]
@@ -9491,7 +9516,8 @@ final class timetrackerUITests: XCTestCase {
 
         let identifiedElement = app.descendants(matching: .any)[sidebarIdentifier]
         if identifiedElement.waitForExistence(timeout: 1),
-           identifiedElement.firstMatch.isHittable {
+           identifiedElement.firstMatch.isHittable
+        {
             activate(identifiedElement.firstMatch)
             return
         }
@@ -9503,8 +9529,9 @@ final class timetrackerUITests: XCTestCase {
         let identifiedTab = app.descendants(matching: .any)[tabIdentifier]
         #if os(iOS)
         let identifiedTabExists = identifiedTab.waitForExistence(timeout: 2)
-        if app.descendants(matching: .any)["phone.tabView"].exists &&
-            (!identifiedTabExists || !identifiedTab.firstMatch.isHittable) {
+        if app.descendants(matching: .any)["phone.tabView"].exists,
+           !identifiedTabExists || !identifiedTab.firstMatch.isHittable
+        {
             // Focusing an inline field can minimize the system tab bar. Reveal
             // it through the same reverse-scroll gesture a user performs before
             // asking XCTest to activate a destination.
@@ -9512,7 +9539,8 @@ final class timetrackerUITests: XCTestCase {
         }
         #endif
         if identifiedTab.waitForExistence(timeout: 2),
-           identifiedTab.firstMatch.isHittable {
+           identifiedTab.firstMatch.isHittable
+        {
             activate(identifiedTab.firstMatch)
             return
         }
@@ -9523,7 +9551,8 @@ final class timetrackerUITests: XCTestCase {
             let appFrame = app.frame
             if tabFrame.width > 0,
                tabFrame.height > 0,
-               appFrame.intersects(tabFrame) {
+               appFrame.intersects(tabFrame)
+            {
                 // Xcode 27 beta can report {-1, -1} as the visible point for a
                 // visually present SwiftUI Tab. A real touch at its frame center
                 // still follows the production interaction path.
@@ -9604,7 +9633,8 @@ final class timetrackerUITests: XCTestCase {
 
         #if os(iOS)
         if app.descendants(matching: .any)["ipad.splitNavigation"]
-            .waitForExistence(timeout: 1) {
+            .waitForExistence(timeout: 1)
+        {
             XCTAssertTrue(
                 openCollapsedSidebarDestination("sidebar.Settings", in: app)
             )
@@ -9649,7 +9679,7 @@ final class timetrackerUITests: XCTestCase {
         let screenshot = mainWindow.screenshot()
         XCTAssertGreaterThan(
             screenshot.pngRepresentation.count,
-            1_024,
+            1024,
             "The macOS app window must produce a valid PNG for \(name)."
         )
         #endif
@@ -9675,7 +9705,7 @@ final class timetrackerUITests: XCTestCase {
         let screenshot = element.screenshot()
         XCTAssertGreaterThan(
             screenshot.pngRepresentation.count,
-            1_024,
+            1024,
             "Screenshot target must produce a valid PNG: \(name)"
         )
         try recordScreenshot(screenshot, name: name)
@@ -9734,7 +9764,8 @@ final class timetrackerUITests: XCTestCase {
                 }
             if let targetDisplayItem,
                targetDisplayItem.waitForExistence(timeout: 3),
-               targetDisplayItem.isHittable {
+               targetDisplayItem.isHittable
+            {
                 targetDisplayItem.click()
                 expectsPrimaryContainment = true
             } else {
@@ -9742,7 +9773,8 @@ final class timetrackerUITests: XCTestCase {
                     .matching(identifier: "_zoomCenter:")
                     .firstMatch
                 if centerItem.waitForExistence(timeout: 3),
-                   centerItem.isHittable {
+                   centerItem.isHittable
+                {
                     centerItem.click()
                     expectsPrimaryContainment = true
                 } else {
@@ -9779,7 +9811,8 @@ final class timetrackerUITests: XCTestCase {
 
         let directoryURL: URL
         if let directory = ProcessInfo.processInfo.environment["UI_SCREENSHOT_DIR"],
-           !directory.isEmpty {
+           !directory.isEmpty
+        {
             directoryURL = URL(fileURLWithPath: directory, isDirectory: true)
         } else {
             #if os(iOS)
@@ -9843,7 +9876,8 @@ final class timetrackerUITests: XCTestCase {
         let frame = button.frame
         guard frame.isNull == false,
               frame.isInfinite == false,
-              frame.isEmpty == false else {
+              frame.isEmpty == false
+        else {
             XCTFail("The visible \(diagnosticName) button needs a finite frame.")
             return false
         }
@@ -9964,7 +9998,7 @@ final class timetrackerUITests: XCTestCase {
         maximumScrolls: Int = 6,
         in app: XCUIApplication
     ) {
-        for _ in 0..<maximumScrolls where !element.isHittable {
+        for _ in 0 ..< maximumScrolls where !element.isHittable {
             scroll(direction: direction, toward: element, in: app)
         }
     }
@@ -9986,7 +10020,7 @@ final class timetrackerUITests: XCTestCase {
         #else
         let startY: CGFloat = direction == .up ? 0.68 : 0.34
         let endY: CGFloat = direction == .up ? 0.56 : 0.46
-        for _ in 0..<maximumScrolls where !element.isHittable {
+        for _ in 0 ..< maximumScrolls where !element.isHittable {
             let start = app.coordinate(
                 withNormalizedOffset: CGVector(dx: 0.5, dy: startY)
             )
@@ -10009,7 +10043,7 @@ final class timetrackerUITests: XCTestCase {
             return
         }
 
-        for _ in 0..<6 where !element.isHittable {
+        for _ in 0 ..< 6 where !element.isHittable {
             #if os(macOS)
             scroll(direction: .up, toward: element, in: app)
             #else
@@ -10058,7 +10092,7 @@ final class timetrackerUITests: XCTestCase {
         in app: XCUIApplication
     ) {
         #if os(macOS)
-        for _ in 0..<12 where !isFrameFullyVisibleAboveSystemChrome(element, in: app) {
+        for _ in 0 ..< 12 where !isFrameFullyVisibleAboveSystemChrome(element, in: app) {
             let windowFrame = app.windows.firstMatch.frame
             let direction: ScrollDirection = element.exists &&
                 element.frame.minY < windowFrame.minY
@@ -10067,7 +10101,7 @@ final class timetrackerUITests: XCTestCase {
             scroll(direction: direction, toward: element, in: app)
         }
         #else
-        for _ in 0..<12 where !isFullyVisibleAboveSystemChrome(element, in: app) {
+        for _ in 0 ..< 12 where !isFullyVisibleAboveSystemChrome(element, in: app) {
             let unobscuredBottom = systemChromeTop(in: app)
             let frame = element.frame
 
@@ -10077,7 +10111,8 @@ final class timetrackerUITests: XCTestCase {
                     in: app
                 )
             } else if element.exists,
-                      frame.maxY > unobscuredBottom - 8 {
+                      frame.maxY > unobscuredBottom - 8
+            {
                 dragContentUp(
                     by: frame.maxY - unobscuredBottom + 20,
                     in: app
@@ -10103,14 +10138,16 @@ final class timetrackerUITests: XCTestCase {
             return element.isHittable
         }
 
-        for _ in 0..<5 {
+        for _ in 0 ..< 5 {
             if element.isHittable,
-               element.frame.minY >= navigationBar.frame.maxY + 8 {
+               element.frame.minY >= navigationBar.frame.maxY + 8
+            {
                 return true
             }
 
             if element.exists,
-               element.frame.minY < navigationBar.frame.maxY + 8 {
+               element.frame.minY < navigationBar.frame.maxY + 8
+            {
                 let start = app.coordinate(
                     withNormalizedOffset: CGVector(dx: 0.5, dy: 0.40)
                 )
@@ -10219,7 +10256,7 @@ final class timetrackerUITests: XCTestCase {
         _ second: XCUIElement,
         in app: XCUIApplication
     ) -> Bool {
-        for _ in 0..<12 {
+        for _ in 0 ..< 12 {
             if first.exists, second.exists {
                 let navigationBar = app.navigationBars.firstMatch
                 let visibleTop = navigationBar.exists
@@ -10235,7 +10272,8 @@ final class timetrackerUITests: XCTestCase {
                 if upperFrame.maxY >= visibleTop + 8,
                    upperFrame.maxY <= visibleBottom - 8,
                    lowerFrame.minY >= visibleTop + 8,
-                   lowerFrame.minY <= visibleBottom - 8 {
+                   lowerFrame.minY <= visibleBottom - 8
+                {
                     return true
                 }
 

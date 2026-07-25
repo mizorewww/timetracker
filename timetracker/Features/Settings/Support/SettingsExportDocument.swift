@@ -2,7 +2,9 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct JSONExportDocument: FileDocument {
-    static var readableContentTypes: [UTType] { [.json] }
+    static var readableContentTypes: [UTType] {
+        [.json]
+    }
 
     var text: String
 
@@ -12,14 +14,15 @@ struct JSONExportDocument: FileDocument {
 
     init(configuration: ReadConfiguration) throws {
         if let data = configuration.file.regularFileContents,
-           let text = String(data: data, encoding: .utf8) {
+           let text = String(data: data, encoding: .utf8)
+        {
             self.text = text
         } else {
-            self.text = ""
+            text = ""
         }
     }
 
-    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+    func fileWrapper(configuration _: WriteConfiguration) throws -> FileWrapper {
         FileWrapper(regularFileWithContents: Data(text.utf8))
     }
 }

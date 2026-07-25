@@ -28,7 +28,7 @@ struct AnalyticsGroupBreakdownContent: View {
                     displayedItems,
                     totalSeconds: distribution.totalSeconds
                 )
-                    .accessibilityHidden(true)
+                .accessibilityHidden(true)
 
                 VStack(spacing: 0) {
                     ForEach(displayedItems) { item in

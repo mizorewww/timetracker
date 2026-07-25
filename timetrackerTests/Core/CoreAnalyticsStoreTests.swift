@@ -5,7 +5,7 @@ import Testing
 @Suite(.serialized)
 struct CoreAnalyticsStoreTests {
     @Test
-    func recentRecordsUseTheMatchingSessionTitleSnapshot() throws {
+    func recentRecordsUseTheMatchingSessionTitleSnapshot() {
         let taskID = UUID()
         let oldSession = TimeSession(
             taskID: taskID,
@@ -38,7 +38,7 @@ struct CoreAnalyticsStoreTests {
             tasks: [],
             taskIDs: [taskID],
             taskPathByID: [:],
-            now: Date(timeIntervalSince1970: 1_000)
+            now: Date(timeIntervalSince1970: 1000)
         )
 
         #expect(records.map(\.title) == ["New title", "Old title"])
@@ -46,8 +46,8 @@ struct CoreAnalyticsStoreTests {
 
     @Test @MainActor
     func analyticsSnapshotCompactsDenseOverlapsWithSweepLine() {
-        let start = Date(timeIntervalSince1970: 10_000)
-        let tasks = (0..<5).map { index in
+        let start = Date(timeIntervalSince1970: 10000)
+        let tasks = (0 ..< 5).map { index in
             TaskNode(
                 title: "Task \(index)",
                 parentID: nil,
@@ -66,7 +66,7 @@ struct CoreAnalyticsStoreTests {
                 source: .timer,
                 deviceID: "test",
                 startedAt: start,
-                endedAt: start.addingTimeInterval(3_600)
+                endedAt: start.addingTimeInterval(3600)
             )
         }
 
@@ -77,15 +77,15 @@ struct CoreAnalyticsStoreTests {
             sessions: sessions,
             taskPathByID: [:],
             taskParentPathByID: [:],
-            now: start.addingTimeInterval(3_600)
+            now: start.addingTimeInterval(3600)
         )
 
-        #expect(snapshot.overview.grossSeconds == 18_000)
-        #expect(snapshot.overview.wallSeconds == 3_600)
-        #expect(snapshot.overview.overlapSeconds == 14_400)
+        #expect(snapshot.overview.grossSeconds == 18000)
+        #expect(snapshot.overview.wallSeconds == 3600)
+        #expect(snapshot.overview.overlapSeconds == 14400)
         #expect(snapshot.overlaps.count == 1)
-        #expect(snapshot.overlaps.first?.wallDurationSeconds == 3_600)
-        #expect(snapshot.overlaps.first?.excessDurationSeconds == 14_400)
+        #expect(snapshot.overlaps.first?.wallDurationSeconds == 3600)
+        #expect(snapshot.overlaps.first?.excessDurationSeconds == 14400)
         #expect(snapshot.overlaps.first?.concurrentSegmentCount == 5)
         #expect(snapshot.overlaps.first?.participantCount == 5)
         #expect(snapshot.overlaps.first?.visibleParticipants.count == 3)
@@ -95,7 +95,7 @@ struct CoreAnalyticsStoreTests {
 
     @Test @MainActor
     func analyticsOverlapWindowsConserveStaggeredTripleConcurrency() {
-        let start = Date(timeIntervalSince1970: 20_000)
+        let start = Date(timeIntervalSince1970: 20000)
         let tasks = ["Alpha", "Beta", "Gamma"].map {
             TaskNode(title: $0, parentID: nil, deviceID: "test")
         }
@@ -132,7 +132,7 @@ struct CoreAnalyticsStoreTests {
                 deviceID: "test",
                 startedAt: start.addingTimeInterval(20 * 60),
                 endedAt: start.addingTimeInterval(30 * 60)
-            )
+            ),
         ]
 
         let snapshot = AnalyticsStore().snapshot(
@@ -161,14 +161,14 @@ struct CoreAnalyticsStoreTests {
         let pairWindows = snapshot.overlaps.filter { $0.concurrentSegmentCount == 2 }
         #expect(pairWindows.map(\.start) == [
             start.addingTimeInterval(10 * 60),
-            start.addingTimeInterval(30 * 60)
+            start.addingTimeInterval(30 * 60),
         ])
         #expect(pairWindows.allSatisfy { $0.excessDurationSeconds == 10 * 60 })
     }
 
     @Test @MainActor
     func analyticsOverlapMergesAdjacentReplacementSegmentsWithoutCrossingBoundaryOnlyRecords() {
-        let start = Date(timeIntervalSince1970: 30_000)
+        let start = Date(timeIntervalSince1970: 30000)
         let firstTask = TaskNode(title: "Alpha", parentID: nil, deviceID: "test")
         let secondTask = TaskNode(title: "Beta", parentID: nil, deviceID: "test")
         let boundaryTask = TaskNode(title: "Boundary", parentID: nil, deviceID: "test")
@@ -223,7 +223,7 @@ struct CoreAnalyticsStoreTests {
                 deviceID: "test",
                 startedAt: start.addingTimeInterval(6 * 60),
                 endedAt: start.addingTimeInterval(5 * 60)
-            )
+            ),
         ]
 
         let snapshot = AnalyticsStore().snapshot(
@@ -252,14 +252,14 @@ struct CoreAnalyticsStoreTests {
 
     @Test @MainActor
     func analyticsOverlapDoesNotMergeHiddenParticipantReplacement() {
-        let start = Date(timeIntervalSince1970: 32_000)
+        let start = Date(timeIntervalSince1970: 32000)
         let tasks = ["Alpha", "Beta", "Gamma", "Zulu Before", "Zulu After"].map {
             TaskNode(title: $0, parentID: nil, deviceID: "test")
         }
         let sessions = tasks.map { task in
             TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: start)
         }
-        let steadySegments = (0..<3).map { index in
+        let steadySegments = (0 ..< 3).map { index in
             TimeSegment(
                 sessionID: sessions[index].id,
                 taskID: tasks[index].id,
@@ -285,7 +285,7 @@ struct CoreAnalyticsStoreTests {
                 deviceID: "test",
                 startedAt: start.addingTimeInterval(10 * 60),
                 endedAt: start.addingTimeInterval(20 * 60)
-            )
+            ),
         ]
 
         let snapshot = AnalyticsStore().snapshot(
@@ -311,7 +311,7 @@ struct CoreAnalyticsStoreTests {
 
     @Test @MainActor
     func analyticsOverlapCountsSegmentsAndUsesTaskIDsForParticipants() {
-        let start = Date(timeIntervalSince1970: 35_000)
+        let start = Date(timeIntervalSince1970: 35000)
         let repeatedTask = TaskNode(title: "Repeated", parentID: nil, deviceID: "test")
         let otherTask = TaskNode(title: "Repeated", parentID: nil, deviceID: "test")
         let repeatedSession = TimeSession(taskID: repeatedTask.id, source: .timer, deviceID: "test", startedAt: start)
@@ -340,7 +340,7 @@ struct CoreAnalyticsStoreTests {
                 deviceID: "test",
                 startedAt: start,
                 endedAt: start.addingTimeInterval(10 * 60)
-            )
+            ),
         ]
 
         let snapshot = AnalyticsStore().snapshot(
@@ -384,31 +384,31 @@ struct CoreAnalyticsStoreTests {
         let sessions = tasks.map { task in
             TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: sessionStart)
         }
-        let segments = [
+        let segments = try [
             TimeSegment(
                 sessionID: sessions[0].id,
                 taskID: tasks[0].id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: try date(day: 7, hour: 23, minute: 30),
-                endedAt: try date(day: 8, hour: 4)
+                startedAt: date(day: 7, hour: 23, minute: 30),
+                endedAt: date(day: 8, hour: 4)
             ),
             TimeSegment(
                 sessionID: sessions[1].id,
                 taskID: tasks[1].id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: try date(day: 8, hour: 0, minute: 30),
-                endedAt: try date(day: 8, hour: 3, minute: 30)
+                startedAt: date(day: 8, hour: 0, minute: 30),
+                endedAt: date(day: 8, hour: 3, minute: 30)
             ),
             TimeSegment(
                 sessionID: sessions[2].id,
                 taskID: tasks[2].id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: try date(day: 8, hour: 1, minute: 30),
-                endedAt: try date(day: 8, hour: 4, minute: 30)
-            )
+                startedAt: date(day: 8, hour: 1, minute: 30),
+                endedAt: date(day: 8, hour: 4, minute: 30)
+            ),
         ]
         let now = try date(day: 8, hour: 12)
         let startOfDay = try date(day: 8, hour: 0)
@@ -424,15 +424,15 @@ struct CoreAnalyticsStoreTests {
             calendar: calendar
         )
 
-        #expect(snapshot.overview.grossSeconds == 7 * 3_600)
-        #expect(snapshot.overview.wallSeconds == 3 * 3_600 + 30 * 60)
-        #expect(snapshot.overview.overlapSeconds == 3 * 3_600 + 30 * 60)
+        #expect(snapshot.overview.grossSeconds == 7 * 3600)
+        #expect(snapshot.overview.wallSeconds == 3 * 3600 + 30 * 60)
+        #expect(snapshot.overview.overlapSeconds == 3 * 3600 + 30 * 60)
         #expect(snapshot.overlaps.reduce(0) { $0 + $1.excessDurationSeconds } == snapshot.overview.overlapSeconds)
         #expect(snapshot.overlaps.contains { $0.start == startOfDay.addingTimeInterval(30 * 60) })
 
         let triple = try #require(snapshot.overlaps.first { $0.concurrentSegmentCount == 3 })
-        #expect(triple.wallDurationSeconds == 3_600)
-        #expect(triple.excessDurationSeconds == 2 * 3_600)
+        #expect(triple.wallDurationSeconds == 3600)
+        #expect(triple.excessDurationSeconds == 2 * 3600)
     }
 
     @Test @MainActor
@@ -451,31 +451,31 @@ struct CoreAnalyticsStoreTests {
         let sessions = tasks.map { task in
             TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: sessionStart)
         }
-        let segments = [
+        let segments = try [
             TimeSegment(
                 sessionID: sessions[0].id,
                 taskID: tasks[0].id,
                 source: .timer,
                 deviceID: "test",
                 startedAt: sessionStart,
-                endedAt: try date("2026-11-01T04:00:00-08:00")
+                endedAt: date("2026-11-01T04:00:00-08:00")
             ),
             TimeSegment(
                 sessionID: sessions[1].id,
                 taskID: tasks[1].id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: try date("2026-11-01T00:30:00-07:00"),
-                endedAt: try date("2026-11-01T02:30:00-08:00")
+                startedAt: date("2026-11-01T00:30:00-07:00"),
+                endedAt: date("2026-11-01T02:30:00-08:00")
             ),
             TimeSegment(
                 sessionID: sessions[2].id,
                 taskID: tasks[2].id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: try date("2026-11-01T01:30:00-07:00"),
-                endedAt: try date("2026-11-01T03:30:00-08:00")
-            )
+                startedAt: date("2026-11-01T01:30:00-07:00"),
+                endedAt: date("2026-11-01T03:30:00-08:00")
+            ),
         ]
         let now = try date("2026-11-01T12:00:00-08:00")
         let startOfDay = try date("2026-11-01T00:00:00-07:00")
@@ -491,20 +491,20 @@ struct CoreAnalyticsStoreTests {
             calendar: calendar
         )
 
-        #expect(snapshot.overview.grossSeconds == 11 * 3_600)
-        #expect(snapshot.overview.wallSeconds == 5 * 3_600)
-        #expect(snapshot.overview.overlapSeconds == 6 * 3_600)
-        #expect(snapshot.overlaps.reduce(0) { $0 + $1.excessDurationSeconds } == 6 * 3_600)
+        #expect(snapshot.overview.grossSeconds == 11 * 3600)
+        #expect(snapshot.overview.wallSeconds == 5 * 3600)
+        #expect(snapshot.overview.overlapSeconds == 6 * 3600)
+        #expect(snapshot.overlaps.reduce(0) { $0 + $1.excessDurationSeconds } == 6 * 3600)
         #expect(snapshot.overlaps.contains { $0.start == startOfDay.addingTimeInterval(30 * 60) })
 
         let triple = try #require(snapshot.overlaps.first { $0.concurrentSegmentCount == 3 })
-        #expect(triple.wallDurationSeconds == 2 * 3_600)
-        #expect(triple.excessDurationSeconds == 4 * 3_600)
+        #expect(triple.wallDurationSeconds == 2 * 3600)
+        #expect(triple.excessDurationSeconds == 4 * 3600)
     }
 
     @Test @MainActor
     func analyticsOverlapAllocatesSubsecondRemaindersToMatchGrossMinusWall() {
-        let start = Date(timeIntervalSince1970: 40_000)
+        let start = Date(timeIntervalSince1970: 40000)
         let tasks = ["Alpha", "Beta", "Gamma"].map {
             TaskNode(title: $0, parentID: nil, deviceID: "test")
         }
@@ -540,9 +540,9 @@ struct CoreAnalyticsStoreTests {
 
     @Test
     func analyticsOverlapPresentationReportsEveryHiddenExcessSecond() {
-        let start = Date(timeIntervalSince1970: 50_000)
+        let start = Date(timeIntervalSince1970: 50000)
         let participant = OverlapAnalyticsParticipant(id: UUID(), title: "Task")
-        let windows = (0..<8).map { index in
+        let windows = (0 ..< 8).map { index in
             OverlapAnalyticsPoint(
                 start: start.addingTimeInterval(Double(index) * 60),
                 end: start.addingTimeInterval(Double(index + 1) * 60),
@@ -577,7 +577,7 @@ struct CoreAnalyticsStoreTests {
         let startOfDay = calendar.startOfDay(for: now)
         let firstTask = TaskNode(title: "First", parentID: nil, deviceID: "test")
         let secondTask = TaskNode(title: "Second", parentID: nil, deviceID: "test")
-        let firstSession = TimeSession(taskID: firstTask.id, source: .timer, deviceID: "test", startedAt: startOfDay.addingTimeInterval(-1_800))
+        let firstSession = TimeSession(taskID: firstTask.id, source: .timer, deviceID: "test", startedAt: startOfDay.addingTimeInterval(-1800))
         let secondSession = TimeSession(taskID: secondTask.id, source: .timer, deviceID: "test", startedAt: startOfDay.addingTimeInterval(-900))
         let segments = [
             TimeSegment(
@@ -585,8 +585,8 @@ struct CoreAnalyticsStoreTests {
                 taskID: firstTask.id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: startOfDay.addingTimeInterval(-1_800),
-                endedAt: startOfDay.addingTimeInterval(1_800)
+                startedAt: startOfDay.addingTimeInterval(-1800),
+                endedAt: startOfDay.addingTimeInterval(1800)
             ),
             TimeSegment(
                 sessionID: secondSession.id,
@@ -595,7 +595,7 @@ struct CoreAnalyticsStoreTests {
                 deviceID: "test",
                 startedAt: startOfDay.addingTimeInterval(-900),
                 endedAt: startOfDay.addingTimeInterval(900)
-            )
+            ),
         ]
 
         let snapshot = AnalyticsStore().snapshot(
@@ -615,12 +615,12 @@ struct CoreAnalyticsStoreTests {
             calendar: calendar
         )
 
-        #expect(snapshot.overview.grossSeconds == 2_700)
-        #expect(snapshot.overview.wallSeconds == 1_800)
+        #expect(snapshot.overview.grossSeconds == 2700)
+        #expect(snapshot.overview.wallSeconds == 1800)
         #expect(snapshot.overview.overlapSeconds == 900)
-        #expect(snapshot.daily.reduce(0) { $0 + $1.grossSeconds } == 2_700)
-        #expect(snapshot.daily.reduce(0) { $0 + $1.wallSeconds } == 1_800)
-        #expect(snapshot.taskBreakdown.first { $0.taskID == firstTask.id }?.grossSeconds == 1_800)
+        #expect(snapshot.daily.reduce(0) { $0 + $1.grossSeconds } == 2700)
+        #expect(snapshot.daily.reduce(0) { $0 + $1.wallSeconds } == 1800)
+        #expect(snapshot.taskBreakdown.first { $0.taskID == firstTask.id }?.grossSeconds == 1800)
         #expect(snapshot.taskBreakdown.first { $0.taskID == secondTask.id }?.grossSeconds == 900)
         #expect(snapshot.overlaps.count == 1)
         #expect(snapshot.overlaps.first?.start == startOfDay)
@@ -647,7 +647,7 @@ struct CoreAnalyticsStoreTests {
             taskID: task.id,
             source: .timer,
             deviceID: "test",
-            startedAt: now.addingTimeInterval(-3_600),
+            startedAt: now.addingTimeInterval(-3600),
             titleSnapshot: task.title
         )
         let spanningNow = TimeSegment(
@@ -655,8 +655,8 @@ struct CoreAnalyticsStoreTests {
             taskID: task.id,
             source: .timer,
             deviceID: "test",
-            startedAt: now.addingTimeInterval(-3_600),
-            endedAt: now.addingTimeInterval(3_600)
+            startedAt: now.addingTimeInterval(-3600),
+            endedAt: now.addingTimeInterval(3600)
         )
         let futureOnly = TimeSegment(
             sessionID: session.id,
@@ -664,7 +664,7 @@ struct CoreAnalyticsStoreTests {
             source: .timer,
             deviceID: "test",
             startedAt: now.addingTimeInterval(60),
-            endedAt: now.addingTimeInterval(3_600)
+            endedAt: now.addingTimeInterval(3600)
         )
         let segments = [spanningNow, futureOnly]
         let snapshot = AnalyticsStore().snapshot(
@@ -689,21 +689,21 @@ struct CoreAnalyticsStoreTests {
             calendar: calendar
         )
 
-        #expect(snapshot.overview.grossSeconds == 3_600)
-        #expect(snapshot.overview.wallSeconds == 3_600)
-        #expect(snapshot.daily.reduce(0) { $0 + $1.grossSeconds } == 3_600)
-        #expect(snapshot.taskBreakdown.first?.grossSeconds == 3_600)
-        #expect(snapshot.rhythm.averageSegmentSeconds == 3_600)
-        #expect(snapshot.quality.averageSegmentSeconds == 3_600)
+        #expect(snapshot.overview.grossSeconds == 3600)
+        #expect(snapshot.overview.wallSeconds == 3600)
+        #expect(snapshot.daily.reduce(0) { $0 + $1.grossSeconds } == 3600)
+        #expect(snapshot.taskBreakdown.first?.grossSeconds == 3600)
+        #expect(snapshot.rhythm.averageSegmentSeconds == 3600)
+        #expect(snapshot.quality.averageSegmentSeconds == 3600)
         #expect(snapshot.todayActivity.reduce(0) { total, hour in
             total + hour.slices.reduce(0) { $0 + $1.seconds }
-        } == 3_600)
+        } == 3600)
         #expect(snapshot.timeline.entries.count == 1)
         #expect(snapshot.timeline.entries.first?.endedAt == now)
         #expect(snapshot.timeline.displayInterval?.end == now)
-        #expect(engine.grossSeconds == 3_600)
-        #expect(engine.wallSeconds == 3_600)
-        #expect(forecastPace == 3_600)
+        #expect(engine.grossSeconds == 3600)
+        #expect(engine.wallSeconds == 3600)
+        #expect(forecastPace == 3600)
 
         let records = AnalyticsStore().recentRecords(
             segments: segments,
@@ -715,7 +715,7 @@ struct CoreAnalyticsStoreTests {
         )
         #expect(
             records.first { $0.id == .trackedSegment(spanningNow.id) }?
-                .durationSeconds == 3_600
+                .durationSeconds == 3600
         )
         #expect(
             records.first { $0.id == .trackedSegment(futureOnly.id) }?
@@ -739,7 +739,7 @@ struct CoreAnalyticsStoreTests {
             source: .timer,
             deviceID: "test",
             startedAt: start,
-            endedAt: start.addingTimeInterval(1_800)
+            endedAt: start.addingTimeInterval(1800)
         )
         let day = try #require(calendar.dateInterval(of: .day, for: start))
         var cache = LedgerBucketCache()
@@ -753,12 +753,12 @@ struct CoreAnalyticsStoreTests {
         let second = cache.summaries(
             segments: [segment],
             interval: day,
-            now: start.addingTimeInterval(1_200),
+            now: start.addingTimeInterval(1200),
             calendar: calendar
         )
 
         #expect(first.first?.grossSeconds == 600)
-        #expect(second.first?.grossSeconds == 1_200)
+        #expect(second.first?.grossSeconds == 1200)
         #expect(cache.bucketCount == 1)
     }
 
@@ -774,7 +774,7 @@ struct CoreAnalyticsStoreTests {
             taskID: task.id,
             source: .timer,
             deviceID: "device-a",
-            startedAt: now.addingTimeInterval(-3_600),
+            startedAt: now.addingTimeInterval(-3600),
             titleSnapshot: task.title
         )
         let stale = TimeSegment(
@@ -782,8 +782,8 @@ struct CoreAnalyticsStoreTests {
             taskID: task.id,
             source: .timer,
             deviceID: "device-a",
-            startedAt: now.addingTimeInterval(-3_600),
-            endedAt: now.addingTimeInterval(-3_000)
+            startedAt: now.addingTimeInterval(-3600),
+            endedAt: now.addingTimeInterval(-3000)
         )
         stale.updatedAt = now.addingTimeInterval(-120)
 
@@ -792,8 +792,8 @@ struct CoreAnalyticsStoreTests {
             taskID: task.id,
             source: .timer,
             deviceID: "device-b",
-            startedAt: now.addingTimeInterval(-3_600),
-            endedAt: now.addingTimeInterval(-2_700)
+            startedAt: now.addingTimeInterval(-3600),
+            endedAt: now.addingTimeInterval(-2700)
         )
         winner.id = stale.id
         winner.updatedAt = now.addingTimeInterval(-60)
@@ -819,7 +819,7 @@ struct CoreAnalyticsStoreTests {
     @Test @MainActor
     func analyticsStoreOwnsSnapshotCache() {
         let task = TaskNode(title: "Cached Task", parentID: nil, deviceID: "test")
-        let session = TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: Date(timeIntervalSince1970: 20_000), titleSnapshot: task.title)
+        let session = TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: Date(timeIntervalSince1970: 20000), titleSnapshot: task.title)
         let segment = TimeSegment(
             sessionID: session.id,
             taskID: task.id,
@@ -909,7 +909,7 @@ struct CoreAnalyticsStoreTests {
             taskID: task.id,
             source: .timer,
             deviceID: "test",
-            startedAt: day.end.addingTimeInterval(-3_600),
+            startedAt: day.end.addingTimeInterval(-3600),
             titleSnapshot: task.title
         )
         let openSegment = TimeSegment(
@@ -931,7 +931,7 @@ struct CoreAnalyticsStoreTests {
             calendar: calendar
         )
 
-        #expect(openSnapshot.overview.grossSeconds == 3_600)
+        #expect(openSnapshot.overview.grossSeconds == 3600)
     }
 
     @Test @MainActor
@@ -1032,7 +1032,7 @@ struct CoreAnalyticsStoreTests {
             calendar: calendar
         ) != nil)
 
-        for index in 0..<40 {
+        for index in 0 ..< 40 {
             let anotherTask = TaskNode(title: "Task \(index)", parentID: nil, deviceID: "test")
             let anotherSnapshot = store.taskSnapshot(
                 range: .today,
@@ -1116,7 +1116,7 @@ struct CoreAnalyticsStoreTests {
             taskID: task.id,
             source: .pomodoro,
             deviceID: "test",
-            startedAt: firstDayStart.addingTimeInterval(23 * 3_600 + 30 * 60)
+            startedAt: firstDayStart.addingTimeInterval(23 * 3600 + 30 * 60)
         )
         let segment = TimeSegment(
             sessionID: session.id,
@@ -1124,7 +1124,7 @@ struct CoreAnalyticsStoreTests {
             source: .pomodoro,
             deviceID: "test",
             startedAt: session.startedAt,
-            endedAt: firstDayStart.addingTimeInterval(24 * 3_600 + 30 * 60)
+            endedAt: firstDayStart.addingTimeInterval(24 * 3600 + 30 * 60)
         )
 
         let firstSnapshot = AnalyticsStore().snapshot(
@@ -1433,17 +1433,17 @@ struct CoreAnalyticsStoreTests {
                 taskID: design.id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: startOfDay.addingTimeInterval(9 * 3_600 + 30 * 60),
-                endedAt: startOfDay.addingTimeInterval(10 * 3_600 + 15 * 60)
+                startedAt: startOfDay.addingTimeInterval(9 * 3600 + 30 * 60),
+                endedAt: startOfDay.addingTimeInterval(10 * 3600 + 15 * 60)
             ),
             TimeSegment(
                 sessionID: writingSession.id,
                 taskID: writing.id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: startOfDay.addingTimeInterval(10 * 3_600),
-                endedAt: startOfDay.addingTimeInterval(11 * 3_600)
-            )
+                startedAt: startOfDay.addingTimeInterval(10 * 3600),
+                endedAt: startOfDay.addingTimeInterval(11 * 3600)
+            ),
         ]
 
         let snapshot = AnalyticsStore().snapshot(
@@ -1465,7 +1465,7 @@ struct CoreAnalyticsStoreTests {
         #expect(nine.slices.first?.colorHex == "5E5CE6")
         #expect(nine.slices.first?.symbolName == "paintbrush")
         #expect(ten.slices.map(\.taskID) == [writing.id, design.id])
-        #expect(ten.slices.map(\.seconds) == [3_600, 15 * 60])
+        #expect(ten.slices.map(\.seconds) == [3600, 15 * 60])
     }
 
     @Test @MainActor
@@ -1484,17 +1484,17 @@ struct CoreAnalyticsStoreTests {
                 taskID: task.id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: day.addingTimeInterval(9 * 3_600),
-                endedAt: day.addingTimeInterval(10 * 3_600)
+                startedAt: day.addingTimeInterval(9 * 3600),
+                endedAt: day.addingTimeInterval(10 * 3600)
             ),
             TimeSegment(
                 sessionID: secondSession.id,
                 taskID: task.id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: day.addingTimeInterval(10 * 3_600),
-                endedAt: day.addingTimeInterval(11 * 3_600)
-            )
+                startedAt: day.addingTimeInterval(10 * 3600),
+                endedAt: day.addingTimeInterval(11 * 3600)
+            ),
         ]
 
         let snapshot = AnalyticsStore().snapshot(
@@ -1536,8 +1536,8 @@ struct CoreAnalyticsStoreTests {
             calendar: calendar
         )
 
-        #expect(summaries.map(\.grossSeconds) == [1_800, 1_800])
-        #expect(summaries.map(\.wallClockSeconds) == [1_800, 1_800])
+        #expect(summaries.map(\.grossSeconds) == [1800, 1800])
+        #expect(summaries.map(\.wallClockSeconds) == [1800, 1800])
         #expect(summaries.first?.taskID == nil)
     }
 
@@ -1572,7 +1572,7 @@ struct CoreAnalyticsStoreTests {
         )
 
         #expect(rhythm.activeDayCount == 3)
-        #expect(rhythm.dailyAverageGrossSeconds == (26 * 3_600) / 3)
+        #expect(rhythm.dailyAverageGrossSeconds == (26 * 3600) / 3)
     }
 
     @Test @MainActor
@@ -1602,21 +1602,21 @@ struct CoreAnalyticsStoreTests {
             source: .timer,
             deviceID: "test",
             startedAt: dayTwo,
-            endedAt: dayTwo.addingTimeInterval(1_200)
+            endedAt: dayTwo.addingTimeInterval(1200)
         )
         var cache = LedgerBucketCache()
 
         let firstSummaries = cache.summaries(
             segments: [firstSegment, secondSegment],
             interval: interval,
-            now: dayTwo.addingTimeInterval(2_000),
+            now: dayTwo.addingTimeInterval(2000),
             calendar: calendar
         )
-        #expect(firstSummaries.map(\.grossSeconds) == [600, 1_200])
+        #expect(firstSummaries.map(\.grossSeconds) == [600, 1200])
         #expect(cache.bucketCount == 2)
 
         cache.invalidate(intervals: [
-            DateInterval(start: calendar.startOfDay(for: dayTwo), duration: 24 * 60 * 60)
+            DateInterval(start: calendar.startOfDay(for: dayTwo), duration: 24 * 60 * 60),
         ])
         #expect(cache.bucketCount == 1)
 
@@ -1626,16 +1626,16 @@ struct CoreAnalyticsStoreTests {
             source: .timer,
             deviceID: "test",
             startedAt: dayTwo,
-            endedAt: dayTwo.addingTimeInterval(1_800)
+            endedAt: dayTwo.addingTimeInterval(1800)
         )
         let refreshedSummaries = cache.summaries(
             segments: [firstSegment, longerSecondSegment],
             interval: interval,
-            now: dayTwo.addingTimeInterval(2_000),
+            now: dayTwo.addingTimeInterval(2000),
             calendar: calendar
         )
 
-        #expect(refreshedSummaries.map(\.grossSeconds) == [600, 1_800])
+        #expect(refreshedSummaries.map(\.grossSeconds) == [600, 1800])
         #expect(cache.bucketCount == 2)
     }
 
@@ -1657,7 +1657,7 @@ struct CoreAnalyticsStoreTests {
         #expect(cache.bucketCount == 2)
 
         cache.invalidate(intervals: [
-            DateInterval(start: secondDay.addingTimeInterval(1_800), duration: 60)
+            DateInterval(start: secondDay.addingTimeInterval(1800), duration: 60),
         ])
 
         #expect(cache.bucketCount == 1)
@@ -1701,7 +1701,7 @@ struct CoreAnalyticsStoreTests {
         _ = cache.summaries(
             segments: [],
             interval: dayInterval(thirdDay),
-            now: thirdDay.addingTimeInterval(86_400),
+            now: thirdDay.addingTimeInterval(86400),
             calendar: calendar
         )
 
@@ -1733,25 +1733,25 @@ struct CoreAnalyticsStoreTests {
             source: .timer,
             deviceID: "test",
             startedAt: start,
-            endedAt: start.addingTimeInterval(7_200)
+            endedAt: start.addingTimeInterval(7200)
         )
         var cache = LedgerBucketCache()
 
         let oneHour = cache.summaries(
             segments: [segment],
-            interval: DateInterval(start: start, duration: 3_600),
-            now: start.addingTimeInterval(7_200),
+            interval: DateInterval(start: start, duration: 3600),
+            now: start.addingTimeInterval(7200),
             calendar: calendar
         )
         let twoHours = cache.summaries(
             segments: [segment],
-            interval: DateInterval(start: start, duration: 7_200),
-            now: start.addingTimeInterval(7_200),
+            interval: DateInterval(start: start, duration: 7200),
+            now: start.addingTimeInterval(7200),
             calendar: calendar
         )
 
-        #expect(oneHour.map(\.grossSeconds) == [3_600])
-        #expect(twoHours.map(\.grossSeconds) == [7_200])
+        #expect(oneHour.map(\.grossSeconds) == [3600])
+        #expect(twoHours.map(\.grossSeconds) == [7200])
         #expect(cache.bucketCount == 2)
     }
 
@@ -1784,8 +1784,8 @@ struct CoreAnalyticsStoreTests {
             calendar: calendar
         )
 
-        #expect(summaries.map(\.grossSeconds) == [3_600, 86_400, 3_600])
-        #expect(summaries.map(\.wallClockSeconds) == [3_600, 86_400, 3_600])
+        #expect(summaries.map(\.grossSeconds) == [3600, 86400, 3600])
+        #expect(summaries.map(\.wallClockSeconds) == [3600, 86400, 3600])
         #expect(cache.bucketCount == 3)
     }
 
@@ -1840,25 +1840,25 @@ struct CoreAnalyticsStoreTests {
                 taskID: taskID,
                 source: .timer,
                 deviceID: "test",
-                startedAt: currentStart.addingTimeInterval(9 * 3_600),
-                endedAt: currentStart.addingTimeInterval(10 * 3_600)
+                startedAt: currentStart.addingTimeInterval(9 * 3600),
+                endedAt: currentStart.addingTimeInterval(10 * 3600)
             ),
             TimeSegment(
                 sessionID: UUID(),
                 taskID: taskID,
                 source: .timer,
                 deviceID: "test",
-                startedAt: previousStart.addingTimeInterval(9 * 3_600),
-                endedAt: previousStart.addingTimeInterval(10 * 3_600)
+                startedAt: previousStart.addingTimeInterval(9 * 3600),
+                endedAt: previousStart.addingTimeInterval(10 * 3600)
             ),
             TimeSegment(
                 sessionID: UUID(),
                 taskID: taskID,
                 source: .timer,
                 deviceID: "test",
-                startedAt: previousStart.addingTimeInterval(15 * 3_600),
-                endedAt: previousStart.addingTimeInterval(16 * 3_600)
-            )
+                startedAt: previousStart.addingTimeInterval(15 * 3600),
+                endedAt: previousStart.addingTimeInterval(16 * 3600)
+            ),
         ]
 
         let comparison = AnalyticsStore().comparison(
@@ -1870,9 +1870,9 @@ struct CoreAnalyticsStoreTests {
 
         #expect(comparison.window.basis == .matchedProgress)
         #expect(comparison.window.current.end == cutoff)
-        #expect(comparison.window.previous.end == previousStart.addingTimeInterval(12 * 3_600))
-        #expect(comparison.currentGrossSeconds == 3_600)
-        #expect(comparison.previousGrossSeconds == 3_600)
+        #expect(comparison.window.previous.end == previousStart.addingTimeInterval(12 * 3600))
+        #expect(comparison.currentGrossSeconds == 3600)
+        #expect(comparison.previousGrossSeconds == 3600)
         #expect(comparison.grossDeltaSeconds == 0)
     }
 
@@ -1983,8 +1983,8 @@ struct CoreAnalyticsStoreTests {
 
         #expect(calendar.component(.hour, from: dstWindow.current.end) == 12)
         #expect(calendar.component(.hour, from: dstWindow.previous.end) == 12)
-        #expect(dstWindow.current.duration == 11 * 3_600)
-        #expect(dstWindow.previous.duration == 12 * 3_600)
+        #expect(dstWindow.current.duration == 11 * 3600)
+        #expect(dstWindow.previous.duration == 12 * 3600)
         #expect(shortMonthWindow.basis == .matchedProgress)
         #expect(shortMonthWindow.previous.end == expectedShortMonthEnd)
     }
@@ -2042,20 +2042,20 @@ struct CoreAnalyticsStoreTests {
             basis: .matchedProgress
         )
         let overview = AnalyticsOverview(
-            grossSeconds: 3_600,
-            wallSeconds: 3_600,
+            grossSeconds: 3600,
+            wallSeconds: 3600,
             overlapSeconds: 0,
             pomodoroCount: 0,
-            averageFocusSeconds: 3_600
+            averageFocusSeconds: 3600
         )
         let rhythm = AnalyticsRhythm(
             activeDayCount: 1,
-            dailyAverageGrossSeconds: 3_600,
+            dailyAverageGrossSeconds: 3600,
             peakHour: nil,
             peakHourSeconds: 0,
-            longestContinuousSeconds: 3_600,
-            averageSegmentSeconds: 3_600,
-            medianSegmentSeconds: 3_600,
+            longestContinuousSeconds: 3600,
+            averageSegmentSeconds: 3600,
+            medianSegmentSeconds: 3600,
             segmentCount: 1
         )
         let quality = AnalyticsQuality(
@@ -2063,26 +2063,26 @@ struct CoreAnalyticsStoreTests {
             switchCount: 0,
             shortSegmentCount: 0,
             shortSegmentRatio: 0,
-            averageSegmentSeconds: 3_600,
-            longestContinuousSeconds: 3_600
+            averageSegmentSeconds: 3600,
+            longestContinuousSeconds: 3600
         )
         let store = AnalyticsStore()
 
         for comparison in [
             AnalyticsComparison(
                 window: window,
-                currentGrossSeconds: 1_800,
-                previousGrossSeconds: 3_600,
-                currentWallSeconds: 1_800,
-                previousWallSeconds: 3_600
+                currentGrossSeconds: 1800,
+                previousGrossSeconds: 3600,
+                currentWallSeconds: 1800,
+                previousWallSeconds: 3600
             ),
             AnalyticsComparison(
                 window: window,
-                currentGrossSeconds: 5_400,
-                previousGrossSeconds: 3_600,
-                currentWallSeconds: 5_400,
-                previousWallSeconds: 3_600
-            )
+                currentGrossSeconds: 5400,
+                previousGrossSeconds: 3600,
+                currentWallSeconds: 5400,
+                previousWallSeconds: 3600
+            ),
         ] {
             let insight = store.insights(
                 overview: overview,
@@ -2103,27 +2103,27 @@ struct CoreAnalyticsStoreTests {
             basis: .matchedProgress
         )
         let overview = AnalyticsOverview(
-            grossSeconds: 3_600,
-            wallSeconds: 3_600,
+            grossSeconds: 3600,
+            wallSeconds: 3600,
             overlapSeconds: 0,
             pomodoroCount: 1,
-            averageFocusSeconds: 3_600
+            averageFocusSeconds: 3600
         )
         let comparison = AnalyticsComparison(
             window: window,
-            currentGrossSeconds: 3_600,
-            previousGrossSeconds: 3_600,
-            currentWallSeconds: 3_600,
-            previousWallSeconds: 3_600
+            currentGrossSeconds: 3600,
+            previousGrossSeconds: 3600,
+            currentWallSeconds: 3600,
+            previousWallSeconds: 3600
         )
         let rhythm = AnalyticsRhythm(
             activeDayCount: 1,
-            dailyAverageGrossSeconds: 3_600,
+            dailyAverageGrossSeconds: 3600,
             peakHour: 9,
-            peakHourSeconds: 3_600,
-            longestContinuousSeconds: 3_600,
-            averageSegmentSeconds: 3_600,
-            medianSegmentSeconds: 3_600,
+            peakHourSeconds: 3600,
+            longestContinuousSeconds: 3600,
+            averageSegmentSeconds: 3600,
+            medianSegmentSeconds: 3600,
             segmentCount: 1
         )
         let quality = AnalyticsQuality(
@@ -2131,8 +2131,8 @@ struct CoreAnalyticsStoreTests {
             switchCount: 0,
             shortSegmentCount: 0,
             shortSegmentRatio: 0,
-            averageSegmentSeconds: 3_600,
-            longestContinuousSeconds: 3_600
+            averageSegmentSeconds: 3600,
+            longestContinuousSeconds: 3600
         )
         let topTask = TaskAnalyticsPoint(
             taskID: UUID(),
@@ -2140,8 +2140,8 @@ struct CoreAnalyticsStoreTests {
             path: "Write release notes",
             colorHex: nil,
             iconName: nil,
-            grossSeconds: 3_600,
-            wallSeconds: 3_600
+            grossSeconds: 3600,
+            wallSeconds: 3600
         )
 
         let insightIDs = AnalyticsStore().insights(
@@ -2170,7 +2170,7 @@ struct CoreAnalyticsStoreTests {
             taskID: task.id,
             source: .timer,
             deviceID: "test",
-            startedAt: now.addingTimeInterval(-3_600)
+            startedAt: now.addingTimeInterval(-3600)
         )
         let currentSegment = TimeSegment(
             sessionID: currentSession.id,
@@ -2184,7 +2184,7 @@ struct CoreAnalyticsStoreTests {
             taskID: task.id,
             source: .manual,
             deviceID: "test",
-            startedAt: now.addingTimeInterval(-400 * 86_400)
+            startedAt: now.addingTimeInterval(-400 * 86400)
         )
         let historicalSegment = TimeSegment(
             sessionID: historicalSession.id,
@@ -2208,7 +2208,7 @@ struct CoreAnalyticsStoreTests {
             calendar: calendar
         )
 
-        #expect(snapshot.overview.grossSeconds == 3_600)
+        #expect(snapshot.overview.grossSeconds == 3600)
         #expect(
             snapshot.recentRecords.map(\.id) == [
                 .trackedSegment(historicalSegment.id),

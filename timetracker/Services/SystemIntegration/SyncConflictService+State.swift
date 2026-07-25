@@ -2,8 +2,13 @@ import Foundation
 import OSLog
 
 extension SyncConflictService {
-    nonisolated static var maximumStateFileByteCount: Int { 128 * 1_024 * 1_024 }
-    nonisolated static var maximumRecoverySnapshotFileByteCount: Int { 64 * 1_024 * 1_024 }
+    nonisolated static var maximumStateFileByteCount: Int {
+        128 * 1024 * 1024
+    }
+
+    nonisolated static var maximumRecoverySnapshotFileByteCount: Int {
+        64 * 1024 * 1024
+    }
 
     private static let stateLogger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
@@ -21,7 +26,8 @@ extension SyncConflictService {
         guard FileManager.default.fileExists(atPath: url.path) else {
             var recoveredState = SyncConflictState()
             if var backup = try loadPendingForcedUploadSnapshotWithoutLock(),
-               backup.hasProtectableUserContent {
+               backup.hasProtectableUserContent
+            {
                 if backup.removeExcludedPreferences() {
                     try savePendingForcedUploadSnapshotWithoutLock(backup)
                 }
@@ -96,11 +102,13 @@ extension SyncConflictService {
     private func inferredPendingLocalIntentForRecoveryMirror() -> SyncPendingLocalIntent {
         let defaults = UserDefaults.standard
         if defaults.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) ||
-            defaults.bool(forKey: AppCloudSync.activeCloudReconciliationKey) {
+            defaults.bool(forKey: AppCloudSync.activeCloudReconciliationKey)
+        {
             return .reconcileWithCloud
         }
         if defaults.bool(forKey: AppCloudSync.pendingCloudUploadResetKey) ||
-            defaults.bool(forKey: AppCloudSync.cloudRecoveryStoreResetKey) {
+            defaults.bool(forKey: AppCloudSync.cloudRecoveryStoreResetKey)
+        {
             return .explicitlyReplaceCloud
         }
         // Legacy or incomplete metadata must never silently replace CloudKit.

@@ -58,7 +58,8 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
 
     @Test
     func storeReadStateDistinguishesNoGoalFromIncompleteBaseline()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let task = try SwiftDataTaskRepository(
             context: context,
@@ -226,7 +227,7 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
         #expect(throws: TaskQuantityEntryMutationError.invalidRecordedAt) {
             try coordinator(
                 context.container,
-                now: { referenceDate(1_000) }
+                now: { referenceDate(1000) }
             ).update(
                 command: TaskQuantityEntryUpdateCommand(
                     entryBaseline: baseline,
@@ -253,7 +254,8 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
 
     @Test
     func dailyTemplateRejectsProgressWhileGeneratedChildAcceptsIt()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let root = try SwiftDataTaskRepository(
             context: context,
@@ -271,7 +273,7 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
             unit: "reps",
             parentID: root.id
         )
-        let now = referenceDate(1_000)
+        let now = referenceDate(1000)
         let recurrence = StoreScopedTaskRecurrenceCommandCoordinator(
             container: context.container,
             writeAuthorization: .isolatedTestHarness,
@@ -645,7 +647,8 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
 
     @Test
     func scopedRefreshRetainsIncompleteSignalAfterMalformedGoalRemoval()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let first = try makeQuantityTask(
             in: context,
@@ -726,7 +729,8 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
 
     @Test
     func exactReplayRefreshesAStaleFacadeWithoutDuplicatingEntry()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let fixture = try makeQuantityTask(
             in: context,
@@ -910,8 +914,8 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
                 recordedAt: referenceDate(100)
             )
         )
-        let entryBaseline = TaskQuantityEntryMutationBaseline(
-            entry: try #require(
+        let entryBaseline = try TaskQuantityEntryMutationBaseline(
+            entry: #require(
                 try quantityEntries(in: context.container).first
             )
         )
@@ -1006,7 +1010,8 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
 
     @Test
     func updateAndHistoricalDeleteAreIdempotentAndRejectStaleBaselines()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let fixture = try makeQuantityTask(
             in: context,
@@ -1132,7 +1137,8 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
 
     @Test
     func updateAndDeleteRollbackAndDominateFutureWinnerTimestamps()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let fixture = try makeQuantityTask(
             in: context,
@@ -1157,7 +1163,7 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
                 .visibleDeduplicatedByID()
                 .first
         )
-        futureEntry.updatedAt = referenceDate(10_000)
+        futureEntry.updatedAt = referenceDate(10000)
         futureEntry.clientMutationID = UUID()
         try sibling.save()
         let futureBaseline = TaskQuantityEntryMutationBaseline(
@@ -1192,7 +1198,7 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
             try quantityEntries(in: context.container).first
         )
         #expect(current.amount == 10)
-        #expect(current.updatedAt == referenceDate(10_000))
+        #expect(current.updatedAt == referenceDate(10000))
 
         let updateOperationID = UUID()
         _ = try coordinator(
@@ -1213,7 +1219,7 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
             try quantityEntries(in: context.container).first
         )
         #expect(current.amount == 20)
-        #expect(current.updatedAt > referenceDate(10_000))
+        #expect(current.updatedAt > referenceDate(10000))
 
         let deleteBaseline = TaskQuantityEntryMutationBaseline(
             entry: current
@@ -1265,7 +1271,8 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
 
     @Test
     func progressSnapshotDeduplicatesPreservesOverageAndFailsClosed()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let fixture = try makeQuantityTask(
             in: context,
@@ -1367,7 +1374,7 @@ struct StoreScopedTaskQuantityEntryCommandCoordinatorTests {
     private func coordinator(
         _ container: ModelContainer,
         now: @escaping () -> Date = {
-            Date(timeIntervalSinceReferenceDate: 1_000)
+            Date(timeIntervalSinceReferenceDate: 1000)
         }
     ) -> StoreScopedTaskQuantityEntryCommandCoordinator {
         StoreScopedTaskQuantityEntryCommandCoordinator(

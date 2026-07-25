@@ -186,13 +186,12 @@ struct DatabaseMaintenanceService {
         return removedCount
     }
 
-    private func purgeCanonicalModels<Model>(
+    private func purgeCanonicalModels<Model: PersistentModel & PersistentUUIDModel>(
         context: ModelContext,
         descriptor: FetchDescriptor<Model>,
         cutoff: Date,
         additionallyExpired: (Model) -> Bool = { _ in false }
-    ) throws -> (ids: Set<UUID>, count: Int)
-    where Model: PersistentModel & PersistentUUIDModel {
+    ) throws -> (ids: Set<UUID>, count: Int) {
         let models = try context.fetch(descriptor)
         let expiredIDs = expiredCanonicalIDs(in: models, cutoff: cutoff)
             .union(models.lazy.filter(additionallyExpired).map(\.id))
@@ -204,12 +203,12 @@ struct DatabaseMaintenanceService {
         return (expiredIDs, count)
     }
 
-    private func deleteMatching<Model>(
+    private func deleteMatching<Model: PersistentModel>(
         context: ModelContext,
         descriptor: FetchDescriptor<Model>,
         batchSize: Int,
         where shouldDelete: (Model) -> Bool
-    ) throws -> Int where Model: PersistentModel {
+    ) throws -> Int {
         var count = 0
         try context.enumerate(
             descriptor,
@@ -223,10 +222,10 @@ struct DatabaseMaintenanceService {
         return count
     }
 
-    private func expiredCanonicalIDs<Model>(
+    private func expiredCanonicalIDs<Model: PersistentUUIDModel>(
         in models: [Model],
         cutoff: Date
-    ) -> Set<UUID> where Model: PersistentUUIDModel {
+    ) -> Set<UUID> {
         Set(
             models
                 .deduplicatedByID()

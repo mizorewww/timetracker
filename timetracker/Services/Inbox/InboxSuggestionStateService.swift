@@ -44,7 +44,8 @@ struct InboxSuggestionStateService {
     ) -> InboxSuggestionStateKind {
         guard item.deletedAt == nil,
               item.isCompleted == false,
-              normalizedTitle(item.title).isEmpty == false else {
+              normalizedTitle(item.title).isEmpty == false
+        else {
             return .unavailable
         }
 
@@ -85,9 +86,9 @@ struct InboxSuggestionStateService {
     ) -> Bool {
         switch state(for: item, suggestion: suggestion, isInFlight: isInFlight) {
         case .eligible, .stale:
-            return true
+            true
         case .unavailable, .pending, .ready, .dismissed:
-            return false
+            false
         }
     }
 
@@ -98,9 +99,9 @@ struct InboxSuggestionStateService {
     ) -> Bool {
         switch state(for: readModel, suggestion: suggestion, isInFlight: isInFlight) {
         case .eligible, .stale:
-            return true
+            true
         case .unavailable, .pending, .ready, .dismissed:
-            return false
+            false
         }
     }
 
@@ -111,7 +112,8 @@ struct InboxSuggestionStateService {
         currentSuggestion: InboxSuggestion?
     ) -> Bool {
         guard item.suggestionIdentity == requestedIdentity,
-              normalizedTitle(item.title) == normalizedTitle(requestedTitle) else {
+              normalizedTitle(item.title) == normalizedTitle(requestedTitle)
+        else {
             return false
         }
 
@@ -131,7 +133,8 @@ struct InboxSuggestionStateService {
     ) -> Bool {
         let item = readModel.item
         guard item.suggestionIdentity == requestedIdentity,
-              normalizedTitle(item.title) == normalizedTitle(requestedTitle) else {
+              normalizedTitle(item.title) == normalizedTitle(requestedTitle)
+        else {
             return false
         }
 

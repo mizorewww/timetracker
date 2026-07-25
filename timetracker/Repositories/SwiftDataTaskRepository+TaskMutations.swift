@@ -143,7 +143,8 @@ extension SwiftDataTaskRepository {
 
     func unarchiveTask(taskID: UUID) throws {
         guard let target = try lifecycleMutationTarget(taskID: taskID),
-              target.node.isArchivedForLifecycle else {
+              target.node.isArchivedForLifecycle
+        else {
             return
         }
         let now = Date()
@@ -171,7 +172,8 @@ extension SwiftDataTaskRepository {
         )
         let candidates = try context.fetch(descriptor)
         guard let node = candidates.deduplicatedByID().first,
-              node.deletedAt == nil else {
+              node.deletedAt == nil
+        else {
             return nil
         }
         return (node, candidates.map(\.updatedAt))

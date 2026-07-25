@@ -74,7 +74,9 @@ nonisolated extension AppleHealthSleepEpisodeService {
         if lhs.interval.start != rhs.interval.start {
             return lhs.interval.start < rhs.interval.start
         }
-        if lhs.source != rhs.source { return lhs.source < rhs.source }
+        if lhs.source != rhs.source {
+            return lhs.source < rhs.source
+        }
         return lhs.anchorSampleID.uuidString < rhs.anchorSampleID.uuidString
     }
 
@@ -97,8 +99,8 @@ nonisolated extension AppleHealthSleepEpisodeService {
         return asleepOverlap / lhs.asleepDuration
             >= AppleHealthSleepEpisodePolicy.duplicateMinimumAsleepCoverage
             && asleepOverlap / rhs.asleepDuration
-                >= AppleHealthSleepEpisodePolicy
-                    .duplicateMinimumAsleepCoverage
+            >= AppleHealthSleepEpisodePolicy
+            .duplicateMinimumAsleepCoverage
     }
 
     private func overlapDuration(

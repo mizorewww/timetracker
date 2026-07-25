@@ -27,10 +27,10 @@ struct CoreCommandHandlerTests {
             first,
             existingItems: [first, second],
             context: context,
-            now: Date(timeIntervalSince1970: 1_000)
+            now: Date(timeIntervalSince1970: 1000)
         )
         #expect(first.isCompleted)
-        #expect(first.completedAt == Date(timeIntervalSince1970: 1_000))
+        #expect(first.completedAt == Date(timeIntervalSince1970: 1000))
         #expect(first.sortOrder > second.sortOrder)
         #expect(first.sortOrderBeforeCompletion == 10)
 
@@ -38,7 +38,7 @@ struct CoreCommandHandlerTests {
             first,
             existingItems: [first, second],
             context: context,
-            now: Date(timeIntervalSince1970: 2_000)
+            now: Date(timeIntervalSince1970: 2000)
         )
         #expect(first.isCompleted == false)
         #expect(first.completedAt == nil)
@@ -81,7 +81,7 @@ struct CoreCommandHandlerTests {
             first,
             existingItems: [first, second],
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 1_000),
+            now: Date(timeIntervalSinceReferenceDate: 1000),
             deviceID: "local-device"
         )
         #expect(first.deviceID == "local-device")
@@ -158,7 +158,7 @@ struct CoreCommandHandlerTests {
                     isCompleted: false,
                     iconName: "paintbrush",
                     colorHex: "1677FF"
-                )
+                ),
             ],
             taskID: targetTaskID,
             context: context,
@@ -242,7 +242,7 @@ struct CoreCommandHandlerTests {
                     title: exactTitle,
                     iconName: "  book  ",
                     colorHex: "#1677ff"
-                )
+                ),
             ],
             taskID: UUID(),
             context: context,
@@ -307,7 +307,7 @@ struct CoreCommandHandlerTests {
         let cases: [(ChecklistDraftField, ChecklistEditorDraft)] = [
             (.title, invalidTitle),
             (.iconName, invalidIcon),
-            (.colorHex, invalidColor)
+            (.colorHex, invalidColor),
         ]
         for (field, draft) in cases {
             #expect(throws: ChecklistDraftValidationError.controlCharacter(index: 0, field: field)) {
@@ -423,12 +423,12 @@ struct CoreCommandHandlerTests {
         context.insert(suggestion)
         try context.save()
 
-        try handler.updateTitle(first, title: "Buy ink", context: context, now: Date(timeIntervalSince1970: 1_000))
+        try handler.updateTitle(first, title: "Buy ink", context: context, now: Date(timeIntervalSince1970: 1000))
         #expect(first.title == "Buy ink")
         #expect(first.suggestedTaskID == nil)
         #expect(first.suggestionReason == nil)
         #expect(first.suggestionGeneratedAt == nil)
-        #expect(suggestion.deletedAt == Date(timeIntervalSince1970: 1_000))
+        #expect(suggestion.deletedAt == Date(timeIntervalSince1970: 1000))
 
         let refreshedSuggestion = InboxSuggestion(
             inboxItemID: first.id,
@@ -442,21 +442,21 @@ struct CoreCommandHandlerTests {
         context.insert(refreshedSuggestion)
         first.suggestedTaskID = suggestedTaskID
         first.suggestionReason = "Likely writing task"
-        first.suggestionGeneratedAt = Date(timeIntervalSince1970: 1_500)
+        first.suggestionGeneratedAt = Date(timeIntervalSince1970: 1500)
         try context.save()
 
-        try handler.discardSuggestion(first, context: context, now: Date(timeIntervalSince1970: 1_600))
+        try handler.discardSuggestion(first, context: context, now: Date(timeIntervalSince1970: 1600))
         #expect(first.suggestedTaskID == nil)
         #expect(first.suggestionReason == nil)
-        #expect(first.suggestionGeneratedAt == Date(timeIntervalSince1970: 1_600))
-        #expect(refreshedSuggestion.deletedAt == Date(timeIntervalSince1970: 1_600))
+        #expect(first.suggestionGeneratedAt == Date(timeIntervalSince1970: 1600))
+        #expect(refreshedSuggestion.deletedAt == Date(timeIntervalSince1970: 1600))
 
-        try handler.toggle(first, context: context, now: Date(timeIntervalSince1970: 2_000))
+        try handler.toggle(first, context: context, now: Date(timeIntervalSince1970: 2000))
         #expect(first.isCompleted)
-        #expect(first.completedAt == Date(timeIntervalSince1970: 2_000))
+        #expect(first.completedAt == Date(timeIntervalSince1970: 2000))
 
-        try handler.softDelete(first, context: context, now: Date(timeIntervalSince1970: 3_000))
-        #expect(first.deletedAt == Date(timeIntervalSince1970: 3_000))
+        try handler.softDelete(first, context: context, now: Date(timeIntervalSince1970: 3000))
+        #expect(first.deletedAt == Date(timeIntervalSince1970: 3000))
     }
 
     @Test @MainActor
@@ -479,7 +479,7 @@ struct CoreCommandHandlerTests {
         try handler.reorderOpenItems(
             orderedItemIDs: reorderedIDs,
             context: context,
-            now: Date(timeIntervalSince1970: 4_000)
+            now: Date(timeIntervalSince1970: 4000)
         )
 
         let openItems = try context.fetch(
@@ -489,7 +489,7 @@ struct CoreCommandHandlerTests {
             )
         )
         #expect(openItems.map(\.title) == ["Third", "First", "Second"])
-        #expect(openItems.allSatisfy { $0.updatedAt == Date(timeIntervalSince1970: 4_000) })
+        #expect(openItems.allSatisfy { $0.updatedAt == Date(timeIntervalSince1970: 4000) })
         #expect(completed.sortOrder == 5)
     }
 
@@ -573,7 +573,7 @@ struct CoreCommandHandlerTests {
         try context.save()
 
         let handler = PomodoroCommandHandler()
-        let cancelledAt = Date(timeIntervalSince1970: 3_000)
+        let cancelledAt = Date(timeIntervalSince1970: 3000)
         try handler.cancelIfNeeded(sessionID: sessionID, runs: [run], context: context, now: cancelledAt)
         #expect(run.state == .cancelled)
         #expect(run.endedAt == cancelledAt)
@@ -582,7 +582,7 @@ struct CoreCommandHandlerTests {
     @Test @MainActor
     func pomodoroCancellationDefersItsSaveToTheOuterAtomicMutation() throws {
         let context = try makeTestContext()
-        let now = Date(timeIntervalSinceReferenceDate: 10_000)
+        let now = Date(timeIntervalSinceReferenceDate: 10000)
         let taskID = UUID()
         let session = TimeSession(
             taskID: taskID,
@@ -667,8 +667,8 @@ struct CoreCommandHandlerTests {
             iconName: nil
         )
         var draft = ManualTimeDraft(taskID: task.id, tasks: [task])
-        draft.startedAt = Date(timeIntervalSince1970: 10_000)
-        draft.endedAt = draft.startedAt.addingTimeInterval(1_200)
+        draft.startedAt = Date(timeIntervalSince1970: 10000)
+        draft.endedAt = draft.startedAt.addingTimeInterval(1200)
         draft.note = "   "
 
         let segment = try LedgerCommandHandler().addManualTime(draft: draft, taskID: task.id, repository: repository)
@@ -703,28 +703,28 @@ struct CoreCommandHandlerTests {
         let context = try makeTestContext()
         let handler = CountdownCommandHandler()
         let event = try handler.add(context: context, deviceID: "test")
-        let date = Date(timeIntervalSince1970: 50_000)
+        let date = Date(timeIntervalSince1970: 50000)
 
         try handler.update(
             event,
             title: "Ship",
             date: date,
             context: context,
-            now: Date(timeIntervalSince1970: 40_000),
+            now: Date(timeIntervalSince1970: 40000),
             deviceID: "updated-device"
         )
         #expect(event.title == "Ship")
         #expect(event.date == date)
-        #expect(event.updatedAt == Date(timeIntervalSince1970: 40_000))
+        #expect(event.updatedAt == Date(timeIntervalSince1970: 40000))
         #expect(event.deviceID == "updated-device")
 
         try handler.softDelete(
             event,
             context: context,
-            now: Date(timeIntervalSince1970: 60_000),
+            now: Date(timeIntervalSince1970: 60000),
             deviceID: "deleted-device"
         )
-        #expect(event.deletedAt == Date(timeIntervalSince1970: 60_000))
+        #expect(event.deletedAt == Date(timeIntervalSince1970: 60000))
         #expect(event.deviceID == "deleted-device")
     }
 
@@ -790,7 +790,6 @@ struct CoreCommandHandlerTests {
             configurations: [configuration]
         )
     }
-
 }
 
 private enum ForcedCommandFailure: Error {

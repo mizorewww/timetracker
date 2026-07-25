@@ -15,7 +15,7 @@ struct CoreTaskDraftRecoveryStoreTests {
         dirty.title = "Recovered title"
         dirty.notes = "Recovered **Markdown**"
         dirty.checklistItems[0].title = "Recovered checklist item"
-        let savedAt = Date(timeIntervalSince1970: 10_000)
+        let savedAt = Date(timeIntervalSince1970: 10000)
 
         try disk.store(now: savedAt).save(dirty, for: source.task.id)
         let loadedDraft = try disk.store(
@@ -37,8 +37,8 @@ struct CoreTaskDraftRecoveryStoreTests {
 
         try disk.store(now: savedAt).remove(for: source.task.id)
         #expect(
-            FileManager.default.fileExists(
-                atPath: try disk.store(now: savedAt)
+            try FileManager.default.fileExists(
+                atPath: disk.store(now: savedAt)
                     .fileURL(for: source.task.id).path
             ) == false
         )
@@ -123,7 +123,7 @@ struct CoreTaskDraftRecoveryStoreTests {
             checklistItems: [source.checklistItem, committedItem],
             visualByChecklistID: [
                 source.checklistItem.id: source.visual,
-                committedItem.id: committedVisual
+                committedItem.id: committedVisual,
             ]
         )
 
@@ -166,7 +166,7 @@ struct CoreTaskDraftRecoveryStoreTests {
         let disk = try DiskFixture()
         defer { disk.remove() }
         let source = ExistingTaskFixture(title: "Expired")
-        let savedAt = Date(timeIntervalSince1970: 20_000)
+        let savedAt = Date(timeIntervalSince1970: 20000)
         var dirty = source.draft()
         dirty.title = "Unsaved"
         let writer = disk.store(now: savedAt, retentionInterval: 60)
@@ -212,15 +212,15 @@ struct CoreTaskDraftRecoveryStoreTests {
         defer { disk.remove() }
         let source = ExistingTaskFixture(title: "Bounded")
         var dirty = source.draft()
-        dirty.notes = String(repeating: "x", count: 2_048)
+        dirty.notes = String(repeating: "x", count: 2048)
         let store = disk.store(maximumEncodedByteCount: 512)
 
         #expect(throws: TaskDraftRecoveryStoreError.self) {
             try store.save(dirty, for: source.task.id)
         }
         #expect(
-            FileManager.default.fileExists(
-                atPath: try store.fileURL(for: source.task.id).path
+            try FileManager.default.fileExists(
+                atPath: store.fileURL(for: source.task.id).path
             ) == false
         )
     }
@@ -296,7 +296,7 @@ struct CoreTaskDraftRecoveryStoreTests {
         let source = ExistingTaskFixture(title: "Oversized recovery")
         let current = source.draft()
         var dirty = current
-        dirty.notes = String(repeating: "x", count: 2_048)
+        dirty.notes = String(repeating: "x", count: 2048)
         let writer = disk.store()
         try writer.save(dirty, for: source.task.id)
         let fileURL = try writer.fileURL(for: source.task.id)
@@ -317,7 +317,7 @@ struct CoreTaskDraftRecoveryStoreTests {
         let first = ExistingTaskFixture(title: "First tied recovery")
         let second = ExistingTaskFixture(title: "Second tied recovery")
         let older = ExistingTaskFixture(title: "Older recovery")
-        let tiedSavedAt = Date(timeIntervalSince1970: 30_000)
+        let tiedSavedAt = Date(timeIntervalSince1970: 30000)
         let olderSavedAt = tiedSavedAt.addingTimeInterval(-1)
         let tiedSources = [first, second].sorted {
             $0.task.id.uuidString < $1.task.id.uuidString
@@ -348,7 +348,7 @@ struct CoreTaskDraftRecoveryStoreTests {
         #expect(records.map(\.savedAt) == [
             tiedSavedAt,
             tiedSavedAt,
-            olderSavedAt
+            olderSavedAt,
         ])
         #expect(
             records.map(\.draft.title) ==
@@ -366,7 +366,7 @@ struct CoreTaskDraftRecoveryStoreTests {
     func recoverableRecordsValidateEveryEnvelopeIdentityAndExpiry() throws {
         let disk = try DiskFixture()
         defer { disk.remove() }
-        let now = Date(timeIntervalSince1970: 40_000)
+        let now = Date(timeIntervalSince1970: 40000)
         let valid = ExistingTaskFixture(title: "Valid")
         var validDraft = valid.draft()
         validDraft.title = "Keep valid recovery"
@@ -377,7 +377,7 @@ struct CoreTaskDraftRecoveryStoreTests {
         let unsupportedURL = try disk.writeEnvelope(
             TaskDraftRecoveryEnvelope(
                 schemaVersion:
-                    TaskDraftRecoveryStore.currentSchemaVersion + 1,
+                TaskDraftRecoveryStore.currentSchemaVersion + 1,
                 sourceTaskID: unsupported.task.id,
                 savedAt: now,
                 draft: unsupported.draft()
@@ -390,7 +390,7 @@ struct CoreTaskDraftRecoveryStoreTests {
         let mismatchedDraftURL = try disk.writeEnvelope(
             TaskDraftRecoveryEnvelope(
                 schemaVersion:
-                    TaskDraftRecoveryStore.currentSchemaVersion,
+                TaskDraftRecoveryStore.currentSchemaVersion,
                 sourceTaskID: mismatchedDraft.task.id,
                 savedAt: now,
                 draft: other.draft()
@@ -404,7 +404,7 @@ struct CoreTaskDraftRecoveryStoreTests {
         let missingBaselineURL = try disk.writeEnvelope(
             TaskDraftRecoveryEnvelope(
                 schemaVersion:
-                    TaskDraftRecoveryStore.currentSchemaVersion,
+                TaskDraftRecoveryStore.currentSchemaVersion,
                 sourceTaskID: missingBaselineID,
                 savedAt: now,
                 draft: missingBaselineDraft
@@ -416,7 +416,7 @@ struct CoreTaskDraftRecoveryStoreTests {
         let mismatchedFileURL = try disk.writeEnvelope(
             TaskDraftRecoveryEnvelope(
                 schemaVersion:
-                    TaskDraftRecoveryStore.currentSchemaVersion,
+                TaskDraftRecoveryStore.currentSchemaVersion,
                 sourceTaskID: mismatchedFile.task.id,
                 savedAt: now,
                 draft: mismatchedFile.draft()
@@ -428,7 +428,7 @@ struct CoreTaskDraftRecoveryStoreTests {
         let expiredURL = try disk.writeEnvelope(
             TaskDraftRecoveryEnvelope(
                 schemaVersion:
-                    TaskDraftRecoveryStore.currentSchemaVersion,
+                TaskDraftRecoveryStore.currentSchemaVersion,
                 sourceTaskID: expired.task.id,
                 savedAt: now.addingTimeInterval(-61),
                 draft: expired.draft()
@@ -445,7 +445,7 @@ struct CoreTaskDraftRecoveryStoreTests {
             mismatchedDraftURL,
             missingBaselineURL,
             mismatchedFileURL,
-            expiredURL
+            expiredURL,
         ] {
             #expect(
                 FileManager.default.fileExists(
@@ -547,8 +547,8 @@ struct CoreTaskDraftRecoveryStoreTests {
             hasUnsavedChanges: false
         )
         #expect(
-            FileManager.default.fileExists(
-                atPath: try recoveryStore.fileURL(for: source.task.id).path
+            try FileManager.default.fileExists(
+                atPath: recoveryStore.fileURL(for: source.task.id).path
             ) == false
         )
     }
@@ -575,8 +575,8 @@ struct CoreTaskDraftRecoveryStoreTests {
 
         #expect(threadProbe.values == [false])
         #expect(
-            FileManager.default.fileExists(
-                atPath: try recoveryStore.fileURL(for: source.task.id).path
+            try FileManager.default.fileExists(
+                atPath: recoveryStore.fileURL(for: source.task.id).path
             ) == false
         )
     }
@@ -604,8 +604,8 @@ struct CoreTaskDraftRecoveryStoreTests {
         await controller.persist(ticket)
 
         #expect(
-            FileManager.default.fileExists(
-                atPath: try recoveryStore.fileURL(for: source.task.id).path
+            try FileManager.default.fileExists(
+                atPath: recoveryStore.fileURL(for: source.task.id).path
             ) == false
         )
     }
@@ -716,8 +716,8 @@ struct CoreTaskDraftRecoveryStoreTests {
         await controller.persist(ticket)
 
         #expect(
-            FileManager.default.fileExists(
-                atPath: try recoveryStore.fileURL(for: source.task.id).path
+            try FileManager.default.fileExists(
+                atPath: recoveryStore.fileURL(for: source.task.id).path
             ) == false
         )
     }
@@ -741,8 +741,8 @@ struct CoreTaskDraftRecoveryStoreTests {
             try failingStore.remove(for: source.task.id)
         }
         #expect(
-            FileManager.default.fileExists(
-                atPath: try failingStore.fileURL(for: source.task.id).path
+            try FileManager.default.fileExists(
+                atPath: failingStore.fileURL(for: source.task.id).path
             ) == false
         )
 
@@ -838,7 +838,7 @@ struct CoreTaskDraftRecoveryStoreTests {
             )
             task.notes = "Persisted notes"
             task.estimatedSeconds = 25 * 60
-            task.dueAt = Date(timeIntervalSince1970: 50_000)
+            task.dueAt = Date(timeIntervalSince1970: 50000)
             checklistItem = ChecklistItem(
                 taskID: task.id,
                 title: "Persisted checklist item",
@@ -882,8 +882,8 @@ struct CoreTaskDraftRecoveryStoreTests {
         }
 
         func store(
-            now: Date = Date(timeIntervalSince1970: 30_000),
-            retentionInterval: TimeInterval = 3_600,
+            now: Date = Date(timeIntervalSince1970: 30000),
+            retentionInterval: TimeInterval = 3600,
             maximumEncodedByteCount: Int =
                 TaskDraftRecoveryStore.maximumEncodedByteCount,
             localFile: DurableLocalFile? = nil
@@ -937,7 +937,7 @@ struct CoreTaskDraftRecoveryStoreTests {
         }
     }
 
-    private nonisolated final class ThreadProbe: @unchecked Sendable {
+    private final nonisolated class ThreadProbe: @unchecked Sendable {
         private let lock = NSLock()
         private var recordedValues: [Bool] = []
 
@@ -952,8 +952,9 @@ struct CoreTaskDraftRecoveryStoreTests {
         }
     }
 
-    private nonisolated final class RecoveryOperationBarrier:
-        @unchecked Sendable {
+    private final nonisolated class RecoveryOperationBarrier:
+        @unchecked Sendable
+    {
         private let lock = NSLock()
         private let resume = DispatchSemaphore(value: 0)
         private var hasEntered = false

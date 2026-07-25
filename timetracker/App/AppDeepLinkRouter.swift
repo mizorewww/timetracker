@@ -15,7 +15,7 @@ enum AppDeepLinkStopTarget: Equatable {
 }
 
 struct AppDeepLinkRouter {
-    static let maximumURLBytes = 2_048
+    static let maximumURLBytes = 2048
 
     func action(for url: URL) -> AppDeepLinkAction? {
         guard url.absoluteString.utf8.count <= Self.maximumURLBytes,
@@ -23,7 +23,8 @@ struct AppDeepLinkRouter {
               url.user == nil,
               url.password == nil,
               url.port == nil,
-              url.fragment == nil else {
+              url.fragment == nil
+        else {
             return nil
         }
 
@@ -43,7 +44,7 @@ struct AppDeepLinkRouter {
                 switch timerStartParameter(from: url) {
                 case .absent:
                     return .startTimerPicker
-                case .task(let taskID, let source):
+                case let .task(taskID, source):
                     return .startTimer(taskID, source: source)
                 case .invalid:
                     return nil
@@ -52,9 +53,9 @@ struct AppDeepLinkRouter {
                 switch timerStopParameter(from: url) {
                 case .absent:
                     return .stopTimer(nil)
-                case .task(let taskID):
+                case let .task(taskID):
                     return .stopTimer(.task(taskID))
-                case .segment(let segmentID):
+                case let .segment(segmentID):
                     return .stopTimer(.segment(segmentID))
                 case .invalid:
                     return nil
@@ -65,7 +66,9 @@ struct AppDeepLinkRouter {
         case "task":
             guard path.count == 1, let taskRoute = path.first else { return nil }
             guard hasNoQueryItems(url) else { return nil }
-            if taskRoute == "new" { return .newTask }
+            if taskRoute == "new" {
+                return .newTask
+            }
             guard let taskID = UUID(uuidString: taskRoute) else { return nil }
             return .openTask(taskID)
         default:
@@ -76,19 +79,19 @@ struct AppDeepLinkRouter {
     private func destination(for rawValue: String) -> TimeTrackerStore.DesktopDestination? {
         switch rawValue.lowercased() {
         case "today", "home":
-            return .today
+            .today
         case "inbox":
-            return .inbox
+            .inbox
         case "tasks":
-            return .tasks
+            .tasks
         case "pomodoro":
-            return .pomodoro
+            .pomodoro
         case "analytics":
-            return .analytics
+            .analytics
         case "settings":
-            return .settings
+            .settings
         default:
-            return nil
+            nil
         }
     }
 
@@ -107,7 +110,8 @@ struct AppDeepLinkRouter {
         let taskItems = queryItems.filter { $0.name == "taskID" }
         guard taskItems.count == 1,
               let rawTaskID = taskItems[0].value,
-              let taskID = UUID(uuidString: rawTaskID) else {
+              let taskID = UUID(uuidString: rawTaskID)
+        else {
             return .invalid
         }
         if queryItems.count == 1 {
@@ -129,7 +133,8 @@ struct AppDeepLinkRouter {
         guard queryItems.count <= 1 else { return .invalid }
         guard let item = queryItems.first else { return .absent }
         guard let rawValue = item.value,
-              let id = UUID(uuidString: rawValue) else {
+              let id = UUID(uuidString: rawValue)
+        else {
             return .invalid
         }
         switch item.name {

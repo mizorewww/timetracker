@@ -13,9 +13,9 @@ struct PreferenceCommandHandler {
         now: Date = Date()
     ) throws {
         let preparedValues = try values.map { key, valueJSON in
-            (
+            try (
                 key,
-                try PreferenceJSON.canonicalValueJSON(for: key, from: valueJSON)
+                PreferenceJSON.canonicalValueJSON(for: key, from: valueJSON)
             )
         }
 

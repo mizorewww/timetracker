@@ -22,7 +22,9 @@ struct CoreDurableLocalFileLockingTests {
             releaseWriter.wait()
         })
         let quarantiner = DurableLocalFile(injectFault: { point in
-            if point == .beforeQuarantinePruning { quarantineEntered.signal() }
+            if point == .beforeQuarantinePruning {
+                quarantineEntered.signal()
+            }
         })
 
         DispatchQueue.global().async {

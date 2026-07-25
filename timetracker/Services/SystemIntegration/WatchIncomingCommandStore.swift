@@ -21,7 +21,8 @@ struct WatchIncomingCommandStore {
               let commands = try? JSONDecoder().decode([WatchTimerCommand].self, from: data),
               commands.count <= WatchTransportLimits.maximumIncomingCommands,
               commands.allSatisfy(\.isStructurallyValid),
-              Set(commands.map(\.id)).count == commands.count else {
+              Set(commands.map(\.id)).count == commands.count
+        else {
             defaults.removeObject(forKey: key)
             return []
         }
@@ -37,7 +38,8 @@ struct WatchIncomingCommandStore {
               commands.allSatisfy(\.isStructurallyValid),
               Set(commands.map(\.id)).count == commands.count,
               let data = try? JSONEncoder().encode(commands),
-              data.count <= WatchTransportLimits.maximumQueueEncodedBytes else {
+              data.count <= WatchTransportLimits.maximumQueueEncodedBytes
+        else {
             // Preserve the previous durable value if a caller hands this store
             // a queue that cannot be restored safely.
             return

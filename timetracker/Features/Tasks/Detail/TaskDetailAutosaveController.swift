@@ -126,7 +126,7 @@ final class TaskDetailAutosaveController {
         case .saved:
             status = .saved
             return true
-        case .failed(let message):
+        case let .failed(message):
             status = .failed(message: message)
             return false
         case .conflicted:

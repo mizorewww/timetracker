@@ -60,7 +60,8 @@ extension TimeTrackerStore {
     private func checklistVisualSuggestionRequest(for item: ChecklistItem) -> ChecklistVisualSuggestionRequest? {
         guard !checklistVisualSuggestionInFlightIDs.contains(item.id),
               let task = taskByID[item.taskID],
-              isTaskEligibleAsParent(task) else {
+              isTaskEligibleAsParent(task)
+        else {
             return nil
         }
         let policy = ChecklistVisualSuggestionPolicy()
@@ -114,7 +115,8 @@ extension TimeTrackerStore {
                 .filter { item in
                     guard item.deletedAt == nil,
                           item.isCompleted == false,
-                          let task = self.taskByID[item.taskID] else {
+                          let task = self.taskByID[item.taskID]
+                    else {
                         return false
                     }
                     return self.isTaskEligibleAsParent(task)
@@ -140,7 +142,8 @@ extension TimeTrackerStore {
             guard !checklistVisualSuggestionInFlightIDs.contains(item.id),
                   taskByID[item.taskID] != nil,
                   policy.shouldSuggest(item: item, visual: checklistVisual(for: item)),
-                  let request = checklistVisualSuggestionRequest(for: item) else {
+                  let request = checklistVisualSuggestionRequest(for: item)
+            else {
                 return false
             }
             let failedFingerprint = checklistVisualSuggestionFailureFingerprintByItemID[item.id]

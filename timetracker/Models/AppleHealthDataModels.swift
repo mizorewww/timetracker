@@ -119,8 +119,12 @@ nonisolated struct AppleHealthSampleBatch: Equatable, Sendable {
         rhsEnd: Date,
         rhsID: UUID
     ) -> Bool {
-        if lhsStart != rhsStart { return lhsStart < rhsStart }
-        if lhsEnd != rhsEnd { return lhsEnd < rhsEnd }
+        if lhsStart != rhsStart {
+            return lhsStart < rhsStart
+        }
+        if lhsEnd != rhsEnd {
+            return lhsEnd < rhsEnd
+        }
         return lhsID.uuidString < rhsID.uuidString
     }
 }

@@ -208,7 +208,7 @@ struct ChecklistTitleTextField: View {
     @Binding var title: String
     let isCompleted: Bool
     var placeholder: String = AppStrings.localized("editor.checklist.itemPlaceholder")
-    var lineLimit: ClosedRange<Int> = 1...5
+    var lineLimit: ClosedRange<Int> = 1 ... 5
     var accessibilityIdentifier: String?
     let submit: () -> Void
 
@@ -237,7 +237,7 @@ private extension View {
     @ViewBuilder
     func accessibilityIdentifier(optional identifier: String?) -> some View {
         if let identifier {
-            self.accessibilityIdentifier(identifier)
+            accessibilityIdentifier(identifier)
         } else {
             self
         }

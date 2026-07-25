@@ -29,11 +29,11 @@ extension TimeTrackerStore {
     ) -> TaskQuantityProgressReadState {
         switch taskQuantityProgressReadState(for: taskID) {
         case .none:
-            return expectedGoalMutationID == nil ? .none : .incomplete
+            expectedGoalMutationID == nil ? .none : .incomplete
         case .incomplete:
-            return .incomplete
-        case .available(let snapshot):
-            return snapshot.goalBaseline.clientMutationID ==
+            .incomplete
+        case let .available(snapshot):
+            snapshot.goalBaseline.clientMutationID ==
                 expectedGoalMutationID
                 ? .available(snapshot)
                 : .incomplete
@@ -44,15 +44,16 @@ extension TimeTrackerStore {
         for taskID: UUID
     ) -> TaskQuantityProgressSnapshot? {
         switch taskQuantityProgressReadState(for: taskID) {
-        case .available(let snapshot):
-            return snapshot
+        case let .available(snapshot):
+            snapshot
         case .none, .incomplete:
-            return nil
+            nil
         }
     }
 
     func visibleTaskQuantityProgressByTaskID()
-        -> [UUID: TaskQuantityProgressSnapshot] {
+        -> [UUID: TaskQuantityProgressSnapshot]
+    {
         _ = taskReadModelRevision
         return TaskQuantityProgressService().snapshotIndex(
             taskIDs: visibleTaskIDs,
@@ -77,7 +78,8 @@ extension TimeTrackerStore {
                 goals: taskQuantityGoals,
                 entries: taskQuantityEntries,
                 isRecordingAllowed: trackableTaskIDs.contains(taskID)
-            ) else {
+            )
+        else {
             return hasVisibleQuantityClaim(taskID: taskID)
                 ? .incomplete
                 : .none
@@ -135,7 +137,8 @@ extension TimeTrackerStore {
             $0.deletedAt == nil && $0.templateTaskID == taskID
         }
         guard occurrences.count <= 1,
-              occurrences.isEmpty || isTemplate == false else {
+              occurrences.isEmpty || isTemplate == false
+        else {
             return nil
         }
         guard let occurrence = occurrences.first else {

@@ -27,7 +27,8 @@ final class UnavailableAppleHealthDataReader: AppleHealthDataReading {
     let isHealthDataAvailable = false
 
     func authorizationRequestStatus() async throws
-        -> AppleHealthAuthorizationRequestStatus {
+        -> AppleHealthAuthorizationRequestStatus
+    {
         throw AppleHealthReadError.unavailable
     }
 
@@ -66,7 +67,8 @@ enum AppleHealthDataReaderFactory {
         #if DEBUG && os(iOS)
         if let sharedUITestReader,
            sharedUITestReader.arguments == arguments,
-           sharedUITestReader.environment == environment {
+           sharedUITestReader.environment == environment
+        {
             return sharedUITestReader.reader
         }
         if let reader = UITestAppleHealthDataReader.makeIfRequested(
@@ -97,7 +99,8 @@ final class HealthKitAppleHealthDataReader: AppleHealthDataReading {
     }
 
     func authorizationRequestStatus() async throws
-        -> AppleHealthAuthorizationRequestStatus {
+        -> AppleHealthAuthorizationRequestStatus
+    {
         guard isHealthDataAvailable else {
             throw AppleHealthReadError.unavailable
         }

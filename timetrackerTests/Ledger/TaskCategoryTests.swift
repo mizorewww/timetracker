@@ -6,7 +6,7 @@ import Testing
 @Suite(.serialized)
 struct TaskCategoryTests {
     @Test
-    func categoryFeatureUsesExtensionModelInsteadOfChangingTaskNodeSchema() throws {
+    func categoryFeatureUsesExtensionModelInsteadOfChangingTaskNodeSchema() {
         let currentTaskProperties = Set(Mirror(reflecting: TaskNode(title: "Current", parentID: nil, deviceID: "test")).children.compactMap(\.label))
 
         #expect(currentTaskProperties.contains("categoryID") == false)
@@ -103,7 +103,7 @@ struct TaskCategoryTests {
         let end = Date().addingTimeInterval(-60)
         _ = try timeRepository.addManualSegment(
             taskID: child.id,
-            startedAt: end.addingTimeInterval(-1_800),
+            startedAt: end.addingTimeInterval(-1800),
             endedAt: end,
             note: nil
         )
@@ -205,7 +205,7 @@ struct TaskCategoryTests {
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
 
-        var draft = store.editorDraft(for: try #require(store.task(for: root.id)))
+        var draft = try store.editorDraft(for: #require(store.task(for: root.id)))
         draft.categoryID = life.id
         #expect(store.saveTaskDraft(draft))
 

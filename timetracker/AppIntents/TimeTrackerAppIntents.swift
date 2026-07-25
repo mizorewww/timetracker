@@ -181,7 +181,7 @@ struct TimeTrackerShortcuts: AppShortcutsProvider {
             intent: AddInboxItemIntent(),
             phrases: [
                 "Add inbox item in \(.applicationName)",
-                "Capture in \(.applicationName)"
+                "Capture in \(.applicationName)",
             ],
             shortTitle: "Add Inbox Item",
             systemImageName: "tray.and.arrow.down"
@@ -191,7 +191,7 @@ struct TimeTrackerShortcuts: AppShortcutsProvider {
             intent: StartTimerIntent(),
             phrases: [
                 "Start timer in \(.applicationName)",
-                "Track time in \(.applicationName)"
+                "Track time in \(.applicationName)",
             ],
             shortTitle: "Start Timer",
             systemImageName: "play.fill"
@@ -201,7 +201,7 @@ struct TimeTrackerShortcuts: AppShortcutsProvider {
             intent: StopTimerIntent(),
             phrases: [
                 "Stop timer in \(.applicationName)",
-                "Stop tracking in \(.applicationName)"
+                "Stop tracking in \(.applicationName)",
             ],
             shortTitle: "Stop Timer",
             systemImageName: "stop.fill"
@@ -211,7 +211,7 @@ struct TimeTrackerShortcuts: AppShortcutsProvider {
             intent: GetActiveTimersIntent(),
             phrases: [
                 "Get running timers in \(.applicationName)",
-                "What am I tracking in \(.applicationName)"
+                "What am I tracking in \(.applicationName)",
             ],
             shortTitle: "Get Running Timers",
             systemImageName: "list.bullet"
@@ -221,7 +221,7 @@ struct TimeTrackerShortcuts: AppShortcutsProvider {
             intent: StopAllTimersIntent(),
             phrases: [
                 "Stop all timers in \(.applicationName)",
-                "Stop everything in \(.applicationName)"
+                "Stop everything in \(.applicationName)",
             ],
             shortTitle: "Stop All Timers",
             systemImageName: "stop.circle.fill"
@@ -284,12 +284,12 @@ struct TaskNodeEntityQuery: EntityStringQuery {
         let context = SystemActionContextProvider.makeContext()
         let repository = SwiftDataTaskRepository(context: context)
         let tasks = try repository.allNodes()
-        let trackableTaskIDs = TaskTrackingAvailabilityService()
+        let trackableTaskIDs = try TaskTrackingAvailabilityService()
             .directWorkTaskIDs(
                 tasks: tasks,
-                recurrenceRules: try repository.taskRecurrenceRules(),
+                recurrenceRules: repository.taskRecurrenceRules(),
                 recurrenceOccurrences:
-                    try repository.taskRecurrenceOccurrences()
+                repository.taskRecurrenceOccurrences()
             )
         let trackableTasks = tasks.filter { trackableTaskIDs.contains($0.id) }
         let parentPathByID = TaskTreeService()

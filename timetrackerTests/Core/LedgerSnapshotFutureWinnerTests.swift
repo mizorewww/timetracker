@@ -53,7 +53,7 @@ struct LedgerSnapshotFutureWinnerTests {
                 nowProvider: { endedAt }
             ).sessions(ids: [segment.sessionID]).first
         )
-        let futureDate = endedAt.addingTimeInterval(3_600)
+        let futureDate = endedAt.addingTimeInterval(3600)
         session.updatedAt = futureDate
         segment.updatedAt = futureDate
         try source.save()
@@ -220,6 +220,6 @@ struct LedgerSnapshotFutureWinnerTests {
     }
 
     private func cloudMilliseconds(_ date: Date) -> Int64 {
-        Int64((date.timeIntervalSince1970 * 1_000).rounded(.down))
+        Int64((date.timeIntervalSince1970 * 1000).rounded(.down))
     }
 }

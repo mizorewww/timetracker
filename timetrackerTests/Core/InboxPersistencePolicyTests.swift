@@ -10,8 +10,8 @@ struct InboxPersistencePolicyTests {
 
     @Test @MainActor
     func policyAcceptsExactUTF8BoundariesAndSupportedMultilineWhitespace() throws {
-        let exactTitle = String(repeating: "界", count: 1_365) + "a"
-        let exactMultiline = String(repeating: "界", count: 21_844) + "\t\n\ra"
+        let exactTitle = String(repeating: "界", count: 1365) + "a"
+        let exactMultiline = String(repeating: "界", count: 21844) + "\t\n\ra"
         let exactCompact = String(repeating: "界", count: 85) + "a"
 
         #expect(exactTitle.utf8.count == SyncDataSnapshotRestoreLimits.maximumTitleByteCount)
@@ -200,7 +200,7 @@ struct InboxPersistencePolicyTests {
                     modelID: "replacement-model"
                 ),
                 context: context,
-                now: Date(timeIntervalSinceReferenceDate: 5_000),
+                now: Date(timeIntervalSinceReferenceDate: 5000),
                 deviceID: localDeviceID
             )
         }
@@ -244,7 +244,7 @@ struct InboxPersistencePolicyTests {
                 item: item,
                 draft: draft,
                 context: context,
-                now: Date(timeIntervalSinceReferenceDate: 6_000),
+                now: Date(timeIntervalSinceReferenceDate: 6000),
                 deviceID: localDeviceID
             )
         }
@@ -260,7 +260,7 @@ struct InboxPersistencePolicyTests {
     @Test @MainActor
     func applyingSuggestionCopiesOnlyPreparedBoundedText() throws {
         let context = try makeTestContext()
-        let exactTitle = String(repeating: "界", count: 1_365) + "a"
+        let exactTitle = String(repeating: "界", count: 1365) + "a"
         let exactModelID = String(repeating: "界", count: 85) + "a"
         let item = InboxItem(title: " \(exactTitle) ", deviceID: remoteDeviceID)
         item.notes = "Line one\tvalue\nLine two\rLine three"
@@ -284,7 +284,7 @@ struct InboxPersistencePolicyTests {
             suggestion: suggestion,
             existingChecklistItems: [],
             context: context,
-            now: Date(timeIntervalSinceReferenceDate: 7_000),
+            now: Date(timeIntervalSinceReferenceDate: 7000),
             deviceID: localDeviceID
         )
         let visual = try #require(
@@ -301,13 +301,13 @@ struct InboxPersistencePolicyTests {
         #expect(visual.suggestionModelID?.utf8.count == SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount)
         #expect(item.title == exactTitle)
         #expect(item.suggestionReason == "First line\nSecond line")
-        #expect(item.deletedAt == Date(timeIntervalSinceReferenceDate: 7_000))
+        #expect(item.deletedAt == Date(timeIntervalSinceReferenceDate: 7000))
         #expect(suggestion.reason == "First line\nSecond line")
         #expect(suggestion.iconName == "book")
         #expect(suggestion.colorHex == "16A34A")
         #expect(suggestion.modelID == exactModelID)
         #expect(suggestion.titleSnapshot == exactTitle)
-        #expect(suggestion.deletedAt == Date(timeIntervalSinceReferenceDate: 7_000))
+        #expect(suggestion.deletedAt == Date(timeIntervalSinceReferenceDate: 7000))
     }
 
     @Test @MainActor
@@ -337,7 +337,7 @@ struct InboxPersistencePolicyTests {
                 suggestion: suggestion,
                 existingChecklistItems: [],
                 context: context,
-                now: Date(timeIntervalSinceReferenceDate: 8_000),
+                now: Date(timeIntervalSinceReferenceDate: 8000),
                 deviceID: localDeviceID
             )
         }
@@ -362,10 +362,10 @@ struct InboxPersistencePolicyTests {
         let schema = TimeTrackerModelRegistry.currentSchema
         let itemID = UUID()
         let suggestionID = UUID()
-        let originalDate = Date(timeIntervalSinceReferenceDate: 9_000)
+        let originalDate = Date(timeIntervalSinceReferenceDate: 9000)
 
         try initializeWritableStore(at: storeURL, schema: schema) { context in
-            let item = InboxItem(title: "Original inbox item", deviceID: self.remoteDeviceID)
+            let item = InboxItem(title: "Original inbox item", deviceID: remoteDeviceID)
             item.id = itemID
             item.updatedAt = originalDate
             let suggestion = InboxSuggestion(
@@ -376,7 +376,7 @@ struct InboxPersistencePolicyTests {
                 colorHex: "16A34A",
                 modelID: "remote-model",
                 titleSnapshot: item.title,
-                deviceID: self.remoteDeviceID
+                deviceID: remoteDeviceID
             )
             suggestion.id = suggestionID
             suggestion.updatedAt = originalDate
@@ -401,7 +401,7 @@ struct InboxPersistencePolicyTests {
                 suggestion: suggestion,
                 existingChecklistItems: [],
                 context: context,
-                now: Date(timeIntervalSinceReferenceDate: 10_000),
+                now: Date(timeIntervalSinceReferenceDate: 10000),
                 deviceID: localDeviceID
             )
             Issue.record("Expected the read-only store to reject the save")

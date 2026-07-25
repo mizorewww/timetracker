@@ -193,7 +193,8 @@ extension SyncDataSnapshot {
                 continue
             }
             if record.updatedAt > current.updatedAt ||
-                (record.updatedAt == current.updatedAt && record.id.uuidString > current.id.uuidString) {
+                (record.updatedAt == current.updatedAt && record.id.uuidString > current.id.uuidString)
+            {
                 winnersByIdentity[identity] = record
             }
         }

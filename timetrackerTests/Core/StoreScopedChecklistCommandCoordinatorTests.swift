@@ -19,7 +19,7 @@ struct StoreScopedChecklistCommandCoordinatorTests {
             container: context.container,
             writeAuthorization: .isolatedTestHarness,
             deviceID: "sibling",
-            nowProvider: { Date(timeIntervalSinceReferenceDate: 1_000) }
+            nowProvider: { Date(timeIntervalSinceReferenceDate: 1000) }
         )
         _ = try sibling.setCompletion(
             baseline: ChecklistMutationBaseline(item: staleItem),
@@ -126,7 +126,7 @@ struct StoreScopedChecklistCommandCoordinatorTests {
         )
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
-        var draft = store.editorDraft(for: try #require(store.task(for: child.id)))
+        var draft = try store.editorDraft(for: #require(store.task(for: child.id)))
         draft.parentID = newParent.id
         _ = try StoreScopedTaskLifecycleCommandCoordinator(
             container: context.container,
@@ -218,7 +218,7 @@ struct StoreScopedChecklistCommandCoordinatorTests {
         )
         siblingVisual.iconName = "paintbrush"
         siblingVisual.colorHex = "EF4444"
-        siblingVisual.userEditedAt = Date(timeIntervalSinceReferenceDate: 1_000)
+        siblingVisual.userEditedAt = Date(timeIntervalSinceReferenceDate: 1000)
         siblingVisual.suggestionTitleSnapshot = item.title
         siblingVisual.suggestionModelID = "manual"
         siblingVisual.suggestionGeneratedAt = nil

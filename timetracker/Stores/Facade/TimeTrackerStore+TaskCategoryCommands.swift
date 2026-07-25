@@ -89,7 +89,8 @@ extension TimeTrackerStore {
 
     private func handleStoreScopedTaskCategoryError(_ error: Error) {
         if error is StoreScopedTaskCategoryMutationError ||
-            (error as? TaskRepositoryError) == .categoryUnavailable {
+            (error as? TaskRepositoryError) == .categoryUnavailable
+        {
             do {
                 try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
             } catch {

@@ -101,7 +101,7 @@ struct StoreScopedInboxSuggestionCommandCoordinatorTests {
         #expect(visual.suggestionModelID == "route-model")
         #expect(
             visual.suggestionGeneratedAt ==
-                Date(timeIntervalSinceReferenceDate: 42_000)
+                Date(timeIntervalSinceReferenceDate: 42000)
         )
         #expect(visual.userEditedAt == nil)
         #expect(try inboxItem(id: item.id, in: freshContext)?.deletedAt != nil)
@@ -580,7 +580,7 @@ struct StoreScopedInboxSuggestionCommandCoordinatorTests {
             writeAuthorization: .isolatedTestHarness,
             deviceID: "test",
             nowProvider: {
-                Date(timeIntervalSinceReferenceDate: 42_000)
+                Date(timeIntervalSinceReferenceDate: 42000)
             }
         )
     }

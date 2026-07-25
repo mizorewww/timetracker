@@ -79,7 +79,7 @@ struct TaskQuantityEntryMutationOutcome: Equatable {
             .taskChanged(
                 taskID: taskID,
                 affectedAncestorIDs: affectedAncestorTaskIDs
-            )
+            ),
         ]
     }
 

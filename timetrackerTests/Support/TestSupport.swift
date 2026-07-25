@@ -25,7 +25,7 @@ func makeTestStore() -> TimeTrackerStore {
     TimeTrackerStore(
         appleHealthDataReader: UnavailableAppleHealthDataReader(),
         appleHealthTimelinePreferenceStore:
-            TestAppleHealthTimelinePreferenceStore(),
+        TestAppleHealthTimelinePreferenceStore(),
         writeAuthorization: .isolatedTestHarness
     )
 }
@@ -37,7 +37,7 @@ func makeTestStore(
     makeTestStore(
         llmCredentialStore: llmCredentialStore,
         appleHealthTimelinePreferenceStore:
-            TestAppleHealthTimelinePreferenceStore()
+        TestAppleHealthTimelinePreferenceStore()
     )
 }
 
@@ -45,13 +45,13 @@ func makeTestStore(
 func makeTestStore(
     llmCredentialStore: any LLMCredentialStoring,
     appleHealthTimelinePreferenceStore:
-        any AppleHealthTimelinePreferenceStoring
+    any AppleHealthTimelinePreferenceStoring
 ) -> TimeTrackerStore {
     TimeTrackerStore(
         llmCredentialStore: llmCredentialStore,
         appleHealthDataReader: UnavailableAppleHealthDataReader(),
         appleHealthTimelinePreferenceStore:
-            appleHealthTimelinePreferenceStore,
+        appleHealthTimelinePreferenceStore,
         writeAuthorization: .isolatedTestHarness
     )
 }
@@ -93,7 +93,7 @@ func makeTestStore(
         inboxSuggestionService: inboxSuggestionService,
         appleHealthDataReader: UnavailableAppleHealthDataReader(),
         appleHealthTimelinePreferenceStore:
-            TestAppleHealthTimelinePreferenceStore(),
+        TestAppleHealthTimelinePreferenceStore(),
         writeAuthorization: .isolatedTestHarness
     )
 }
@@ -110,14 +110,15 @@ func makeTestStore(
         checklistVisualSuggestionService: checklistVisualSuggestionService,
         appleHealthDataReader: UnavailableAppleHealthDataReader(),
         appleHealthTimelinePreferenceStore:
-            TestAppleHealthTimelinePreferenceStore(),
+        TestAppleHealthTimelinePreferenceStore(),
         writeAuthorization: .isolatedTestHarness
     )
 }
 
 @MainActor
 final class TestAppleHealthTimelinePreferenceStore:
-    AppleHealthTimelinePreferenceStoring {
+    AppleHealthTimelinePreferenceStoring
+{
     var isTimelineEnabled: Bool
     var taskCatalogClearRecoveryTaskIDs: Set<UUID> = []
 
@@ -146,9 +147,10 @@ func sourceText(_ relativePath: String) throws -> String {
 extension String {
     func slice(from start: String, to end: String) -> String? {
         guard let startRange = range(of: start),
-              let endRange = range(of: end, range: startRange.upperBound..<endIndex) else {
+              let endRange = range(of: end, range: startRange.upperBound ..< endIndex)
+        else {
             return nil
         }
-        return String(self[startRange.lowerBound..<endRange.lowerBound])
+        return String(self[startRange.lowerBound ..< endRange.lowerBound])
     }
 }

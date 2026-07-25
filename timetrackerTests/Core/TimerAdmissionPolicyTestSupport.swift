@@ -10,7 +10,7 @@ nonisolated enum TimerAdmissionPolicyFixtures {
     ) -> TimerActiveSegmentSnapshot {
         TimerActiveSegmentSnapshot(
             segmentID: uuid(segmentID),
-            sessionID: uuid(sessionID ?? segmentID + 1_000),
+            sessionID: uuid(sessionID ?? segmentID + 1000),
             taskID: uuid(taskID),
             startedAt: Date(timeIntervalSinceReferenceDate: startedAt)
         )

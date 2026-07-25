@@ -39,19 +39,19 @@ struct CoreCloudRecoveryGateTests {
         let fallbackRefresh = try #require(
             fallbackSource.range(
                 of: "refreshLocalFallbackRecoverySnapshotBeforeCloudReset(",
-                range: outerLock.lowerBound..<fallbackSource.endIndex
+                range: outerLock.lowerBound ..< fallbackSource.endIndex
             )
         )
         let recoveryPreparation = try #require(
             fallbackSource.range(
                 of: "AppCloudSync.preparePendingCloudRecoveryReset()",
-                range: fallbackRefresh.lowerBound..<fallbackSource.endIndex
+                range: fallbackRefresh.lowerBound ..< fallbackSource.endIndex
             )
         )
         let destructiveRecovery = try #require(
             fallbackSource.range(
                 of: "AppCloudSync.performPendingCloudRecoveryResetIfNeeded(",
-                range: recoveryPreparation.lowerBound..<fallbackSource.endIndex
+                range: recoveryPreparation.lowerBound ..< fallbackSource.endIndex
             )
         )
 
@@ -136,7 +136,7 @@ struct CoreCloudRecoveryGateTests {
                 }
             )
 
-            guard case .completed(let recovery) = gate else {
+            guard case let .completed(recovery) = gate else {
                 Issue.record("Protected fallback recovery should complete")
                 return
             }
@@ -164,7 +164,7 @@ struct CoreCloudRecoveryGateTests {
     }
 
     @Test @MainActor
-    func missingAndUnreadableUploadBackupsDeferRecovery() throws {
+    func missingAndUnreadableUploadBackupsDeferRecovery() {
         withRecoveryDefaults {
             let defaults = UserDefaults.standard
             let missingBackup = SyncConflictService.hasDefaultPendingForcedUploadBackup(
@@ -188,7 +188,7 @@ struct CoreCloudRecoveryGateTests {
                     removeStoreFiles: { _ in removalCount += 1 }
                 )
 
-                guard case .deferred(let reason) = gate else {
+                guard case let .deferred(reason) = gate else {
                     Issue.record("Unavailable upload backup must defer CloudKit recovery")
                     continue
                 }
@@ -200,7 +200,7 @@ struct CoreCloudRecoveryGateTests {
     }
 
     @Test @MainActor
-    func noPendingRequestIsTheOnlyNoOpCompletion() throws {
+    func noPendingRequestIsTheOnlyNoOpCompletion() {
         withRecoveryDefaults {
             var removalCount = 0
             let gate = AppCloudSync.performPendingCloudRecoveryResetIfNeeded(
@@ -209,7 +209,7 @@ struct CoreCloudRecoveryGateTests {
                 removeStoreFiles: { _ in removalCount += 1 }
             )
 
-            guard case .completed(let completion) = gate else {
+            guard case let .completed(completion) = gate else {
                 Issue.record("No pending recovery should complete without work")
                 return
             }
@@ -234,7 +234,7 @@ struct CoreCloudRecoveryGateTests {
                 removeSyncConflictState: { stateRemovalCount += 1 }
             )
 
-            guard case .failed(let failure) = gate else {
+            guard case let .failed(failure) = gate else {
                 Issue.record("Store deletion failure must block CloudKit recovery")
                 return
             }
@@ -260,7 +260,7 @@ struct CoreCloudRecoveryGateTests {
                 removeSyncConflictState: { throw ProbeError.deletionFailed }
             )
 
-            guard case .failed(let failure) = gate else {
+            guard case let .failed(failure) = gate else {
                 Issue.record("State deletion failure must block CloudKit recovery")
                 return
             }
@@ -284,7 +284,7 @@ struct CoreCloudRecoveryGateTests {
                 beginCloudImportSession: { _ in throw ProbeError.unreadable }
             )
 
-            guard case .failed(let failure) = gate else {
+            guard case let .failed(failure) = gate else {
                 Issue.record("A missing durable import checkpoint must block recovery")
                 return
             }
@@ -309,7 +309,7 @@ struct CoreCloudRecoveryGateTests {
                 removeStoreFiles: { _ in }
             )
 
-            guard case .completed(let completion) = gate else {
+            guard case let .completed(completion) = gate else {
                 Issue.record("Successful reset must produce a completion token")
                 return
             }
@@ -332,7 +332,7 @@ struct CoreCloudRecoveryGateTests {
     }
 
     @Test @MainActor
-    func queuedReconciliationBecomesActiveOnlyAfterCloudContainerStarts() throws {
+    func queuedReconciliationBecomesActiveOnlyAfterCloudContainerStarts() {
         withRecoveryDefaults {
             let defaults = UserDefaults.standard
             AppCloudSync.requestCloudReconciliationReset()
@@ -347,7 +347,7 @@ struct CoreCloudRecoveryGateTests {
                 removeStoreFiles: { _ in },
                 beginCloudImportSession: { startedImportKind = $0 }
             )
-            guard case .completed(let completion) = gate else {
+            guard case let .completed(completion) = gate else {
                 Issue.record("Reconciliation reset should complete")
                 return
             }
@@ -368,7 +368,7 @@ struct CoreCloudRecoveryGateTests {
     }
 
     @Test @MainActor
-    func failedDestructiveReconciliationResetKeepsFallbackReadOnly() throws {
+    func failedDestructiveReconciliationResetKeepsFallbackReadOnly() {
         withRecoveryDefaults {
             AppCloudSync.requestCloudReconciliationReset()
             let gate = AppCloudSync.performPendingCloudRecoveryResetIfNeeded(
@@ -418,7 +418,7 @@ struct CoreCloudRecoveryGateTests {
                 removeSyncConflictState: {},
                 beginCloudImportSession: { startedImportKind = $0 }
             )
-            guard case .completed(let completion) = gate else {
+            guard case let .completed(completion) = gate else {
                 Issue.record("Download reset should complete")
                 return
             }
@@ -524,7 +524,7 @@ struct CoreCloudRecoveryGateTests {
                 removeStoreFiles: { _ in removalCount += 1 }
             )
 
-            guard case .deferred(let reason) = gate else {
+            guard case let .deferred(reason) = gate else {
                 Issue.record("Conflicting legacy recovery requests must require a new choice")
                 return
             }
@@ -589,7 +589,7 @@ struct CoreCloudRecoveryGateTests {
                 beginCloudImportSession: { _ in }
             )
 
-            guard case .completed(let completion) = gate else {
+            guard case let .completed(completion) = gate else {
                 Issue.record("Locked download recovery should complete")
                 return
             }
@@ -632,7 +632,7 @@ struct CoreCloudRecoveryGateTests {
                 storeURL: storeURL
             )
 
-            guard case .completed(let completion) = gate else {
+            guard case let .completed(completion) = gate else {
                 Issue.record("Real locked store cleanup should complete")
                 return
             }
@@ -658,7 +658,7 @@ struct CoreCloudRecoveryGateTests {
             AppCloudSync.cloudRecoveryStoreResetKey,
             AppCloudSync.activeCloudDownloadRecoveryKey,
             AppDemoDataConfiguration.overrideKey,
-            SeedData.automaticDemoSeedingDisabledKey
+            SeedData.automaticDemoSeedingDisabledKey,
         ]
         let previousValues = Dictionary(uniqueKeysWithValues: keys.map { ($0, defaults.object(forKey: $0)) })
         keys.forEach { defaults.removeObject(forKey: $0) }

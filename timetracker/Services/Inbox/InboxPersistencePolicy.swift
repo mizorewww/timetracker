@@ -97,18 +97,18 @@ enum InboxPersistencePolicy {
         notes: String?,
         suggestionReason: String?
     ) throws -> PreparedInboxItemText {
-        PreparedInboxItemText(
-            title: try requiredSingleLine(
+        try PreparedInboxItemText(
+            title: requiredSingleLine(
                 title,
                 field: .itemTitle,
                 maximum: SyncDataSnapshotRestoreLimits.maximumTitleByteCount
             ),
-            notes: try optionalMultiline(
+            notes: optionalMultiline(
                 notes,
                 field: .notes,
                 trimsOuterWhitespace: false
             ),
-            suggestionReason: try optionalMultiline(
+            suggestionReason: optionalMultiline(
                 suggestionReason,
                 field: .suggestionReason,
                 trimsOuterWhitespace: true
@@ -125,16 +125,16 @@ enum InboxPersistencePolicy {
     ) throws -> PreparedInboxSuggestionText {
         let preparedIconName = try optionalSingleLine(iconName, field: .iconName)
         let preparedColorHex = try optionalSingleLine(colorHex, field: .colorHex)
-        return PreparedInboxSuggestionText(
-            reason: try optionalMultiline(
+        return try PreparedInboxSuggestionText(
+            reason: optionalMultiline(
                 reason,
                 field: .suggestionReason,
                 trimsOuterWhitespace: true
             ),
             iconName: ChecklistVisualSanitizer.sanitizedIcon(preparedIconName),
             colorHex: ChecklistVisualSanitizer.sanitizedColor(preparedColorHex),
-            modelID: try optionalSingleLine(modelID, field: .modelID),
-            titleSnapshot: try requiredSingleLine(
+            modelID: optionalSingleLine(modelID, field: .modelID),
+            titleSnapshot: requiredSingleLine(
                 titleSnapshot,
                 field: .titleSnapshot,
                 maximum: SyncDataSnapshotRestoreLimits.maximumTitleByteCount
@@ -211,7 +211,8 @@ enum InboxPersistencePolicy {
         let containsUnsupportedControl = value.unicodeScalars.contains { scalar in
             guard CharacterSet.controlCharacters.contains(scalar) else { return false }
             if allowsMultilineWhitespace,
-               scalar.value == 9 || scalar.value == 10 || scalar.value == 13 {
+               scalar.value == 9 || scalar.value == 10 || scalar.value == 13
+            {
                 return false
             }
             return true

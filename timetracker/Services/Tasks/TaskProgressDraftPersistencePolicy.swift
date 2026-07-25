@@ -57,11 +57,10 @@ enum TaskProgressDraftPersistencePolicy {
         dailyRecurrence: TaskDailyRecurrenceDraft?,
         confirmsQuantityProgressReset: Bool = false
     ) throws -> PreparedTaskProgressDraft {
-        let preparedGoal: PreparedTaskQuantityGoalDraft?
-        if let quantityGoal {
-            preparedGoal = try prepareQuantityGoal(quantityGoal)
+        let preparedGoal: PreparedTaskQuantityGoalDraft? = if let quantityGoal {
+            try prepareQuantityGoal(quantityGoal)
         } else {
-            preparedGoal = nil
+            nil
         }
         if let dailyRecurrence {
             try StoreScopedTaskRecurrenceCommandCoordinator.validate(
@@ -72,7 +71,7 @@ enum TaskProgressDraftPersistencePolicy {
         return PreparedTaskProgressDraft(
             quantityGoal: preparedGoal,
             confirmsQuantityProgressReset:
-                confirmsQuantityProgressReset,
+            confirmsQuantityProgressReset,
             dailyRecurrence: dailyRecurrence
         )
     }

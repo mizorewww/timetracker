@@ -645,7 +645,7 @@ struct CoreSystemActionCommandTests {
         #expect(stoppedID == nil)
         #expect(older.endedAt == nil)
         #expect(newer.endedAt == nil)
-        #expect(Set(try timeRepository.activeSegments().map(\.id)) == [older.id, newer.id])
+        #expect(try Set(timeRepository.activeSegments().map(\.id)) == [older.id, newer.id])
     }
 
     @Test @MainActor
@@ -825,7 +825,7 @@ struct CoreSystemActionCommandTests {
         )
         let events: Set<StoreDomainEvent> = [
             .ledgerChanged(taskID: task.id, dateInterval: nil, isVisible: true),
-            .pomodoroChanged(runID: nil, sessionID: nil, taskID: task.id)
+            .pomodoroChanged(runID: nil, sessionID: nil, taskID: task.id),
         ]
 
         let segmentID = try #require(

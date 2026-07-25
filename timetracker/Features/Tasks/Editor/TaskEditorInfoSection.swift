@@ -101,7 +101,8 @@ struct TaskInfoEditorSection: View {
         guard let error = validation.titleError else { return nil }
         if case .required = error,
            draft.taskID == nil,
-           hasEditedTitle == false {
+           hasEditedTitle == false
+        {
             return nil
         }
         return error
@@ -110,7 +111,8 @@ struct TaskInfoEditorSection: View {
     private var inheritedCategoryHint: TaskInheritedCategoryHint? {
         guard let parentID = draft.parentID,
               let parent = store.task(for: parentID),
-              let category = store.effectiveCategory(for: parent) else {
+              let category = store.effectiveCategory(for: parent)
+        else {
             return nil
         }
         return TaskInheritedCategoryHint(
@@ -123,8 +125,9 @@ struct TaskInfoEditorSection: View {
     private var appleHealthCategory: TaskInheritedCategoryHint? {
         guard let taskID = draft.taskID,
               let taskDefinition = AppleHealthTaskCatalog.taskDefinition(
-                for: taskID
-              ) else {
+                  for: taskID
+              )
+        else {
             return nil
         }
         if let category = store.taskCategories.first(where: {

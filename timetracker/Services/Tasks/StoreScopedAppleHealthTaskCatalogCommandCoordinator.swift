@@ -14,7 +14,7 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinator {
         writeAuthorization: StoreWriteAuthorization = .applicationState,
         deviceID: String? = nil,
         didReachCheckpoint: @escaping
-            (AppleHealthTaskCatalogMutationCheckpoint) throws -> Void = { _ in }
+        (AppleHealthTaskCatalogMutationCheckpoint) throws -> Void = { _ in }
     ) {
         self.container = container
         self.writeAuthorization = writeAuthorization
@@ -46,8 +46,8 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinator {
         let reconciliationPlan = AppleHealthTaskCatalog.plan(
             for: reconciliationRoles
         )
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: try TimerStoreScope(container: container),
+        let transaction = try StoreScopedTimerMutationTransaction(
+            scope: TimerStoreScope(container: container),
             container: container
         )
 
@@ -153,7 +153,8 @@ private extension StoreScopedAppleHealthTaskCatalogCommandCoordinator {
         for definition in definitions {
             if let category = state.categoriesByID[definition.id] {
                 guard recoverableIDs.contains(definition.id),
-                      category.deletedAt != nil else {
+                      category.deletedAt != nil
+                else {
                     continue
                 }
                 try repository.resetAppleHealthCategoryAfterClear(
@@ -186,8 +187,9 @@ private extension StoreScopedAppleHealthTaskCatalogCommandCoordinator {
     ) throws {
         for definition in definitions {
             guard categoryIsAvailable(definition.categoryID, state: state) ||
-                    outcome.createdCategoryIDs.contains(definition.categoryID) ||
-                    outcome.restoredCategoryIDs.contains(definition.categoryID) else {
+                outcome.createdCategoryIDs.contains(definition.categoryID) ||
+                outcome.restoredCategoryIDs.contains(definition.categoryID)
+            else {
                 continue
             }
 
@@ -230,7 +232,8 @@ private extension StoreScopedAppleHealthTaskCatalogCommandCoordinator {
 
             guard creatableIDs.contains(definition.id) else { continue }
             guard state.claimedTaskIDs.contains(definition.id) == false,
-                  state.assignmentsByID[definition.categoryAssignmentID] == nil else {
+                  state.assignmentsByID[definition.categoryAssignmentID] == nil
+            else {
                 continue
             }
             try repository.createAppleHealthTask(definition)
@@ -280,10 +283,11 @@ private extension StoreScopedAppleHealthTaskCatalogCommandCoordinator {
         state: PersistenceState
     ) -> Bool {
         guard let canonical =
-                state.assignmentsByID[definition.categoryAssignmentID],
-              canonical.deletedAt == nil,
-              canonical.taskID == definition.id,
-              canonical.categoryID == definition.categoryID else {
+            state.assignmentsByID[definition.categoryAssignmentID],
+            canonical.deletedAt == nil,
+            canonical.taskID == definition.id,
+            canonical.categoryID == definition.categoryID
+        else {
             return true
         }
 
@@ -295,7 +299,8 @@ private extension StoreScopedAppleHealthTaskCatalogCommandCoordinator {
         guard activeRows.count == 1,
               activeRows[0].persistentModelID == canonical.persistentModelID,
               logicalWinner?.persistentModelID ==
-                canonical.persistentModelID else {
+              canonical.persistentModelID
+        else {
             return true
         }
         return false

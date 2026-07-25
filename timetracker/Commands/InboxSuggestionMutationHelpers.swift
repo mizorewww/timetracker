@@ -67,9 +67,9 @@ extension InboxCommandHandler {
     func prepareSuggestionMutation(
         _ suggestion: InboxSuggestion
     ) throws -> PreparedInboxSuggestionMutation {
-        PreparedInboxSuggestionMutation(
+        try PreparedInboxSuggestionMutation(
             suggestion: suggestion,
-            text: try InboxPersistencePolicy.prepareSuggestion(
+            text: InboxPersistencePolicy.prepareSuggestion(
                 reason: suggestion.reason,
                 iconName: suggestion.iconName,
                 colorHex: suggestion.colorHex,

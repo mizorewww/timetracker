@@ -27,8 +27,8 @@ enum AppPreferenceValueSanitizer {
     static let maximumTodayHeatmapTaskCount = 64
     nonisolated static let maximumLLMModelCount = 256
     nonisolated static let maximumLLMModelIDByteCount = 256
-    static let maximumLLMEndpointLength = 2_048
-    static let maximumLLMPromptInstructionsByteCount = 4 * 1_024
+    static let maximumLLMEndpointLength = 2048
+    static let maximumLLMPromptInstructionsByteCount = 4 * 1024
     static let maximumLLMTaskPlanInstructionsByteCount = maximumLLMPromptInstructionsByteCount
 
     static func preferredColorScheme(_ value: String) -> String {
@@ -53,7 +53,9 @@ enum AppPreferenceValueSanitizer {
         result.reserveCapacity(min(values.count, maximumPomodoroPlanCount))
         for value in values where seen.insert(value.id).inserted {
             result.append(value.normalized())
-            if result.count == maximumPomodoroPlanCount { break }
+            if result.count == maximumPomodoroPlanCount {
+                break
+            }
         }
         return result
     }
@@ -83,7 +85,9 @@ enum AppPreferenceValueSanitizer {
         result.reserveCapacity(min(values.count, maximumCount))
         for value in values where seen.insert(value).inserted {
             result.append(value)
-            if result.count == maximumCount { break }
+            if result.count == maximumCount {
+                break
+            }
         }
         return result
     }
@@ -95,7 +99,8 @@ enum AppPreferenceValueSanitizer {
     nonisolated static func llmModelID(_ value: String) -> String {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.utf8.count <= maximumLLMModelIDByteCount,
-              !trimmed.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
+              !trimmed.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains)
+        else {
             return ""
         }
         return trimmed
@@ -148,7 +153,8 @@ enum AppPreferenceValueSanitizer {
             defaultInstructions: kind.defaultInstructions
         )
         if kind == .taskPlan,
-           instructions == LLMTaskPlanPrompt.legacyDefaultInstructions {
+           instructions == LLMTaskPlanPrompt.legacyDefaultInstructions
+        {
             return LLMTaskPlanPrompt.defaultInstructions
         }
         return instructions
@@ -182,13 +188,15 @@ enum AppPreferenceValueSanitizer {
         mutating func insert(_ value: String) {
             let normalized = AppPreferenceValueSanitizer.llmModelID(value)
             guard !normalized.isEmpty,
-                  !retainedValues.contains(normalized) else {
+                  !retainedValues.contains(normalized)
+            else {
                 return
             }
 
             if values.count == AppPreferenceValueSanitizer.maximumLLMModelCount,
                let greatestRetainedValue = values.last,
-               normalized > greatestRetainedValue {
+               normalized > greatestRetainedValue
+            {
                 return
             }
 

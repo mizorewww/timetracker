@@ -8,13 +8,13 @@ struct PrivacyManifestContractTests {
         let root = try projectRootURL()
 
         #expect(try reasons(in: root.appending(path: "timetracker/PrivacyInfo.xcprivacy")) == [
-            "NSPrivacyAccessedAPICategoryUserDefaults": ["1C8F.1", "CA92.1"]
+            "NSPrivacyAccessedAPICategoryUserDefaults": ["1C8F.1", "CA92.1"],
         ])
         #expect(try reasons(in: root.appending(path: "timetrackerWidgetExtension/PrivacyInfo.xcprivacy")) == [
-            "NSPrivacyAccessedAPICategoryUserDefaults": ["1C8F.1"]
+            "NSPrivacyAccessedAPICategoryUserDefaults": ["1C8F.1"],
         ])
         #expect(try reasons(in: root.appending(path: "timetrackerWatchApp/PrivacyInfo.xcprivacy")) == [
-            "NSPrivacyAccessedAPICategoryUserDefaults": ["CA92.1"]
+            "NSPrivacyAccessedAPICategoryUserDefaults": ["CA92.1"],
         ])
     }
 
@@ -24,7 +24,7 @@ struct PrivacyManifestContractTests {
         let paths = [
             "timetracker/PrivacyInfo.xcprivacy",
             "timetrackerWidgetExtension/PrivacyInfo.xcprivacy",
-            "timetrackerWatchApp/PrivacyInfo.xcprivacy"
+            "timetrackerWatchApp/PrivacyInfo.xcprivacy",
         ]
 
         for path in paths {
@@ -44,7 +44,7 @@ struct PrivacyManifestContractTests {
             "timetracker/Services/SystemIntegration/SyncConflictService+StateWriting.swift",
             "timetracker/Services/SystemIntegration/DurableLocalFile+Writing.swift",
             "timetracker/Services/SystemIntegration/DurableLocalFile+Quarantine.swift",
-            "timetracker/Services/SystemIntegration/DurableLocalFile+Synchronization.swift"
+            "timetracker/Services/SystemIntegration/DurableLocalFile+Synchronization.swift",
         ].map(sourceText).joined(separator: "\n")
 
         #expect(source.contains("#if os(iOS)"))

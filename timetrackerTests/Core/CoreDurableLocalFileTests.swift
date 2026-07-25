@@ -386,14 +386,14 @@ struct CoreDurableLocalFileTests {
 
         #expect(throws: DurableLocalFileError.symbolicLinkNotAllowed) {
             try file.read(
-                upTo: 1_024,
+                upTo: 1024,
                 from: leafAlias,
                 durableRootURL: fixture.root
             )
         }
         #expect(throws: DurableLocalFileError.symbolicLinkNotAllowed) {
             try file.read(
-                upTo: 1_024,
+                upTo: 1024,
                 from: directoryAlias.appendingPathComponent("payload.json"),
                 durableRootURL: fixture.root
             )
@@ -434,7 +434,8 @@ struct CoreDurableLocalFileTests {
             "directory=\(directoryURL.path) root=\(paths.root.path)"
         )
         while cursor.path != paths.root.path,
-              cursor.pathComponents.count >= paths.root.pathComponents.count {
+              cursor.pathComponents.count >= paths.root.pathComponents.count
+        {
             visitedPaths.append(cursor.path)
             cursor.deleteLastPathComponent()
         }

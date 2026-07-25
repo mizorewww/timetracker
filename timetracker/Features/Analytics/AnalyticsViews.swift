@@ -84,30 +84,30 @@ struct AnalyticsView: View {
         }
         .navigationTitle(AppStrings.analytics)
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.inline)
         #endif
-        .accessibilityIdentifier("analytics.view")
-        .background(AppColors.background)
-        .onChange(of: range) { _, range in
-            monthNavigationAnchor = nil
-            guard followsCurrentPeriod == false else { return }
-            let actionNow = Date()
-            liveNow = actionNow
-            followsCurrentPeriod = range.isCurrentPeriod(referenceDate, liveNow: actionNow)
-        }
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active else { return }
-            liveNow = Date()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
-            liveNow = Date()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .NSSystemClockDidChange)) { _ in
-            liveNow = Date()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
-            liveNow = Date()
-        }
+            .accessibilityIdentifier("analytics.view")
+            .background(AppColors.background)
+            .onChange(of: range) { _, range in
+                monthNavigationAnchor = nil
+                guard followsCurrentPeriod == false else { return }
+                let actionNow = Date()
+                liveNow = actionNow
+                followsCurrentPeriod = range.isCurrentPeriod(referenceDate, liveNow: actionNow)
+            }
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active else { return }
+                liveNow = Date()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+                liveNow = Date()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .NSSystemClockDidChange)) { _ in
+                liveNow = Date()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
+                liveNow = Date()
+            }
     }
 
     private func waitForRefresh(_ plan: AnalyticsRefreshPlan?) async {

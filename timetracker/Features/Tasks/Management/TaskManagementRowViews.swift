@@ -10,9 +10,9 @@ struct TaskManagementFlatRow: View {
     var toggleExpansion: (() -> Void)?
     var identityContext: TaskIdentityPresentation.Context = .hierarchical
     let openTaskDetail: (TaskNode) -> Void
-#if os(iOS)
+    #if os(iOS)
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-#endif
+    #endif
 
     var body: some View {
         let rollup = store.rollup(for: task.id)

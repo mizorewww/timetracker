@@ -28,12 +28,12 @@ struct CoreDurableLocalFileQuarantineTests {
     func quarantineCountBudgetAppliesAcrossDiagnosticPrefixes() throws {
         let fixture = try Fixture()
         defer { fixture.remove() }
-        let clock = MutableDate(Date(timeIntervalSinceReferenceDate: 10_000))
+        let clock = MutableDate(Date(timeIntervalSinceReferenceDate: 10000))
         let file = DurableLocalFile(
             quarantinePolicy: .init(
                 maximumFileCount: 2,
-                maximumTotalByteCount: 1_024,
-                maximumAge: 1_000
+                maximumTotalByteCount: 1024,
+                maximumAge: 1000
             ),
             dateProvider: { clock.value }
         )
@@ -72,11 +72,11 @@ struct CoreDurableLocalFileQuarantineTests {
     func quarantinePrunesExpiredAndImplausiblyFutureDiagnostics() throws {
         let fixture = try Fixture()
         defer { fixture.remove() }
-        let clock = MutableDate(Date(timeIntervalSinceReferenceDate: 20_000))
+        let clock = MutableDate(Date(timeIntervalSinceReferenceDate: 20000))
         let file = DurableLocalFile(
             quarantinePolicy: .init(
                 maximumFileCount: 8,
-                maximumTotalByteCount: 1_024,
+                maximumTotalByteCount: 1024,
                 maximumAge: 100
             ),
             dateProvider: { clock.value }
@@ -91,7 +91,7 @@ struct CoreDurableLocalFileQuarantineTests {
         let future = quarantineDirectory(in: fixture).appendingPathComponent("future.json")
         try Data("future".utf8).write(to: future)
         try FileManager.default.setAttributes(
-            [.modificationDate: clock.value.addingTimeInterval(1_000)],
+            [.modificationDate: clock.value.addingTimeInterval(1000)],
             ofItemAtPath: future.path
         )
         clock.value.addTimeInterval(101)
@@ -113,12 +113,12 @@ struct CoreDurableLocalFileQuarantineTests {
     func quarantineEnforcesTotalBytesAndDoesNotRetainOversizedCandidate() throws {
         let fixture = try Fixture()
         defer { fixture.remove() }
-        let clock = MutableDate(Date(timeIntervalSinceReferenceDate: 30_000))
+        let clock = MutableDate(Date(timeIntervalSinceReferenceDate: 30000))
         let file = DurableLocalFile(
             quarantinePolicy: .init(
                 maximumFileCount: 4,
                 maximumTotalByteCount: 6,
-                maximumAge: 1_000
+                maximumAge: 1000
             ),
             dateProvider: { clock.value }
         )
@@ -152,7 +152,7 @@ struct CoreDurableLocalFileQuarantineTests {
         let entries = try quarantineEntries(in: fixture)
         #expect(entries == [second])
         let totalByteCount = try entries.reduce(Int64(0)) { partialResult, url in
-            partialResult + (try fileSize(at: url))
+            try partialResult + fileSize(at: url)
         }
         #expect(totalByteCount <= 6)
     }
@@ -330,10 +330,12 @@ struct CoreDurableLocalFileQuarantineTests {
 
     private func fileSize(at url: URL) throws -> Int64 {
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
-        return (try #require(attributes[.size] as? NSNumber)).int64Value
+        return try (#require(attributes[.size] as? NSNumber)).int64Value
     }
 
-    private var quarantineName: String { ".TimeTrackerQuarantine" }
+    private var quarantineName: String {
+        ".TimeTrackerQuarantine"
+    }
 
     private struct InjectedFailure: Error {}
 

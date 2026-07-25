@@ -35,8 +35,8 @@ nonisolated struct TimelineAxisCompression: Equatable, Sendable {
             removedBefore += gapDuration - placeholder
         }
 
-        self.omittedGaps = gaps
-        self.compressedDuration = max(1, displayInterval.duration - gaps.reduce(0) { $0 + $1.omittedDuration })
+        omittedGaps = gaps
+        compressedDuration = max(1, displayInterval.duration - gaps.reduce(0) { $0 + $1.omittedDuration })
     }
 
     func ratio(for date: Date) -> Double {

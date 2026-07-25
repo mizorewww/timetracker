@@ -73,8 +73,8 @@ struct AnalyticsPeriodSelectionTests {
             calendar: losAngeles
         )
 
-        #expect(spring.interval.duration == 23 * 3_600)
-        #expect(fall.interval.duration == 25 * 3_600)
+        #expect(spring.interval.duration == 23 * 3600)
+        #expect(fall.interval.duration == 25 * 3600)
         #expect(spring.cutoff == spring.interval.end)
         #expect(fall.cutoff == fall.interval.end)
     }
@@ -86,7 +86,7 @@ struct AnalyticsPeriodSelectionTests {
         let expectations: [(AnalyticsRange, DateComponents)] = [
             (.today, DateComponents(year: 2026, month: 7, day: 15, hour: 12)),
             (.week, DateComponents(year: 2026, month: 7, day: 9, hour: 12)),
-            (.month, DateComponents(year: 2026, month: 6, day: 16, hour: 12))
+            (.month, DateComponents(year: 2026, month: 6, day: 16, hour: 12)),
         ]
 
         for (range, expectedComponents) in expectations {
@@ -144,7 +144,7 @@ struct AnalyticsPeriodSelectionTests {
                 .month,
                 DateComponents(year: 2026, month: 5, day: 16, hour: 12),
                 DateComponents(year: 2026, month: 6, day: 16, hour: 12)
-            )
+            ),
         ]
 
         for (range, referenceComponents, expectedComponents) in expectations {
@@ -340,8 +340,8 @@ struct AnalyticsPeriodSelectionTests {
         )
 
         #expect(march == expectedMarch)
-        #expect(losAngeles.timeZone.secondsFromGMT(for: february) == -8 * 3_600)
-        #expect(losAngeles.timeZone.secondsFromGMT(for: march) == -7 * 3_600)
+        #expect(losAngeles.timeZone.secondsFromGMT(for: february) == -8 * 3600)
+        #expect(losAngeles.timeZone.secondsFromGMT(for: march) == -7 * 3600)
     }
 
     @Test

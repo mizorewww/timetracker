@@ -134,7 +134,7 @@ struct SyncedPreferenceMigrationFailureTests {
     private func clear(_ defaults: UserDefaults) {
         for key in AppPreferenceKey.allCases.map(\.rawValue) + [
             SyncedPreferenceService.migrationKey,
-            SyncedPreferenceService.legacyLLMAPIKey
+            SyncedPreferenceService.legacyLLMAPIKey,
         ] {
             defaults.removeObject(forKey: key)
         }

@@ -11,7 +11,8 @@ extension SyncConflictService {
             }
         }
         if AppCloudSync.isCloudDownloadRecoveryActive,
-           try loadState().cloudDownloadRecoveryCompleted == true {
+           try loadState().cloudDownloadRecoveryCompleted == true
+        {
             AppCloudSync.completeCloudDownloadRecovery()
         }
         return prompt
@@ -33,7 +34,8 @@ extension SyncConflictService {
         }
         state.advanceSyncEpoch()
         if let pendingLocalSnapshot = state.pendingForcedUploadSnapshot,
-           pendingLocalIntent(from: state) == .reconcileWithCloud {
+           pendingLocalIntent(from: state) == .reconcileWithCloud
+        {
             return try reconcilePendingLocalSnapshot(
                 pendingLocalSnapshot,
                 context: context,
@@ -58,7 +60,8 @@ extension SyncConflictService {
             let previousCloudFingerprint = try state.pendingCloudSnapshot?.fingerprint()
             let importedSnapshot = try SyncDataSnapshot.capture(context: context)
             if var cloudSnapshot = state.pendingCloudSnapshot,
-               let workingSnapshot = state.pendingConflictWorkingSnapshot ?? state.pendingCloudSnapshot {
+               let workingSnapshot = state.pendingConflictWorkingSnapshot ?? state.pendingCloudSnapshot
+            {
                 cloudSnapshot.applyChanges(from: workingSnapshot, to: importedSnapshot)
                 state.pendingCloudSnapshot = cloudSnapshot
             }
@@ -73,7 +76,8 @@ extension SyncConflictService {
         let cloudSnapshot = try SyncDataSnapshot.capture(context: context)
         let cloudFingerprint = try cloudSnapshot.fingerprint()
         guard let localSnapshot = state.localSnapshot,
-              let localFingerprint = state.localFingerprint else {
+              let localFingerprint = state.localFingerprint
+        else {
             state.acceptCloudSnapshot(cloudSnapshot, fingerprint: cloudFingerprint)
             try saveState(state)
             return nil
@@ -131,11 +135,13 @@ extension SyncConflictService {
         guard let error else { return false }
         let nsError = error as NSError
         if nsError.domain == CKError.errorDomain,
-           CKError.Code(rawValue: nsError.code) == .serverRecordChanged {
+           CKError.Code(rawValue: nsError.code) == .serverRecordChanged
+        {
             return true
         }
         if nsError.domain == NSCocoaErrorDomain,
-           nsError.code == NSPersistentStoreSaveConflictsError {
+           nsError.code == NSPersistentStoreSaveConflictsError
+        {
             return true
         }
         return nsError.localizedDescription.localizedCaseInsensitiveContains("conflict")

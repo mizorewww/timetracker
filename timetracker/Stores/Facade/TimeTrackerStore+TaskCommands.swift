@@ -43,7 +43,7 @@ extension TimeTrackerStore {
         case .stale:
             errorMessage = TaskLifecycleMutationError.staleDraft.localizedDescription
             return false
-        case .failed(let message):
+        case let .failed(message):
             errorMessage = message
             return false
         }

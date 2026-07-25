@@ -32,7 +32,7 @@ extension TimeTrackerStore {
         entryID: UUID,
         recordedAt: Date = Date()
     ) -> Bool {
-        return performTaskQuantityCommand { coordinator in
+        performTaskQuantityCommand { coordinator in
             try coordinator.record(
                 command: TaskQuantityEntryRecordCommand(
                     taskID: taskID,
@@ -77,7 +77,7 @@ extension TimeTrackerStore {
         recordedAt: Date,
         operationID: UUID
     ) -> Bool {
-        return performTaskQuantityCommand { coordinator in
+        performTaskQuantityCommand { coordinator in
             try coordinator.update(
                 command: TaskQuantityEntryUpdateCommand(
                     entryBaseline: baseline,
@@ -172,7 +172,8 @@ extension TimeTrackerStore {
             $0.taskID == taskID || $0.id == expectedGoalID
         }
         return if hasVisibleGoalClaim ||
-            taskIDsWithIncompleteQuantityProgress.contains(taskID) {
+            taskIDsWithIncompleteQuantityProgress.contains(taskID)
+        {
             .incompleteQuantityGraph
         } else {
             .quantityGoalUnavailable

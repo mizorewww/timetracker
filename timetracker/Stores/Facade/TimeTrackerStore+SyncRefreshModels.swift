@@ -19,26 +19,26 @@ extension TimeTrackerStore {
         var priority: Int {
             switch self {
             case .remoteStoreChanged:
-                return 0
+                0
             case let .cloudExportFinished(_, succeeded, reportsConflict, _):
-                return reportsConflict ? 4 : (succeeded ? 1 : 3)
+                reportsConflict ? 4 : (succeeded ? 1 : 3)
             case let .cloudImportFinished(succeeded, reportsConflict, _):
-                return reportsConflict ? 4 : (succeeded ? 2 : 3)
+                reportsConflict ? 4 : (succeeded ? 2 : 3)
             case let .cloudSetupFinished(succeeded, _):
-                return succeeded ? 1 : 3
+                succeeded ? 1 : 3
             }
         }
 
         var activityKind: SyncActivityKind {
             switch self {
             case .remoteStoreChanged:
-                return .remoteRefresh
+                .remoteRefresh
             case .cloudImportFinished:
-                return .importData
+                .importData
             case .cloudExportFinished:
-                return .exportData
+                .exportData
             case .cloudSetupFinished:
-                return .setup
+                .setup
             }
         }
 

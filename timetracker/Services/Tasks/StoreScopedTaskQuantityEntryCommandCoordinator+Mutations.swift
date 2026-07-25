@@ -97,7 +97,8 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
             state: state
         )
         guard entry.amount != command.amount ||
-                entry.recordedAt != command.recordedAt else {
+            entry.recordedAt != command.recordedAt
+        else {
             return outcome(
                 entryID: entry.id,
                 taskID: entry.taskID,
@@ -127,7 +128,7 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
     ) throws -> TaskQuantityEntryMutationOutcome {
         let baseline = command.entryBaseline
         guard baseline.quantityGoalID ==
-                TaskProgressIdentity.quantityGoalID(taskID: baseline.taskID)
+            TaskProgressIdentity.quantityGoalID(taskID: baseline.taskID)
         else {
             throw TaskQuantityEntryMutationError.entryChanged
         }
@@ -138,7 +139,8 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
             throw TaskQuantityEntryMutationError.entryUnavailable
         }
         guard entry.taskID == baseline.taskID,
-              entry.quantityGoalID == baseline.quantityGoalID else {
+              entry.quantityGoalID == baseline.quantityGoalID
+        else {
             throw TaskQuantityEntryMutationError.entryChanged
         }
         if entry.deletedAt != nil {

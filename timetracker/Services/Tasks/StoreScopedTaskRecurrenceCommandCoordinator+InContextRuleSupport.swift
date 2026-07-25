@@ -20,8 +20,9 @@ extension StoreScopedTaskRecurrenceCommandCoordinator {
         }
         guard state.claimedRuleIDs.contains(ruleID) == false,
               state.claimedRuleTemplateTaskIDs.contains(
-                templateTaskID
-              ) == false else {
+                  templateTaskID
+              ) == false
+        else {
             throw TaskRecurrenceMutationError.ruleUnavailable
         }
         let rule = TaskRecurrenceRule(
@@ -51,9 +52,10 @@ extension StoreScopedTaskRecurrenceCommandCoordinator {
         guard let rule = state.rulesByID[baseline.ruleID],
               rule.deletedAt == nil,
               rule.id == TaskProgressIdentity.recurrenceRuleID(
-                templateTaskID: rule.templateTaskID
+                  templateTaskID: rule.templateTaskID
               ),
-              rule.templateTaskID == baseline.templateTaskID else {
+              rule.templateTaskID == baseline.templateTaskID
+        else {
             throw TaskRecurrenceMutationError.ruleUnavailable
         }
         guard rule.clientMutationID == baseline.clientMutationID else {
@@ -61,7 +63,8 @@ extension StoreScopedTaskRecurrenceCommandCoordinator {
         }
         guard rule.cadenceRaw == TaskRecurrenceCadence.daily.rawValue,
               TaskRecurrenceDayKey.isCanonical(rule.startDayKey),
-              Self.validTimeZone(rule.timeZoneIdentifier) != nil else {
+              Self.validTimeZone(rule.timeZoneIdentifier) != nil
+        else {
             throw TaskRecurrenceMutationError.immutableRuleConfiguration
         }
         return rule
@@ -77,7 +80,8 @@ extension StoreScopedTaskRecurrenceCommandCoordinator {
               state.templateEligibleTaskIDs.contains(rule.templateTaskID),
               let template = state.taskByID[rule.templateTaskID],
               template.deletedAt == nil,
-              template.isArchivedForLifecycle == false else {
+              template.isArchivedForLifecycle == false
+        else {
             return .noChanges
         }
         var outcome = TaskRecurrenceMutationOutcome.noChanges

@@ -12,8 +12,8 @@ struct CoreLLMTaskPlanServiceTests {
                     "reference": " Work ",
                     "title": " Work ",
                     "iconName": "briefcase",
-                    "colorHex": "1677FF"
-                ]
+                    "colorHex": "1677FF",
+                ],
             ],
             "tasks": [
                 [
@@ -24,7 +24,7 @@ struct CoreLLMTaskPlanServiceTests {
                     "notes": " Useful context ",
                     "estimatedMinutes": 25,
                     "iconName": "target",
-                    "colorHex": "34C759"
+                    "colorHex": "34C759",
                 ],
                 [
                     "reference": "child",
@@ -34,8 +34,8 @@ struct CoreLLMTaskPlanServiceTests {
                     "notes": NSNull(),
                     "estimatedMinutes": NSNull(),
                     "iconName": "paperplane",
-                    "colorHex": "0A84FF"
-                ]
+                    "colorHex": "0A84FF",
+                ],
             ],
             "checklistItems": [
                 [
@@ -43,9 +43,9 @@ struct CoreLLMTaskPlanServiceTests {
                     "taskReference": " ROOT ",
                     "title": "Verify tests",
                     "iconName": "checkmark.circle",
-                    "colorHex": "1677FF"
-                ]
-            ]
+                    "colorHex": "1677FF",
+                ],
+            ],
         ])
         let content = try #require(String(data: contentData, encoding: .utf8))
         let responseData = try Self.chatResponseData(content: content)
@@ -210,7 +210,7 @@ struct CoreLLMTaskPlanServiceTests {
                     headerFields: nil
                 )
             )
-            return (try Self.chatResponseData(content: content), response)
+            return try (Self.chatResponseData(content: content), response)
         }
 
         await Self.expectError(.invalidResponse) {
@@ -274,7 +274,7 @@ struct CoreLLMTaskPlanServiceTests {
         )
         let defaultPrompt = try JSONDecoder().decode(
             UserPromptEnvelope.self,
-            from: Data(try #require(defaultEnvelope.messages.last).content.utf8)
+            from: Data(#require(defaultEnvelope.messages.last).content.utf8)
         )
         #expect(defaultPrompt.instructions == LLMTaskPlanPrompt.defaultInstructions)
     }
@@ -285,7 +285,7 @@ struct CoreLLMTaskPlanServiceTests {
             _ = try LLMTaskPlanService.makeDraft(
                 from: Self.payload(tasks: [
                     Self.task("Duplicate"),
-                    Self.task(" duplicate ")
+                    Self.task(" duplicate "),
                 ]),
                 modelID: "model"
             )
@@ -293,7 +293,7 @@ struct CoreLLMTaskPlanServiceTests {
         Self.expectError(.orphanReference) {
             _ = try LLMTaskPlanService.makeDraft(
                 from: Self.payload(tasks: [
-                    Self.task("root", category: "missing")
+                    Self.task("root", category: "missing"),
                 ]),
                 modelID: "model"
             )
@@ -301,7 +301,7 @@ struct CoreLLMTaskPlanServiceTests {
         Self.expectError(.orphanReference) {
             _ = try LLMTaskPlanService.makeDraft(
                 from: Self.payload(tasks: [
-                    Self.task("child", parent: "missing")
+                    Self.task("child", parent: "missing"),
                 ]),
                 modelID: "model"
             )
@@ -323,7 +323,7 @@ struct CoreLLMTaskPlanServiceTests {
             _ = try LLMTaskPlanService.makeDraft(
                 from: Self.payload(tasks: [
                     Self.task("a", parent: "b"),
-                    Self.task("b", parent: "a")
+                    Self.task("b", parent: "a"),
                 ]),
                 modelID: "model"
             )
@@ -334,14 +334,14 @@ struct CoreLLMTaskPlanServiceTests {
                     categories: [Self.category("work")],
                     tasks: [
                         Self.task("root", category: "work"),
-                        Self.task("child", category: "work", parent: "root")
+                        Self.task("child", category: "work", parent: "root"),
                     ]
                 ),
                 modelID: "model"
             )
         }
 
-        let tooDeepTasks = (0...7).map { index in
+        let tooDeepTasks = (0 ... 7).map { index in
             Self.task(
                 "task-\(index)",
                 parent: index == 0 ? nil : "task-\(index - 1)"
@@ -361,7 +361,7 @@ struct CoreLLMTaskPlanServiceTests {
             from: Self.payload(
                 categories: [Self.category("reading")],
                 tasks: [Self.task("root")],
-                checklistItems: (1...150).map {
+                checklistItems: (1 ... 150).map {
                     Self.checklist("chapter-\($0)", task: "root")
                 }
             ),
@@ -377,7 +377,7 @@ struct CoreLLMTaskPlanServiceTests {
         Self.expectError(.limitExceeded) {
             _ = try LLMTaskPlanService.makeDraft(
                 from: Self.payload(
-                    categories: (0...LLMTaskPlanService.maximumCategoryCount).map {
+                    categories: (0 ... LLMTaskPlanService.maximumCategoryCount).map {
                         Self.category("category-\($0)")
                     },
                     tasks: [Self.task("root")]
@@ -388,7 +388,7 @@ struct CoreLLMTaskPlanServiceTests {
         Self.expectError(.limitExceeded) {
             _ = try LLMTaskPlanService.makeDraft(
                 from: Self.payload(
-                    tasks: (0...LLMTaskPlanService.maximumTaskCount).map {
+                    tasks: (0 ... LLMTaskPlanService.maximumTaskCount).map {
                         Self.task("task-\($0)")
                     }
                 ),
@@ -400,7 +400,7 @@ struct CoreLLMTaskPlanServiceTests {
                 from: Self.payload(
                     tasks: [Self.task("root")],
                     checklistItems: (
-                        0...LLMTaskPlanService.maximumChecklistItemCountPerTask
+                        0 ... LLMTaskPlanService.maximumChecklistItemCountPerTask
                     ).map {
                         Self.checklist("item-\($0)", task: "root")
                     }
@@ -409,9 +409,9 @@ struct CoreLLMTaskPlanServiceTests {
             )
         }
 
-        let tasks = (0..<9).map { Self.task("task-\($0)") }
+        let tasks = (0 ..< 9).map { Self.task("task-\($0)") }
         let tooManyChecklistItems = (
-            0...LLMTaskPlanService.maximumChecklistItemCount
+            0 ... LLMTaskPlanService.maximumChecklistItemCount
         ).map {
             Self.checklist("item-\($0)", task: "task-\($0 % tasks.count)")
         }
@@ -584,8 +584,8 @@ struct CoreLLMTaskPlanServiceTests {
     private static func chatResponseData(content: String) throws -> Data {
         try JSONSerialization.data(withJSONObject: [
             "choices": [
-                ["message": ["content": content]]
-            ]
+                ["message": ["content": content]],
+            ],
         ])
     }
 

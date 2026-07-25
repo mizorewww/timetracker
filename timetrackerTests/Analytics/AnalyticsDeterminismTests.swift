@@ -6,7 +6,7 @@ import Testing
 struct AnalyticsDeterminismTests {
     @Test
     func equalDurationTasksUseStableRankingAcrossInputPermutations() {
-        let start = Date(timeIntervalSinceReferenceDate: 10_000)
+        let start = Date(timeIntervalSinceReferenceDate: 10000)
         let alpha = TaskNode(title: "Alpha", parentID: nil, deviceID: "test")
         let zulu = TaskNode(title: "Zulu", parentID: nil, deviceID: "test")
         let alphaSegment = segment(taskID: alpha.id, start: start)
@@ -34,11 +34,11 @@ struct AnalyticsDeterminismTests {
 
     @Test
     func equalPeakHoursUseTheEarliestLocalHour() {
-        let first = AnalyticsSelectionPolicy.peakHour(in: [14: 3_600, 9: 3_600])
-        let second = AnalyticsSelectionPolicy.peakHour(in: [9: 3_600, 14: 3_600])
+        let first = AnalyticsSelectionPolicy.peakHour(in: [14: 3600, 9: 3600])
+        let second = AnalyticsSelectionPolicy.peakHour(in: [9: 3600, 14: 3600])
 
         #expect(first?.hour == 9)
-        #expect(first?.seconds == 3_600)
+        #expect(first?.seconds == 3600)
         #expect(second?.hour == first?.hour)
         #expect(second?.seconds == first?.seconds)
     }
@@ -50,21 +50,21 @@ struct AnalyticsDeterminismTests {
             taskID: taskID,
             source: .timer,
             deviceID: "old",
-            startedAt: Date(timeIntervalSinceReferenceDate: 1_000),
+            startedAt: Date(timeIntervalSinceReferenceDate: 1000),
             titleSnapshot: "Older title"
         )
         let newer = TimeSession(
             taskID: taskID,
             source: .timer,
             deviceID: "new",
-            startedAt: Date(timeIntervalSinceReferenceDate: 2_000),
+            startedAt: Date(timeIntervalSinceReferenceDate: 2000),
             titleSnapshot: "Latest title"
         )
         let item = bounded(
             segment(
                 taskID: taskID,
                 sessionID: newer.id,
-                start: Date(timeIntervalSinceReferenceDate: 3_000)
+                start: Date(timeIntervalSinceReferenceDate: 3000)
             )
         )
         let store = AnalyticsStore()
@@ -103,7 +103,7 @@ struct AnalyticsDeterminismTests {
             source: .timer,
             deviceID: "test",
             startedAt: start,
-            endedAt: start.addingTimeInterval(3_600)
+            endedAt: start.addingTimeInterval(3600)
         )
     }
 

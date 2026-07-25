@@ -7,7 +7,7 @@ import Testing
 @MainActor
 struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
     @Test
-    func catalogUsesStableUniqueIdentitiesAndOnlyRequestedRoles() throws {
+    func catalogUsesStableUniqueIdentitiesAndOnlyRequestedRoles() {
         let roles: Set<AppleHealthTaskRole> = [
             .sleep,
             .workout(.running),
@@ -53,7 +53,8 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
 
     @Test
     func firstApplyCreatesOrdinaryDefinitionsReplayIsNoOpAndNewKindIsIncremental()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let coordinator = makeCoordinator(container: context.container)
         let firstRoles: Set<AppleHealthTaskRole> = [
@@ -139,7 +140,7 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
         )
         try repository.archiveTask(taskID: definition.id)
 
-        let importedAt = Date().addingTimeInterval(3_600)
+        let importedAt = Date().addingTimeInterval(3600)
         let task = try #require(
             try editContext.fetch(FetchDescriptor<TaskNode>())
                 .latestByID()[definition.id]
@@ -230,7 +231,7 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
         )
         first.taskID = definitions[1].id
         second.taskID = definitions[0].id
-        first.updatedAt = Date().addingTimeInterval(3_600)
+        first.updatedAt = Date().addingTimeInterval(3600)
         second.updatedAt = first.updatedAt.addingTimeInterval(1)
         first.clientMutationID = UUID()
         second.clientMutationID = UUID()
@@ -388,7 +389,8 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
 
     @Test
     func tombstonesAndStagedAssignmentsBlockOrdinaryBackgroundCreation()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let coordinator = makeCoordinator(container: context.container)
         let running = AppleHealthTaskCatalog.taskDefinition(
@@ -441,7 +443,8 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
 
     @Test
     func explicitPostClearRecoveryRebuildsOnlyPreviouslyVisibleTemplates()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let coordinator = makeCoordinator(container: context.container)
         let role = AppleHealthTaskRole.sleep
@@ -524,7 +527,8 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
 
     @Test
     func clearRecoveryRebuildsOneDefaultGraphAcrossDuplicatesAndRelationships()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let coordinator = makeCoordinator(container: context.container)
         let role = AppleHealthTaskRole.workout(.running)
@@ -582,7 +586,7 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
                 includesPreferences: true
             )
         }
-        let lateImportDate = Date().addingTimeInterval(3_600)
+        let lateImportDate = Date().addingTimeInterval(3600)
         fixedAssignment.deletedAt = nil
         fixedAssignment.taskID = UUID()
         fixedAssignment.categoryID = customCategory.id
@@ -650,7 +654,8 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
 
     @Test
     func staleActiveReceiptIsConsumedWithoutRevivingItsDeletedCategory()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let coordinator = makeCoordinator(container: context.container)
         let role = AppleHealthTaskRole.workout(.running)
@@ -683,7 +688,8 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
 
     @Test
     func missingReceiptTaskWithStagedAssignmentRemainsPending()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let definition = AppleHealthTaskCatalog.taskDefinition(
             for: .workout(.walking)
@@ -752,7 +758,8 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
 
     @Test
     func facadeAndCoordinatorCannotPersistHealthSamplesOrConstructModels()
-        throws {
+        throws
+    {
         let facade = try sourceText(
             "timetracker/Stores/Facade/TimeTrackerStore+AppleHealthTaskCatalog.swift"
         )
@@ -807,7 +814,8 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
         _ model: Model,
         at date: Date
     ) where Model: SoftDeletablePersistentUUIDModel &
-        ClientMutationTrackedModel {
+        ClientMutationTrackedModel
+    {
         model.deletedAt = date
         model.updatedAt = date
         model.deviceID = "clear-test"

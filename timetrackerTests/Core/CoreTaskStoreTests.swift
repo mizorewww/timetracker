@@ -106,7 +106,7 @@ struct CoreTaskStoreTests {
                 deletedRoot,
                 deletedDescendant,
                 completedRoot,
-                completedChild
+                completedChild,
             ]
         )
 
@@ -133,7 +133,7 @@ struct CoreTaskStoreTests {
                 deletedRoot,
                 deletedDescendant,
                 completedRoot,
-                completedChild
+                completedChild,
             ]
         )
         #expect(Set(candidates.map(\.id)) == Set([availableRoot.id, completedRoot.id]))
@@ -515,26 +515,37 @@ private final class TaskStoreTestRepository: TaskRepository {
         ids.compactMap { tasksByID[$0] }
     }
 
-    func categories() throws -> [TaskCategory] { [] }
-    func categoryAssignments() throws -> [TaskCategoryAssignment] { [] }
-    func category(id: UUID) throws -> TaskCategory? { nil }
-    func categoryID(forRootTaskID taskID: UUID) throws -> UUID? { nil }
+    func categories() throws -> [TaskCategory] {
+        []
+    }
+
+    func categoryAssignments() throws -> [TaskCategoryAssignment] {
+        []
+    }
+
+    func category(id _: UUID) throws -> TaskCategory? {
+        nil
+    }
+
+    func categoryID(forRootTaskID _: UUID) throws -> UUID? {
+        nil
+    }
 
     func createCategory(title: String, colorHex: String?, iconName: String?, includesInForecast: Bool) throws -> TaskCategory {
         TaskCategory(title: title, deviceID: "test", colorHex: colorHex, iconName: iconName, includesInForecast: includesInForecast)
     }
 
-    func updateCategory(categoryID: UUID, title: String, colorHex: String?, iconName: String?, includesInForecast: Bool) throws {}
-    func softDeleteCategory(categoryID: UUID) throws {}
+    func updateCategory(categoryID _: UUID, title _: String, colorHex _: String?, iconName _: String?, includesInForecast _: Bool) throws {}
+    func softDeleteCategory(categoryID _: UUID) throws {}
 
-    func createTask(title: String, parentID: UUID?, categoryID: UUID?, colorHex: String?, iconName: String?) throws -> TaskNode {
+    func createTask(title: String, parentID: UUID?, categoryID _: UUID?, colorHex: String?, iconName: String?) throws -> TaskNode {
         let task = TaskNode(title: title, parentID: parentID, deviceID: "test", colorHex: colorHex, iconName: iconName)
         tasksByID[task.id] = task
         return task
     }
 
-    func updateTask(taskID: UUID, title: String, parentID: UUID?, categoryID: UUID?, colorHex: String?, iconName: String?, notes: String?, estimatedSeconds: Int?, dueAt: Date?) throws {}
-    func moveTask(taskID: UUID, newParentID: UUID?, sortOrder: Double) throws {}
-    func archiveTask(taskID: UUID) throws {}
-    func unarchiveTask(taskID: UUID) throws {}
+    func updateTask(taskID _: UUID, title _: String, parentID _: UUID?, categoryID _: UUID?, colorHex _: String?, iconName _: String?, notes _: String?, estimatedSeconds _: Int?, dueAt _: Date?) throws {}
+    func moveTask(taskID _: UUID, newParentID _: UUID?, sortOrder _: Double) throws {}
+    func archiveTask(taskID _: UUID) throws {}
+    func unarchiveTask(taskID _: UUID) throws {}
 }

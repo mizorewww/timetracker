@@ -8,7 +8,8 @@ import Testing
 struct TaskRecurrenceWorkEligibilityTests {
     @Test
     func templateRemainsAParentButOnlyOccurrenceAcceptsDirectWork()
-        throws {
+        throws
+    {
         let fixture = try makeFixture()
         let fresh = ModelContext(fixture.container)
         let repository = SwiftDataTaskRepository(
@@ -20,11 +21,11 @@ struct TaskRecurrenceWorkEligibilityTests {
         let service = TaskTrackingAvailabilityService()
 
         let hierarchyEligibleIDs = service.trackableTaskIDs(tasks: tasks)
-        let directWorkIDs = service.directWorkTaskIDs(
+        let directWorkIDs = try service.directWorkTaskIDs(
             tasks: tasks,
             recurrenceRules: rules,
             recurrenceOccurrences:
-                try repository.taskRecurrenceOccurrences()
+            repository.taskRecurrenceOccurrences()
         )
 
         #expect(hierarchyEligibleIDs.contains(fixture.templateTaskID))
@@ -76,7 +77,8 @@ struct TaskRecurrenceWorkEligibilityTests {
 
     @Test
     func timerPomodoroAndManualTimeRejectTemplateBeforeMutating()
-        throws {
+        throws
+    {
         let fixture = try makeFixture()
         let timer = StoreScopedTimerCommandCoordinator(
             container: fixture.container,
@@ -96,7 +98,7 @@ struct TaskRecurrenceWorkEligibilityTests {
                 fixture.generatedTaskID
         )
         _ = try timer.stop(
-            segmentID: try #require(
+            segmentID: #require(
                 timerOutcome.subjectSegment?.segmentID
             )
         )
@@ -110,7 +112,7 @@ struct TaskRecurrenceWorkEligibilityTests {
         #expect(throws: SystemActionCommandError.taskNotFound) {
             _ = try pomodoro.start(
                 taskID: fixture.templateTaskID,
-                focusSeconds: 1_500,
+                focusSeconds: 1500,
                 breakSeconds: 300,
                 longBreakSeconds: nil,
                 targetRounds: 2
@@ -118,7 +120,7 @@ struct TaskRecurrenceWorkEligibilityTests {
         }
         let focus = try pomodoro.start(
             taskID: fixture.generatedTaskID,
-            focusSeconds: 1_500,
+            focusSeconds: 1500,
             breakSeconds: 300,
             longBreakSeconds: nil,
             targetRounds: 2
@@ -152,7 +154,8 @@ struct TaskRecurrenceWorkEligibilityTests {
 
     @Test
     func facadeAndSharedPickerKeepTemplateAsExpandableContainer()
-        throws {
+        throws
+    {
         let fixture = try makeFixture()
         let store = makeTestStore()
         store.configureIfNeeded(
@@ -274,10 +277,10 @@ private extension TaskRecurrenceWorkEligibilityTests {
             timeZoneIdentifier: "Asia/Singapore",
             now: now
         )
-        return Fixture(
+        return try Fixture(
             container: context.container,
             templateTaskID: template.id,
-            generatedTaskID: try #require(
+            generatedTaskID: #require(
                 outcome.materializations.first?.generatedTaskID
             ),
             now: now

@@ -15,7 +15,9 @@ nonisolated enum SyncConflictSnapshotStorageSlot: String, Codable, CaseIterable,
         }
     }
 
-    var corruptFilePrefix: String { "\(fileStem).corrupt-" }
+    var corruptFilePrefix: String {
+        "\(fileStem).corrupt-"
+    }
 }
 
 nonisolated struct SyncConflictSnapshotReference: Codable, Equatable, Hashable {
@@ -30,7 +32,7 @@ nonisolated struct SyncConflictSnapshotReference: Codable, Equatable, Hashable {
         byteCount: Int,
         sha256: String
     ) {
-        precondition((0...1).contains(generation))
+        precondition((0 ... 1).contains(generation))
         self.slot = slot
         self.generation = generation
         self.byteCount = byteCount
@@ -50,15 +52,16 @@ nonisolated struct SyncConflictSnapshotReference: Codable, Equatable, Hashable {
         let generation = try values.decode(Int.self, forKey: .generation)
         let byteCount = try values.decode(Int.self, forKey: .byteCount)
         let sha256 = try values.decode(String.self, forKey: .sha256)
-        guard (0...1).contains(generation),
+        guard (0 ... 1).contains(generation),
               byteCount >= 0,
               sha256.utf8.count == 64,
               sha256.unicodeScalars.allSatisfy({ scalar in
                   switch scalar.value {
-                  case 48...57, 97...102: true
+                  case 48 ... 57, 97 ... 102: true
                   default: false
                   }
-              }) else {
+              })
+        else {
             throw DecodingError.dataCorruptedError(
                 forKey: .generation,
                 in: values,

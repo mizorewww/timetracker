@@ -1,36 +1,36 @@
 import Foundation
 
 enum WatchConnectivityPayloadCodec {
-    nonisolated private static let kindKey = "kind"
-    nonisolated private static let commandKind = "timerCommand"
-    nonisolated private static let commandResultKind = "commandResult"
-    nonisolated private static let stateKind = "stateSnapshot"
+    private nonisolated static let kindKey = "kind"
+    private nonisolated static let commandKind = "timerCommand"
+    private nonisolated static let commandResultKind = "commandResult"
+    private nonisolated static let stateKind = "stateSnapshot"
 
-    nonisolated private static let idKey = "id"
-    nonisolated private static let typeKey = "type"
-    nonisolated private static let taskIDKey = "taskID"
-    nonisolated private static let segmentIDKey = "segmentID"
-    nonisolated private static let issuedAtKey = "issuedAt"
-    nonisolated private static let deviceIDKey = "deviceID"
-    nonisolated private static let commandIDKey = "commandID"
-    nonisolated private static let statusKey = "status"
-    nonisolated private static let completedAtKey = "completedAt"
-    nonisolated private static let relatedIDKey = "relatedID"
-    nonisolated private static let failureCodeKey = "failureCode"
-    nonisolated private static let receivedKey = "received"
+    private nonisolated static let idKey = "id"
+    private nonisolated static let typeKey = "type"
+    private nonisolated static let taskIDKey = "taskID"
+    private nonisolated static let segmentIDKey = "segmentID"
+    private nonisolated static let issuedAtKey = "issuedAt"
+    private nonisolated static let deviceIDKey = "deviceID"
+    private nonisolated static let commandIDKey = "commandID"
+    private nonisolated static let statusKey = "status"
+    private nonisolated static let completedAtKey = "completedAt"
+    private nonisolated static let relatedIDKey = "relatedID"
+    private nonisolated static let failureCodeKey = "failureCode"
+    private nonisolated static let receivedKey = "received"
 
-    nonisolated private static let generatedAtKey = "generatedAt"
-    nonisolated private static let todayGrossSecondsKey = "todayGrossSeconds"
-    nonisolated private static let todayWallSecondsKey = "todayWallSeconds"
-    nonisolated private static let activeTimersKey = "activeTimers"
-    nonisolated private static let recentTasksKey = "recentTasks"
-    nonisolated private static let titleKey = "title"
-    nonisolated private static let pathKey = "path"
-    nonisolated private static let startedAtKey = "startedAt"
-    nonisolated private static let colorHexKey = "colorHex"
-    nonisolated private static let iconNameKey = "iconName"
-    nonisolated private static let quickStartRankKey = "quickStartRank"
-    nonisolated private static let allTasksRankKey = "allTasksRank"
+    private nonisolated static let generatedAtKey = "generatedAt"
+    private nonisolated static let todayGrossSecondsKey = "todayGrossSeconds"
+    private nonisolated static let todayWallSecondsKey = "todayWallSeconds"
+    private nonisolated static let activeTimersKey = "activeTimers"
+    private nonisolated static let recentTasksKey = "recentTasks"
+    private nonisolated static let titleKey = "title"
+    private nonisolated static let pathKey = "path"
+    private nonisolated static let startedAtKey = "startedAt"
+    private nonisolated static let colorHexKey = "colorHex"
+    private nonisolated static let iconNameKey = "iconName"
+    private nonisolated static let quickStartRankKey = "quickStartRank"
+    private nonisolated static let allTasksRankKey = "allTasksRank"
 
     nonisolated static func encode(command: WatchTimerCommand) -> [String: Any] {
         var payload: [String: Any] = [
@@ -38,7 +38,7 @@ enum WatchConnectivityPayloadCodec {
             idKey: command.id.uuidString,
             typeKey: command.type.rawValue,
             issuedAtKey: command.issuedAt.timeIntervalSinceReferenceDate,
-            deviceIDKey: command.deviceID
+            deviceIDKey: command.deviceID,
         ]
         payload[taskIDKey] = command.taskID?.uuidString
         payload[segmentIDKey] = command.segmentID?.uuidString
@@ -52,7 +52,8 @@ enum WatchConnectivityPayloadCodec {
               let typeString = payload[typeKey] as? String,
               let type = WatchTimerCommandType(rawValue: typeString),
               let issuedAtInterval = payload[issuedAtKey] as? TimeInterval,
-              let deviceID = payload[deviceIDKey] as? String else {
+              let deviceID = payload[deviceIDKey] as? String
+        else {
             return nil
         }
 
@@ -75,7 +76,7 @@ enum WatchConnectivityPayloadCodec {
             completedAtKey: result.completedAt.timeIntervalSinceReferenceDate,
             // Preserve the legacy receipt bit for older watch builds while newer
             // builds use the typed terminal status above.
-            receivedKey: true
+            receivedKey: true,
         ]
         payload[relatedIDKey] = result.relatedID?.uuidString
         payload[failureCodeKey] = result.failureCode
@@ -87,7 +88,8 @@ enum WatchConnectivityPayloadCodec {
               let commandID = uuid(from: payload[commandIDKey]),
               let statusValue = payload[statusKey] as? String,
               let status = WatchCommandResultStatus(rawValue: statusValue),
-              let completedAtInterval = payload[completedAtKey] as? TimeInterval else {
+              let completedAtInterval = payload[completedAtKey] as? TimeInterval
+        else {
             return nil
         }
 
@@ -108,7 +110,7 @@ enum WatchConnectivityPayloadCodec {
             todayGrossSecondsKey: state.todayGrossSeconds,
             todayWallSecondsKey: state.todayWallSeconds,
             activeTimersKey: state.activeTimers.map(encode(activeTimer:)),
-            recentTasksKey: state.recentTasks.map(encode(recentTask:))
+            recentTasksKey: state.recentTasks.map(encode(recentTask:)),
         ]
     }
 
@@ -120,7 +122,8 @@ enum WatchConnectivityPayloadCodec {
               let activePayloads = payload[activeTimersKey] as? [[String: Any]],
               let recentPayloads = payload[recentTasksKey] as? [[String: Any]],
               activePayloads.count <= WatchTransportLimits.maximumActiveTimers,
-              recentPayloads.count <= WatchTransportLimits.maximumRecentTasks else {
+              recentPayloads.count <= WatchTransportLimits.maximumRecentTasks
+        else {
             return nil
         }
 
@@ -140,24 +143,24 @@ enum WatchConnectivityPayloadCodec {
         return snapshot.isValid(at: Date()) ? snapshot : nil
     }
 
-    nonisolated private static func encode(activeTimer: WatchActiveTimerSnapshot) -> [String: Any] {
+    private nonisolated static func encode(activeTimer: WatchActiveTimerSnapshot) -> [String: Any] {
         var payload: [String: Any] = [
             idKey: activeTimer.id.uuidString,
             taskIDKey: activeTimer.taskID.uuidString,
             titleKey: activeTimer.title,
             pathKey: activeTimer.path,
-            startedAtKey: activeTimer.startedAt.timeIntervalSinceReferenceDate
+            startedAtKey: activeTimer.startedAt.timeIntervalSinceReferenceDate,
         ]
         payload[colorHexKey] = activeTimer.colorHex
         payload[iconNameKey] = activeTimer.iconName
         return payload
     }
 
-    nonisolated private static func encode(recentTask: WatchRecentTaskSnapshot) -> [String: Any] {
+    private nonisolated static func encode(recentTask: WatchRecentTaskSnapshot) -> [String: Any] {
         var payload: [String: Any] = [
             taskIDKey: recentTask.taskID.uuidString,
             titleKey: recentTask.title,
-            pathKey: recentTask.path
+            pathKey: recentTask.path,
         ]
         payload[colorHexKey] = recentTask.colorHex
         payload[iconNameKey] = recentTask.iconName
@@ -166,12 +169,13 @@ enum WatchConnectivityPayloadCodec {
         return payload
     }
 
-    nonisolated private static func decodeActiveTimer(from payload: [String: Any]) -> WatchActiveTimerSnapshot? {
+    private nonisolated static func decodeActiveTimer(from payload: [String: Any]) -> WatchActiveTimerSnapshot? {
         guard let id = uuid(from: payload[idKey]),
               let taskID = uuid(from: payload[taskIDKey]),
               let title = payload[titleKey] as? String,
               let path = payload[pathKey] as? String,
-              let startedAtInterval = payload[startedAtKey] as? TimeInterval else {
+              let startedAtInterval = payload[startedAtKey] as? TimeInterval
+        else {
             return nil
         }
 
@@ -186,10 +190,11 @@ enum WatchConnectivityPayloadCodec {
         )
     }
 
-    nonisolated private static func decodeRecentTask(from payload: [String: Any]) -> WatchRecentTaskSnapshot? {
+    private nonisolated static func decodeRecentTask(from payload: [String: Any]) -> WatchRecentTaskSnapshot? {
         guard let taskID = uuid(from: payload[taskIDKey]),
               let title = payload[titleKey] as? String,
-              let path = payload[pathKey] as? String else {
+              let path = payload[pathKey] as? String
+        else {
             return nil
         }
 
@@ -204,7 +209,7 @@ enum WatchConnectivityPayloadCodec {
         )
     }
 
-    nonisolated private static func uuid(from value: Any?) -> UUID? {
+    private nonisolated static func uuid(from value: Any?) -> UUID? {
         guard let string = value as? String else { return nil }
         return UUID(uuidString: string)
     }

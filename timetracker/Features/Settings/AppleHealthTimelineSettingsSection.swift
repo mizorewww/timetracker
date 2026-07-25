@@ -35,7 +35,8 @@ struct AppleHealthTimelineSettingsSection: View {
             }
 
             if store.isAppleHealthTimelineEnabled,
-               store.appleHealthTimelineState.isBusy == false {
+               store.appleHealthTimelineState.isBusy == false
+            {
                 Button {
                     Task {
                         await store.refreshAppleHealthTimeline()

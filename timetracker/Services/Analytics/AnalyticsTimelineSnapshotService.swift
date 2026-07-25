@@ -12,7 +12,7 @@ struct AnalyticsTimelineSnapshotService {
         minimumLaneGap: TimeInterval = 60
     ) -> AnalyticsTimelineSnapshot {
         let dayInterval = calendar.dateInterval(of: .day, for: date)
-            ?? DateInterval(start: calendar.startOfDay(for: date), duration: 86_400)
+            ?? DateInterval(start: calendar.startOfDay(for: date), duration: 86400)
         let seeds = presentationSeeds(
             segments: segments,
             tasks: tasks,
@@ -45,7 +45,8 @@ struct AnalyticsTimelineSnapshotService {
                       endedAt: segment.endedAt,
                       now: now,
                       clippedTo: visibleInterval
-                  ) else {
+                  )
+            else {
                 return nil
             }
             let task = taskByID[segment.taskID]
@@ -73,7 +74,8 @@ struct AnalyticsTimelineSnapshotService {
     ) -> AnalyticsTimelineSnapshot {
         let visibleSeeds = seeds.compactMap { seed -> TimelinePresentationSeed? in
             guard let interval = seed.interval.intersection(with: visibleInterval),
-                  interval.duration > 0 else {
+                  interval.duration > 0
+            else {
                 return nil
             }
             let durationIntervals = Self.mergedIntervals(
@@ -143,7 +145,7 @@ struct AnalyticsTimelineSnapshotService {
         )
     }
 
-    nonisolated private static func seedPrecedes(
+    private nonisolated static func seedPrecedes(
         _ lhs: TimelinePresentationSeed,
         _ rhs: TimelinePresentationSeed
     ) -> Bool {
@@ -156,13 +158,15 @@ struct AnalyticsTimelineSnapshotService {
         return lhs.id.stableSortKey < rhs.id.stableSortKey
     }
 
-    nonisolated private static func mergedIntervals(
+    private nonisolated static func mergedIntervals(
         _ intervals: [DateInterval]
     ) -> [DateInterval] {
         let sorted = intervals
             .filter { $0.duration > 0 }
             .sorted {
-                if $0.start != $1.start { return $0.start < $1.start }
+                if $0.start != $1.start {
+                    return $0.start < $1.start
+                }
                 return $0.end < $1.end
             }
         guard var current = sorted.first else { return [] }

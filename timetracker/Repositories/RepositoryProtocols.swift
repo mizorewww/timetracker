@@ -31,12 +31,25 @@ protocol TaskRepository {
 
 extension TaskRepository {
     @discardableResult
-    func repairInvalidHierarchy() throws -> Set<UUID> { [] }
+    func repairInvalidHierarchy() throws -> Set<UUID> {
+        []
+    }
 
-    func taskRecurrenceRules() throws -> [TaskRecurrenceRule] { [] }
-    func taskRecurrenceOccurrences() throws -> [TaskRecurrenceOccurrence] { [] }
-    func taskQuantityGoals() throws -> [TaskQuantityGoal] { [] }
-    func taskQuantityEntries() throws -> [TaskQuantityEntry] { [] }
+    func taskRecurrenceRules() throws -> [TaskRecurrenceRule] {
+        []
+    }
+
+    func taskRecurrenceOccurrences() throws -> [TaskRecurrenceOccurrence] {
+        []
+    }
+
+    func taskQuantityGoals() throws -> [TaskQuantityGoal] {
+        []
+    }
+
+    func taskQuantityEntries() throws -> [TaskQuantityEntry] {
+        []
+    }
 
     func taskRecurrenceRules(
         taskIDs: Set<UUID>

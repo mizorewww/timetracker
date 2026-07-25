@@ -23,11 +23,10 @@ extension TimeTrackerStore {
         client: CloudAccountStatusClient? = nil,
         checkedAt: Date = Date()
     ) async -> CloudAccountCheckOutcome {
-        let resolvedClient: CloudAccountStatusClient
-        if let client {
-            resolvedClient = client
+        let resolvedClient: CloudAccountStatusClient = if let client {
+            client
         } else {
-            resolvedClient = .live(containerIdentifier: AppCloudSync.containerIdentifier)
+            .live(containerIdentifier: AppCloudSync.containerIdentifier)
         }
         let requestID = UUID()
         cloudAccountCheckRequestID = requestID
@@ -81,7 +80,8 @@ extension TimeTrackerStore {
         }
 
         if let detailTaskID = tasksRoute?.taskID,
-           shouldRetainTaskDetailRoute(detailTaskID) == false {
+           shouldRetainTaskDetailRoute(detailTaskID) == false
+        {
             tasksRoute = nil
         }
     }

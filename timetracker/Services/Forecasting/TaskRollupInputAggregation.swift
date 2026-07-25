@@ -162,7 +162,7 @@ struct TaskRollupInputAggregation {
             value: -(TaskRollupHistoricalPolicy.paceDayCount - 1),
             to: today
         ) ?? today.addingTimeInterval(
-            -Double(TaskRollupHistoricalPolicy.paceDayCount - 1) * 86_400
+            -Double(TaskRollupHistoricalPolicy.paceDayCount - 1) * 86400
         )
         let intervals = segments.compactMap { segment -> DateInterval? in
             TrackedTimePolicy.interval(

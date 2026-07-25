@@ -1,19 +1,19 @@
 import Foundation
 
 nonisolated enum WidgetSnapshotLimits {
-    static let maximumEncodedBytes = 256 * 1_024
+    static let maximumEncodedBytes = 256 * 1024
     static let maximumFutureClockSkew: TimeInterval = 5 * 60
     static let maximumActiveTimerAge: TimeInterval = 10 * 366 * 24 * 60 * 60
     static let maximumSummarySeconds = 10 * 366 * 24 * 60 * 60
     static let maximumActiveTimers = 64
     static let maximumRecentTasks = 64
-    static let maximumTitleBytes = 4 * 1_024
-    static let maximumPathBytes = 16 * 1_024
+    static let maximumTitleBytes = 4 * 1024
+    static let maximumPathBytes = 16 * 1024
     static let maximumStyleValueBytes = 256
     static let maximumProjectedTitleBytes = 512
-    static let maximumProjectedPathBytes = 1_024
+    static let maximumProjectedPathBytes = 1024
     static let maximumProjectedStyleValueBytes = 128
-    static let maximumSnapshotTextBytes = 128 * 1_024
+    static let maximumSnapshotTextBytes = 128 * 1024
 
     static func isFinite(_ date: Date) -> Bool {
         date.timeIntervalSinceReferenceDate.isFinite
@@ -90,7 +90,8 @@ nonisolated struct WidgetSnapshot: Codable, Equatable, Sendable {
         staleAfter threshold: TimeInterval = WidgetSnapshot.staleAfter
     ) -> WidgetSnapshotFreshness {
         guard WidgetSnapshotLimits.isFinite(now),
-              WidgetSnapshotLimits.isFinite(generatedAt) else {
+              WidgetSnapshotLimits.isFinite(generatedAt)
+        else {
             return .clockAdjusted
         }
         if generatedAt.timeIntervalSince(now) > WidgetSnapshotLimits.maximumFutureClockSkew {
@@ -116,15 +117,16 @@ nonisolated struct WidgetSnapshot: Codable, Equatable, Sendable {
             )
         }
         guard WidgetSnapshotLimits.isFinite(generatedAt),
-              (0...WidgetSnapshotLimits.maximumSummarySeconds).contains(todayGrossSeconds),
-              (0...WidgetSnapshotLimits.maximumSummarySeconds).contains(todayWallSeconds),
+              (0 ... WidgetSnapshotLimits.maximumSummarySeconds).contains(todayGrossSeconds),
+              (0 ... WidgetSnapshotLimits.maximumSummarySeconds).contains(todayWallSeconds),
               activeTimers.count <= WidgetSnapshotLimits.maximumActiveTimers,
               recentTasks.count <= WidgetSnapshotLimits.maximumRecentTasks,
               textByteCount <= WidgetSnapshotLimits.maximumSnapshotTextBytes,
               activeTimers.allSatisfy({ $0.isStructurallyValid(relativeTo: generatedAt) }),
               recentTasks.allSatisfy(\.isStructurallyValid),
               Set(activeTimers.map(\.id)).count == activeTimers.count,
-              Set(recentTasks.map(\.taskID)).count == recentTasks.count else {
+              Set(recentTasks.map(\.taskID)).count == recentTasks.count
+        else {
             return false
         }
         return true
@@ -171,15 +173,16 @@ nonisolated struct WidgetTimerSnapshot: Codable, Equatable, Identifiable, Sendab
         guard WidgetSnapshotLimits.isFinite(startedAt),
               WidgetSnapshotLimits.isFinite(generatedAt),
               WidgetSnapshotLimits.isBounded(
-                title,
-                maximumUTF8Bytes: WidgetSnapshotLimits.maximumTitleBytes
+                  title,
+                  maximumUTF8Bytes: WidgetSnapshotLimits.maximumTitleBytes
               ),
               WidgetSnapshotLimits.isBounded(
-                path,
-                maximumUTF8Bytes: WidgetSnapshotLimits.maximumPathBytes
+                  path,
+                  maximumUTF8Bytes: WidgetSnapshotLimits.maximumPathBytes
               ),
               WidgetSnapshotLimits.isValidStyleValue(colorHex),
-              WidgetSnapshotLimits.isValidStyleValue(iconName) else {
+              WidgetSnapshotLimits.isValidStyleValue(iconName)
+        else {
             return false
         }
         let age = generatedAt.timeIntervalSince(startedAt)
@@ -196,7 +199,9 @@ nonisolated struct WidgetRecentTaskSnapshot: Codable, Equatable, Identifiable, S
     var colorHex: String?
     var iconName: String?
 
-    var id: UUID { taskID }
+    var id: UUID {
+        taskID
+    }
 
     nonisolated var isStructurallyValid: Bool {
         WidgetSnapshotLimits.isBounded(

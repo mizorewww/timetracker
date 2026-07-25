@@ -91,7 +91,7 @@ extension LedgerStore {
             .map(\.id)
     }
 
-    nonisolated private static func isMoreRecent(
+    private nonisolated static func isMoreRecent(
         _ lhs: LedgerSegmentSnapshot,
         _ rhs: LedgerSegmentSnapshot
     ) -> Bool {
@@ -101,7 +101,7 @@ extension LedgerStore {
         return lhs.id.uuidString < rhs.id.uuidString
     }
 
-    nonisolated private static func isMoreRecent(_ lhs: TimeSegment, _ rhs: TimeSegment) -> Bool {
+    private nonisolated static func isMoreRecent(_ lhs: TimeSegment, _ rhs: TimeSegment) -> Bool {
         if lhs.startedAt != rhs.startedAt {
             return lhs.startedAt > rhs.startedAt
         }

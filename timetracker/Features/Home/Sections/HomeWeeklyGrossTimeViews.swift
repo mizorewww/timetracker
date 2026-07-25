@@ -86,11 +86,11 @@ struct HomeWeeklyGrossTimeSection: View {
                             .frame(height: 210)
                     }
                 }
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .appCard(padding: 0)
-                    .accessibilityElement(children: .contain)
-                    .accessibilityIdentifier("home.weeklyGross.card")
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .appCard(padding: 0)
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("home.weeklyGross.card")
             }
         case .listSection:
             Section {
@@ -108,9 +108,9 @@ struct HomeWeeklyGrossTimeSection: View {
                             .frame(height: 170)
                     }
                 }
-                    .homeVisualizationListCard(
-                        accessibilityIdentifier: "home.weeklyGross.card"
-                    )
+                .homeVisualizationListCard(
+                    accessibilityIdentifier: "home.weeklyGross.card"
+                )
             } header: {
                 HomeWeeklyGrossTimeHeader(
                     container: .listSection,
@@ -120,7 +120,7 @@ struct HomeWeeklyGrossTimeSection: View {
                             : nil
                     }
                 )
-                    .textCase(nil)
+                .textCase(nil)
             }
         }
     }

@@ -27,10 +27,10 @@ enum ForecastConfidence: String, CaseIterable {
 
     var displayName: String {
         switch self {
-        case .high: return AppStrings.localized("forecast.confidence.high")
-        case .medium: return AppStrings.localized("forecast.confidence.medium")
-        case .low: return AppStrings.localized("forecast.confidence.low")
-        case .none: return AppStrings.localized("forecast.confidence.none")
+        case .high: AppStrings.localized("forecast.confidence.high")
+        case .medium: AppStrings.localized("forecast.confidence.medium")
+        case .low: AppStrings.localized("forecast.confidence.low")
+        case .none: AppStrings.localized("forecast.confidence.none")
         }
     }
 }
@@ -47,19 +47,19 @@ enum ForecastState: String, CaseIterable {
     var displayName: String {
         switch self {
         case .ready:
-            return AppStrings.localized("forecast.state.ready")
+            AppStrings.localized("forecast.state.ready")
         case .needsChecklist:
-            return AppStrings.localized("forecast.state.needsChecklist")
+            AppStrings.localized("forecast.state.needsChecklist")
         case .needsCompletedItem:
-            return AppStrings.localized("forecast.state.needsCompletedItem")
+            AppStrings.localized("forecast.state.needsCompletedItem")
         case .needsTrackedTime:
-            return AppStrings.localized("forecast.state.needsTrackedTime")
+            AppStrings.localized("forecast.state.needsTrackedTime")
         case .completed:
-            return AppStrings.localized("forecast.state.completed")
+            AppStrings.localized("forecast.state.completed")
         case .aggregate:
-            return AppStrings.localized("forecast.state.aggregate")
+            AppStrings.localized("forecast.state.aggregate")
         case .disabled:
-            return AppStrings.localized("forecast.state.disabled")
+            AppStrings.localized("forecast.state.disabled")
         }
     }
 }
@@ -82,7 +82,9 @@ struct TaskRollup: Identifiable, Equatable {
     let forecastSourceTaskIDs: [UUID]
     let forecastSourceLabel: String?
 
-    var id: UUID { taskID }
+    var id: UUID {
+        taskID
+    }
 
     var completionFraction: Double {
         if checklistProgress.totalCount > 0 {
@@ -97,9 +99,9 @@ struct TaskRollup: Identifiable, Equatable {
     var isDisplayableForecast: Bool {
         switch forecastState {
         case .ready, .aggregate:
-            return estimatedTotalSeconds != nil && remainingSeconds != nil && confidence != .none
+            estimatedTotalSeconds != nil && remainingSeconds != nil && confidence != .none
         case .needsChecklist, .needsCompletedItem, .needsTrackedTime, .completed, .disabled:
-            return false
+            false
         }
     }
 

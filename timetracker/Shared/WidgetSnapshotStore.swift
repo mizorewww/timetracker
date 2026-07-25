@@ -30,7 +30,8 @@ nonisolated struct WidgetSnapshotTimelinePolicy: Sendable {
             let staleDate = snapshot.generatedAt.addingTimeInterval(WidgetSnapshot.staleAfter)
             let minimumReloadDate = now.addingTimeInterval(Self.minimumRetryDelay)
             guard WidgetSnapshotLimits.isFinite(staleDate),
-                  WidgetSnapshotLimits.isFinite(minimumReloadDate) else {
+                  WidgetSnapshotLimits.isFinite(minimumReloadDate)
+            else {
                 return .never
             }
             return .after(max(staleDate, minimumReloadDate))
@@ -44,7 +45,8 @@ nonisolated struct WidgetSnapshotTimelinePolicy: Sendable {
                 -WidgetSnapshotLimits.maximumFutureClockSkew
             )
             guard WidgetSnapshotLimits.isFinite(earliestRetry),
-                  WidgetSnapshotLimits.isFinite(clockRecoveryDate) else {
+                  WidgetSnapshotLimits.isFinite(clockRecoveryDate)
+            else {
                 return .never
             }
             // Schedule once at the earliest time the snapshot can be current.
@@ -62,8 +64,8 @@ struct SharedWidgetSnapshotStore {
     static let widgetKind = "TimeTrackerActiveTimerWidget"
 
     var defaults: UserDefaults?
-    var encoder: JSONEncoder = JSONEncoder()
-    var decoder: JSONDecoder = JSONDecoder()
+    var encoder: JSONEncoder = .init()
+    var decoder: JSONDecoder = .init()
 
     init(defaults: UserDefaults? = UserDefaults(suiteName: Self.suiteName)) {
         self.defaults = defaults
@@ -98,7 +100,8 @@ struct SharedWidgetSnapshotStore {
         guard let data = defaults.data(forKey: Self.snapshotKey),
               data.count <= WidgetSnapshotLimits.maximumEncodedBytes,
               let snapshot = try? decoder.decode(WidgetSnapshot.self, from: data),
-              snapshot.isStructurallyValid else {
+              snapshot.isStructurallyValid
+        else {
             return .corrupted
         }
         return .snapshot(snapshot, freshness: snapshot.freshness(at: now))

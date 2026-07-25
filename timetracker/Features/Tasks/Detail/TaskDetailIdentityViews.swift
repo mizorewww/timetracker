@@ -73,17 +73,17 @@ struct TaskDetailIdentityRow: View {
                 AppStrings.localized("editor.task.name"),
                 text: $draft.title
             )
-                .font(.headline)
-                .textFieldStyle(.roundedBorder)
-                .focused(focusedTextField, equals: .title)
-                .contentShape(Rectangle())
-                .foregroundStyle(.primary)
-                .submitLabel(.done)
-                .onSubmit {
-                    focusedTextField.wrappedValue = nil
-                }
-                .accessibilityHint(validation.titleError?.localizedDescription ?? "")
-                .accessibilityIdentifier("task.editor.title.field")
+            .font(.headline)
+            .textFieldStyle(.roundedBorder)
+            .focused(focusedTextField, equals: .title)
+            .contentShape(Rectangle())
+            .foregroundStyle(.primary)
+            .submitLabel(.done)
+            .onSubmit {
+                focusedTextField.wrappedValue = nil
+            }
+            .accessibilityHint(validation.titleError?.localizedDescription ?? "")
+            .accessibilityIdentifier("task.editor.title.field")
 
             Text(parentPath)
                 .font(.subheadline)
@@ -104,7 +104,8 @@ struct TaskDetailIdentityRow: View {
 
     private var parentPath: String {
         guard let parentID = draft.parentID,
-              let parent = store.task(for: parentID) else {
+              let parent = store.task(for: parentID)
+        else {
             return AppStrings.localized("task.root")
         }
         return store.taskIdentityPresentation(for: parent).fullPath

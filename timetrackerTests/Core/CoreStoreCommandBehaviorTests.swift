@@ -129,7 +129,7 @@ struct CoreStoreCommandBehaviorTests {
     @Test @MainActor
     func facadeCommandsExposeTypedUserVisibleErrors() {
         let store = makeTestStore()
-        let now = Date(timeIntervalSince1970: 1_000)
+        let now = Date(timeIntervalSince1970: 1000)
 
         var missingTaskDraft = ManualTimeDraft(taskID: nil, tasks: [])
         missingTaskDraft.startedAt = now
@@ -198,7 +198,6 @@ struct CoreStoreCommandBehaviorTests {
         #expect(!didCommit)
         #expect(try context.fetch(FetchDescriptor<InboxItem>()).isEmpty)
     }
-
 }
 
 private struct ForcedMutationFailure: Error {}

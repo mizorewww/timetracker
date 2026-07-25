@@ -7,7 +7,7 @@ import Testing
 struct CorePerformanceBudgetTests {
     @Test @MainActor
     func taskTreeFlatteningStaysWithinPerformanceBudget() {
-        let roots = (0..<500).map { index in
+        let roots = (0 ..< 500).map { index in
             TaskNode(title: "Root \(index)", parentID: nil, deviceID: "test")
         }
         let children = roots.enumerated().map { index, root in
@@ -24,7 +24,7 @@ struct CorePerformanceBudgetTests {
         )
         let elapsed = CFAbsoluteTimeGetCurrent() - start
 
-        #expect(rows.count == 1_000)
+        #expect(rows.count == 1000)
         #expect(elapsed < 2.0)
     }
 
@@ -34,15 +34,15 @@ struct CorePerformanceBudgetTests {
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         let startDate = calendar.date(from: DateComponents(year: 2026, month: 4, day: 1, hour: 8)) ?? Date(timeIntervalSince1970: 1_775_000_000)
         let now = calendar.date(from: DateComponents(year: 2026, month: 4, day: 16, hour: 12)) ?? startDate.addingTimeInterval(15 * 24 * 60 * 60)
-        let tasks = (0..<40).map { index in
+        let tasks = (0 ..< 40).map { index in
             TaskNode(title: "Analytics Task \(index)", parentID: nil, deviceID: "test")
         }
-        let sessions = (0..<720).map { index in
+        let sessions = (0 ..< 720).map { index in
             TimeSession(
                 taskID: tasks[index % tasks.count].id,
                 source: .timer,
                 deviceID: "test",
-                startedAt: startDate.addingTimeInterval(Double(index * 1_800)),
+                startedAt: startDate.addingTimeInterval(Double(index * 1800)),
                 titleSnapshot: tasks[index % tasks.count].title
             )
         }
@@ -82,7 +82,7 @@ struct CorePerformanceBudgetTests {
         let monthStart = calendar.date(from: DateComponents(year: 2026, month: 4, day: 1, hour: 0)) ?? Date(timeIntervalSince1970: 1_775_000_000)
         let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart) ?? monthStart.addingTimeInterval(31 * 24 * 60 * 60)
         let taskID = UUID()
-        let sessions = (0..<20_000).map { index in
+        let sessions = (0 ..< 20000).map { index in
             TimeSession(
                 taskID: taskID,
                 source: .timer,
@@ -123,10 +123,10 @@ struct CorePerformanceBudgetTests {
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         let dayStart = calendar.date(from: DateComponents(year: 2026, month: 4, day: 12, hour: 0)) ?? Date(timeIntervalSince1970: 1_776_000_000)
         let now = dayStart.addingTimeInterval(24 * 60 * 60 - 1)
-        let tasks = (0..<80).map { index in
+        let tasks = (0 ..< 80).map { index in
             TaskNode(title: "Dense Task \(index)", parentID: nil, deviceID: "test")
         }
-        let sessions = (0..<2_000).map { index in
+        let sessions = (0 ..< 2000).map { index in
             let task = tasks[index % tasks.count]
             return TimeSession(
                 taskID: task.id,
@@ -144,7 +144,7 @@ struct CorePerformanceBudgetTests {
                 source: source,
                 deviceID: "test",
                 startedAt: session.startedAt,
-                endedAt: min(session.startedAt.addingTimeInterval(Double(1_800 + (index % 15) * 45)), now)
+                endedAt: min(session.startedAt.addingTimeInterval(Double(1800 + (index % 15) * 45)), now)
             )
         }
 
@@ -175,10 +175,10 @@ struct CorePerformanceBudgetTests {
         let dayStart = calendar.date(from: DateComponents(year: 2026, month: 4, day: 12, hour: 0))
             ?? Date(timeIntervalSince1970: 1_776_000_000)
         let now = dayStart.addingTimeInterval(24 * 60 * 60 - 1)
-        let tasks = (0..<80).map { index in
+        let tasks = (0 ..< 80).map { index in
             TaskNode(title: "Dense Task \(index)", parentID: nil, deviceID: "test")
         }
-        let sessions = (0..<2_000).map { index in
+        let sessions = (0 ..< 2000).map { index in
             let task = tasks[index % tasks.count]
             return TimeSession(
                 taskID: task.id,
@@ -196,7 +196,7 @@ struct CorePerformanceBudgetTests {
                 deviceID: "test",
                 startedAt: session.startedAt,
                 endedAt: min(
-                    session.startedAt.addingTimeInterval(Double(1_800 + (index % 15) * 45)),
+                    session.startedAt.addingTimeInterval(Double(1800 + (index % 15) * 45)),
                     now
                 )
             )
@@ -249,7 +249,7 @@ struct CorePerformanceBudgetTests {
     @Test @MainActor
     func longChecklistRollupStaysWithinPerformanceBudget() {
         let root = TaskNode(title: "Root Forecast", parentID: nil, deviceID: "test")
-        let children = (0..<300).map { index in
+        let children = (0 ..< 300).map { index in
             TaskNode(title: "Forecast Child \(index)", parentID: root.id, deviceID: "test")
         }
         let tasks = [root] + children
@@ -264,11 +264,11 @@ struct CorePerformanceBudgetTests {
                 source: .timer,
                 deviceID: "test",
                 startedAt: startDate,
-                endedAt: startDate.addingTimeInterval(Double(1_200 + (index % 6) * 120))
+                endedAt: startDate.addingTimeInterval(Double(1200 + (index % 6) * 120))
             )
         }
         let checklistItems = children.flatMap { child in
-            (0..<40).map { itemIndex in
+            (0 ..< 40).map { itemIndex in
                 ChecklistItem(
                     taskID: child.id,
                     title: "Step \(itemIndex)",
@@ -284,7 +284,7 @@ struct CorePerformanceBudgetTests {
             tasks: tasks,
             segments: segments,
             checklistItems: checklistItems,
-            now: startDate.addingTimeInterval(86_400)
+            now: startDate.addingTimeInterval(86400)
         )
         let elapsed = CFAbsoluteTimeGetCurrent() - start
 
@@ -298,7 +298,7 @@ struct CorePerformanceBudgetTests {
     func timelineLayoutWithManyRowsStaysWithinPerformanceBudget() {
         let dayStart = Date(timeIntervalSince1970: 1_800_000_000)
         let day = DateInterval(start: dayStart, duration: 24 * 60 * 60)
-        let items = (0..<5_000).map { index in
+        let items = (0 ..< 5000).map { index in
             let start = dayStart.addingTimeInterval(Double(index * 13))
             return TimelineLayoutItem(
                 id: UUID(),
@@ -319,7 +319,7 @@ struct CorePerformanceBudgetTests {
     @Test
     func horizontalTimelineProjectionWithManyRowsStaysWithinPerformanceBudget() {
         let startDate = Date(timeIntervalSince1970: 1_800_000_000)
-        let entries = (0..<5_000).map { index in
+        let entries = (0 ..< 5000).map { index in
             let startedAt = startDate.addingTimeInterval(Double(index * 13))
             let endedAt = startedAt.addingTimeInterval(30)
             let id = UUID()
@@ -363,7 +363,7 @@ struct CorePerformanceBudgetTests {
     @Test @MainActor
     func affectedRollupRefreshStaysWithinPerformanceBudget() throws {
         let parent = TaskNode(title: "Budget Parent", parentID: nil, deviceID: "test")
-        let children = (0..<500).map { index in
+        let children = (0 ..< 500).map { index in
             TaskNode(title: "Budget Child \(index)", parentID: parent.id, deviceID: "test")
         }
         let startDate = Date(timeIntervalSince1970: 1_800_000_000)
@@ -382,7 +382,7 @@ struct CorePerformanceBudgetTests {
         }
         var store = RollupStore()
         let tasks = [parent] + children
-        store.refresh(tasks: tasks, segments: segments, checklistItems: [], now: startDate.addingTimeInterval(7_200))
+        store.refresh(tasks: tasks, segments: segments, checklistItems: [], now: startDate.addingTimeInterval(7200))
 
         let changedChild = try #require(children.first)
         let start = CFAbsoluteTimeGetCurrent()
@@ -391,7 +391,7 @@ struct CorePerformanceBudgetTests {
             tasks: tasks,
             segments: segments,
             checklistItems: [],
-            now: startDate.addingTimeInterval(7_200)
+            now: startDate.addingTimeInterval(7200)
         )
         let elapsed = CFAbsoluteTimeGetCurrent() - start
 
@@ -411,7 +411,7 @@ struct CorePerformanceBudgetTests {
         )))
         let task = TaskNode(title: "Large History", parentID: nil, deviceID: "test")
         let historyStart = try #require(calendar.date(byAdding: .day, value: -60, to: now))
-        let segments = (0..<50_000).map { index in
+        let segments = (0 ..< 50000).map { index in
             let start = historyStart.addingTimeInterval(Double(index * 90))
             return TimeSegment(
                 sessionID: UUID(),
@@ -424,7 +424,7 @@ struct CorePerformanceBudgetTests {
         }
         let checklist = [
             ChecklistItem(taskID: task.id, title: "Done", isCompleted: true, sortOrder: 0, deviceID: "test"),
-            ChecklistItem(taskID: task.id, title: "Next", isCompleted: false, sortOrder: 1, deviceID: "test")
+            ChecklistItem(taskID: task.id, title: "Next", isCompleted: false, sortOrder: 1, deviceID: "test"),
         ]
         var incremental = RollupStore()
         incremental.refresh(
@@ -436,13 +436,13 @@ struct CorePerformanceBudgetTests {
         )
 
         let original = try #require(segments.last)
-        let updated = TimeSegment(
+        let updated = try TimeSegment(
             sessionID: original.sessionID,
             taskID: task.id,
             source: .timer,
             deviceID: "test",
             startedAt: original.startedAt,
-            endedAt: try #require(original.endedAt).addingTimeInterval(120)
+            endedAt: #require(original.endedAt).addingTimeInterval(120)
         )
         updated.id = original.id
         let start = CFAbsoluteTimeGetCurrent()
@@ -454,7 +454,7 @@ struct CorePerformanceBudgetTests {
                     id: original.id,
                     before: LedgerSegmentSnapshot(original),
                     after: LedgerSegmentSnapshot(updated)
-                )
+                ),
             ],
             checklistItemsByTaskID: [:],
             now: now,
@@ -467,7 +467,7 @@ struct CorePerformanceBudgetTests {
         facade.allSegments = segments
         facade.rollupDomainStore = incremental
         let rankingStart = CFAbsoluteTimeGetCurrent()
-        for _ in 0..<100 {
+        for _ in 0 ..< 100 {
             #expect(facade.frequentRecentTasks(limit: 1).first?.id == task.id)
         }
         let rankingElapsed = CFAbsoluteTimeGetCurrent() - rankingStart
@@ -500,7 +500,7 @@ struct CorePerformanceBudgetTests {
         )
         let firstStart = Date(timeIntervalSinceReferenceDate: 20_000_000)
         let historyStart = firstStart.addingTimeInterval(-8_000_000)
-        for index in 0..<49_999 {
+        for index in 0 ..< 49999 {
             let startedAt = historyStart.addingTimeInterval(
                 Double(index * 60)
             )
@@ -530,7 +530,7 @@ struct CorePerformanceBudgetTests {
         var predecessorID = first.id
         var restartedAt = stoppedAt.addingTimeInterval(30)
         var samples: [TimeInterval] = []
-        for _ in 0..<3 {
+        for _ in 0 ..< 3 {
             let coordinator = StoreScopedTimerCommandCoordinator(
                 container: context.container,
                 writeAuthorization: .isolatedTestHarness,
@@ -543,7 +543,7 @@ struct CorePerformanceBudgetTests {
 
             let replacementID = try #require(outcome.subjectSegmentID)
             #expect(outcome.tombstonedSegments.map(\.segmentID) == [
-                predecessorID
+                predecessorID,
             ])
             let active = try SwiftDataTimeTrackingRepository(
                 context: ModelContext(context.container),

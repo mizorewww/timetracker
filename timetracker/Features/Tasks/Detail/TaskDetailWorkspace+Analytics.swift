@@ -161,7 +161,8 @@ private struct TaskDetailAnalyticsWorkspace: View {
            let resolvedSnapshot = store.taskAnalyticsSnapshot(
                for: request,
                now: evaluationDate
-           ) {
+           )
+        {
             // Keep the existing tracked-task transition atomic. Apple Health
             // evidence stays on the cancellable asynchronous path below.
             snapshot = resolvedSnapshot
@@ -248,7 +249,8 @@ private struct TaskDetailAnalyticsWorkspace: View {
             )
             guard Task.isCancelled == false,
                   activeLoadID == loadID,
-                  currentLoadRequest == loadRequest else {
+                  currentLoadRequest == loadRequest
+            else {
                 return
             }
 
@@ -268,7 +270,8 @@ private struct TaskDetailAnalyticsWorkspace: View {
         } catch let error as AppleHealthReadError where error == .unavailable {
             guard Task.isCancelled == false,
                   activeLoadID == loadID,
-                  currentLoadRequest == loadRequest else {
+                  currentLoadRequest == loadRequest
+            else {
                 return
             }
             loadedRequest = request
@@ -277,7 +280,8 @@ private struct TaskDetailAnalyticsWorkspace: View {
         } catch {
             guard Task.isCancelled == false,
                   activeLoadID == loadID,
-                  currentLoadRequest == loadRequest else {
+                  currentLoadRequest == loadRequest
+            else {
                 return
             }
             loadedRequest = request

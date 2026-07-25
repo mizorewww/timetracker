@@ -7,7 +7,8 @@ import Testing
 struct TaskProgressDraftCompatibilityTests {
     @Test
     func legacyRecoveryPayloadWithoutProgressFieldsStillDecodes()
-        throws {
+        throws
+    {
         let taskID = UUID()
         var draft = TaskEditorDraft(parentID: nil)
         draft.taskID = taskID
@@ -31,7 +32,7 @@ struct TaskProgressDraftCompatibilityTests {
         let envelope = TaskDraftRecoveryEnvelope(
             schemaVersion: 1,
             sourceTaskID: taskID,
-            savedAt: Date(timeIntervalSince1970: 1_000),
+            savedAt: Date(timeIntervalSince1970: 1000),
             draft: draft
         )
         let encoded = try TaskDraftRecoveryCodec.encode(envelope)
@@ -108,7 +109,8 @@ struct TaskProgressDraftCompatibilityTests {
 
     @Test
     func currentRecoveryRoundTripDropsDestructiveAuthorization()
-        throws {
+        throws
+    {
         let taskID = UUID()
         let entryRevision = UUID()
         var draft = TaskEditorDraft(parentID: nil)
@@ -135,7 +137,7 @@ struct TaskProgressDraftCompatibilityTests {
         let envelope = TaskDraftRecoveryEnvelope(
             schemaVersion: 1,
             sourceTaskID: taskID,
-            savedAt: Date(timeIntervalSince1970: 2_000),
+            savedAt: Date(timeIntervalSince1970: 2000),
             draft: draft
         )
 
@@ -219,7 +221,7 @@ struct TaskProgressDraftCompatibilityTests {
                 .unitByteLimitExceeded(
                     actual: 129,
                     maximum:
-                        TaskQuantityPolicy.maximumUnitLabelByteCount
+                    TaskQuantityPolicy.maximumUnitLabelByteCount
                 )
         ) {
             try TaskProgressDraftPersistencePolicy.prepare(

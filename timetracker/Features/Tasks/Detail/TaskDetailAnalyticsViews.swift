@@ -62,7 +62,6 @@ struct TaskDetailAppleHealthPeriodSection: View {
             }
         }
     }
-
 }
 
 struct TaskDetailAnalysisSection: View {
@@ -78,7 +77,8 @@ struct TaskDetailAnalysisSection: View {
             }
 
             if snapshot.overview.grossSeconds == 0,
-               snapshot.source == .appleHealth {
+               snapshot.source == .appleHealth
+            {
                 VStack(alignment: .leading, spacing: 4) {
                     Label(
                         AppStrings.localized(
@@ -197,7 +197,6 @@ struct TaskDetailAnalysisSection: View {
             )
         }
     }
-
 }
 
 private struct TaskDetailAnalyticsRangePicker: View {
@@ -257,7 +256,7 @@ private struct TaskDetailContributionBar: View {
         .accessibilityLabel(AppStrings.localized("task.detail.analysis"))
         .accessibilityValue(
             "\(AppStrings.localized("task.detail.direct")) \(Int(directRatio * 100))%, " +
-            "\(AppStrings.localized("task.detail.children")) \(100 - Int(directRatio * 100))%"
+                "\(AppStrings.localized("task.detail.children")) \(100 - Int(directRatio * 100))%"
         )
     }
 

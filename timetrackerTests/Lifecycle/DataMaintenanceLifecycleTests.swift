@@ -146,7 +146,7 @@ struct DataMaintenanceLifecycleTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Temporary Client", parentID: nil, colorHex: nil, iconName: nil)
-        let start = Date().addingTimeInterval(-1_800)
+        let start = Date().addingTimeInterval(-1800)
         let segment = try timeRepository.addManualSegment(
             taskID: task.id,
             startedAt: start,
@@ -357,8 +357,8 @@ struct DataMaintenanceLifecycleTests {
         let task = try taskRepository.createTask(title: "Long deleted task", parentID: nil, colorHex: nil, iconName: nil)
         let segment = try timeRepository.addManualSegment(
             taskID: task.id,
-            startedAt: Date(timeIntervalSinceReferenceDate: 1_000),
-            endedAt: Date(timeIntervalSinceReferenceDate: 1_600),
+            startedAt: Date(timeIntervalSinceReferenceDate: 1000),
+            endedAt: Date(timeIntervalSinceReferenceDate: 1600),
             note: nil
         )
         let run = PomodoroRun(taskID: task.id, deviceID: "test")
@@ -418,7 +418,7 @@ struct DataMaintenanceLifecycleTests {
         let now = Date(timeIntervalSinceReferenceDate: 10_000_000)
         let expiredAt = now.addingTimeInterval(-DatabaseMaintenanceService.defaultTombstoneRetention - 1)
 
-        for index in 0..<7 {
+        for index in 0 ..< 7 {
             let event = CountdownEvent(title: "Expired \(index)", date: now, deviceID: "test")
             event.deletedAt = expiredAt
             event.updatedAt = expiredAt

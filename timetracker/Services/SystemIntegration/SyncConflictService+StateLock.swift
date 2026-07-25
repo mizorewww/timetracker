@@ -4,7 +4,7 @@ import Foundation
 /// `lockf` coordinates the app, widgets, and Shortcuts processes. A recursive
 /// in-process lock is also necessary because POSIX record locks are associated
 /// with the process and state helpers deliberately nest locked transactions.
-nonisolated private final class SyncConflictProcessFileLock: @unchecked Sendable {
+private final nonisolated class SyncConflictProcessFileLock: @unchecked Sendable {
     private let recursiveLock = NSRecursiveLock()
     private var depth = 0
     private var descriptor: Int32 = -1
@@ -48,7 +48,9 @@ nonisolated private final class SyncConflictProcessFileLock: @unchecked Sendable
         var backoff = Self.initialBackoff
         while Darwin.lockf(descriptor, F_TLOCK, 0) != 0 {
             let errorCode = errno
-            if errorCode == EINTR { continue }
+            if errorCode == EINTR {
+                continue
+            }
             guard errorCode == EAGAIN || errorCode == EACCES else {
                 Darwin.close(descriptor)
                 throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO)
@@ -64,7 +66,7 @@ nonisolated private final class SyncConflictProcessFileLock: @unchecked Sendable
     }
 
     private static let acquireTimeout: TimeInterval = 5
-    private static let initialBackoff: useconds_t = 25_000
+    private static let initialBackoff: useconds_t = 25000
     private static let maximumBackoff: useconds_t = 250_000
 
     private static func releaseDescriptor(_ descriptor: Int32) {
@@ -74,7 +76,7 @@ nonisolated private final class SyncConflictProcessFileLock: @unchecked Sendable
     }
 }
 
-nonisolated private final class SyncConflictFileLockRegistry: @unchecked Sendable {
+private final nonisolated class SyncConflictFileLockRegistry: @unchecked Sendable {
     static let shared = SyncConflictFileLockRegistry()
 
     private let registryLock = NSLock()

@@ -74,7 +74,7 @@ struct HomeLayoutPolicy {
     }
 
     var usesTwoColumnContent: Bool {
-        contentWidth >= 1_000
+        contentWidth >= 1000
     }
 
     func usesSideBySideCurrentState(prefersSingleColumn: Bool) -> Bool {
@@ -83,7 +83,7 @@ struct HomeLayoutPolicy {
     }
 
     var contentMaxWidth: CGFloat {
-        1_180
+        1180
     }
 
     var contentWidth: CGFloat {
@@ -169,8 +169,8 @@ struct PomodoroLayoutPolicy {
 }
 
 struct SplitColumnLayoutPolicy {
-    var sidebar: ColumnWidth = ColumnWidth(min: 220, ideal: 240, max: 300)
-    var detail: ColumnWidth = ColumnWidth(min: 520, ideal: 760, max: nil)
+    var sidebar: ColumnWidth = .init(min: 220, ideal: 240, max: 300)
+    var detail: ColumnWidth = .init(min: 520, ideal: 760, max: nil)
 
     static let iPad = SplitColumnLayoutPolicy(
         sidebar: ColumnWidth(min: 240, ideal: 260, max: 300),

@@ -28,7 +28,7 @@ struct CoreRefreshPlannerTests {
         let scopes = StoreRefreshPlanner().scopes(after: [
             .taskChanged(taskID: taskID, affectedAncestorIDs: []),
             .checklistChanged(taskID: taskID, affectedAncestorIDs: []),
-            .ledgerChanged(taskID: taskID, dateInterval: nil, isVisible: true)
+            .ledgerChanged(taskID: taskID, dateInterval: nil, isVisible: true),
         ])
 
         #expect(scopes.contains(.tasks))
@@ -72,7 +72,7 @@ struct CoreRefreshPlannerTests {
                 taskID: taskID,
                 dateInterval: range,
                 isVisible: false
-            )
+            ),
         ])
         #expect(historyPlan.affectedTaskIDs == [taskID])
         #expect(historyPlan.affectedLedgerRanges == [range])

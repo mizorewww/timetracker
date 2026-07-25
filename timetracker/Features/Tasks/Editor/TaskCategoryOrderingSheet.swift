@@ -47,31 +47,31 @@ struct TaskCategoryOrderingSheet: View {
             #endif
             .navigationTitle(AppStrings.localized("taskCategory.sort"))
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+                .navigationBarTitleDisplayMode(.inline)
             #endif
-            .accessibilityIdentifier("taskCategory.sorter")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(AppStrings.cancel) {
-                        dismiss()
-                    }
-                    .keyboardShortcut(.cancelAction)
-                    .accessibilityIdentifier("taskCategory.sort.cancel")
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(AppStrings.done) {
-                        if store.reorderTaskCategories(
-                            orderedCategoryIDs: orderedCategories.map(\.id),
-                            baseline: baseline
-                        ) {
+                .accessibilityIdentifier("taskCategory.sorter")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(AppStrings.cancel) {
                             dismiss()
                         }
+                        .keyboardShortcut(.cancelAction)
+                        .accessibilityIdentifier("taskCategory.sort.cancel")
                     }
-                    .keyboardShortcut(.defaultAction)
-                    .accessibilityIdentifier("taskCategory.sort.done")
+
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(AppStrings.done) {
+                            if store.reorderTaskCategories(
+                                orderedCategoryIDs: orderedCategories.map(\.id),
+                                baseline: baseline
+                            ) {
+                                dismiss()
+                            }
+                        }
+                        .keyboardShortcut(.defaultAction)
+                        .accessibilityIdentifier("taskCategory.sort.done")
+                    }
                 }
-            }
         }
         .platformSheetFrame(width: 480, height: 520)
     }

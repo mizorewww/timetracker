@@ -6,7 +6,7 @@ import SwiftUI
 final class TimeTrackerAppDelegate: NSObject, NSApplicationDelegate {
     private var uiTestWindow: NSWindow?
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    func applicationDidFinishLaunching(_: Notification) {
         guard CommandLine.arguments.contains("--uitesting") else { return }
 
         UserDefaults.standard.set(false, forKey: "NSQuitAlwaysKeepsWindows")

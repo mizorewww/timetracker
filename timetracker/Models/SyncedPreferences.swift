@@ -49,7 +49,9 @@ struct AppPreferences: Equatable {
     var llmTaskPlanInstructions = LLMTaskPlanPrompt.defaultInstructions
     var llmAutomaticSuggestionsEnabled = false
 
-    static var defaults: AppPreferences { AppPreferences() }
+    static var defaults: AppPreferences {
+        AppPreferences()
+    }
 
     init() {}
 
@@ -73,11 +75,11 @@ struct AppPreferences: Equatable {
                 PreferenceJSON.decode(String.self, from: preference.valueJSON, default: pomodoroDefaultMode)
             )
         case .defaultFocusMinutes:
-            defaultFocusMinutes = PreferenceJSON.decode(Int.self, from: preference.valueJSON, default: defaultFocusMinutes).clamped(to: 1...480)
+            defaultFocusMinutes = PreferenceJSON.decode(Int.self, from: preference.valueJSON, default: defaultFocusMinutes).clamped(to: 1 ... 480)
         case .defaultBreakMinutes:
-            defaultBreakMinutes = PreferenceJSON.decode(Int.self, from: preference.valueJSON, default: defaultBreakMinutes).clamped(to: 1...480)
+            defaultBreakMinutes = PreferenceJSON.decode(Int.self, from: preference.valueJSON, default: defaultBreakMinutes).clamped(to: 1 ... 480)
         case .defaultPomodoroRounds:
-            defaultPomodoroRounds = PreferenceJSON.decode(Int.self, from: preference.valueJSON, default: defaultPomodoroRounds).clamped(to: 1...24)
+            defaultPomodoroRounds = PreferenceJSON.decode(Int.self, from: preference.valueJSON, default: defaultPomodoroRounds).clamped(to: 1 ... 24)
         case .pomodoroPlans:
             pomodoroPlans = AppPreferenceValueSanitizer.pomodoroPlans(
                 PreferenceJSON.decode([PomodoroPlan].self, from: preference.valueJSON, default: pomodoroPlans)
@@ -253,12 +255,12 @@ enum SyncedPreferenceService {
                         (preference.deletedAt == nil) == (existing.deletedAt == nil) &&
                         (preference.createdAt > existing.createdAt ||
                             (preference.createdAt == existing.createdAt &&
-                                preference.id.uuidString > existing.id.uuidString))) {
+                                preference.id.uuidString > existing.id.uuidString)))
+                {
                     result[preference.key] = preference
                 }
             }
     }
-
 }
 
 extension Comparable {

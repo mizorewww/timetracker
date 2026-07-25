@@ -30,7 +30,6 @@ struct DurationLabel: View {
     let startedAt: Date
     let endedAt: Date?
 
-    @ViewBuilder
     var body: some View {
         let now = Date()
         if endedAt.map({ $0 <= now }) == true {

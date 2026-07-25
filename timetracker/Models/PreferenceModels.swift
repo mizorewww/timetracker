@@ -17,12 +17,12 @@ final class SyncedPreference {
         valueJSON: String,
         deviceID: String
     ) {
-        self.id = UUID()
+        id = UUID()
         self.key = key
         self.valueJSON = valueJSON
-        self.createdAt = Date()
-        self.updatedAt = Date()
+        createdAt = Date()
+        updatedAt = Date()
         self.deviceID = deviceID
-        self.clientMutationID = UUID()
+        clientMutationID = UUID()
     }
 }

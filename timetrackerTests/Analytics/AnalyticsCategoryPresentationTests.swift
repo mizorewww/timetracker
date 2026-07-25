@@ -1,6 +1,5 @@
 import Foundation
 import Testing
-
 @testable import timetracker
 
 struct AnalyticsCategoryPresentationTests {
@@ -12,7 +11,7 @@ struct AnalyticsCategoryPresentationTests {
                 .time,
                 .tasks,
                 .pomodoro,
-                .overview
+                .overview,
             ]
         )
         let homeCategories =
@@ -41,11 +40,11 @@ struct AnalyticsCategoryPresentationTests {
             path: "Study / Read Apple HIG",
             colorHex: "16A34A",
             iconName: "book.pages",
-            grossSeconds: 2_400,
-            wallSeconds: 2_400
+            grossSeconds: 2400,
+            wallSeconds: 2400
         )
         let snapshot = makeSnapshot(
-            grossSeconds: 3_600,
+            grossSeconds: 3600,
             taskBreakdown: [topTask]
         )
         let expected = String(
@@ -53,7 +52,7 @@ struct AnalyticsCategoryPresentationTests {
                 "analytics.question.answer.taskCategoryFormat"
             ),
             "Read Apple HIG",
-            DurationFormatter.compact(2_400)
+            DurationFormatter.compact(2400)
         )
 
         #expect(AnalyticsCategory.tasks.answerPreview(from: snapshot) == expected)

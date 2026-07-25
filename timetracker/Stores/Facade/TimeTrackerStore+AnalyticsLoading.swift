@@ -41,7 +41,8 @@ extension TimeTrackerStore {
                 taskParentPathByID: taskParentPathByID
             )
             guard let resolvedVisualSnapshot = await AnalyticsVisualSnapshotTask.resolve(visualInput),
-                  Task.isCancelled == false else {
+                  Task.isCancelled == false
+            else {
                 return nil
             }
             visualSnapshot = resolvedVisualSnapshot

@@ -69,19 +69,19 @@ struct TaskHierarchyPicker: View {
         )
         #else
         .background(AppColors.background)
-        .searchable(text: $searchText, prompt: AppStrings.localized("tasks.searchPrompt"))
+            .searchable(text: $searchText, prompt: AppStrings.localized("tasks.searchPrompt"))
         #endif
-        .navigationTitle(navigationTitle)
-        .accessibilityIdentifier(accessibilityIdentifier)
+            .navigationTitle(navigationTitle)
+            .accessibilityIdentifier(accessibilityIdentifier)
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.inline)
         #endif
-        .onAppear {
-            revealSelectedTasks(selectedTaskIDs)
-        }
-        .onChange(of: selectedTaskIDs) { previous, current in
-            revealSelectedTasks(current.subtracting(previous))
-        }
+            .onAppear {
+                revealSelectedTasks(selectedTaskIDs)
+            }
+            .onChange(of: selectedTaskIDs) { previous, current in
+                revealSelectedTasks(current.subtracting(previous))
+            }
     }
 
     private func pickerList(

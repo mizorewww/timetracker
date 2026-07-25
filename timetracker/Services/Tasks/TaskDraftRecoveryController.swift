@@ -11,7 +11,7 @@ nonisolated enum TaskDraftRecoveryControllerError: Error, Equatable, Sendable {
     case removalSuperseded
 }
 
-nonisolated final class TaskDraftRecoveryController: @unchecked Sendable {
+final nonisolated class TaskDraftRecoveryController: @unchecked Sendable {
     private let store: TaskDraftRecoveryStore
     private let gate: TaskDraftRecoveryOperationGate
     private let worker: TaskDraftRecoveryWorker
@@ -183,8 +183,9 @@ private actor TaskDraftRecoveryWorker {
     }
 }
 
-nonisolated final class TaskDraftRecoveryOperationGate:
-    @unchecked Sendable {
+final nonisolated class TaskDraftRecoveryOperationGate:
+    @unchecked Sendable
+{
     private let revisionLock = NSLock()
     private let operationLock = NSLock()
     private var revisionsByTaskID: [UUID: UUID] = [:]

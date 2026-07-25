@@ -113,7 +113,7 @@ struct InboxSuggestionApplyBoundaryTests {
                 suggestion: suggestion,
                 existingChecklistItems: [],
                 context: context,
-                now: Date(timeIntervalSinceReferenceDate: 1_000),
+                now: Date(timeIntervalSinceReferenceDate: 1000),
                 deviceID: "local"
             )
         }

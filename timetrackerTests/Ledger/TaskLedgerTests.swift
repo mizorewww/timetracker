@@ -17,7 +17,7 @@ struct TaskLedgerTests {
             iconName: nil
         )
         let segment = try timeRepository.startTask(taskID: task.id, source: .timer)
-        let futureStart = Date().addingTimeInterval(3_600)
+        let futureStart = Date().addingTimeInterval(3600)
         segment.startedAt = futureStart
         let session = try #require(try timeRepository.sessions().first)
         session.startedAt = futureStart
@@ -176,8 +176,8 @@ struct TaskLedgerTests {
             nowProvider: { now }
         )
         let queried = try repository.segments(
-            from: now.addingTimeInterval(-1_200),
-            to: now.addingTimeInterval(1_200),
+            from: now.addingTimeInterval(-1200),
+            to: now.addingTimeInterval(1200),
             now: now
         )
 
@@ -191,25 +191,25 @@ struct TaskLedgerTests {
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
         let dayStart = try #require(calendar.date(from: DateComponents(year: 2026, month: 7, day: 14)))
         let task = TaskNode(title: "Night work", parentID: nil, deviceID: "test")
-        let session = TimeSession(taskID: task.id, source: .pomodoro, deviceID: "test", startedAt: dayStart.addingTimeInterval(-3_600))
+        let session = TimeSession(taskID: task.id, source: .pomodoro, deviceID: "test", startedAt: dayStart.addingTimeInterval(-3600))
         let segment = TimeSegment(
             sessionID: session.id,
             taskID: task.id,
             source: .pomodoro,
             deviceID: "test",
-            startedAt: dayStart.addingTimeInterval(-3_600),
-            endedAt: dayStart.addingTimeInterval(3_600)
+            startedAt: dayStart.addingTimeInterval(-3600),
+            endedAt: dayStart.addingTimeInterval(3600)
         )
         let store = makeTestStore()
         store.allSegments = [segment]
         let run = PomodoroRun(taskID: task.id, deviceID: "test")
         run.sessionID = session.id
-        let now = dayStart.addingTimeInterval(2 * 3_600)
+        let now = dayStart.addingTimeInterval(2 * 3600)
 
-        #expect(store.todayGrossSeconds(now: now, calendar: calendar) == 3_600)
-        #expect(store.todayWallSeconds(now: now, calendar: calendar) == 3_600)
-        #expect(store.averageFocusSeconds(now: now, calendar: calendar) == 3_600)
-        #expect(store.pomodoroElapsedFocusSeconds(for: run, now: now) == 2 * 3_600)
+        #expect(store.todayGrossSeconds(now: now, calendar: calendar) == 3600)
+        #expect(store.todayWallSeconds(now: now, calendar: calendar) == 3600)
+        #expect(store.averageFocusSeconds(now: now, calendar: calendar) == 3600)
+        #expect(store.pomodoroElapsedFocusSeconds(for: run, now: now) == 2 * 3600)
     }
 
     @Test @MainActor
@@ -225,15 +225,15 @@ struct TaskLedgerTests {
             taskID: task.id,
             source: .pomodoro,
             deviceID: "test",
-            startedAt: dayStart.addingTimeInterval(-3_600)
+            startedAt: dayStart.addingTimeInterval(-3600)
         )
         let segment = TimeSegment(
             sessionID: session.id,
             taskID: task.id,
             source: .pomodoro,
             deviceID: "test",
-            startedAt: dayStart.addingTimeInterval(-3_600),
-            endedAt: dayStart.addingTimeInterval(3_600)
+            startedAt: dayStart.addingTimeInterval(-3600),
+            endedAt: dayStart.addingTimeInterval(3600)
         )
         context.insert(task)
         context.insert(session)
@@ -250,10 +250,10 @@ struct TaskLedgerTests {
         // Clear the published compatibility array to prove these reads are
         // served by the domain indexes after configuration.
         store.allSegments = []
-        let now = dayStart.addingTimeInterval(2 * 3_600)
+        let now = dayStart.addingTimeInterval(2 * 3600)
 
-        #expect(store.averageFocusSeconds(now: now, calendar: calendar) == 3_600)
-        #expect(store.pomodoroElapsedFocusSeconds(for: run, now: now) == 2 * 3_600)
+        #expect(store.averageFocusSeconds(now: now, calendar: calendar) == 3600)
+        #expect(store.pomodoroElapsedFocusSeconds(for: run, now: now) == 2 * 3600)
     }
 
     @Test @MainActor
@@ -271,7 +271,7 @@ struct TaskLedgerTests {
         } catch {
             Issue.record("Unexpected move error: \(error)")
         }
-        #expect((try repository.task(id: root.id))?.parentID == nil)
+        #expect(try (repository.task(id: root.id))?.parentID == nil)
 
         try repository.moveTask(taskID: child.id, newParentID: nil, sortOrder: 20)
         let movedTask = try repository.task(id: child.id)
@@ -382,7 +382,7 @@ struct TaskLedgerTests {
     }
 
     @Test @MainActor
-    func taskTreeServiceFiltersInvalidParentsAndFlattensVisibleRows() throws {
+    func taskTreeServiceFiltersInvalidParentsAndFlattensVisibleRows() {
         let parent = TaskNode(title: "Parent", parentID: nil, deviceID: "test")
         let child = TaskNode(title: "Child", parentID: parent.id, deviceID: "test")
         let grandchild = TaskNode(title: "Grandchild", parentID: child.id, deviceID: "test")
@@ -480,7 +480,7 @@ struct TaskLedgerTests {
     }
 
     @Test @MainActor
-    func taskWithMissingRemoteParentIsRecoveredAsARoot() throws {
+    func taskWithMissingRemoteParentIsRecoveredAsARoot() {
         let task = TaskNode(title: "Orphaned during staged import", parentID: UUID(), deviceID: "cloud")
         let plan = TaskHierarchyRepairPlan(tasks: [task])
         #expect(plan.cycleBreakerTaskIDs.isEmpty)
@@ -501,7 +501,7 @@ struct TaskLedgerTests {
         )
         child.depth = 1
         child.path = TaskHierarchyMetadata.canonicalPath(for: child.id)
-        let originalUpdatedAt = Date(timeIntervalSinceReferenceDate: 10_000)
+        let originalUpdatedAt = Date(timeIntervalSinceReferenceDate: 10000)
         let originalMutationID = UUID()
         child.updatedAt = originalUpdatedAt
         child.clientMutationID = originalMutationID
@@ -545,7 +545,7 @@ struct TaskLedgerTests {
     func deeplyNestedTaskPathsAreIterativeAndDisplayBounded() throws {
         var tasks: [TaskNode] = []
         var parentID: UUID?
-        for index in 0..<5_000 {
+        for index in 0 ..< 5000 {
             let task = TaskNode(title: "Level \(index)", parentID: parentID, deviceID: "test")
             tasks.append(task)
             parentID = task.id
@@ -586,11 +586,11 @@ struct TaskLedgerTests {
         let firstTask = try taskRepository.createTask(title: "Design", parentID: nil, colorHex: nil, iconName: nil)
         let secondTask = try taskRepository.createTask(title: "Writing", parentID: nil, colorHex: nil, iconName: nil)
 
-        let start = Date(timeIntervalSince1970: 2_000)
+        let start = Date(timeIntervalSince1970: 2000)
         let segment = try timeRepository.addManualSegment(
             taskID: firstTask.id,
             startedAt: start,
-            endedAt: start.addingTimeInterval(1_800),
+            endedAt: start.addingTimeInterval(1800),
             note: "Original"
         )
 
@@ -598,18 +598,18 @@ struct TaskLedgerTests {
             segmentID: segment.id,
             taskID: secondTask.id,
             startedAt: start.addingTimeInterval(300),
-            endedAt: start.addingTimeInterval(2_100),
+            endedAt: start.addingTimeInterval(2100),
             note: "Corrected"
         )
 
-        let editedSegments = try timeRepository.segments(from: start, to: start.addingTimeInterval(3_000))
+        let editedSegments = try timeRepository.segments(from: start, to: start.addingTimeInterval(3000))
         let updated = try #require(editedSegments.first { $0.id == segment.id })
         #expect(updated.taskID == secondTask.id)
         #expect(updated.startedAt == start.addingTimeInterval(300))
-        #expect(updated.endedAt == start.addingTimeInterval(2_100))
+        #expect(updated.endedAt == start.addingTimeInterval(2100))
 
         try timeRepository.softDeleteSegment(segmentID: segment.id)
-        #expect(try timeRepository.segments(from: start, to: start.addingTimeInterval(3_000)).isEmpty)
+        #expect(try timeRepository.segments(from: start, to: start.addingTimeInterval(3000)).isEmpty)
     }
 
     @Test @MainActor
@@ -675,7 +675,7 @@ struct TaskLedgerTests {
     func deletingTheEarliestSegmentRebuildsTheRemainingSessionBounds() throws {
         let context = try makeTestContext()
         let taskID = UUID()
-        let start = Date(timeIntervalSinceReferenceDate: 10_000)
+        let start = Date(timeIntervalSinceReferenceDate: 10000)
         let session = TimeSession(
             taskID: taskID,
             source: .manual,
@@ -732,7 +732,7 @@ struct TaskLedgerTests {
         #expect(activeSession.deviceID == "segment-stop-device")
         #expect(activeSession.clientMutationID != creationMutationID)
 
-        let start = Date(timeIntervalSince1970: 20_000)
+        let start = Date(timeIntervalSince1970: 20000)
         let manualSegment = try creationRepository.addManualSegment(
             taskID: firstTask.id,
             startedAt: start,
@@ -785,7 +785,7 @@ struct TaskLedgerTests {
         let store = makeTestStore()
         store.configureIfNeeded(context: context)
         var draft = try #require(store.segmentEditorDraft(for: segment))
-        draft.startedAt = Date().addingTimeInterval(3_600)
+        draft.startedAt = Date().addingTimeInterval(3600)
         draft.isActive = true
 
         #expect(store.saveSegmentDraft(draft) == false)
@@ -796,13 +796,13 @@ struct TaskLedgerTests {
 
     @Test
     func invalidationRangeNormalizesReversedRemoteDates() {
-        let later = Date(timeIntervalSinceReferenceDate: 2_000)
-        let earlier = Date(timeIntervalSinceReferenceDate: 1_000)
+        let later = Date(timeIntervalSinceReferenceDate: 2000)
+        let earlier = Date(timeIntervalSinceReferenceDate: 1000)
         let range = StoreInvalidationRange(start: later, end: earlier)
 
         #expect(range.start == earlier)
         #expect(range.end == later)
-        #expect(DateInterval(start: range.start, end: range.end).duration == 1_000)
+        #expect(DateInterval(start: range.start, end: range.end).duration == 1000)
     }
 
     @Test @MainActor
@@ -811,7 +811,7 @@ struct TaskLedgerTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Active", parentID: nil, colorHex: nil, iconName: nil)
-        let start = Date(timeIntervalSince1970: 10_000)
+        let start = Date(timeIntervalSince1970: 10000)
         let session = TimeSession(taskID: task.id, source: .timer, deviceID: "test", startedAt: start, titleSnapshot: task.title)
         let segment = TimeSegment(sessionID: session.id, taskID: task.id, source: .timer, deviceID: "test", startedAt: start, endedAt: nil)
         context.insert(session)
@@ -820,12 +820,12 @@ struct TaskLedgerTests {
 
         let beforeRange = try timeRepository.segments(
             from: start.addingTimeInterval(600),
-            to: start.addingTimeInterval(1_200),
+            to: start.addingTimeInterval(1200),
             now: start.addingTimeInterval(300)
         )
         let insideRange = try timeRepository.segments(
             from: start.addingTimeInterval(600),
-            to: start.addingTimeInterval(1_200),
+            to: start.addingTimeInterval(1200),
             now: start.addingTimeInterval(900)
         )
 
@@ -839,11 +839,11 @@ struct TaskLedgerTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Writing", parentID: nil, colorHex: nil, iconName: nil)
-        let start = Date(timeIntervalSince1970: 10_000)
+        let start = Date(timeIntervalSince1970: 10000)
         let segment = try timeRepository.addManualSegment(
             taskID: task.id,
             startedAt: start,
-            endedAt: start.addingTimeInterval(1_200),
+            endedAt: start.addingTimeInterval(1200),
             note: "Initial note"
         )
 
@@ -855,16 +855,15 @@ struct TaskLedgerTests {
             segmentID: segment.id,
             taskID: task.id,
             startedAt: start.addingTimeInterval(60),
-            endedAt: start.addingTimeInterval(1_500),
+            endedAt: start.addingTimeInterval(1500),
             note: "Corrected note"
         )
 
         session = try #require(try timeRepository.sessions().first { $0.id == segment.sessionID })
         #expect(session.note == "Corrected note")
         #expect(session.startedAt == start.addingTimeInterval(60))
-        #expect(session.endedAt == start.addingTimeInterval(1_500))
+        #expect(session.endedAt == start.addingTimeInterval(1500))
     }
-
 
     @Test @MainActor
     func taskListRollupDurationsIncludeHistoricalDescendantTaskTime() throws {
@@ -877,32 +876,32 @@ struct TaskLedgerTests {
         let calendar = Calendar.current
         let currentDayStart = calendar.startOfDay(for: Date())
         let testDayStart = try #require(calendar.date(byAdding: .day, value: -2, to: currentDayStart))
-        let now = testDayStart.addingTimeInterval(12 * 3_600)
+        let now = testDayStart.addingTimeInterval(12 * 3600)
         let startOfDay = calendar.startOfDay(for: now)
 
         _ = try timeRepository.addManualSegment(
             taskID: parent.id,
-            startedAt: startOfDay.addingTimeInterval(9 * 3_600),
-            endedAt: startOfDay.addingTimeInterval(9 * 3_600 + 600),
+            startedAt: startOfDay.addingTimeInterval(9 * 3600),
+            endedAt: startOfDay.addingTimeInterval(9 * 3600 + 600),
             note: nil
         )
         _ = try timeRepository.addManualSegment(
             taskID: child.id,
-            startedAt: startOfDay.addingTimeInterval(10 * 3_600),
-            endedAt: startOfDay.addingTimeInterval(10 * 3_600 + 900),
+            startedAt: startOfDay.addingTimeInterval(10 * 3600),
+            endedAt: startOfDay.addingTimeInterval(10 * 3600 + 900),
             note: nil
         )
         _ = try timeRepository.addManualSegment(
             taskID: grandchild.id,
-            startedAt: startOfDay.addingTimeInterval(11 * 3_600),
-            endedAt: startOfDay.addingTimeInterval(11 * 3_600 + 300),
+            startedAt: startOfDay.addingTimeInterval(11 * 3600),
+            endedAt: startOfDay.addingTimeInterval(11 * 3600 + 300),
             note: nil
         )
-        let yesterday = calendar.date(byAdding: .day, value: -1, to: startOfDay) ?? startOfDay.addingTimeInterval(-86_400)
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: startOfDay) ?? startOfDay.addingTimeInterval(-86400)
         _ = try timeRepository.addManualSegment(
             taskID: child.id,
-            startedAt: yesterday.addingTimeInterval(14 * 3_600),
-            endedAt: yesterday.addingTimeInterval(14 * 3_600 + 2_400),
+            startedAt: yesterday.addingTimeInterval(14 * 3600),
+            endedAt: yesterday.addingTimeInterval(14 * 3600 + 2400),
             note: nil
         )
 
@@ -910,11 +909,11 @@ struct TaskLedgerTests {
         store.configureIfNeeded(context: context)
 
         #expect(store.secondsForTaskToday(parent, now: now) == 600)
-        #expect(store.secondsForTaskTodayRollup(parent, now: now) == 1_800)
-        #expect(store.secondsForTaskTodayRollup(child, now: now) == 1_200)
+        #expect(store.secondsForTaskTodayRollup(parent, now: now) == 1800)
+        #expect(store.secondsForTaskTodayRollup(child, now: now) == 1200)
         #expect(store.secondsForTaskTotal(parent) == 600)
-        #expect(store.secondsForTaskTotalRollup(parent, now: now) == 4_200)
-        #expect(store.secondsForTaskTotalRollup(child, now: now) == 3_600)
-        #expect(store.rollup(for: parent.id)?.workedSeconds == 4_200)
+        #expect(store.secondsForTaskTotalRollup(parent, now: now) == 4200)
+        #expect(store.secondsForTaskTotalRollup(child, now: now) == 3600)
+        #expect(store.rollup(for: parent.id)?.workedSeconds == 4200)
     }
 }

@@ -47,7 +47,8 @@ nonisolated struct AppleHealthSleepEpisode {
         to intervals: inout [DateInterval]
     ) {
         guard let last = intervals.last,
-              interval.start <= last.end else {
+              interval.start <= last.end
+        else {
             intervals.append(interval)
             return
         }

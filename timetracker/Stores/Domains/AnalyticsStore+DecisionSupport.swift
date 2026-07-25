@@ -124,5 +124,4 @@ extension AnalyticsStore {
             now: now
         )
     }
-
 }

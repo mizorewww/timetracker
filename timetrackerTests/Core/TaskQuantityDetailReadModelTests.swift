@@ -8,7 +8,8 @@ import Testing
 struct TaskQuantityDetailReadModelTests {
     @Test
     func generatedTaskDetailUsesCanonicalProgressAndStoredLocalDay()
-        throws {
+        throws
+    {
         let context = try makeTestContext()
         let fixture = try insertTaskProgressPersistenceFixture(
             into: context
@@ -23,16 +24,16 @@ struct TaskQuantityDetailReadModelTests {
         #expect(detail.progress.totalAmount == 20)
         #expect(detail.progress.remainingAmount == 30)
         #expect(detail.entries.map(\.id) == [fixture.entry.id])
-        guard case .generated(let occurrence) = detail.recurrenceRole else {
+        guard case let .generated(occurrence) = detail.recurrenceRole else {
             Issue.record("Expected generated recurrence role")
             return
         }
         #expect(occurrence.dayKey == "2026-07-20")
         #expect(occurrence.timeZoneIdentifier == "Asia/Singapore")
         #expect(
-            TaskRecurrenceDayKey.value(
+            try TaskRecurrenceDayKey.value(
                 for: occurrence.localDate,
-                timeZone: try #require(
+                timeZone: #require(
                     TimeZone(identifier: occurrence.timeZoneIdentifier)
                 )
             ) == occurrence.dayKey
@@ -43,7 +44,7 @@ struct TaskQuantityDetailReadModelTests {
     func detailFiltersTombstonesAndSortsNewestThenStableID() throws {
         let context = try makeTestContext()
         let fixture = try makeQuantityTask(in: context)
-        let sharedDate = Date(timeIntervalSinceReferenceDate: 1_000)
+        let sharedDate = Date(timeIntervalSinceReferenceDate: 1000)
         let earlier = quantityEntry(
             id: UUID(uuidString: "10000000-0000-4000-8000-000000000000")!,
             taskID: fixture.task.id,
@@ -85,7 +86,7 @@ struct TaskQuantityDetailReadModelTests {
             detail.entries.map(\.id) == [
                 firstAtSharedDate.id,
                 secondAtSharedDate.id,
-                earlier.id
+                earlier.id,
             ]
         )
         #expect(detail.recurrenceRole == .ordinary)
@@ -181,7 +182,7 @@ struct TaskQuantityDetailReadModelTests {
             id: UUID(),
             taskID: malformed.task.id,
             amount: 1,
-            date: Date(timeIntervalSinceReferenceDate: 2_000)
+            date: Date(timeIntervalSinceReferenceDate: 2000)
         )
         entry.quantityGoalID = UUID()
         context.insert(entry)
@@ -199,7 +200,7 @@ struct TaskQuantityDetailReadModelTests {
     private func availableDetail(
         _ readModel: TaskQuantityDetailReadModel
     ) throws -> TaskQuantityDetailSnapshot {
-        guard case .available(let detail) = readModel else {
+        guard case let .available(detail) = readModel else {
             Issue.record("Expected available quantity detail")
             throw DetailTestError.unavailable
         }

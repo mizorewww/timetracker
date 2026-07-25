@@ -82,7 +82,8 @@ struct TaskRecurrencePersistenceState {
         var cursor = taskByID[taskID]?.parentID
         while let taskID = cursor,
               visited.insert(taskID).inserted,
-              let task = taskByID[taskID] {
+              let task = taskByID[taskID]
+        {
             result.insert(taskID)
             cursor = task.parentID
         }

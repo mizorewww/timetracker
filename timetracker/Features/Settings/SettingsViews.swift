@@ -19,19 +19,19 @@ struct SettingsView: View {
 
     var body: some View {
         settingsNavigation
-        .navigationTitle(AppStrings.settings)
+            .navigationTitle(AppStrings.settings)
         #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.inline)
         #endif
-        .accessibilityIdentifier("settings.view")
-        .fileExporter(
-            isPresented: $isExportPresented,
-            document: exportDocument,
-            contentType: .json,
-            defaultFilename: "time-tracker-export.json"
-        ) { result in
-            handleExportResult(result)
-        }
+            .accessibilityIdentifier("settings.view")
+            .fileExporter(
+                isPresented: $isExportPresented,
+                document: exportDocument,
+                contentType: .json,
+                defaultFilename: "time-tracker-export.json"
+            ) { result in
+                handleExportResult(result)
+            }
     }
 
     @ViewBuilder
@@ -114,7 +114,7 @@ struct SettingsView: View {
     func prepareJSONExport() {
         dataOperationMessage = nil
         do {
-            exportDocument = JSONExportDocument(text: try store.jsonExport())
+            exportDocument = try JSONExportDocument(text: store.jsonExport())
             isExportPresented = true
         } catch {
             presentSettingsError(context: .dataExport, error: error)

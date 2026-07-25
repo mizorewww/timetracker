@@ -48,7 +48,7 @@ struct ManualTimePanel: View {
             Form {
                 Section(AppStrings.localized("segment.assignment")) {
                     Picker(AppStrings.localized("segment.task"), selection: taskBinding) {
-                        Text(.app("segment.choose")).tag(Optional<UUID>.none)
+                        Text(.app("segment.choose")).tag(UUID?.none)
                         ForEach(availableTasks, id: \.id) { task in
                             Text(store.path(for: task)).tag(Optional(task.id))
                         }
@@ -74,8 +74,8 @@ struct ManualTimePanel: View {
                             endedAt: draft.endedAt,
                             now: now
                         )))
-                            .font(.headline.monospacedDigit())
-                            .foregroundStyle(validation == .valid ? Color.primary : Color.red)
+                        .font(.headline.monospacedDigit())
+                        .foregroundStyle(validation == .valid ? Color.primary : Color.red)
                     }
                     validationMessage(for: validation)
                 }
@@ -86,7 +86,7 @@ struct ManualTimePanel: View {
                         text: $draft.note,
                         axis: .vertical
                     )
-                    .lineLimit(3...8)
+                    .lineLimit(3 ... 8)
                     .accessibilityIdentifier("manualTime.note")
                     if let noteError {
                         noteValidationLabel(noteError)
@@ -96,24 +96,24 @@ struct ManualTimePanel: View {
             .formStyle(.grouped)
             .navigationTitle(AppStrings.localized("manual.title"))
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+                .navigationBarTitleDisplayMode(.inline)
             #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(AppStrings.cancel) {
-                        requestCancel()
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(AppStrings.cancel) {
+                            requestCancel()
+                        }
+                        .keyboardShortcut(.cancelAction)
                     }
-                    .keyboardShortcut(.cancelAction)
-                }
 
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(AppStrings.localized("common.save")) {
-                        onSave(draft)
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(AppStrings.localized("common.save")) {
+                            onSave(draft)
+                        }
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(draft.taskID == nil || validation != .valid || noteError != nil)
                     }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(draft.taskID == nil || validation != .valid || noteError != nil)
                 }
-            }
         }
         .editorDiscardConfirmation(
             isPresented: $isDiscardConfirmationPresented,

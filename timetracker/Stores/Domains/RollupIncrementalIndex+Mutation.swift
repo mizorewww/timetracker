@@ -131,7 +131,9 @@ extension RollupIncrementalIndex {
         return allAffected.sorted { lhs, rhs in
             let leftDepth = depthByTaskID[lhs] ?? 0
             let rightDepth = depthByTaskID[rhs] ?? 0
-            if leftDepth != rightDepth { return leftDepth > rightDepth }
+            if leftDepth != rightDepth {
+                return leftDepth > rightDepth
+            }
             return lhs.uuidString < rhs.uuidString
         }
     }

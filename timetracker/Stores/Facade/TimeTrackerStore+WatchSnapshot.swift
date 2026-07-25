@@ -12,10 +12,12 @@ extension TimeTrackerStore {
         let availableTaskIDs = Set(watchTasks.map(\.id))
         var quickStartRankByTaskID: [UUID: Int] = [:]
         for taskID in preferences.quickStartTaskIDs
-        where availableTaskIDs.contains(taskID) {
+            where availableTaskIDs.contains(taskID)
+        {
             guard quickStartRankByTaskID[taskID] == nil,
                   quickStartRankByTaskID.count <
-                    WatchTransportLimits.maximumQuickStartTasks else {
+                  WatchTransportLimits.maximumQuickStartTasks
+            else {
                 continue
             }
             quickStartRankByTaskID[taskID] = quickStartRankByTaskID.count
@@ -100,7 +102,8 @@ extension TimeTrackerStore {
         func include(_ projection: WatchRankedTaskProjection) {
             guard selectedProjections.count < WatchTransportLimits.maximumRecentTasks,
                   selectedTaskIDs.contains(projection.snapshot.taskID) == false,
-                  projection.textByteCount <= remainingTextBytes else {
+                  projection.textByteCount <= remainingTextBytes
+            else {
                 return
             }
             selectedTaskIDs.insert(projection.snapshot.taskID)
@@ -129,9 +132,9 @@ extension TimeTrackerStore {
             }
         let allTasksRankByTaskID = Dictionary(
             uniqueKeysWithValues: selectedProjections
-            .sorted { $0.rank < $1.rank }
-            .enumerated()
-            .map { ($0.element.snapshot.taskID, $0.offset) }
+                .sorted { $0.rank < $1.rank }
+                .enumerated()
+                .map { ($0.element.snapshot.taskID, $0.offset) }
         )
         let quickStartRankBySelectedTaskID = Dictionary(
             uniqueKeysWithValues: selectedProjections
@@ -200,5 +203,4 @@ extension TimeTrackerStore {
 
         return pinnedTasks + recentFillTasks + remainingTasks
     }
-
 }

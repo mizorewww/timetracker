@@ -32,13 +32,11 @@ nonisolated struct TimerAdmissionPolicy {
         activeSegments: [TimerActiveSegmentSnapshot]
     ) -> TimerStopPlan {
         let activeSegments = canonicalSegments(activeSegments)
-        let matches: [TimerActiveSegmentSnapshot]
-
-        switch target {
-        case .segment(let segmentID):
-            matches = activeSegments.filter { $0.segmentID == segmentID }
-        case .task(let taskID):
-            matches = activeSegments.filter { $0.taskID == taskID }
+        let matches: [TimerActiveSegmentSnapshot] = switch target {
+        case let .segment(segmentID):
+            activeSegments.filter { $0.segmentID == segmentID }
+        case let .task(taskID):
+            activeSegments.filter { $0.taskID == taskID }
         }
 
         return TimerStopPlan(segmentsToStop: matches)

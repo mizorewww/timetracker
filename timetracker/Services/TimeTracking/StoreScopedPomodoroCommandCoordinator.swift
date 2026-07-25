@@ -50,14 +50,15 @@ struct StoreScopedPomodoroCommandCoordinator {
                 deviceID: resolvedDeviceID
             )
             let tasks = try taskRepository.allNodes()
-            guard TaskTrackingAvailabilityService()
+            guard try TaskTrackingAvailabilityService()
                 .directWorkTaskIDs(
                     tasks: tasks,
-                    recurrenceRules: try taskRepository.taskRecurrenceRules(),
+                    recurrenceRules: taskRepository.taskRecurrenceRules(),
                     recurrenceOccurrences:
-                        try taskRepository.taskRecurrenceOccurrences()
+                    taskRepository.taskRecurrenceOccurrences()
                 )
-                .contains(taskID) else {
+                .contains(taskID)
+            else {
                 throw SystemActionCommandError.taskNotFound
             }
             let allowParallelTimers = try TimerAdmissionPreferenceResolver
@@ -89,7 +90,7 @@ struct StoreScopedPomodoroCommandCoordinator {
                 targetRounds: targetRounds,
                 allowParallelTimers: allowParallelTimers,
                 activeSegments: activeSegmentsBefore,
-                pomodoroRuns: try pomodoroRepository.runs(),
+                pomodoroRuns: pomodoroRepository.runs(),
                 timeRepository: timeRepository,
                 pomodoroRepository: pomodoroRepository,
                 context: context
@@ -105,7 +106,8 @@ struct StoreScopedPomodoroCommandCoordinator {
                   let segment = activeSegmentsAfter.first(where: {
                       $0.sessionID == sessionID && $0.taskID == startedRun.taskID
                   }),
-                  try pomodoroRepository.activeRuns().map(\.id) == [startedRun.id] else {
+                  try pomodoroRepository.activeRuns().map(\.id) == [startedRun.id]
+            else {
                 throw StoreScopedPomodoroCommandInvariantError.startedFocusMissing
             }
             let focus = PomodoroFocusMutationSnapshot(
@@ -152,7 +154,8 @@ struct StoreScopedPomodoroCommandCoordinator {
                   run.clientMutationID == phase.mutationID,
                   run.state == .shortBreak || run.state == .longBreak,
                   run.deletedAt == nil,
-                  run.endedAt == nil else {
+                  run.endedAt == nil
+            else {
                 return .rejected(.stalePhase)
             }
             guard run.sessionID == nil else {
@@ -164,14 +167,15 @@ struct StoreScopedPomodoroCommandCoordinator {
                 deviceID: resolvedDeviceID
             )
             let tasks = try taskRepository.allNodes()
-            guard TaskTrackingAvailabilityService()
+            guard try TaskTrackingAvailabilityService()
                 .directWorkTaskIDs(
                     tasks: tasks,
-                    recurrenceRules: try taskRepository.taskRecurrenceRules(),
+                    recurrenceRules: taskRepository.taskRecurrenceRules(),
                     recurrenceOccurrences:
-                        try taskRepository.taskRecurrenceOccurrences()
+                    taskRepository.taskRecurrenceOccurrences()
                 )
-                .contains(run.taskID) else {
+                .contains(run.taskID)
+            else {
                 return .rejected(.taskUnavailable(run.taskID))
             }
             let allowParallelTimers = try TimerAdmissionPreferenceResolver
@@ -188,9 +192,10 @@ struct StoreScopedPomodoroCommandCoordinator {
                 repository: pomodoroRepository,
                 context: context
             ),
-            let resumedRun = try pomodoroRepository.run(id: run.id),
-            resumedRun.state == .focusing,
-            resumedRun.clientMutationID != phase.mutationID else {
+                let resumedRun = try pomodoroRepository.run(id: run.id),
+                resumedRun.state == .focusing,
+                resumedRun.clientMutationID != phase.mutationID
+            else {
                 throw StoreScopedPomodoroCommandInvariantError.resumedFocusMissing
             }
             let focus = PomodoroFocusMutationSnapshot(

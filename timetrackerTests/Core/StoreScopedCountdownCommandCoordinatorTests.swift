@@ -30,7 +30,7 @@ struct StoreScopedCountdownCommandCoordinatorTests {
         let context = try makeTestContext()
         let event = CountdownEvent(
             title: "Original",
-            date: Date(timeIntervalSince1970: 10_000),
+            date: Date(timeIntervalSince1970: 10000),
             deviceID: "original"
         )
         context.insert(event)
@@ -40,7 +40,7 @@ struct StoreScopedCountdownCommandCoordinatorTests {
             container: context.container,
             writeAuthorization: .isolatedTestHarness,
             deviceID: "sibling",
-            nowProvider: { Date(timeIntervalSince1970: 20_000) }
+            nowProvider: { Date(timeIntervalSince1970: 20000) }
         )
 
         try coordinator.update(
@@ -71,7 +71,7 @@ struct StoreScopedCountdownCommandCoordinatorTests {
         let context = try makeTestContext()
         let event = CountdownEvent(
             title: "Delete in sibling",
-            date: Date(timeIntervalSince1970: 10_000),
+            date: Date(timeIntervalSince1970: 10000),
             deviceID: "original"
         )
         context.insert(event)
@@ -84,7 +84,7 @@ struct StoreScopedCountdownCommandCoordinatorTests {
             container: context.container,
             writeAuthorization: .isolatedTestHarness,
             deviceID: "sibling",
-            nowProvider: { Date(timeIntervalSince1970: 20_000) }
+            nowProvider: { Date(timeIntervalSince1970: 20000) }
         ).delete(baseline: CountdownMutationBaseline(event: staleEvent))
 
         #expect(store.updateCountdownEvent(staleEvent, title: "Resurrect") == false)

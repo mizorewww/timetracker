@@ -34,16 +34,18 @@ extension StoreScopedChecklistCommandCoordinator {
                 .trackableTaskIDs(tasks: tasks)
                 .contains(baseline.taskID),
                 let item = try visibleItems(taskID: baseline.taskID, context: context)
-                    .first(where: { $0.id == baseline.itemID }),
+                .first(where: { $0.id == baseline.itemID }),
                 item.clientMutationID == baseline.itemMutationID,
                 ChecklistVisualSuggestionPolicy().normalizedTitle(item.title) == baseline.normalizedTitle,
-                item.isCompleted == false else {
+                item.isCompleted == false
+            else {
                 return (nil, false)
             }
 
             let visual = try canonicalVisual(for: item.id, context: context)
             guard visualMatches(baseline: baseline, current: visual),
-                  ChecklistVisualSuggestionPolicy().shouldSuggest(item: item, visual: visual) else {
+                  ChecklistVisualSuggestionPolicy().shouldSuggest(item: item, visual: visual)
+            else {
                 return (nil, false)
             }
 
@@ -78,7 +80,8 @@ extension StoreScopedChecklistCommandCoordinator {
     ) -> Bool {
         guard baseline.visualID == current?.id,
               baseline.visualMutationID == current?.clientMutationID,
-              baseline.visualUserEditedAt == current?.userEditedAt else {
+              baseline.visualUserEditedAt == current?.userEditedAt
+        else {
             return false
         }
         return current?.deletedAt == nil || current == nil

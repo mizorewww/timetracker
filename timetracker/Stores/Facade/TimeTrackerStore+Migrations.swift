@@ -56,9 +56,9 @@ extension TimeTrackerStore {
 enum LegacyCountdownMigrationPolicy {
     static let payloadKey = "CountdownEventsJSON"
     static let migrationKey = "CountdownEventsMigratedToSwiftData"
-    static let maximumPayloadByteCount = 256 * 1_024
+    static let maximumPayloadByteCount = 256 * 1024
     static let maximumEventCount = 256
-    static let maximumTitleByteCount = 4 * 1_024
+    static let maximumTitleByteCount = 4 * 1024
     static let earliestSupportedDate = Date(timeIntervalSince1970: -2_208_988_800)
     static let latestSupportedDate = Date(timeIntervalSince1970: 7_289_654_400)
 
@@ -114,7 +114,8 @@ private struct LegacyCountdownPayload: Decodable {
     init(from decoder: Decoder) throws {
         var container = try decoder.unkeyedContainer()
         if let count = container.count,
-           count > LegacyCountdownMigrationPolicy.maximumEventCount {
+           count > LegacyCountdownMigrationPolicy.maximumEventCount
+        {
             throw LegacyCountdownPayloadError.tooManyEvents
         }
 
@@ -129,7 +130,8 @@ private struct LegacyCountdownPayload: Decodable {
             let elementDecoder = try container.superDecoder()
             guard let event = try? LegacyCountdownEvent(from: elementDecoder),
                   LegacyCountdownMigrationPolicy.accepts(event),
-                  event.id.map({ seenIDs.insert($0).inserted }) ?? true else {
+                  event.id.map({ seenIDs.insert($0).inserted }) ?? true
+            else {
                 continue
             }
             decoded.append(event)

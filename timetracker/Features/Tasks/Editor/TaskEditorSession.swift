@@ -39,30 +39,33 @@ final class TaskEditorSession {
             quantityGoal: draft.quantityGoal,
             dailyRecurrence: draft.dailyRecurrence,
             confirmsQuantityProgressReset:
-                draft.confirmsQuantityProgressReset
+            draft.confirmsQuantityProgressReset
         )) != nil else {
             return false
         }
         if draft.baseline?.quantityGoalMutationID != nil,
            draft.quantityGoal == nil,
-           draft.confirmsQuantityProgressReset == false {
+           draft.confirmsQuantityProgressReset == false
+        {
             return false
         }
         if let taskID = draft.taskID {
             if case .incomplete = store.taskQuantityProgressReadState(
                 for: taskID,
                 expectedGoalMutationID:
-                    draft.baseline?.quantityGoalMutationID
+                draft.baseline?.quantityGoalMutationID
             ) {
                 return false
             }
             if draft.dailyRecurrence != nil,
-               store.isGeneratedRecurrenceTask(taskID: taskID) {
+               store.isGeneratedRecurrenceTask(taskID: taskID)
+            {
                 return false
             }
             if draft.baseline?.recurrenceRuleMutationID == nil,
                draft.dailyRecurrence != nil,
-               store.taskHasActiveWork(taskID: taskID) {
+               store.taskHasActiveWork(taskID: taskID)
+            {
                 return false
             }
         }
@@ -106,7 +109,7 @@ final class TaskEditorSession {
         onStale: (() -> Void)? = nil
     ) {
         switch saveDraft(draft) {
-        case .saved(let taskID):
+        case let .saved(taskID):
             onSaved(taskID)
         case .stale:
             if let onStale {
@@ -114,7 +117,7 @@ final class TaskEditorSession {
             } else {
                 prepareLatestDraft()
             }
-        case .failed(let message):
+        case let .failed(message):
             store.errorMessage = message
         }
     }
@@ -155,7 +158,8 @@ final class TaskEditorSession {
 
     func discardChanges() {
         if let taskID = draft.taskID,
-           let task = store.task(for: taskID) {
+           let task = store.task(for: taskID)
+        {
             replace(with: store.editorDraft(for: task))
         } else {
             replace(with: sessionBaseline)
@@ -169,7 +173,8 @@ final class TaskEditorSession {
 
     private func prepareLatestDraft() {
         guard let taskID = draft.taskID,
-              let latestTask = store.task(for: taskID) else {
+              let latestTask = store.task(for: taskID)
+        else {
             store.errorMessage = AppStrings.localized(
                 "systemAction.error.taskNotFound"
             )
@@ -206,7 +211,8 @@ final class TaskEditorSession {
         var candidates = store.validParentTasks(for: draft.taskID)
         if let currentParentID = draft.parentID,
            let currentParent = store.task(for: currentParentID),
-           candidates.contains(where: { $0.id == currentParentID }) == false {
+           candidates.contains(where: { $0.id == currentParentID }) == false
+        {
             candidates.append(currentParent)
         }
         return candidates

@@ -30,7 +30,8 @@ extension AnalyticsStore {
 
         while participants.count < limit {
             while let candidate = heap.min,
-                  activeSegmentCountByTaskID[candidate.id] == nil {
+                  activeSegmentCountByTaskID[candidate.id] == nil
+            {
                 _ = heap.popMin()
                 residentParticipantIDs.remove(candidate.id)
             }

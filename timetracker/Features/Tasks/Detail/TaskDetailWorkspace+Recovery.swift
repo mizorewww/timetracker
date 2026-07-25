@@ -55,14 +55,14 @@ extension TaskDetailWorkspace {
             returnDestination: returnDestination
         )
         switch result {
-        case .saved(let savedTaskID):
+        case let .saved(savedTaskID):
             savedRecoveryCopyTaskID = savedTaskID
             finishSavedRecoveryCopy()
         case .stale:
             store.errorMessage = TaskLifecycleMutationError
                 .staleDraft
                 .localizedDescription
-        case .failed(let message):
+        case let .failed(message):
             store.errorMessage = message
         }
     }

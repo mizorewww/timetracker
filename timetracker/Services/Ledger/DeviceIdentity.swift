@@ -26,7 +26,8 @@ nonisolated enum DeviceIdentityPolicy {
 
     static func isValid(_ identifier: String, for platform: DeviceIdentityPlatform) -> Bool {
         guard identifier.utf8.count <= maximumIdentifierByteCount,
-              !identifier.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
+              !identifier.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains)
+        else {
             return false
         }
 
@@ -35,7 +36,8 @@ nonisolated enum DeviceIdentityPolicy {
 
         let uuidString = String(identifier.dropFirst(prefix.count))
         guard let uuid = UUID(uuidString: uuidString),
-              uuid.uuidString == uuidString else {
+              uuid.uuidString == uuidString
+        else {
             return false
         }
         return identifier == self.identifier(platform: platform, uuid: uuid)
@@ -50,7 +52,8 @@ nonisolated enum DeviceIdentityStorage {
         makeUUID: () -> UUID
     ) -> String {
         if let existing = defaults.string(forKey: storageKey),
-           DeviceIdentityPolicy.isValid(existing, for: platform) {
+           DeviceIdentityPolicy.isValid(existing, for: platform)
+        {
             return existing
         }
 

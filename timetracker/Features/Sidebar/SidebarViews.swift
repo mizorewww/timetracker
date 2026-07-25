@@ -133,7 +133,8 @@ struct SidebarView: View {
 
     private var selectionFromStore: SidebarSelection {
         if let taskID = store.tasksRoute?.taskID,
-           store.isTaskDetailRouteValid(taskID) {
+           store.isTaskDetailRouteValid(taskID)
+        {
             return .task(taskID)
         }
         return .destination(store.desktopDestination)

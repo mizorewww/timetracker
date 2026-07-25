@@ -143,10 +143,13 @@ struct TaskRollupResolutionService {
         var seen = Set<UUID>()
         for rollup in rollups {
             for sourceID in rollup.forecastSourceTaskIDs
-            where sampled.count < Self.maximumSampledSourceIDs && seen.insert(sourceID).inserted {
+                where sampled.count < Self.maximumSampledSourceIDs && seen.insert(sourceID).inserted
+            {
                 sampled.append(sourceID)
             }
-            if sampled.count == Self.maximumSampledSourceIDs { break }
+            if sampled.count == Self.maximumSampledSourceIDs {
+                break
+            }
         }
         return sampled
     }

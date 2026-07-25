@@ -13,19 +13,19 @@ enum LLMModelServiceError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .missingEndpoint:
-            return AppStrings.localized("settings.llm.error.missingEndpoint")
+            AppStrings.localized("settings.llm.error.missingEndpoint")
         case .invalidEndpoint:
-            return AppStrings.localized("settings.llm.error.invalidEndpoint")
+            AppStrings.localized("settings.llm.error.invalidEndpoint")
         case .missingAPIKey:
-            return AppStrings.localized("settings.llm.error.missingAPIKey")
+            AppStrings.localized("settings.llm.error.missingAPIKey")
         case let .responseStatus(status):
-            return String(format: AppStrings.localized("settings.llm.error.responseStatus"), status)
+            String(format: AppStrings.localized("settings.llm.error.responseStatus"), status)
         case .responseTooLarge:
-            return AppStrings.localized("settings.llm.error.responseTooLarge")
+            AppStrings.localized("settings.llm.error.responseTooLarge")
         case .timeout:
-            return AppStrings.localized("settings.llm.error.timeout")
+            AppStrings.localized("settings.llm.error.timeout")
         case .invalidResponse:
-            return AppStrings.localized("settings.llm.error.invalidResponse")
+            AppStrings.localized("settings.llm.error.invalidResponse")
         }
     }
 }
@@ -43,7 +43,7 @@ struct LLMModelService {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMModelServiceError.invalidResponse
         }
-        guard (200..<300).contains(httpResponse.statusCode) else {
+        guard (200 ..< 300).contains(httpResponse.statusCode) else {
             throw LLMModelServiceError.responseStatus(httpResponse.statusCode)
         }
         try LLMSecureHTTPTransport.validateBufferedResponse(data)
@@ -99,7 +99,8 @@ struct LLMModelService {
               components.user == nil,
               components.password == nil,
               components.query == nil,
-              components.fragment == nil else {
+              components.fragment == nil
+        else {
             return nil
         }
 
@@ -115,7 +116,8 @@ struct LLMModelService {
               let sourceScheme = source.scheme?.lowercased(),
               let destinationScheme = destination.scheme?.lowercased(),
               let sourceHost = source.host?.lowercased(),
-              let destinationHost = destination.host?.lowercased() else {
+              let destinationHost = destination.host?.lowercased()
+        else {
             return false
         }
 
@@ -124,7 +126,7 @@ struct LLMModelService {
             effectivePort(for: source) == effectivePort(for: destination)
     }
 
-    nonisolated private static func effectivePort(for components: URLComponents) -> Int? {
+    private nonisolated static func effectivePort(for components: URLComponents) -> Int? {
         if let port = components.port {
             return port
         }
@@ -135,7 +137,7 @@ struct LLMModelService {
         }
     }
 
-    nonisolated private static func isLoopbackHost(_ host: String) -> Bool {
+    private nonisolated static func isLoopbackHost(_ host: String) -> Bool {
         let address = if host.hasPrefix("[") && host.hasSuffix("]") {
             String(host.dropFirst().dropLast())
         } else {

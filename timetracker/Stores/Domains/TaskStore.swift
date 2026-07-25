@@ -30,16 +30,16 @@ struct TaskStore {
                     visibleScopeIDs.contains($0.generatedTaskID)
             }.map(\.generatedTaskID)
         )
-        let fetchedRelatedTaskIDs = Set(
-            try repository.taskRecurrenceOccurrences(
+        let fetchedRelatedTaskIDs = try Set(
+            repository.taskRecurrenceOccurrences(
                 taskIDs: visibleScopeIDs
             ).map(\.generatedTaskID)
         )
         let relatedTaskIDs = cachedRelatedTaskIDs.union(
             fetchedRelatedTaskIDs
         )
-        fetchedTasks = (
-            fetchedTasks + (try repository.tasks(ids: relatedTaskIDs))
+        fetchedTasks = try (
+            fetchedTasks + (repository.tasks(ids: relatedTaskIDs))
         ).deduplicatedByID()
         let scopedTaskIDs = taskIDs.union(relatedTaskIDs)
         let fetchedTaskIDs = Set(fetchedTasks.map(\.id))
@@ -97,14 +97,14 @@ struct TaskStore {
             recurrenceRules.filter {
                 replacingTaskIDs.contains($0.templateTaskID) == false
             } +
-            fetchedRules
+                fetchedRules
         ).deduplicatedByID()
         recurrenceOccurrences = (
             recurrenceOccurrences.filter {
                 replacingTaskIDs.contains($0.templateTaskID) == false &&
                     replacingTaskIDs.contains($0.generatedTaskID) == false
             } +
-            fetchedOccurrences
+                fetchedOccurrences
         ).deduplicatedByID()
         quantityGoals = fetchedGoals.deduplicatedByID()
         quantityEntries = fetchedEntries.deduplicatedByID()
@@ -120,10 +120,11 @@ struct TaskStore {
             .filter { $0.deletedAt == nil }
             .latestByID()
         for occurrence in recurrenceOccurrences where
-            occurrence.deletedAt == nil {
+            occurrence.deletedAt == nil
+        {
             let relationshipIsComplete =
                 visibleRuleByID[occurrence.ruleID]?.templateTaskID ==
-                    occurrence.templateTaskID &&
+                occurrence.templateTaskID &&
                 taskIDs.contains(occurrence.templateTaskID) &&
                 taskIDs.contains(occurrence.generatedTaskID)
             guard relationshipIsComplete == false else { continue }
@@ -158,7 +159,8 @@ struct TaskStore {
         for entry in quantityEntries {
             let goal = goalByID[entry.quantityGoalID]
             guard taskIDs.contains(entry.taskID) == false ||
-                    goal?.taskID != entry.taskID else {
+                goal?.taskID != entry.taskID
+            else {
                 continue
             }
             var participantIDs = Set<UUID>()

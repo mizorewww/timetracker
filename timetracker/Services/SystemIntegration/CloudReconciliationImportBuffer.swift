@@ -22,7 +22,9 @@ final class CloudRecoveryImportBuffer {
         self.recordReceipt = recordReceipt
     }
 
-    var isObserving: Bool { token != nil }
+    var isObserving: Bool {
+        token != nil
+    }
 
     func startIfNeeded() {
         guard token == nil else { return }
@@ -34,7 +36,8 @@ final class CloudRecoveryImportBuffer {
             guard let event = notification.userInfo?[
                 NSPersistentCloudKitContainer.eventNotificationUserInfoKey
             ] as? NSPersistentCloudKitContainer.Event,
-                event.endDate != nil else {
+                event.endDate != nil
+            else {
                 return
             }
             MainActor.assumeIsolated { [weak self] in

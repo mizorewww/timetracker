@@ -108,7 +108,8 @@ struct LedgerBucketCache {
                entries.count >= maximumBucketCount,
                let leastRecentlyUsedKey = entries.min(by: {
                    $0.value.lastAccess < $1.value.lastAccess
-                })?.key {
+               })?.key
+            {
                 entries.removeValue(forKey: leastRecentlyUsedKey)
             }
             let lastAccess = nextAccess()

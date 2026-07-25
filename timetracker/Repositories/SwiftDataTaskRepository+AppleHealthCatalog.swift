@@ -180,8 +180,9 @@ extension SwiftDataTaskRepository {
             for: definition.id
         )
         guard task.parentID != nil ||
-                task.depth != 0 ||
-                task.path != canonicalPath else {
+            task.depth != 0 ||
+            task.path != canonicalPath
+        else {
             return false
         }
 
@@ -233,8 +234,9 @@ extension SwiftDataTaskRepository {
         let competitors = competingAssignments.filter { candidate in
             guard candidate !== assignment,
                   seenPersistentIDs.insert(
-                    candidate.persistentModelID
-                  ).inserted else {
+                      candidate.persistentModelID
+                  ).inserted
+            else {
                 return false
             }
             return true
@@ -310,7 +312,8 @@ extension SwiftDataTaskRepository {
         observedDates: [Date],
         now: Date
     ) throws where Model: SoftDeletablePersistentUUIDModel &
-        ClientMutationTrackedModel {
+        ClientMutationTrackedModel
+    {
         model.deletedAt = nil
         model.updatedAt = PersistentLWWMutationDate.strictlyDominating(
             preferred: now,

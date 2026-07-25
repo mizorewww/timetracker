@@ -2,6 +2,7 @@ import CoreData
 import Foundation
 import Observation
 import SwiftData
+
 @MainActor
 @Observable
 final class TimeTrackerStore {
@@ -42,14 +43,16 @@ final class TimeTrackerStore {
         }
         self.writeAuthorization = writeAuthorization
         self.syncConflictService = syncConflictService ?? Self.defaultSyncConflictService()
-        self.taskDraftRecoveryController = TaskDraftRecoveryController(store: taskDraftRecoveryStore ?? TaskDraftRecoveryStore())
+        taskDraftRecoveryController = TaskDraftRecoveryController(store: taskDraftRecoveryStore ?? TaskDraftRecoveryStore())
     }
 
     private static func defaultAppleHealthTimelinePreferenceStore()
-        -> any AppleHealthTimelinePreferenceStoring {
+        -> any AppleHealthTimelinePreferenceStoring
+    {
         #if DEBUG && os(iOS)
         if let fixture =
-            UITestAppleHealthDataReader.preferenceStoreIfRequested() {
+            UITestAppleHealthDataReader.preferenceStoreIfRequested()
+        {
             return fixture
         }
         #endif
@@ -73,16 +76,19 @@ final class TimeTrackerStore {
             rebuildTaskIndexes()
         }
     }
+
     var taskCategories: [TaskCategory] = [] {
         didSet {
             rebuildTaskCategoryIndexes()
         }
     }
+
     var taskCategoryAssignments: [TaskCategoryAssignment] = [] {
         didSet {
             rebuildTaskCategoryIndexes()
         }
     }
+
     var activeSegments: [TimeSegment] = [] {
         didSet {
             activeSegmentByTaskID = activeSegments.reduce(into: [:]) { result, segment in
@@ -92,11 +98,13 @@ final class TimeTrackerStore {
             }
         }
     }
+
     var todaySegments: [TimeSegment] = [] {
         didSet {
             sortedTodaySegments = todaySegments.sorted { $0.startedAt > $1.startedAt }
         }
     }
+
     var allSegments: [TimeSegment] = []
     var sessions: [TimeSession] = []
     var pomodoroRuns: [PomodoroRun] = []
@@ -110,6 +118,7 @@ final class TimeTrackerStore {
             }
         }
     }
+
     var checklistItemVisuals: [ChecklistItemVisual] = [] {
         didSet {
             if !suppressChecklistVisualIndexRebuild {
@@ -117,6 +126,7 @@ final class TimeTrackerStore {
             }
         }
     }
+
     var inboxItems: [InboxItem] = [] {
         didSet {
             if !suppressInboxSuggestionIndexRebuild {
@@ -124,6 +134,7 @@ final class TimeTrackerStore {
             }
         }
     }
+
     var inboxSuggestions: [InboxSuggestion] = [] {
         didSet {
             if !suppressInboxSuggestionIndexRebuild {
@@ -131,6 +142,7 @@ final class TimeTrackerStore {
             }
         }
     }
+
     var inboxSuggestionInFlightIDs: Set<UUID> = []
     var inboxSuggestionFailureByItemID: [UUID: String] = [:]
     @ObservationIgnored var inboxSuggestionPendingIDs: [UUID] = []
@@ -154,6 +166,7 @@ final class TimeTrackerStore {
         let applicationSafety = AppCloudSync.persistenceWriteSafety
         return applicationSafety == .ready ? persistenceWriteSafety : applicationSafety
     }
+
     var rollupDomainStore = RollupStore()
     var analyticsDomainStore = AnalyticsStore()
     var analyticsRevision: UInt = 0
@@ -181,27 +194,29 @@ final class TimeTrackerStore {
         case analytics = "Analytics"
         case settings = "Settings"
 
-        var id: String { rawValue }
+        var id: String {
+            rawValue
+        }
 
         var title: String {
             switch self {
-            case .today: return AppStrings.today
-            case .inbox: return AppStrings.inbox
-            case .tasks: return AppStrings.tasks
-            case .pomodoro: return AppStrings.focus
-            case .analytics: return AppStrings.analytics
-            case .settings: return AppStrings.settings
+            case .today: AppStrings.today
+            case .inbox: AppStrings.inbox
+            case .tasks: AppStrings.tasks
+            case .pomodoro: AppStrings.focus
+            case .analytics: AppStrings.analytics
+            case .settings: AppStrings.settings
             }
         }
 
         var symbolName: String {
             switch self {
-            case .today: return "sun.max"
-            case .inbox: return "tray"
-            case .tasks: return "checklist"
-            case .pomodoro: return "timer"
-            case .analytics: return "chart.bar"
-            case .settings: return "gearshape"
+            case .today: "sun.max"
+            case .inbox: "tray"
+            case .tasks: "checklist"
+            case .pomodoro: "timer"
+            case .analytics: "chart.bar"
+            case .settings: "gearshape"
             }
         }
     }

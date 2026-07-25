@@ -28,7 +28,7 @@ extension TimeTrackerStore {
             for: taskID
         )
         return todayHeatmapRecurrenceProjection.renderableTaskIDs([
-            ownerTaskID
+            ownerTaskID,
         ]).first
     }
 
@@ -42,8 +42,8 @@ extension TimeTrackerStore {
             taskByID: taskByID,
             childrenByParentID: childrenByParentID,
             additionalContributingTaskIDsBySelectedTaskID:
-                todayHeatmapRecurrenceProjection
-                    .generatedTaskIDsByTemplateTaskID,
+            todayHeatmapRecurrenceProjection
+                .generatedTaskIDsByTemplateTaskID,
             segments: allSegments,
             checklistItems: checklistItems,
             quantityGoals: taskQuantityGoals,
@@ -53,5 +53,4 @@ extension TimeTrackerStore {
             calendar: calendar
         )
     }
-
 }

@@ -36,7 +36,7 @@ struct CorePathFileLockTests {
         #expect(depth == 2)
 
         #expect(throws: InjectedFailure.self) {
-            try lock.withExclusiveAccess { () throws -> Void in
+            try lock.withExclusiveAccess { () throws in
                 throw InjectedFailure()
             }
         }

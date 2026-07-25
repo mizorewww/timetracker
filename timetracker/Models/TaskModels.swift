@@ -51,19 +51,19 @@ final class TaskNode {
         iconName: String? = nil,
         sortOrder: Double = 0
     ) {
-        self.id = UUID()
+        id = UUID()
         self.title = title
         self.parentID = parentID
         self.sortOrder = sortOrder
-        self.path = ""
-        self.depth = 0
-        self.statusRaw = LegacyTaskStatusRaw.active
+        path = ""
+        depth = 0
+        statusRaw = LegacyTaskStatusRaw.active
         self.colorHex = colorHex
         self.iconName = iconName
-        self.createdAt = Date()
-        self.updatedAt = Date()
+        createdAt = Date()
+        updatedAt = Date()
         self.deviceID = deviceID
-        self.clientMutationID = UUID()
+        clientMutationID = UUID()
     }
 }
 
@@ -89,16 +89,16 @@ final class TaskCategory {
         includesInForecast: Bool = true,
         sortOrder: Double = 0
     ) {
-        self.id = UUID()
+        id = UUID()
         self.title = title
         self.colorHex = colorHex
         self.iconName = iconName
         self.includesInForecast = includesInForecast
         self.sortOrder = sortOrder
-        self.createdAt = Date()
-        self.updatedAt = Date()
+        createdAt = Date()
+        updatedAt = Date()
         self.deviceID = deviceID
-        self.clientMutationID = UUID()
+        clientMutationID = UUID()
     }
 }
 
@@ -114,13 +114,13 @@ final class TaskCategoryAssignment {
     var clientMutationID: UUID = UUID()
 
     init(taskID: UUID, categoryID: UUID, deviceID: String) {
-        self.id = UUID()
+        id = UUID()
         self.taskID = taskID
         self.categoryID = categoryID
-        self.createdAt = Date()
-        self.updatedAt = Date()
+        createdAt = Date()
+        updatedAt = Date()
         self.deviceID = deviceID
-        self.clientMutationID = UUID()
+        clientMutationID = UUID()
     }
 }
 
@@ -129,10 +129,18 @@ extension TaskCategoryAssignment {
     /// "root task has category" key. Assignment rows have independent UUIDs,
     /// so normal model-ID deduplication alone cannot resolve concurrent writes.
     func isPreferredLogicalWinner(over other: TaskCategoryAssignment) -> Bool {
-        if updatedAt != other.updatedAt { return updatedAt > other.updatedAt }
-        if (deletedAt == nil) != (other.deletedAt == nil) { return deletedAt != nil }
-        if createdAt != other.createdAt { return createdAt > other.createdAt }
-        if deviceID != other.deviceID { return deviceID > other.deviceID }
+        if updatedAt != other.updatedAt {
+            return updatedAt > other.updatedAt
+        }
+        if (deletedAt == nil) != (other.deletedAt == nil) {
+            return deletedAt != nil
+        }
+        if createdAt != other.createdAt {
+            return createdAt > other.createdAt
+        }
+        if deviceID != other.deviceID {
+            return deviceID > other.deviceID
+        }
         if clientMutationID != other.clientMutationID {
             return clientMutationID.uuidString > other.clientMutationID.uuidString
         }
@@ -140,7 +148,7 @@ extension TaskCategoryAssignment {
     }
 }
 
-extension Sequence where Element == TaskCategoryAssignment {
+extension Sequence<TaskCategoryAssignment> {
     func logicalWinnersByTaskID() -> [UUID: TaskCategoryAssignment] {
         reduce(into: [:]) { winners, assignment in
             guard let current = winners[assignment.taskID] else {

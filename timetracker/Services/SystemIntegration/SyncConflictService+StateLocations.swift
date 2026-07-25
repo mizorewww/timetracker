@@ -18,7 +18,7 @@ extension SyncConflictService {
     }
 
     nonisolated func stateLockURL() throws -> URL {
-        Self.stateLockURL(for: try stateURL())
+        try Self.stateLockURL(for: stateURL())
     }
 
     /// Derives the durable root from the exact spelling of a managed URL.
@@ -44,12 +44,12 @@ extension SyncConflictService {
     }
 
     nonisolated static func defaultStateURL() throws -> URL {
-        try defaultStateDirectoryURL().appendingPathComponent(Self.stateFileName)
+        try defaultStateDirectoryURL().appendingPathComponent(stateFileName)
     }
 
     nonisolated static func defaultPendingForcedUploadSnapshotURL() throws -> URL {
         try defaultStateDirectoryURL().appendingPathComponent(
-            Self.pendingForcedUploadSnapshotFileName
+            pendingForcedUploadSnapshotFileName
         )
     }
 

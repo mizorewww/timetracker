@@ -131,6 +131,6 @@ struct CoreLedgerRelationshipVisibilityTests {
         let previousDayStart = try #require(
             calendar.date(byAdding: .day, value: -1, to: currentDayStart)
         )
-        return previousDayStart.addingTimeInterval(12 * 3_600)
+        return previousDayStart.addingTimeInterval(12 * 3600)
     }
 }

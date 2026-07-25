@@ -181,8 +181,8 @@ struct StoreScopedSegmentCommandCoordinatorTests {
             )
         }
 
-        let activeIDs = Set(
-            try timeRepository(
+        let activeIDs = try Set(
+            timeRepository(
                 ModelContext(container),
                 now: startedAt.addingTimeInterval(60)
             ).activeSegments().map(\.id)

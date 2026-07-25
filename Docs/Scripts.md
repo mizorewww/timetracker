@@ -50,6 +50,33 @@ make test-versioning
 
 脚本依赖 Xcode 注入的 `TARGET_BUILD_DIR` 和 `UNLOCALIZED_RESOURCES_FOLDER_PATH`；缺失时会成功退出并打印跳过信息。`SRCROOT` 可覆盖 Git 仓库根目录。dirty 状态包括已暂存、未暂存和未跟踪文件。
 
+## `make localization-check`(`localization_check.sh`)
+
+纯标准库静态校验:解析所有 target 的 `.strings`(`Localizable`/`InfoPlist`/`AppShortcuts`),比对 `en`/`zh-Hans`/`zh-Hant` 三语种 key 集合,任一资源不一致即退出码 1。无需 `xcodebuild`,毫秒级。
+
+```sh
+make localization-check
+```
+
+只在不一致时输出详情(`--quiet`):
+
+```sh
+scripts/localization_check.sh --quiet
+```
+
+该脚本也是 pre-commit 闸门:提交前先以 `--quiet` 跑一次,缺 key 即中止提交。`--repo-root` 可覆盖仓库根。范围只做 key-set parity;`Localizable.strings` 的 value 内容禁令(如"软删除")仍由 `LocalizationContractTests` Swift 套件负责,二者互补。
+
+## `make format` / `make format-check`(`format.sh`)
+
+用 [SwiftFormat](https://github.com/nicklockwood/swiftformat)(Nick Lockwood)格式化所有 Swift 源根(`timetracker`、`timetrackerTests`、`timetrackerUITests`、`timetrackerWatchApp`、`timetrackerWidgetExtension`、`timetrackerLiveActivityExtension`、`SharedLiveActivity`),配置在仓库根 `.swiftformat`(排除 `build/`、`.venv/`、`timetracker.xcodeproj/`)。
+
+```sh
+make format         # 原地格式化
+make format-check   # 只读校验(--lint),不符合则退出码 1
+```
+
+前置依赖:`brew install swiftformat`。`format.py` 只定位二进制并转发参数,格式化逻辑在外部 `swiftformat`;`--check` 透传为 `--lint`。`.swiftformat` 禁用了若干会改写语义/产生无效代码的默认规则(`organizeDeclarations`、`opaqueGenericParameters`、`noForceUnwrapInTests`、`preferKeyPath`),详见配置文件注释。
+
 ## `make export-artifacts`(`export_signed_artifacts.sh`)
 
 归档 iOS 和 macOS Release 产物，导出开发签名 IPA，复制并签名校验 macOS `.app`，再生成 macOS zip：

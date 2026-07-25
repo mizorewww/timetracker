@@ -1,0 +1,10 @@
+# SwiftFormat 配置 — 保守基线,与现有风格对齐(4 空格缩进 / K&R 大括号)。
+# 详见 https://github.com/nicklockwood/swiftformat 与 `make help`。
+# 首次全量格式化后落地;后续以 `make format` / `make format-check` 维护。
+
+--swiftversion 6.0
+--indent 4
+--allman false
+--ifdef no-indent
+--exclude build/, .venv/, timetracker.xcodeproj/
+--disable organizeDeclarations, opaqueGenericParameters, noForceUnwrapInTests, preferKeyPath

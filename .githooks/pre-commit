@@ -2,4 +2,6 @@
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+# 提交闸门:三语种 .strings key 一致(毫秒级,无需 xcodebuild)。
+"$REPO_ROOT/scripts/localization_check.sh" --quiet
 "$REPO_ROOT/scripts/stage_commit_version.sh"

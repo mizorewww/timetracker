@@ -39,6 +39,8 @@ Build, release, versioning, and hook commands enter through the Makefile. `scrip
 | `make build-ios` / `make build-macos` | build for `generic/platform=iOS` / `generic/platform=macOS` |
 | `make build-install-all` | build iOS+Watch and macOS, install to physical devices, copy macOS app to `/Applications` |
 | `make test` | signed macOS unit tests (`timetrackerTests`) — the default verification gate |
+| `make localization-check` | static check that every `.strings` resource exposes the same keys across `en`/`zh-Hans`/`zh-Hant` (no `xcodebuild`; also a pre-commit gate) |
+| `make format` / `make format-check` | run SwiftFormat in-place / lint-only over all Swift sources (config in `.swiftformat`; `brew install swiftformat`) |
 | `make export-artifacts` | archive and export signed IPA + macOS app/zip |
 | `make build-info` | write `AppBuildInfo.plist` (normally invoked by the Xcode build phase; standalone it skips) |
 | `make clean` | remove `build/Exports`, `build/Archives`, `build/Install` |
@@ -81,11 +83,12 @@ Follow this lifecycle for every task. Do not skip steps to move faster; narrow t
 ### 5. Commit small and complete
 
 - Commit after every small, coherent, verified step — do not wait for the whole repository-wide goal.
-- Before the first commit in a clone, run `make install-hooks`; use `make check-hooks` to verify later checkpoints. The tracked hook must remain active so every normal commit advances the app marketing version and build number.
+- Before the first commit in a clone, run `make install-hooks`; use `make check-hooks` to verify later checkpoints. The tracked hook must remain active so every normal commit advances the app marketing version and build number. The hook also runs the localization parity gate (`.strings` keys must match across all three locales) before staging the version bump — add new keys to `en`, `zh-Hans`, and `zh-Hant` in the same change.
 - Keep each commit focused, reviewable, and safe to revert. Stage only completed work; do not capture another active agent's half-finished edit.
 - Update the affected current docs (UserGuide, CodeGuide, Architecture, ProjectMap, privacy, versioning) in the same commit as the behavior change.
 - Keep repository agent resources, including `AGENTS.md` and `.agents/`, under version control. Do not add them to `.gitignore`; commit new or updated agent instructions and supporting files with the small task that uses them.
 - Run the task's verification gate before committing — `make test` for the default macOS unit suite, `make test-versioning` for any hook/versioning change, plus the UI/device checks the risk requires. Report failed or inconclusive verification honestly.
+- Keep Swift sources formatted with `make format` (SwiftFormat, config in `.swiftformat`); `make format-check` is the read-only gate. Formatting is not chained into the pre-commit hook — run it manually before committing Swift changes.
 - Do not run `make bump-version` in the normal commit flow; the pre-commit hook advances the version automatically. `make bump-version` is only for explicit manual bumps or temp-copy verification.
 
 ### 6. Close out

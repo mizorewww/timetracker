@@ -18,6 +18,9 @@
 | `make build-macos` | 构建 macOS app(`generic/platform=macOS`) |
 | `make build-install-all` | 构建 iOS+Watch 与 macOS,安装到设备并复制到 /Applications |
 | `make test` | macOS 单元测试(`timetrackerTests`) |
+| `make localization-check` | 静态校验所有 `.strings` 资源在三语种间 key 一致(无需 `xcodebuild`,也作为 pre-commit 闸门) |
+| `make format` | 用 SwiftFormat 原地格式化所有 Swift 源 |
+| `make format-check` | 只读校验 Swift 源是否符合 SwiftFormat(不修改) |
 | `make export-artifacts` | 归档并导出签名产物(iOS IPA + macOS app/zip) |
 | `make build-info` | 写入 `AppBuildInfo.plist`(通常由 Xcode 构建阶段调用,手动运行会因缺 Xcode 变量而跳过) |
 | `make clean` | 删除 `build/` 下的导出、归档与安装产物 |
@@ -50,10 +53,13 @@ tools/timetracker_tools/    # Python 实现
   install_git_hooks.py
   write_build_info_plist.py
   test_versioning_hooks.py
+  localization_check.py        # .strings 三语种 key parity 静态校验
+  format.py                    # 定位 swiftformat 二进制并传播退出码(逻辑在外部 swiftformat)
 scripts/*.sh                # 薄 wrapper:补 PATH + exec uv run python -m timetracker_tools.<name>
 ```
 
-- **无第三方运行依赖**:实现只用标准库(`subprocess`、`plistlib`、`json`、`argparse`、`re`、`pathlib`、`tempfile`)。`uv sync` 只装本包自身。
+- **无第三方 Python 运行依赖**:实现只用标准库(`subprocess`、`plistlib`、`json`、`argparse`、`re`、`pathlib`、`tempfile`)。`uv sync` 只装本包自身。
+- **外部二进制**:`make format` / `make format-check` 调用 [SwiftFormat](https://github.com/nicklockwood/swiftformat)(Nick Lockwood),需 `brew install swiftformat`;配置在仓库根 `.swiftformat`。`format.py` 只负责定位二进制与转发参数,不在 Python 侧实现格式化逻辑。
 - **`uv run` 自举**:wrapper 调 `uv run --project <root> python -m timetracker_tools.<name>`,`uv run` 会在缺失时自动创建 `.venv` 并以 editable 方式装好包,因此首次运行不必先 `make venv`。`make venv` 只是显式 bootstrap,便于离线/CI 预热。
 - **`uv.lock` 提交**:锁文件入库以保证不同机器环境一致;`.venv/` 不入库。
 
@@ -79,7 +85,7 @@ PATH 兜底是为了应对 **Xcode 构建阶段**环境 PATH 受限的情况(见
 两处外部调用方写死了 `scripts/` 路径,刻意保留不改,经由 wrapper 间接调 Python:
 
 - **Xcode 构建阶段**:`timetracker.xcodeproj/project.pbxproj` 的 "Write Build Info" 阶段 `shellScript = "$SRCROOT/scripts/write_build_info_plist.sh"`。该 wrapper 再 `uv run` 调 `write_build_info_plist.py`,后者从 Xcode 注入的 `TARGET_BUILD_DIR` / `UNLOCALIZED_RESOURCES_FOLDER_PATH` 定位资源目录并写入 `AppBuildInfo.plist`。
-- **pre-commit hook**:`.githooks/pre-commit` 调 `scripts/stage_commit_version.sh`,该 wrapper 调 `stage_commit_version.py`,改写 Git index 中的 pbxproj blob 并同步工作树版本字段(不带入其它未暂存改动)。
+- **pre-commit hook**:`.githooks/pre-commit` 先调 `scripts/localization_check.sh --quiet`(三语种 `.strings` key parity 闸门,失败即中止提交),再调 `scripts/stage_commit_version.sh`,后者调 `stage_commit_version.py`,改写 Git index 中的 pbxproj blob 并同步工作树版本字段(不带入其它未暂存改动)。
 
 ### 排错:uv 不在 Xcode 构建阶段的 PATH
 

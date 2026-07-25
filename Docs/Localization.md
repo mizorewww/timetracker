@@ -16,7 +16,7 @@ User-facing copy should be added to the `Localizable.strings` files under each t
 
 - Do not hard-code user-facing Chinese text in Swift source. The unit test `swiftSourcesDoNotContainHardCodedChineseText` enforces this.
 - Do not add a new localized key to only one language. The unit test `localizationFilesExposeTheSameKeys` requires all locale files to expose the same keys.
-- Keep `InfoPlist.strings` in parity for the main app, Live Activity, Widget, and Watch, and keep the main app's `AppShortcuts.strings` in parity. These resource families currently need an explicit plist/static check in addition to the `Localizable.strings` unit suite.
+- Keep `InfoPlist.strings` in parity for the main app, Live Activity, Widget, and Watch, and keep the main app's `AppShortcuts.strings` in parity. `InfoPlist.strings`/`AppShortcuts.strings` parity is enforced statically by `make localization-check` (and by the pre-commit gate), which compares key sets across all three locales for every target/resource family without running `xcodebuild`; the `Localizable.strings` key-parity and hard-coded-Chinese scan remain in the `LocalizationContractTests` Swift suite.
 - Prefer concise labels that fit on iPhone.
 - Avoid implementation terms in everyday UI. Use ledger terminology only when the user is editing historical records or reading data-management settings.
 - Do not expose or translate legacy task workflow values (`planned`, `active`, `completed`) as product state. Checklist completion copy belongs to checklist items and does not imply that the task is locked. The current task product vocabulary is Archive/Restore; deletion copy is reserved for reset, ledger/checklist entities, and historical tombstone fallbacks, never an ordinary task action.

@@ -69,6 +69,20 @@ test: ## macOS 单元测试(timetrackerTests)
 	  -destination 'platform=macOS' -only-testing:timetrackerTests \
 	  -parallel-testing-enabled NO
 
+# ── 校验 ──────────────────────────────────────────────────────
+.PHONY: localization-check
+localization-check: ## 校验所有 .strings 资源在三语种间 key 一致
+	@$(SCRIPTS)/localization_check.sh
+
+# ── 格式化 ────────────────────────────────────────────────────
+.PHONY: format
+format: ## 用 SwiftFormat 原地格式化所有 Swift 源
+	@$(SCRIPTS)/format.sh
+
+.PHONY: format-check
+format-check: ## 只读校验 Swift 源是否符合 SwiftFormat(不修改)
+	@$(SCRIPTS)/format.sh --check
+
 # ── 发布 ──────────────────────────────────────────────────────
 .PHONY: export-artifacts
 export-artifacts: ## 归档并导出签名产物(iOS IPA + macOS app/zip)

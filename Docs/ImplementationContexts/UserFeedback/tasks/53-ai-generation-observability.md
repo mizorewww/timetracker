@@ -8,8 +8,8 @@
 - [x] 领取"生成任务展示模型目前输出了多少token,让用户知道是否卡死"与"AI生成任务界面可以查看CoT和原始输出"两条反馈(同一生成界面,合并为一个任务)。
 - [x] 审计生成链路(UI → coordinator → LLMTaskPlanService → transport)与响应模型,确定流式进度与 CoT 捕获方案。
 - [x] 实现流式 token 进度 + CoT/原始输出查看 + 行为测试。
-- [~] 模拟器截图验收,`make test` 全绿。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
+- [x] 模拟器截图验收,`make test` 全绿。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -28,9 +28,9 @@
 
 - [x] Checkpoint A:领取任务、创建实现记忆与 active link。
 - [~] Checkpoint B:审计生成链路与响应契约。
-- [ ] Checkpoint C:实现 + 补齐行为测试。
-- [ ] Checkpoint D:模拟器验收与资源清理。
-- [ ] Checkpoint E:Release 构建安装、核验与收口。
+- [x] Checkpoint C:实现 + 补齐行为测试。
+- [x] Checkpoint D:模拟器验收与资源清理。
+- [x] Checkpoint E:Release 构建安装、核验与收口。
 
 ## 资源所有权
 
@@ -39,7 +39,15 @@
 
 ## 已提交 checkpoint
 
-- [ ] 待提交:领取任务、实现记忆与 active link。
+- [x] 实现与测试:feat: stream AI task plan generation with token progress and reasoning view(版本 1.1.160)。
+- [x] 已收口:userfeedback 两条均勾选 [x],active link 已移除,任务关闭。
+
+### 验收记录(Checkpoint D/E)
+
+- 单测:CoreLLMTaskPlanStreamingTests(9)+ CoreLLMServerSentEventParserTests(7)+ CoreLLMResponseTransportTests(含 4 个新流式用例)+ CoreLLMTaskPlanServiceTests 全绿;`make test` 全量仅剩任务52已确认的 2 个既有隔离 flake(干净 HEAD 同现)。
+- 模拟器:iPhone 17 Pro (iOS 27,UDID 298999E1,已 shutdown+delete):新 UI 测试 testAITaskPlanPreviewExposesReasoningAndRawOutput 通过;testAITaskPlanWithOneHundredFiftyChecklistItemsRendersAndCreates 回归通过;截图 iphone-ai-task-plan-observability 目检通过(原生 List、DisclosureGroup 层级正确、等宽 JSON 可选中)。
+- 资源清理:模拟器已删除,/tmp xcresult/log 已清,无残留 xcodebuild/启动台进程。
+- Release:build_install_all 完成(exit 0),iOS+Watch+macOS 安装流程走完;实体机状态不阻塞。
 
 ## 实现与验收记录
 

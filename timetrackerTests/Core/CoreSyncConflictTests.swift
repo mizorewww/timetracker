@@ -10,6 +10,7 @@ struct CoreSyncConflictTests {
         try withCloudSyncMode {
             let context = try makeTestContext()
             let task = TaskNode(title: "Local plan", parentID: nil, deviceID: "test")
+            task.updatedAt = Date().addingTimeInterval(120)
             context.insert(task)
             try context.save()
 
@@ -19,6 +20,7 @@ struct CoreSyncConflictTests {
             task.title = "Cloud plan"
             task.updatedAt = Date().addingTimeInterval(60)
             try context.save()
+            try insertUnmergeableSentinel(into: context)
 
             let prompt = try #require(try service.handleCloudImport(context: context))
             #expect(prompt.localSummary.isEmpty == false)
@@ -47,7 +49,10 @@ struct CoreSyncConflictTests {
             try context.save()
 
             let service = SyncConflictService(stateURL: temporaryStateURL())
+            let sentinel = try insertUnmergeableSentinel(into: context)
             #expect(try service.bootstrap(context: context) == nil)
+            context.delete(sentinel)
+            try context.save()
 
             task.title = "Cloud plan"
             task.updatedAt = Date().addingTimeInterval(60)
@@ -82,16 +87,17 @@ struct CoreSyncConflictTests {
 
             task.title = "Mac local edit"
             task.deviceID = "device-a"
-            task.updatedAt = Date().addingTimeInterval(60)
+            task.updatedAt = Date().addingTimeInterval(120)
             task.clientMutationID = UUID()
             try context.save()
             try service.recordLocalMutation(context: context)
 
             task.title = "iPhone remote edit"
             task.deviceID = "device-b"
-            task.updatedAt = Date().addingTimeInterval(120)
+            task.updatedAt = Date().addingTimeInterval(60)
             task.clientMutationID = UUID()
             try context.save()
+            try insertUnmergeableSentinel(into: context)
 
             let prompt = try #require(try service.handleCloudImport(context: context))
             #expect(prompt.localSummary.isEmpty == false)
@@ -108,6 +114,157 @@ struct CoreSyncConflictTests {
             let tasks = try context.fetch(FetchDescriptor<TaskNode>())
             #expect(tasks.map(\.title) == ["Mac local edit"])
             #expect(try service.prompt() == nil)
+        }
+    }
+
+    @Test @MainActor
+    func mergeableDivergenceAutoMergesWithoutPrompting() throws {
+        try withCloudSyncMode {
+            let context = try makeTestContext()
+            let task = TaskNode(title: "Shared base", parentID: nil, deviceID: "device-a")
+            context.insert(task)
+            try context.save()
+
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            #expect(try service.bootstrap(context: context) == nil)
+            try acknowledgeCurrentCloudExport(service: service, context: context)
+
+            task.title = "Mac local edit"
+            task.updatedAt = Date().addingTimeInterval(60)
+            task.clientMutationID = UUID()
+            try context.save()
+            try service.recordLocalMutation(context: context)
+
+            task.title = "iPhone remote edit"
+            task.deviceID = "device-b"
+            task.updatedAt = Date().addingTimeInterval(120)
+            task.clientMutationID = UUID()
+            try context.save()
+
+            #expect(try service.handleCloudImport(context: context) == nil)
+            #expect(try service.prompt() == nil)
+
+            let state = try service.loadState()
+            let cloudFingerprint = try SyncDataSnapshot.capture(context: context).fingerprint()
+            #expect(state.baseFingerprint == cloudFingerprint)
+            #expect(state.localFingerprint == cloudFingerprint)
+            #expect(state.pendingConflictID == nil)
+            #expect(
+                try context.fetch(FetchDescriptor<TaskNode>())
+                    .visibleDeduplicatedByID()
+                    .first?.title == "iPhone remote edit"
+            )
+        }
+    }
+
+    @Test @MainActor
+    func autoMergeRestoresANewerLocalBranchWithoutPrompting() throws {
+        try withCloudSyncMode {
+            let context = try makeTestContext()
+            let task = TaskNode(title: "Shared base", parentID: nil, deviceID: "device-a")
+            context.insert(task)
+            try context.save()
+
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            #expect(try service.bootstrap(context: context) == nil)
+            try acknowledgeCurrentCloudExport(service: service, context: context)
+
+            task.title = "Mac local edit"
+            task.updatedAt = Date().addingTimeInterval(120)
+            task.clientMutationID = UUID()
+            try context.save()
+            try service.recordLocalMutation(context: context)
+
+            task.title = "iPhone remote edit"
+            task.deviceID = "device-b"
+            task.updatedAt = Date().addingTimeInterval(60)
+            task.clientMutationID = UUID()
+            try context.save()
+
+            #expect(try service.handleCloudImport(context: context) == nil)
+            #expect(try service.prompt() == nil)
+
+            let state = try service.loadState()
+            #expect(state.pendingConflictID == nil)
+            #expect(state.localSnapshot?.tasks.first?.title == "Mac local edit")
+            #expect(
+                try context.fetch(FetchDescriptor<TaskNode>())
+                    .visibleDeduplicatedByID()
+                    .first?.title == "Mac local edit"
+            )
+        }
+    }
+
+    @Test @MainActor
+    func autoMergeUnionsRecordsUniqueToEachSide() throws {
+        try withCloudSyncMode {
+            let context = try makeTestContext()
+            let shared = TaskNode(title: "Shared base", parentID: nil, deviceID: "device-a")
+            context.insert(shared)
+            try context.save()
+
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            #expect(try service.bootstrap(context: context) == nil)
+            try acknowledgeCurrentCloudExport(service: service, context: context)
+
+            let localOnly = TaskNode(title: "Mac-only task", parentID: nil, deviceID: "device-a")
+            context.insert(localOnly)
+            try context.save()
+            try service.recordLocalMutation(context: context)
+
+            // Simulate a CloudKit import that brings a remote-only task while
+            // the local-only task remains in the store awaiting export.
+            let remoteOnly = TaskNode(title: "iPhone-only task", parentID: nil, deviceID: "device-b")
+            context.insert(remoteOnly)
+            try context.save()
+
+            #expect(try service.handleCloudImport(context: context) == nil)
+            #expect(try service.prompt() == nil)
+
+            let visibleTitles = try context.fetch(FetchDescriptor<TaskNode>())
+                .visibleDeduplicatedByID()
+                .map(\.title)
+                .sorted()
+            #expect(visibleTitles == ["Mac-only task", "Shared base", "iPhone-only task"])
+        }
+    }
+
+    @Test @MainActor
+    func pendingConflictAutoResolvesWhenTheUnmergeableRowLeavesTheCloudBranch() throws {
+        try withCloudSyncMode {
+            let context = try makeTestContext()
+            let task = TaskNode(title: "Shared base", parentID: nil, deviceID: "device-a")
+            context.insert(task)
+            try context.save()
+
+            let service = SyncConflictService(stateURL: temporaryStateURL())
+            #expect(try service.bootstrap(context: context) == nil)
+            try acknowledgeCurrentCloudExport(service: service, context: context)
+
+            task.title = "Mac local edit"
+            task.updatedAt = Date().addingTimeInterval(180)
+            try context.save()
+            try service.recordLocalMutation(context: context)
+
+            task.title = "iPhone cloud edit"
+            task.updatedAt = Date().addingTimeInterval(120)
+            try context.save()
+            let sentinel = try insertUnmergeableSentinel(into: context)
+            #expect(try service.handleCloudImport(context: context) != nil)
+
+            context.delete(sentinel)
+            try context.save()
+            #expect(try service.handleCloudImport(context: context) == nil)
+            #expect(try service.prompt() == nil)
+
+            let state = try service.loadState()
+            #expect(state.pendingConflictID == nil)
+            #expect(state.pendingCloudSnapshot == nil)
+            #expect(
+                try context.fetch(FetchDescriptor<TaskNode>())
+                    .visibleDeduplicatedByID()
+                    .first?.title == "Mac local edit"
+            )
         }
     }
 
@@ -186,9 +343,10 @@ struct CoreSyncConflictTests {
 
             task.title = "Remote edit"
             task.deviceID = "device-b"
-            task.updatedAt = base.addingTimeInterval(30)
+            task.updatedAt = base.addingTimeInterval(15)
             task.clientMutationID = UUID()
             try context.save()
+            try insertUnmergeableSentinel(into: context)
 
             let prompt = try #require(try service.handleCloudImport(context: context))
             #expect(
@@ -432,13 +590,14 @@ struct CoreSyncConflictTests {
             try acknowledgeCurrentCloudExport(service: service, context: context)
 
             task.title = "Mac local edit"
-            task.updatedAt = Date().addingTimeInterval(60)
+            task.updatedAt = Date().addingTimeInterval(120)
             try context.save()
             try service.recordLocalMutation(context: context)
 
             task.title = "iPhone cloud edit"
-            task.updatedAt = Date().addingTimeInterval(120)
+            task.updatedAt = Date().addingTimeInterval(60)
             try context.save()
+            try insertUnmergeableSentinel(into: context)
             let prompt = try #require(try service.handleCloudImport(context: context))
 
             let laterTask = TaskNode(title: "Post-conflict task", parentID: nil, deviceID: "device-a")
@@ -489,7 +648,7 @@ struct CoreSyncConflictTests {
             try acknowledgeCurrentCloudExport(service: service, context: context)
 
             task.title = "Local task edit"
-            task.updatedAt = base.addingTimeInterval(10)
+            task.updatedAt = base.addingTimeInterval(20)
             task.clientMutationID = UUID()
             inbox.title = "Unreported inbox edit"
             inbox.updatedAt = base.addingTimeInterval(10)
@@ -501,12 +660,13 @@ struct CoreSyncConflictTests {
             )
 
             task.title = "Cloud task edit"
-            task.updatedAt = base.addingTimeInterval(20)
+            task.updatedAt = base.addingTimeInterval(10)
             task.clientMutationID = UUID()
             inbox.title = "Cloud inbox edit"
             inbox.updatedAt = base.addingTimeInterval(20)
             inbox.clientMutationID = UUID()
             try context.save()
+            try insertUnmergeableSentinel(into: context)
             let prompt = try #require(try service.handleCloudImport(context: context))
 
             #expect(
@@ -540,10 +700,13 @@ struct CoreSyncConflictTests {
             #expect(try service.bootstrap(context: context) == nil)
             try acknowledgeCurrentCloudExport(service: service, context: context)
 
+            let sentinel = try insertUnmergeableSentinel(into: context)
             task.title = "Mac local edit"
             task.updatedAt = Date().addingTimeInterval(60)
             try context.save()
             try service.recordLocalMutation(context: context)
+            context.delete(sentinel)
+            try context.save()
 
             task.title = "iPhone cloud edit"
             task.updatedAt = Date().addingTimeInterval(120)
@@ -585,10 +748,13 @@ struct CoreSyncConflictTests {
             #expect(try service.bootstrap(context: context) == nil)
             try acknowledgeCurrentCloudExport(service: service, context: context)
 
+            let sentinel = try insertUnmergeableSentinel(into: context)
             task.title = "Mac local edit"
             task.updatedAt = Date().addingTimeInterval(60)
             try context.save()
             try service.recordLocalMutation(context: context)
+            context.delete(sentinel)
+            try context.save()
 
             task.title = "iPhone cloud edit"
             task.updatedAt = Date().addingTimeInterval(120)
@@ -1104,7 +1270,7 @@ struct CoreSyncConflictTests {
     }
 
     @Test @MainActor
-    func automaticCloudReenablePreservesRemoteDataUntilUserChooses() throws {
+    func automaticCloudReenableAutoMergesLocalAndRemoteBranches() throws {
         try withSyncMode(AppCloudSync.modeLocal) {
             let service = SyncConflictService(stateURL: temporaryStateURL())
             let localContext = try makeTestContext()
@@ -1135,12 +1301,19 @@ struct CoreSyncConflictTests {
             )
             #expect(AppCloudSync.allowsUserWrites == false)
 
-            let prompt = try #require(try service.handleCloudImport(context: cloudContext))
+            #expect(try service.handleCloudImport(context: cloudContext) == nil)
             let state = try service.loadState()
-            #expect(prompt.localSummary.isEmpty == false)
-            #expect(prompt.cloudSummary.isEmpty == false)
-            #expect(state.localSnapshot?.tasks.map(\.title) == ["Protected local branch"])
-            #expect(state.pendingCloudSnapshot?.tasks.map(\.title) == ["Remote cloud branch"])
+            #expect(
+                try cloudContext.fetch(FetchDescriptor<TaskNode>())
+                    .visibleDeduplicatedByID()
+                    .map(\.title)
+                    .sorted() == ["Protected local branch", "Remote cloud branch"]
+            )
+            #expect(state.localSnapshot?.tasks.map(\.title).sorted() == [
+                "Protected local branch",
+                "Remote cloud branch",
+            ])
+            #expect(state.pendingConflictID == nil)
             #expect(state.pendingForcedUploadSnapshot == nil)
             #expect(state.pendingLocalIntent == nil)
             #expect(AppCloudSync.isCloudRecoveryPending == false)
@@ -1177,7 +1350,7 @@ struct CoreSyncConflictTests {
     }
 
     @Test @MainActor
-    func initialEmptyCloudImportPromptsBeforeProtectedLocalUpload() throws {
+    func initialEmptyCloudImportAutoRestoresTheProtectedLocalBranch() throws {
         try withSyncMode(AppCloudSync.modeLocal) {
             let service = SyncConflictService(stateURL: temporaryStateURL())
             let localContext = try makeTestContext()
@@ -1195,12 +1368,17 @@ struct CoreSyncConflictTests {
 
             let emptyCloudContext = try makeTestContext()
             #expect(try service.bootstrap(context: emptyCloudContext) == nil)
-            let prompt = try #require(try service.handleCloudImport(context: emptyCloudContext))
+            #expect(try service.handleCloudImport(context: emptyCloudContext) == nil)
             let state = try service.loadState()
 
-            #expect(prompt.localSummary.isEmpty == false)
+            #expect(
+                try emptyCloudContext.fetch(FetchDescriptor<TaskNode>())
+                    .visibleDeduplicatedByID()
+                    .map(\.title) == ["Device-only branch"]
+            )
             #expect(state.localSnapshot?.tasks.map(\.title) == ["Device-only branch"])
-            #expect(state.pendingCloudSnapshot?.hasProtectableUserContent == false)
+            #expect(state.pendingConflictID == nil)
+            #expect(state.pendingCloudSnapshot == nil)
             #expect(state.pendingForcedUploadSnapshot == nil)
             #expect(AppCloudSync.isCloudReconciliationActive == false)
         }
@@ -1236,7 +1414,13 @@ struct CoreSyncConflictTests {
                     .visibleDeduplicatedByID()
                     .map(\.title) == ["Current remote branch"]
             )
-            #expect(try service.handleCloudImport(context: cloudContext) != nil)
+            #expect(try service.handleCloudImport(context: cloudContext) == nil)
+            #expect(
+                try cloudContext.fetch(FetchDescriptor<TaskNode>())
+                    .visibleDeduplicatedByID()
+                    .map(\.title)
+                    .sorted() == ["Current remote branch", "Legacy local branch"]
+            )
         }
     }
 
@@ -1640,14 +1824,16 @@ struct CoreSyncConflictTests {
             #expect(firstStore.persistenceWriteSafety != .ready)
             #expect(secondStore.persistenceWriteSafety != .ready)
 
-            let prompt = try #require(try service.handleCloudImport(context: context))
+            #expect(try service.handleCloudImport(context: context) == nil)
 
             #expect(firstStore.persistenceWriteSafety == .ready)
             #expect(secondStore.persistenceWriteSafety == .ready)
-            #expect(firstStore.pendingSyncConflict?.id == prompt.id)
-            #expect(secondStore.pendingSyncConflict?.id == prompt.id)
-            #expect(firstStore.hasCompletedStartupConfiguration == false)
-            #expect(secondStore.hasCompletedStartupConfiguration == false)
+            #expect(firstStore.pendingSyncConflict == nil)
+            #expect(secondStore.pendingSyncConflict == nil)
+            // Auto-merge completes the reconciliation without a prompt, so
+            // nothing keeps startup configuration deferred anymore.
+            #expect(firstStore.hasCompletedStartupConfiguration)
+            #expect(secondStore.hasCompletedStartupConfiguration)
         }
     }
 
@@ -1921,6 +2107,24 @@ struct CoreSyncConflictTests {
             try service.markCloudExportFinished(eventID: eventID, succeeded: true)
             #expect(try service.loadState().baseFingerprint == migratedBase)
         }
+    }
+
+    /// A Pomodoro row whose negative planned focus fails the restore
+    /// preflight. Any merged snapshot containing it cannot auto-resolve, which
+    /// keeps the explicit copy-choice prompt reachable in tests.
+    @MainActor
+    private func insertUnmergeableSentinel(into context: ModelContext) throws -> PomodoroRun {
+        let run = PomodoroRun(
+            taskID: UUID(),
+            focus: -120,
+            breakSeconds: 60,
+            longBreakSeconds: 300,
+            targetRounds: 4,
+            deviceID: "merge-sentinel"
+        )
+        context.insert(run)
+        try context.save()
+        return run
     }
 
     private func temporaryStateURL() -> URL {

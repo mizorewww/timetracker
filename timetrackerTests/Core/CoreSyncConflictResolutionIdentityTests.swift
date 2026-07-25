@@ -151,6 +151,7 @@ struct CoreSyncConflictResolutionIdentityTests {
     private func makeConflictFixture() throws -> ConflictFixture {
         let context = try makeTestContext()
         let task = TaskNode(title: "Local plan", parentID: nil, deviceID: "test")
+        task.updatedAt = Date().addingTimeInterval(120)
         context.insert(task)
         try context.save()
 
@@ -160,6 +161,19 @@ struct CoreSyncConflictResolutionIdentityTests {
 
         task.title = "Cloud plan"
         task.updatedAt = Date().addingTimeInterval(60)
+        try context.save()
+        // The invalid planned focus only exists in the imported cloud branch,
+        // so the merged snapshot fails the restore preflight and the prompt
+        // path stays reachable; the local branch remains restorable.
+        let sentinel = PomodoroRun(
+            taskID: UUID(),
+            focus: -120,
+            breakSeconds: 60,
+            longBreakSeconds: 300,
+            targetRounds: 4,
+            deviceID: "merge-sentinel"
+        )
+        context.insert(sentinel)
         try context.save()
         let prompt = try #require(try service.handleCloudImport(context: context))
 

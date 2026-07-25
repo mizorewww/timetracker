@@ -69,6 +69,20 @@ extension SyncConflictService {
             if try state.pendingCloudSnapshot?.fingerprint() != previousCloudFingerprint {
                 state.rotatePendingConflictIdentity()
             }
+            // A conflict that becomes mergeable (for example after both
+            // branches finish absorbing each other's records) resolves
+            // automatically instead of prompting again with a rotated ID.
+            if let localSnapshot = state.localSnapshot,
+               let cloudSnapshot = state.pendingCloudSnapshot,
+               try resolveDivergenceByAutoMerge(
+                   localSnapshot: localSnapshot,
+                   cloudSnapshot: cloudSnapshot,
+                   context: context,
+                   state: &state
+               ) == .merged
+            {
+                return nil
+            }
             try saveState(state)
             return prompt(from: state)
         }
@@ -111,17 +125,19 @@ extension SyncConflictService {
                 return nil
             }
 
-            return try saveConflict(
+            return try resolveDivergenceByAutoMergeOrPrompt(
                 localSnapshot: localSnapshot,
                 cloudSnapshot: cloudSnapshot,
+                context: context,
                 state: &state
             )
         }
 
         if localSnapshot.hasProtectableUserContent {
-            return try saveConflict(
+            return try resolveDivergenceByAutoMergeOrPrompt(
                 localSnapshot: localSnapshot,
                 cloudSnapshot: cloudSnapshot,
+                context: context,
                 state: &state
             )
         }
@@ -145,6 +161,69 @@ extension SyncConflictService {
             return true
         }
         return nsError.localizedDescription.localizedCaseInsensitiveContains("conflict")
+    }
+
+    enum SyncAutoMergeOutcome: Equatable {
+        case merged
+        case requiresPrompt
+    }
+
+    /// Attempts record-level LWW union before involving the user. When the
+    /// cloud branch already contains every winning record the merge is a
+    /// no-op accept, which also lets the acknowledged baseline advance again;
+    /// otherwise the merged snapshot is validated and restored as the local
+    /// winner. Any merge, validation, or restore failure falls back to the
+    /// explicit copy-choice prompt, which is the remaining "actually
+    /// conflicting" path.
+    private func resolveDivergenceByAutoMergeOrPrompt(
+        localSnapshot: SyncDataSnapshot,
+        cloudSnapshot: SyncDataSnapshot,
+        context: ModelContext,
+        state: inout SyncConflictState
+    ) throws -> SyncConflictPrompt? {
+        switch try resolveDivergenceByAutoMerge(
+            localSnapshot: localSnapshot,
+            cloudSnapshot: cloudSnapshot,
+            context: context,
+            state: &state
+        ) {
+        case .merged:
+            nil
+        case .requiresPrompt:
+            try saveConflict(
+                localSnapshot: localSnapshot,
+                cloudSnapshot: cloudSnapshot,
+                state: &state
+            )
+        }
+    }
+
+    private func resolveDivergenceByAutoMerge(
+        localSnapshot: SyncDataSnapshot,
+        cloudSnapshot: SyncDataSnapshot,
+        context: ModelContext,
+        state: inout SyncConflictState
+    ) throws -> SyncAutoMergeOutcome {
+        do {
+            let merged = localSnapshot.mergedForAutoResolution(with: cloudSnapshot)
+            let mergedFingerprint = try merged.fingerprint()
+            if try mergedFingerprint == cloudSnapshot.fingerprint() {
+                state.acceptCloudSnapshot(cloudSnapshot, fingerprint: mergedFingerprint)
+                state.clearPendingConflict()
+                try saveState(state)
+                return .merged
+            }
+            try merged.restoreAsLocalWinner(context: context)
+            let restoredSnapshot = try SyncDataSnapshot.capture(context: context)
+            state.localSnapshot = restoredSnapshot
+            state.localFingerprint = try restoredSnapshot.fingerprint()
+            state.advanceLocalGeneration()
+            state.clearPendingConflict()
+            try saveState(state)
+            return .merged
+        } catch {
+            return .requiresPrompt
+        }
     }
 
     private func saveConflict(
@@ -191,9 +270,10 @@ extension SyncConflictService {
 
         state.localSnapshot = localSnapshot
         state.localFingerprint = localFingerprint
-        let conflict = try saveConflict(
+        let conflict = try resolveDivergenceByAutoMergeOrPrompt(
             localSnapshot: localSnapshot,
             cloudSnapshot: cloudSnapshot,
+            context: context,
             state: &state
         )
         AppCloudSync.completeCloudReconciliation()

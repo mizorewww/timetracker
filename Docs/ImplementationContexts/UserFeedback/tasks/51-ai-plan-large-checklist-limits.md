@@ -9,7 +9,7 @@
 - [x] 审计计划数量上限(system contract 8分类/64任务/32清单每项/256总计)、验证失败路径与预览渲染截断。
 - [x] 确定新上限(支持 150+ 清单项)与忠实渲染方案(大计划预览不截断不卡死)。
 - [x] 实现并运行聚焦测试与模拟器截图验收。
-- [ ] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -30,7 +30,7 @@
 - [x] Checkpoint B：审计上限与渲染路径。
 - [x] Checkpoint C：实现并补齐聚焦测试(含 150 清单项端到端)。
 - [x] Checkpoint D：三平台模拟器验收与资源清理。
-- [~] Checkpoint E：Release 构建安装、核验与收口。
+- [x] Checkpoint E：Release 构建安装、核验与收口。(2026-07-25:macOS Release 构建成功并装入 /Applications;iPad Pro M4 已安装;iPhone Air 安装失败(设备不可用),按惯例不阻塞)
 
 ## 资源所有权
 
@@ -39,7 +39,7 @@
 
 ## 已提交 checkpoint
 
-- [~] 待提交：领取任务、实现记忆与 active link。
+- [x] 已收口:userfeedback 勾选 [x],active link 已移除,任务关闭。
 
 
 ## 实现与验收记录

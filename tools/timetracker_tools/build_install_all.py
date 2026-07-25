@@ -12,6 +12,7 @@ import json
 import os
 import plistlib
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -27,7 +28,18 @@ def plist_value(plist_path: Path, key: str) -> str | None:
     with plist_path.open("rb") as handle:
         data = plistlib.load(handle)
     value = data.get(key)
-    return value if value is None else str(value)
+    if value is None:
+        return None
+    # plistlib decodes plist booleans as Python `bool`, whose str() is
+    # capitalized ("True"/"False"). The TRUEISH/FALSEISH sets below use the
+    # plist/PlistBuddy convention ("true"/"false", "YES"/"NO"), so normalize
+    # booleans to lowercase to keep the shell-script behavior the rewrite was
+    # based on. Without this, an embedded Watch app whose
+    # WKRunsIndependentlyOfCompanionApp is `false` reads back as "False" and
+    # is misclassified as independent, aborting before any device install.
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
 
 
 def require_app_bundle(path: Path, label: str) -> None:
@@ -47,7 +59,7 @@ def connected_watch_udids(timeout: str) -> list[str]:
             capture_output=True,
         )
         if result.returncode != 0:
-            print("Warning: unable to query physical Apple Watch devices.", file=os.stderr)
+            print("Warning: unable to query physical Apple Watch devices.", file=sys.stderr)
             return []
         with json_path.open("rb") as handle:
             payload = json.load(handle)
@@ -79,7 +91,7 @@ def validate_embedded_watch_profile(watch_app: Path, timeout: str) -> None:
     watch_udids = connected_watch_udids(timeout)
     if not watch_udids:
         print("Warning: no physical Apple Watch is visible; embedded profile device coverage was not verified.",
-              file=os.stderr)
+              file=sys.stderr)
         return
 
     for udid in watch_udids:
@@ -198,9 +210,9 @@ def install_on_available_ios_devices(
 def report_device_failures(failures: list[str], allow_failures: bool) -> None:
     if not failures:
         return
-    print("Some device operations failed:", file=os.stderr)
+    print("Some device operations failed:", file=sys.stderr)
     for entry in failures:
-        print(f"  - {entry}", file=os.stderr)
+        print(f"  - {entry}", file=sys.stderr)
     if not allow_failures:
         raise SystemExit(1)
 

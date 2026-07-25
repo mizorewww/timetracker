@@ -62,6 +62,55 @@ struct StoreScopedAITaskPlanCommandCoordinatorTests {
     }
 
     @Test
+    func largePlanCreatesEveryChecklistItemAtomically() throws {
+        let context = try makeTestContext()
+        let categoryID = UUID()
+        let taskID = UUID()
+        let draft = AITaskPlanDraft(
+            categories: [
+                AITaskPlanCategoryDraft(
+                    id: categoryID,
+                    title: "Reading",
+                    iconName: "book",
+                    colorHex: "5E5CE6"
+                )
+            ],
+            tasks: [
+                AITaskPlanTaskDraft(
+                    id: taskID,
+                    categoryID: categoryID,
+                    title: "Read 150 Chapters",
+                    iconName: "book",
+                    colorHex: "5E5CE6",
+                    checklistItems: (1...150).map { index in
+                        AITaskPlanChecklistDraft(
+                            title: "Chapter \(index)",
+                            iconName: "book",
+                            colorHex: "5E5CE6"
+                        )
+                    }
+                )
+            ],
+            modelID: "test-model"
+        )
+
+        let outcome = try coordinator(container: context.container).apply(draft)
+
+        #expect(outcome.didCreate)
+        let freshContext = ModelContext(context.container)
+        let checklistItems = try freshContext.fetch(FetchDescriptor<ChecklistItem>())
+        #expect(checklistItems.count == 150)
+        #expect(Set(checklistItems.map(\.taskID)) == [taskID])
+        #expect(
+            checklistItems.contains { $0.title == "Chapter 150" }
+        )
+        let checklistVisuals = try freshContext.fetch(
+            FetchDescriptor<ChecklistItemVisual>()
+        )
+        #expect(checklistVisuals.count == 150)
+    }
+
+    @Test
     func quantityAndDailyRecurrenceMaterializeACompleteGraphAndReplayOnce()
         throws {
         let context = try makeTestContext()

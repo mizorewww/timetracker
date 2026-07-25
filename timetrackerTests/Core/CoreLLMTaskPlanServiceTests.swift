@@ -356,6 +356,23 @@ struct CoreLLMTaskPlanServiceTests {
     }
 
     @Test
+    func oneHundredFiftyChecklistItemsUnderOneTaskAreAccepted() throws {
+        let draft = try LLMTaskPlanService.makeDraft(
+            from: Self.payload(
+                categories: [Self.category("reading")],
+                tasks: [Self.task("root")],
+                checklistItems: (1...150).map {
+                    Self.checklist("chapter-\($0)", task: "root")
+                }
+            ),
+            modelID: "model"
+        )
+
+        #expect(draft.tasks.count == 1)
+        #expect(draft.tasks[0].checklistItems.count == 150)
+    }
+
+    @Test
     func categoryTaskAndChecklistCountLimitsRejectTheWholePayload() {
         Self.expectError(.limitExceeded) {
             _ = try LLMTaskPlanService.makeDraft(

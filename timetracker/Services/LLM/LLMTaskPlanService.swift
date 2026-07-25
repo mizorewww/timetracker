@@ -153,10 +153,10 @@ struct LLMTaskPlanService {
     static let maximumRequestByteCount = 4 * 1_024
     static let maximumInstructionsByteCount = 4 * 1_024
     static let maximumResponseContentByteCount = 128 * 1_024
-    static let maximumCategoryCount = 8
-    static let maximumTaskCount = 64
-    static let maximumChecklistItemCountPerTask = 32
-    static let maximumChecklistItemCount = 256
+    static let maximumCategoryCount = 16
+    static let maximumTaskCount = 128
+    static let maximumChecklistItemCountPerTask = 256
+    static let maximumChecklistItemCount = 1024
     /// Root tasks have depth zero. A task at depth six is accepted.
     static let maximumTaskDepth = 6
 
@@ -501,9 +501,11 @@ extension LLMTaskPlanService {
     must use null. The task graph must be acyclic and contain at least one \
     task. Root task depth is zero and maximum task depth is 6.
 
-    Limits: at most 8 categories, 64 tasks, 32 checklist items per task, and \
-    256 checklist items total. estimatedMinutes is null or an integer from 0 \
-    through 600. notes is null or plain text. quantityGoal is null or an \
+    Limits: at most \(Self.maximumCategoryCount) categories, \
+    \(Self.maximumTaskCount) tasks, \
+    \(Self.maximumChecklistItemCountPerTask) checklist items per task, and \
+    \(Self.maximumChecklistItemCount) checklist items total. estimatedMinutes \
+    is null or an integer from 0 through 600. notes is null or plain text. quantityGoal is null or an \
     object with exactly targetAmount and unitLabel; targetAmount is an integer \
     from 1 through 1000000 and unitLabel is nonempty plain text of at most 128 \
     UTF-8 bytes. recurrenceCadence is null or exactly "daily". Quantity goals \

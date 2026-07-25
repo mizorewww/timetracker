@@ -73,7 +73,11 @@ struct AITaskPlanUIContractTests {
         #expect(service.contains("systemContract"))
         #expect(service.contains("instructions: preparedInstructions"))
         #expect(service.contains("maximumTaskDepth = 6"))
-        #expect(service.contains("at most 8 categories, 64 tasks"))
+        #expect(service.contains("static let maximumCategoryCount = 16"))
+        #expect(service.contains("static let maximumTaskCount = 128"))
+        #expect(service.contains("static let maximumChecklistItemCountPerTask = 256"))
+        #expect(service.contains("static let maximumChecklistItemCount = 1024"))
+        #expect(service.contains("\\(Self.maximumCategoryCount) categories"))
     }
 
     @Test

@@ -30,6 +30,15 @@ struct AITaskPlanGeneratorSheet: View {
     private var usesUITestFixture: Bool {
         #if DEBUG
         CommandLine.arguments.contains("--uitesting-ai-task-plan")
+            || CommandLine.arguments.contains("--uitesting-ai-task-plan-large")
+        #else
+        false
+        #endif
+    }
+
+    private var usesLargeUITestFixture: Bool {
+        #if DEBUG
+        CommandLine.arguments.contains("--uitesting-ai-task-plan-large")
         #else
         false
         #endif
@@ -299,7 +308,10 @@ struct AITaskPlanGeneratorSheet: View {
         generationTask = Task { @MainActor in
             do {
                 let draft: AITaskPlanDraft
-                if usesUITestFixture {
+                if usesLargeUITestFixture {
+                    try await Task.sleep(for: .milliseconds(180))
+                    draft = .largeUITestFixture
+                } else if usesUITestFixture {
                     try await Task.sleep(for: .milliseconds(180))
                     draft = .uiTestFixture
                 } else {
@@ -526,19 +538,15 @@ private struct AITaskPlanTaskDraftRow: View {
             AITaskPlanTaskProgressDraftEditor(task: $task)
                 .padding(.leading, nestedContentLeadingInset)
 
-            if !task.checklistItems.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(task.checklistItems) { item in
-                        AITaskPlanChecklistDraftRow(
-                            item: checklistItemBinding(for: item),
-                            remove: {
-                                task.checklistItems.removeAll {
-                                    $0.id == item.id
-                                }
-                            }
-                        )
+            ForEach(task.checklistItems) { item in
+                AITaskPlanChecklistDraftRow(
+                    item: checklistItemBinding(for: item),
+                    remove: {
+                        task.checklistItems.removeAll {
+                            $0.id == item.id
+                        }
                     }
-                }
+                )
                 .padding(.leading, nestedContentLeadingInset)
             }
         }
@@ -958,6 +966,45 @@ private extension AITaskPlanDraft {
         let usedIDs = copy.usedCategoryIDs
         copy.categories.removeAll { !usedIDs.contains($0.id) }
         return copy
+    }
+
+    /// One task carrying 150 checklist items, used to verify that large
+    /// generated plans render and create faithfully.
+    static var largeUITestFixture: AITaskPlanDraft {
+        let categoryID = UUID(
+            uuidString: "20000000-0000-4000-8000-000000000010"
+        )!
+        let taskID = UUID(
+            uuidString: "20000000-0000-4000-8000-000000000110"
+        )!
+        return AITaskPlanDraft(
+            categories: [
+                AITaskPlanCategoryDraft(
+                    id: categoryID,
+                    title: "Reading",
+                    iconName: "book",
+                    colorHex: "5E5CE6"
+                )
+            ],
+            tasks: [
+                AITaskPlanTaskDraft(
+                    id: taskID,
+                    categoryID: categoryID,
+                    title: "Read 150 Chapters",
+                    notes: "A faithful large plan.",
+                    iconName: "book",
+                    colorHex: "5E5CE6",
+                    checklistItems: (1...150).map { index in
+                        AITaskPlanChecklistDraft(
+                            title: "Chapter \(index)",
+                            iconName: "book",
+                            colorHex: "5E5CE6"
+                        )
+                    }
+                )
+            ],
+            modelID: "uitest-large-fixture"
+        )
     }
 
     static var uiTestFixture: AITaskPlanDraft {

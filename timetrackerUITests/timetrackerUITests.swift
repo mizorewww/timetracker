@@ -3714,6 +3714,94 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testAITaskPlanWithOneHundredFiftyChecklistItemsRendersAndCreates() throws {
+        #if targetEnvironment(simulator)
+        let app = launchApp(
+            route: "tasks",
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: ["--uitesting-ai-task-plan-large"]
+        )
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+        openSection(
+            "Tasks",
+            tabIdentifier: "phone.tab.tasks",
+            sidebarIdentifier: "sidebar.Tasks",
+            in: app
+        )
+        let tasksView = app.descendants(matching: .any)["tasks.view"].firstMatch
+        XCTAssertTrue(tasksView.waitForExistence(timeout: 8))
+
+        let addMenu = app.descendants(matching: .any)["tasks.add"].firstMatch
+        XCTAssertTrue(addMenu.waitForExistence(timeout: 3) && addMenu.isHittable)
+        activate(addMenu)
+        let generatePlan = app.descendants(matching: .any)[
+            "tasks.generatePlan"
+        ].firstMatch
+        XCTAssertTrue(
+            generatePlan.waitForExistence(timeout: 3) && generatePlan.isHittable
+        )
+        activate(generatePlan)
+
+        let request = app.descendants(matching: .any)["aiTaskPlan.request"].firstMatch
+        XCTAssertTrue(request.waitForExistence(timeout: 5) && request.isHittable)
+        activate(request)
+        request.typeText("Generate 150 chapters under one reading task")
+        let generate = app.buttons["aiTaskPlan.generate"].firstMatch
+        XCTAssertTrue(generate.waitForExistence(timeout: 3) && generate.isEnabled)
+        activate(generate)
+
+        let summary = app.staticTexts[
+            "1 categories · 1 tasks · 150 checklist items"
+        ].firstMatch
+        XCTAssertTrue(
+            summary.waitForExistence(timeout: 10),
+            "The preview must summarize the full 150-item plan."
+        )
+        let lastChapter = app.textFields.matching(
+            NSPredicate(format: "value == %@", "Chapter 150")
+        ).firstMatch
+        for _ in 0..<12 {
+            app.swipeUp(velocity: .fast)
+        }
+        scrollUntilHittable(lastChapter, direction: .up, maximumScrolls: 30, in: app)
+        XCTAssertTrue(
+            lastChapter.waitForExistence(timeout: 8),
+            "The preview must render every checklist row, including Chapter 150."
+        )
+        try capture("\(screenshotPrefix)-ai-task-plan-large-preview", app: app)
+
+        let create = app.buttons["aiTaskPlan.create"].firstMatch
+        XCTAssertTrue(create.waitForExistence(timeout: 5) && create.isHittable)
+        activate(create)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["aiTaskPlan.sheet"]
+                .waitForNonExistence(timeout: 15),
+            "The 150-item plan must be created without failure."
+        )
+
+        // Creating a plan opens the first created task directly.
+        let detail = app.descendants(matching: .any)["task.detail"].firstMatch
+        XCTAssertTrue(
+            detail.waitForExistence(timeout: 15),
+            "Creating the plan must open the created task."
+        )
+        let titleField = app.descendants(matching: .any)[
+            "task.editor.title.field"
+        ].firstMatch
+        XCTAssertTrue(titleField.waitForExistence(timeout: 5))
+        XCTAssertEqual(titleField.value as? String, "Read 150 Chapters")
+        let categoryRow = app.descendants(matching: .any)[
+            "task.editor.category"
+        ].firstMatch
+        XCTAssertTrue(categoryRow.waitForExistence(timeout: 5))
+        XCTAssertEqual(categoryRow.value as? String, "Reading")
+        try capture("\(screenshotPrefix)-ai-task-plan-large-created", app: app)
+        #else
+        throw XCTSkip("Large plan rendering is verified on owned simulators.")
+        #endif
+    }
+
+    @MainActor
     func testEveryAIPromptExposesMarkdownPreviewAndFixedContract() throws {
         // Prompt editor presentation on macOS lives in a separate Settings
         // scene whose window placement makes scripted navigation unreliable;

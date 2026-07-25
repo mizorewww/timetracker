@@ -4,7 +4,7 @@ import Testing
 @testable import timetracker
 
 @Suite(.serialized)
-struct CoreRefactorTests {
+struct CoreStoreCommandBehaviorTests {
     @Test @MainActor
     func tasksRouteIsSeparateFromPlainTaskSelection() throws {
         let context = try makeTestContext()

@@ -4,7 +4,7 @@ import Testing
 @testable import timetracker
 
 @Suite(.serialized)
-struct PreferencesChecklistForecastTests {
+struct PreferenceSyncBehaviorTests {
     @Test
     func heatmapPeriodsExposeStableIdentityAndWeekCounts() {
         #expect(ActivityHeatmapPeriod.allCases == [

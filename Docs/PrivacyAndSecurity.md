@@ -1,7 +1,7 @@
 # TimeTracker 隐私与安全说明
 
 状态：工程级数据流说明，非法律隐私政策
-校对日期：2026-07-20
+校对日期：2026-07-25
 
 本文说明仓库当前实现如何存储和传输数据，并列出发行前安全门禁。最终上架文案仍需根据实际发行地区、服务方和 App Store 隐私申报单独审核。
 
@@ -71,7 +71,7 @@ iOS 的 `SyncConflictState.json`、pending forced-upload 恢复镜像和腐损�
 - 候选任务标题与层级路径。
 - 候选任务图标名与颜色十六进制值。
 
-一次最多选取 48 个可工作任务，先保留 Quick Start 固定任务，再使用已有计时索引选高频/近期任务，最后才按稳定路径顺序补足。候选 JSON 最多 16 KiB；Inbox 标题最多 512 UTF-8 bytes，单个候选标题/路径最多 256/512 bytes。候选去重和取舍是输入顺序无关的确定结果。
+一次最多选取 48 个可工作任务，先保留 Quick Start 固定任务，再使用已有计时索引选高频/近期任务，最后才按稳定路径顺序补足。候选 JSON 最多 12 KiB；Inbox 标题最多 512 UTF-8 bytes，单个候选标题/路径最多 256/512 bytes。候选去重和取舍是输入顺序无关的确定结果。
 
 ### 清单视觉建议
 
@@ -91,9 +91,9 @@ Checklist 标题与所属任务标题各最多 512 UTF-8 bytes，任务显示路
 - “任务规划指令”设置，最多 4 KiB UTF-8 bytes。它是可同步、可导出的普通偏好，不是秘密；不应填写密码或 API key。
 - 允许模型使用的精选系统图标名和颜色列表。
 
-请求不包含现有任务库、历史时间记录、Inbox 或 checklist 内容。固定 system contract 要求模型只返回分类、任务和 checklist 的 flat JSON 草稿；响应正文在服务层再限制为 128 KiB，并校验引用、层级、字段及 8 个分类、64 个任务、每任务 32/总计 256 个 checklist 的数量上限。通过校验的结果只进入本机可编辑预览；用户点按“创建”后才在一个 SwiftData 事务中新增事实。该流程不会自动修改、删除或覆盖既有任务，任一步失败都不留下半份计划。
+请求不包含现有任务库、历史时间记录、Inbox 或 checklist 内容。固定 system contract 要求模型只返回分类、任务和 checklist 的 flat JSON 草稿；响应正文在服务层再限制为 128 KiB，并校验引用、层级、字段及 16 个分类、128 个任务、每任务 256/总计 1024 个 checklist、最大任务深度 6 的数量上限。通过校验的结果只进入本机可编辑预览；用户点按“创建”后才在一个 SwiftData 事务中新增事实。该流程不会自动修改、删除或覆盖既有任务，任一步失败都不留下半份计划。
 
-两类建议和任务计划生成的 user prompt 最多 24 KiB，最终 JSON request body 最多 32 KiB，model ID 256 bytes，endpoint/API key 分别最多 4/8 KiB。256-byte model ID 同时符合同步快照的 compact-field restore 上限，避免本机可写入的 AI provenance 无法恢复。用户文本只在发送副本中按完整 Unicode `Character` 边界缩短，不回写 SwiftData 事实。建议模型返回的 reason/model ID 再次有界化，icon 必须属于本次已公告的精选列表，任务 UUID 必须属于实际发送候选。
+两类建议和任务计划生成的 user prompt 最多 24 KiB，最终 JSON request body 最多 64 KiB，model ID 256 bytes，endpoint/API key 分别最多 4/8 KiB。256-byte model ID 同时符合同步快照的 compact-field restore 上限，避免本机可写入的 AI provenance 无法恢复。用户文本只在发送副本中按完整 Unicode `Character` 边界缩短，不回写 SwiftData 事实。建议模型返回的 reason/model ID 再次有界化，icon 必须属于本次已公告的精选列表，任务 UUID 必须属于实际发送候选。
 
 ### 凭证与传输
 

@@ -1,7 +1,7 @@
 # TimeTracker 代码文档
 
 状态：当前实现说明
-校对日期：2026-07-19
+校对日期：2026-07-25
 
 本文面向维护者，说明当前代码边界、数据流、扩展方式和验证入口。架构目标与未完成计划分别见 [Architecture](Architecture.md) 和 [NextDevelopmentPlan](NextDevelopmentPlan.md)。
 
@@ -15,7 +15,7 @@
 | timetrackerLiveActivityExtension | iPhone Live Activity |
 | timetrackerWidgetExtension | 桌面小组件 |
 | timetrackerWatchApp | Apple Watch 配套应用 |
-| timetrackerTests | 单元、领域和源码契约测试 |
+| timetrackerTests | 单元、领域和行为契约测试 |
 | timetrackerUITests | 端到端 UI 测试与截图基线 |
 
 当前构建设置声明 iOS/iPadOS 26.2、macOS 15.7、watchOS 26.2。打开工程前使用与这些 SDK 匹配的 Xcode。
@@ -36,7 +36,7 @@
       -only-testing:timetrackerUITests \
       -parallel-testing-enabled NO
 
-每次重构的最终结果以 [审核报告](Audit-2026-07-14.md) 的“本轮重构结果”为准。历史上曾通过的套件不能替代当前工作树复验；模拟器截图也不能替代 Widget、Watch、Live Activity 和 CloudKit 的真机验收。
+每次重构的最终结果以提交该重构的 commit/PR 中的复验记录为准（日期化的 `Audit-*.md` 快照已于 2026-07-25 退役，证据改存 git 历史）。历史上曾通过的套件不能替代当前工作树复验；模拟器截图也不能替代 Widget、Watch、Live Activity 和 CloudKit 的真机验收。
 
 ## 2. 代码地图
 
@@ -376,7 +376,7 @@ LLMService 面向用户配置的 OpenAI-compatible endpoint。边界要求：
 - 带 Authorization 的 redirect 只允许保持相同 scheme、host 和有效端口；跨源、HTTPS 降级或模糊主机跳转必须拒绝，防止 credential 泄漏。
 - 生产 transport 使用专用 `URLSessionConfiguration.ephemeral`：禁用 URL cache、cookie 与 cookie store，资源超时 60 秒。响应通过 `URLSession.AsyncBytes` 流式读取；HTTP 非 2xx 与声明超过 2 MiB 的 Content-Length 在 headers 阶段取消，未声明/不可信长度仍以实际读取字节硬限制 2 MiB。父 Task 取消必须取消底层 URLSession task，`URLError.timedOut` 转为可操作超时错误。
 - 注入 transport 仍须在 Model/Inbox/Checklist service 层对成功响应执行 2 MiB 二次防御；响应类型和 HTTP 状态优先于 buffered-body 上限，保持真实与替代 transport 的错误语义一致。
-- 发送前按功能构造最小请求，不附带无关数据。`LLMSuggestionInputPolicy` 是 Inbox/checklist 共用的 request projection 边界：候选最多 48 项/16 KiB JSON，prompt 最多 24 KiB，request body 最多 32 KiB，持久化 model ID 最多 256 bytes，字段按 UTF-8 bytes 以完整 `Character` 裁剪。model ID 上限必须与同步快照 compact-field restore 上限保持一致；这些裁剪仅用于网络 DTO，不回写 canonical facts。
+- 发送前按功能构造最小请求，不附带无关数据。`LLMSuggestionInputPolicy` 是 Inbox/checklist 共用的 request projection 边界：候选最多 48 项/12 KiB JSON，prompt 最多 24 KiB，request body 最多 64 KiB，持久化 model ID 最多 256 bytes，字段按 UTF-8 bytes 以完整 `Character` 裁剪。model ID 上限必须与同步快照 compact-field restore 上限保持一致；这些裁剪仅用于网络 DTO，不回写 canonical facts。
 - 模型 ID 是 opaque identifier，不是可安全缩写的展示文本。偏好 sanitizer 只接受最多 256 UTF-8 bytes 且不含控制字符的完整 ID；超限项从模型列表过滤、超限选择变为空配置，绝不能截断后向服务端发送另一个标识。
 - 模型发现不得先把服务端 `data` 全量物化为数组或无界 Set。`LLMModelListResponse` 逐项解码到 `LLMModelIDAccumulator`，只保留与偏好 sanitizer 相同的升序前 256 个唯一有效完整 ID；总响应仍同时受 transport 的 2 MiB 上限约束。
 - Inbox 候选集先取 Quick Start 固定任务，再取高频/近期任务，最后稳定补足。候选归一化去重后再按实际 JSON 字节预算取舍；不能回退成对全库纯字母截断。
@@ -384,11 +384,13 @@ LLMService 面向用户配置的 OpenAI-compatible endpoint。边界要求：
 - 日志和错误信息不得打印密钥或完整敏感请求。
 - 解码错误、限流、超时和无效模型必须转换为可操作错误。
 
-Settings 采用 `LLMConfigurationDraft`：endpoint/API key/模型编辑先留在 sheet；“测试连接”只读取模型并验证当时的 credential fingerprint，不持久化；只有模型有效时才能“保存”。修改凭证会取消旧请求并清空旧模型结果，取消有改动的 sheet 会二次确认。保存时 endpoint、模型列表和已选模型由 `PreferenceCommandHandler.set(values:)` 在一个 SwiftData transaction 中一次提交；API key 的 Keychain side effect 不属于同一 ACID transaction，提交失败时只可用旧值补偿恢复，且补偿失败必须单独报告。
+Settings 采用 `LLMConfigurationDraft`：endpoint/API key/模型/提示词指令编辑先留在 sheet；“测试连接”只读取模型并验证当时的 credential fingerprint，不持久化；只有模型有效时才能“保存”。修改凭证会取消旧请求并清空旧模型结果，取消有改动的 sheet 会二次确认。保存时 endpoint、模型列表、已选模型和各 `LLMPromptKind` 的任务规划/建议提示词指令由 `PreferenceCommandHandler.set(values:)` 在一个 SwiftData transaction 中一次提交（提示词指令是可同步、可导出的普通偏好，不是秘密）；API key 的 Keychain side effect 不属于同一 ACID transaction，提交失败时只可用旧值补偿恢复，且补偿失败必须单独报告。
 
 自动建议是另一个明确的本机同意开关，默认 false，不进入 CloudKit 或 JSON。只完成配置不会开启后台发送；开启后才会为 Inbox/checklist 触发受并发和退避控制的请求。发行时必须锁定默认 endpoint/第三方 endpoint 的运营方、用途、保留期、删除渠道和隐私披露；“OpenAI-compatible”不是数据不保留的保证。
 
 Inbox 和 checklist 视觉自动建议各自最多同时发出 3 个请求；一个请求完成或过期后再补下一项。Checklist 失败按请求指纹记录并至少退避 60 秒，配置或内容变化后才立即形成新请求；保存失败必须保留对应错误状态，不能让网络成功掩盖持久化失败。
+
+任务计划生成（`LLMTaskPlanService` → `StoreScopedAITaskPlanCommandCoordinator` → `TimeTrackerStore+AITaskPlanCommands`，UI 在 `Features/Tasks/Generation`）只在用户从任务页填写需求并明确点按“生成”后发出一次请求。请求只含当次需求（≤4 KiB）、可同步的任务规划指令偏好（≤4 KiB）和精选图标/颜色列表，不含现有任务库或历史时间记录；固定 system contract 要求模型只返回分类、任务和 checklist 的 flat JSON 草稿。服务层再限制响应正文为 128 KiB，并校验层级、引用与数量上限：≤16 个分类、≤128 个任务、每任务 ≤256 个 checklist、总计 ≤1024 个 checklist、最大任务深度 6。请求的 user prompt 与 JSON request body 复用 `LLMSuggestionInputPolicy` 的 24 KiB / 64 KiB 上限。通过校验的结果只进入本机可编辑预览（`AITaskPlanGeneratorViews`），用户点按“创建”后才在一个 SwiftData 事务中新增事实；任一步失败都不留下半份计划，也不会修改、删除或覆盖既有任务。
 
 精确的数据字段与安全边界见 [PrivacyAndSecurity](PrivacyAndSecurity.md)。
 
@@ -432,7 +434,7 @@ Inbox 和 checklist 视觉自动建议各自最多同时发出 3 个请求；一
 3. 正常字号下以稳定界面标识驱动的核心流程测试
 4. 少量稳定截图测试
 
-2026-07-25 已删除全部通过读取 Swift 源文件并匹配字符串来约束 UI 的源码扫描契约测试（含 `CoreSourceLayoutTests` 与 UIContracts 源码扫描层）：这类测试在等价重构后误报，维护成本高于护栏价值。新增测试必须落在上述四个层级；布局类验收使用截图/人工检查清单，不再新增源码字符串扫描。
+2026-07-25 已删除通过读取 Swift 源文件并匹配字符串来约束 UI 的源码扫描契约层（`CoreSourceLayoutTests` 与 UIContracts 源码扫描文件）：这类测试在等价重构后误报，维护成本高于护栏价值。少数混合文件保留了真正的行为测试，其中个别仍用 `sourceText(...)` 读取源码做 Deep Link 集成点、Live Activity 不可变属性或 scheme 并行化等非布局断言；这些是行为断言而非 UI 字符串扫描，不在禁止之列。新增测试必须落在上述四个层级；布局类验收使用截图/人工检查清单，不再新增源码字符串扫描。
 
 测试必须隔离 UserDefaults、Keychain、临时目录、时区与 locale。本轮已移除类别空分区测试对演示种子全局状态的依赖；新增测试仍应显式清理共享状态。
 
@@ -444,7 +446,7 @@ Today UI 测试以 `home.view` 判断根页面就绪，再滚动查找具体操�
 - 注释解释原因、不变量和失败模式，不复述语法。
 - 当前行为写入 UserGuide、CodeGuide 或 Architecture。
 - 决策与权衡写入 AgentDecisions。
-- 一次性审计事实写入带日期的 Audit 文档。
+- 一次性审计事实写入提交该工作的 commit/PR；体量较大时可在 `Docs/` 下新建带日期的 `Audit-*.md` 并随该次工作提交（旧的 `Audit-2026-07-14.md` / `InteractionAudit-2026-07-18.md` 已于 2026-07-25 退役，证据改存 git 历史）。
 - 未来工作只写入计划文档，并明确状态。
 
 当前生产 Swift 文件尚无系统性的三斜线 API 文档，这是需要持续偿还的文档债务。

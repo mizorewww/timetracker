@@ -1,66 +1,11 @@
 #!/usr/bin/env bash
+# Thin wrapper: Xcode 构建阶段写入 AppBuildInfo.plist。
+# 实现见 tools/timetracker_tools/write_build_info_plist.py(经 uv run 调用)。
+# 依赖 Xcode 注入的 TARGET_BUILD_DIR / UNLOCALIZED_RESOURCES_FOLDER_PATH。
 set -euo pipefail
-
-if [[ -z "${TARGET_BUILD_DIR:-}" || -z "${UNLOCALIZED_RESOURCES_FOLDER_PATH:-}" ]]; then
-  echo "Build info skipped: TARGET_BUILD_DIR or UNLOCALIZED_RESOURCES_FOLDER_PATH is missing."
-  exit 0
-fi
-
-SRCROOT="${SRCROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
-RESOURCE_DIR="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH"
-PLIST_PATH="$RESOURCE_DIR/AppBuildInfo.plist"
-
-git_value() {
-  git -C "$SRCROOT" "$@" 2>/dev/null || true
-}
-
-BRANCH="$(git_value branch --show-current)"
-if [[ -z "$BRANCH" ]]; then
-  BRANCH="$(git_value rev-parse --abbrev-ref HEAD)"
-fi
-if [[ -z "$BRANCH" || "$BRANCH" == "HEAD" ]]; then
-  BRANCH="detached"
-fi
-
-COMMIT_FULL="$(git_value rev-parse HEAD)"
-COMMIT_SHORT="$(git_value rev-parse --short=12 HEAD)"
-if [[ -z "$COMMIT_FULL" ]]; then
-  COMMIT_FULL="unknown"
-fi
-if [[ -z "$COMMIT_SHORT" ]]; then
-  COMMIT_SHORT="unknown"
-fi
-
-DIRTY="false"
-if [[ -n "$(git_value status --porcelain --untracked-files=normal)" ]]; then
-  DIRTY="true"
-fi
-
-mkdir -p "$RESOURCE_DIR"
-
-GIT_BRANCH="$BRANCH" \
-GIT_COMMIT_FULL="$COMMIT_FULL" \
-GIT_COMMIT_SHORT="$COMMIT_SHORT" \
-GIT_DIRTY="$DIRTY" \
-BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-/usr/bin/python3 - "$PLIST_PATH" <<'PY'
-import os
-import plistlib
-import sys
-
-payload = {
-    "GitBranch": os.environ["GIT_BRANCH"],
-    "GitCommitFull": os.environ["GIT_COMMIT_FULL"],
-    "GitCommitShort": os.environ["GIT_COMMIT_SHORT"],
-    "GitDirty": os.environ["GIT_DIRTY"],
-    "BuildDate": os.environ["BUILD_DATE"],
-}
-
-output_path = sys.argv[1]
-temporary_path = f"{output_path}.tmp"
-with open(temporary_path, "wb") as handle:
-    plistlib.dump(payload, handle, sort_keys=True)
-os.replace(temporary_path, output_path)
-PY
-
-echo "Wrote build info: $PLIST_PATH ($BRANCH $COMMIT_SHORT dirty=$DIRTY)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+command -v uv >/dev/null 2>&1 || for d in /opt/homebrew/bin /usr/local/bin "$HOME/.local/bin" "$HOME/.cargo/bin"; do
+  case ":$PATH:" in *":$d:"*) ;; *) PATH="$d:$PATH";; esac
+done
+command -v uv >/dev/null 2>&1 || { echo "uv not found on PATH" >&2; exit 1; }
+exec uv run --project "$ROOT" python -m timetracker_tools.write_build_info_plist "$@"

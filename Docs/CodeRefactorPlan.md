@@ -1,6 +1,6 @@
 # Code Refactor Status And Guardrails
 
-Status: current source-structure guardrails. The completed 2026-07-14 repository-wide split, the 2026-07-17 writer/analytics closure (W0/R1, commits `e30fd6a`/`55f19ae`), and their final evidence are recorded in git history and [Audit-2026-07-14](Audit-2026-07-14.md); they are not repeated here.
+Status: current source-structure guardrails. The completed 2026-07-14 repository-wide split, the 2026-07-17 writer/analytics closure (W0/R1, commits `e30fd6a`/`55f19ae`), and their final evidence are recorded in git history (the dated `Audit-*.md` snapshots were retired on 2026-07-25); they are not repeated here.
 
 ## Active-Work Rule
 
@@ -27,7 +27,7 @@ These are the highest-priority mixed-responsibility owners, not an exhaustive li
 | Area | Current concentration | Preferred boundary |
 | --- | --- | --- |
 | `Stores/Facade/TimeTrackerStore+Lifecycle.swift` | Generic refresh, mutation authorization/post-commit work, repository requirements, errors, and sync snapshot finishing share one owner | Split refresh/account/conflict lifecycle, mutation orchestration, and repository/error support without widening private helpers |
-| `Stores/Facade/TimeTrackerStore+PreferenceCommands.swift` | Display/timing, Focus, cloud/Quick Start, and LLM preferences share one command facade | Split by preference family while retaining one validated `setPreference` support boundary |
+| `Stores/Facade/TimeTrackerStore+PreferenceCommands.swift` | Thin preference setters (`preferredColorScheme`, `allowParallelTimers`, `showGrossAndWallTogether`) plus one generic `setPreference` dispatcher | Low priority: most preference families already moved to `StoreScopedPreferenceCommandCoordinator`; revisit only if new preference setters accumulate here |
 | `Stores/Facade/TimeTrackerStore+SyncObservers.swift` | Observer installation, event decoding, batch drain, conflict processing, and recovery presentation share one owner | Separate observer/event intake from batch processing and recovery presentation; keep the fixed-deadline bounded coalescer semantics |
 | `Features/Tasks/Management/TaskRowComponents.swift` | Row action policy, context menu, swipe actions, and destructive confirmation remain coupled | Extract one shared action context before separating menu and swipe presentation, so they cannot acquire divergent confirmation state |
 | `Features/Analytics/AnalyticsPeriodSelectionViews.swift` | Period selector views, date text/policy, navigation bounds, and snapshot requests share one file | Separate pure period/navigation policy from SwiftUI presentation when this screen next changes |

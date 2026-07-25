@@ -1,6 +1,6 @@
 # Next Development Plan
 
-Status: current future roadmap only. Completed 2026-07-14 restructuring and UI changes belong in [Audit-2026-07-14](Audit-2026-07-14.md), not in this backlog.
+Status: current future roadmap only. Completed 2026-07-14 restructuring and UI changes belong in git history (the dated `Audit-*.md` snapshots were retired on 2026-07-25), not in this backlog.
 
 This document is the working roadmap for the next development cycle. It is separate from the architecture documents: architecture explains where code belongs; this plan explains what to build next, what to avoid, and what "done" means.
 

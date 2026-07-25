@@ -127,7 +127,6 @@ Keep and refine:
 - `ChecklistControls`
 - `SettingsRows`, `SettingsActionRows`, `SettingsInputRows`, `SettingsPresentationModifiers`, `SettingsSyncFeedbackRow`
 - `TaskSummaryRow`, `TaskIdentityRow`, `TaskTimerActionButton`
-- `MetricCards`
 - `SectionHeaders`
 - `TaskProgressViews`
 - `LayoutPolicies`
@@ -136,7 +135,7 @@ Review before further reuse:
 
 - `ActionControls`: make sure it wraps native button styles rather than inventing new ones.
 - `DesignSystem.cardStyle`: limit use to repeated content or framed data.
-- `MetricCards`: avoid turning every statistic into a card.
+- Metric/statistic presentation (e.g. `PhoneSummaryMetric`, `AnalyticsSummaryMiniMetric`, `AnalyticsMetricList` in features): avoid turning every statistic into a card; prefer native `LabeledContent` rows until a framed metric is justified.
 
 Avoid adding:
 

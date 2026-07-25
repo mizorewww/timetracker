@@ -22,25 +22,22 @@
 - clone 后先安装版本钩子(每次 commit 自动递增版本号):
 
 ```sh
-scripts/install_git_hooks.sh
+make install-hooks
 ```
 
 ## 常用命令
 
+开发命令统一从 Makefile 入口进入(逻辑由 uv 管理的 Python 工具实现,详见 [DevelopmentTools](Docs/DevelopmentTools.md)):
+
 ```sh
-# macOS 单元测试(默认验证入口)
-xcodebuild test -project timetracker.xcodeproj -scheme timetracker \
-  -destination 'platform=macOS' -only-testing:timetrackerTests -parallel-testing-enabled NO
-
-# iOS 设备构建
-xcodebuild build -project timetracker.xcodeproj -scheme timetracker \
-  -destination 'generic/platform=iOS'
-
-# 导出签名产物(iOS IPA + macOS app/zip)
-./scripts/export_signed_artifacts.sh
+make venv              # 创建/同步 .venv(可选,wrapper 会自举)
+make test              # macOS 单元测试(默认验证入口)
+make build-ios         # iOS 设备构建
+make export-artifacts  # 导出签名产物(iOS IPA + macOS app/zip)
+make help              # 列出全部目标
 ```
 
-更多脚本见 [Scripts](Docs/Scripts.md),完整验证策略见 [Testing](Docs/Testing.md)。
+各脚本行为与可配置变量见 [Scripts](Docs/Scripts.md),完整验证策略见 [Testing](Docs/Testing.md)。
 
 ## 文档地图
 
@@ -51,6 +48,7 @@ xcodebuild build -project timetracker.xcodeproj -scheme timetracker \
 | 看当前实现细节与维护者笔记 | [CodeGuide](Docs/CodeGuide.md) |
 | 查必须遵守的工程决策 | [AgentDecisions](Docs/AgentDecisions.md) |
 | 写/跑测试、验证与发布门禁 | [Testing](Docs/Testing.md) |
+| 跑构建/发布/版本命令 | [DevelopmentTools](Docs/DevelopmentTools.md) |
 | 改 UI | [UI-Design](Docs/UI-Design.md) + 仓库内 `apple-hig` / `swiftui-expert-skill` |
 | 改用户可见文案 | [Localization](Docs/Localization.md) |
 | 了解用户视角的当前行为 | [UserGuide](Docs/UserGuide.md) |
@@ -58,7 +56,7 @@ xcodebuild build -project timetracker.xcodeproj -scheme timetracker \
 | 计划下一步功能 | [NextDevelopmentPlan](Docs/NextDevelopmentPlan.md) |
 | 重构前先查集中度与护栏 | [CodeRefactorPlan](Docs/CodeRefactorPlan.md) |
 | 版本/构建信息 | [Versioning](Docs/Versioning.md) |
-| 一次性审核证据(历史) | [Audit-2026-07-14](Docs/Audit-2026-07-14.md)、[InteractionAudit-2026-07-18](Docs/InteractionAudit-2026-07-18.md) |
+| 一次性审核证据(历史) | 见 git 历史(日期化 `Audit-*.md` 快照已于 2026-07-25 退役) |
 | 用户反馈清单(任务来源) | [userfeedback](Docs/userfeedback.md) |
 
 Agent 工作流程(文档阅读顺序、任务生命周期、验证分级、提交纪律)定义在 [AGENTS.md](AGENTS.md)。

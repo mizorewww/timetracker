@@ -1,27 +1,10 @@
 #!/usr/bin/env bash
+# Thin wrapper: 手动递增 marketing/build 版本(正常提交无需运行)。
+# 实现见 tools/timetracker_tools/bump_marketing_version.py(经 uv run 调用)。
 set -euo pipefail
-
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PROJECT_FILE="${PROJECT_FILE:-$ROOT_DIR/timetracker.xcodeproj/project.pbxproj}"
-
-if [[ ! -f "$PROJECT_FILE" ]]; then
-  echo "Project file not found: $PROJECT_FILE" >&2
-  exit 1
-fi
-
-CURRENT_VERSION="$(grep -E -m 1 'MARKETING_VERSION = [0-9]+(\.[0-9]+){1,2};' "$PROJECT_FILE" | sed -E 's/.*MARKETING_VERSION = ([0-9]+(\.[0-9]+){1,2});.*/\1/' || true)"
-CURRENT_BUILD="$(grep -E -m 1 'CURRENT_PROJECT_VERSION = [0-9]+;' "$PROJECT_FILE" | sed -E 's/.*CURRENT_PROJECT_VERSION = ([0-9]+);.*/\1/' || true)"
-
-if [[ -z "$CURRENT_VERSION" || -z "$CURRENT_BUILD" ]]; then
-  echo "Unable to read MARKETING_VERSION or CURRENT_PROJECT_VERSION from $PROJECT_FILE" >&2
-  exit 1
-fi
-
-IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
-PATCH="${PATCH:-0}"
-NEXT_VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
-NEXT_BUILD="$((CURRENT_BUILD + 1))"
-
-perl -0pi -e "s/MARKETING_VERSION = [0-9]+(?:\\.[0-9]+){1,2};/MARKETING_VERSION = $NEXT_VERSION;/g; s/CURRENT_PROJECT_VERSION = [0-9]+;/CURRENT_PROJECT_VERSION = $NEXT_BUILD;/g" "$PROJECT_FILE"
-
-echo "Bumped version: $CURRENT_VERSION ($CURRENT_BUILD) -> $NEXT_VERSION ($NEXT_BUILD)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+command -v uv >/dev/null 2>&1 || for d in /opt/homebrew/bin /usr/local/bin "$HOME/.local/bin" "$HOME/.cargo/bin"; do
+  case ":$PATH:" in *":$d:"*) ;; *) PATH="$d:$PATH";; esac
+done
+command -v uv >/dev/null 2>&1 || { echo "uv not found on PATH" >&2; exit 1; }
+exec uv run --project "$ROOT" python -m timetracker_tools.bump_marketing_version "$@"

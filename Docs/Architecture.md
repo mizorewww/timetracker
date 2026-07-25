@@ -99,7 +99,7 @@ External CloudKit changes enter the same pipeline through remote-store and compl
 | Forecast | none, derived | none | `RollupStore` | `TaskRollupService`, `ForecastDisplayService` | `Features/Home`, `Features/Analytics`, `Features/Tasks/Detail` |
 | Pomodoro | `PomodoroRun`, ledger models | `PomodoroCommandHandler`, ledger/task commands | `LedgerStore`, Pomodoro read models | persisted-phase deadline/reconciliation helpers | `Features/Pomodoro` |
 | Analytics | none, derived | none | `AnalyticsStore` | `AnalyticsEngine`, `TimeAggregationService` | `Features/Analytics` |
-| Synced settings | `SyncedPreference` | `PreferenceCommandHandler` | `PreferenceStore` | `AppPreferenceCodec`, `SyncedPreferenceService` | `Features/Settings` |
+| Synced settings | `SyncedPreference` | `PreferenceCommandHandler` | `PreferenceStore` | `PreferenceJSON`, `AppPreferenceValueSanitizer`, `SyncedPreferenceService` | `Features/Settings` |
 | Countdown events | `CountdownEvent` | `CountdownCommandHandler` | `TimeTrackerStore` countdown snapshot | date formatting helpers | `Features/Home`, `Features/Settings` |
 | JSON export | none | facade maintenance command | none | export DTO encoding | `Features/Settings/Support/SettingsExportDocument` |
 | Tombstone maintenance | destructive maintenance, Demo/UI Test only | maintenance facade | affected stores | `DatabaseMaintenanceService` | hidden for production stores |
@@ -251,7 +251,7 @@ The editable AI task-planning instructions are a bounded synced string preferenc
 
 Keychain is intentionally outside SwiftData's ACID boundary. Saving LLM configuration batches endpoint, model list, and selected model into one preference transaction, while preserving the previous Keychain value for compensating restore if that transaction fails. A compensation failure is a separate error, never proof of atomic cross-storage rollback. “Clear all data” likewise clears the Keychain API key and device-local automatic-suggestion consent, attempts to restore them if the SwiftData reset fails, and leaves the device-local iCloud startup switch unchanged.
 
-Inbox and checklist AI requests use one bounded network-projection policy. Inbox selects at most 48 trackable candidates by Quick Start pin, indexed frequent/recent use, then stable path; normalized candidate JSON is capped at 16 KiB. Both flows cap the user prompt at 24 KiB and the final request body at 32 KiB, bound each transmitted field by UTF-8 bytes, and shorten only at complete `Character` boundaries. The full on-device symbol catalogue remains available to the picker, while prompts advertise a 78-symbol semantic subset. Returned task IDs must belong to the transmitted candidates, and returned icons must belong to the advertised subset. Projection shaping never mutates canonical Task, Inbox, or Checklist text.
+Inbox and checklist AI requests use one bounded network-projection policy. Inbox selects at most 48 trackable candidates by Quick Start pin, indexed frequent/recent use, then stable path; normalized candidate JSON is capped at 12 KiB. Both flows cap the user prompt at 24 KiB and the final request body at 64 KiB, bound each transmitted field by UTF-8 bytes, and shorten only at complete `Character` boundaries. The full on-device symbol catalogue remains available to the picker, while prompts advertise a 78-symbol semantic subset. Returned task IDs must belong to the transmitted candidates, and returned icons must belong to the advertised subset. Projection shaping never mutates canonical Task, Inbox, or Checklist text.
 
 AI task-plan generation is explicit and draft-first. `LLMTaskPlanService` sends only the user's 4 KiB request, the sanitized 4 KiB planning instructions, and icon/color allowlists under an immutable system contract. It accepts one flat response capped at 128 KiB, maps textual references to locally generated UUIDs, and rejects duplicate/orphan references, cycles, child-task categories, depth beyond six, invalid fields, more than 8 categories, 64 tasks, 32 checklist items per task, or 256 checklist items total. The SwiftUI sheet owns the mutable preview; it can rename or remove proposed items but cannot write facts directly.
 
@@ -370,7 +370,7 @@ Before merging a feature:
 7. Are compact iPhone, iPad split view, and macOS sidebar/detail layouts considered separately?
 8. Are all strings localized in English, Simplified Chinese, and Traditional Chinese?
 9. Are tests behavior-based rather than fragile source scans?
-10. Did verification match the change's risk: relevant signed tests/builds for code changes, normal-size screenshots for affected visual flows, and Instruments only for performance-sensitive work? Is dated evidence recorded in the Audit rather than inferred from an earlier batch, and are all owned simulator/test/trace resources released?
+10. Did verification match the change's risk: relevant signed tests/builds for code changes, normal-size screenshots for affected visual flows, and Instruments only for performance-sensitive work? Is dated evidence recorded in the shipping commit/PR rather than inferred from an earlier batch, and are all owned simulator/test/trace resources released?
 
 ## Feature Status
 
@@ -380,6 +380,6 @@ Future work should preserve the ledger contract: every timer, pomodoro, manual e
 
 ## Version and Build Info
 
-Settings includes an About section with the app icon, `MARKETING_VERSION`, build number, Git branch, short commit hash, and build date. The app target writes `AppBuildInfo.plist` during the build using `scripts/write_build_info_plist.sh`; do not hard-code Git metadata in Swift source.
+Settings includes an About section with the app icon, `MARKETING_VERSION`, build number, Git branch, short commit hash, and build date. The app target writes `AppBuildInfo.plist` during the build via a build phase that runs `scripts/write_build_info_plist.sh` (a thin wrapper around the `timetracker_tools.write_build_info_plist` Python module; see [DevelopmentTools](DevelopmentTools.md)); do not hard-code Git metadata in Swift source.
 
 Version bumping is automated through `.githooks/pre-commit`. See `Docs/Versioning.md` before changing release or commit automation.

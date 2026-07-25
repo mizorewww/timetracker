@@ -19,28 +19,28 @@ Example:
 The repository includes `.githooks/pre-commit`. Install it once per clone:
 
 ```sh
-scripts/install_git_hooks.sh
+make install-hooks
 ```
 
 Git intentionally does not activate hooks from tracked files after a clone. The installer sets this clone's local `core.hooksPath` to `.githooks` and verifies that the executable pre-commit hook resolves correctly. Check an existing clone without changing it with:
 
 ```sh
-scripts/install_git_hooks.sh --check
+make check-hooks
 ```
 
-The hook runs `scripts/stage_commit_version.sh`. It derives the next version from `HEAD`, so repeating a failed commit attempt is idempotent. It updates only the version fields in the index and working copy: already staged project changes stay staged, while unrelated unstaged project changes remain unstaged.
+The hook runs `scripts/stage_commit_version.sh` (a thin wrapper around the `timetracker_tools.stage_commit_version` Python module; see [DevelopmentTools](DevelopmentTools.md)). It derives the next version from `HEAD`, so repeating a failed commit attempt is idempotent. It updates only the version fields in the index and working copy: already staged project changes stay staged, while unrelated unstaged project changes remain unstaged.
 
 Run the isolated Git integration test with:
 
 ```sh
-scripts/test_versioning_hooks.sh
+make test-versioning
 ```
 
 Every `git commit`, including `--allow-empty` and `--amend`, advances the version. The standard Git `--no-verify` escape can bypass client-side hooks, so release verification must still confirm the installed bundle version.
 
 ## Build Metadata
 
-The app target has a build phase that runs `scripts/write_build_info_plist.sh`. It writes `AppBuildInfo.plist` into the built app bundle with:
+The app target has a build phase that runs `scripts/write_build_info_plist.sh` (a thin wrapper around the `timetracker_tools.write_build_info_plist` Python module). It writes `AppBuildInfo.plist` into the built app bundle with:
 
 - Git branch
 - Short and full commit hash

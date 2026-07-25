@@ -6,23 +6,32 @@ Reviewed: 2026-07-25
 
 ## Baseline Commands
 
+Run these through the Makefile (see [DevelopmentTools](DevelopmentTools.md)); the explicit `xcodebuild` forms are shown as equivalents for CI or override contexts.
+
 Unit tests on macOS:
 
 ```sh
-xcodebuild test -project timetracker.xcodeproj -scheme timetracker -destination 'platform=macOS' -only-testing:timetrackerTests
+make test
+# equivalent:
+# xcodebuild test -project timetracker.xcodeproj -scheme timetracker -destination 'platform=macOS' -only-testing:timetrackerTests
 ```
 
 Build for iOS device:
 
 ```sh
-xcodebuild build -project timetracker.xcodeproj -scheme timetracker -destination 'generic/platform=iOS'
+make build-ios
+# equivalent:
+# xcodebuild build -project timetracker.xcodeproj -scheme timetracker -destination 'generic/platform=iOS'
 ```
 
 Final signed Release builds:
 
 ```sh
-xcodebuild build -project timetracker.xcodeproj -scheme timetracker -configuration Release -destination 'generic/platform=iOS'
-xcodebuild build -project timetracker.xcodeproj -scheme timetracker -configuration Release -destination 'platform=macOS,arch=arm64'
+CONFIGURATION=Release make build-ios
+CONFIGURATION=Release make build-macos
+# equivalents:
+# xcodebuild build -project timetracker.xcodeproj -configuration Release -destination 'generic/platform=iOS'
+# xcodebuild build -project timetracker.xcodeproj -configuration Release -destination 'platform=macOS,arch=arm64'
 ```
 
 Keep `CODE_SIGN_STYLE=Automatic` and team `LT98S43NKA`. Do not add `CODE_SIGNING_ALLOWED=NO`, `CODE_SIGNING_REQUIRED=NO`, or an empty team to make these commands pass. Simulator `Sign to Run Locally` is expected and is not device entitlement evidence.
@@ -49,7 +58,7 @@ The output must include the app scheme `timetracker`. Shared schemes live in `ti
 Signed export:
 
 ```sh
-./scripts/export_signed_artifacts.sh
+make export-artifacts
 ```
 
 ## What Must Stay Covered
@@ -93,7 +102,7 @@ The default UI matrix uses normal text sizes and ordinary interaction paths. The
 - Calendar boundaries and caching: 23/25-hour DST days, cross-midnight intervals, same-day clipped subranges, cache-key separation, and local invalidation.
 - LLM transport: valid localhost/IPv4/IPv6 loopback, spoofed loopback names, remote HTTP, same-origin redirect, cross-host/port redirect, HTTPS downgrade, ephemeral/no-cache/no-cookie configuration, 60-second resource timeout, exact 2 MiB acceptance, first over-limit byte cancellation, Content-Length preflight, non-2xx body avoidance, waiting/streaming cancellation, typed timeout, injected-transport defense, and HTTP-status error priority.
 - Device identity: accept and stably reuse only the current platform prefix plus canonical UUID; reject/regenerate cross-platform, malformed, noncanonical, control-character and oversized persisted values, and prove generated identifiers contain no host or account name.
-- LLM suggestion request projection: Inbox prioritizes Quick Start then indexed frequent/recent tasks before stable fill; the normalized set is input-order independent, unique, at most 48 candidates and 16 KiB JSON. Inbox/checklist field, prompt (24 KiB), and body (32 KiB) caps are UTF-8/Unicode safe; the picker keeps its full catalogue while prompts and returned icons use the curated set. Cover oversized credentials, non-candidate task IDs, bounded reason/model output, canonical source text remaining untouched, and the invariant that a 256-byte persisted model ID passes snapshot restore while an oversized Unicode ID is safely bounded first.
+- LLM suggestion request projection: Inbox prioritizes Quick Start then indexed frequent/recent tasks before stable fill; the normalized set is input-order independent, unique, at most 48 candidates and 12 KiB JSON. Inbox/checklist field, prompt (24 KiB), and body (64 KiB) caps are UTF-8/Unicode safe; the picker keeps its full catalogue while prompts and returned icons use the curated set. Cover oversized credentials, non-candidate task IDs, bounded reason/model output, canonical source text remaining untouched, and the invariant that a 256-byte persisted model ID passes snapshot restore while an oversized Unicode ID is safely bounded first.
 - LLM configuration: Test→Save draft normalization, stale request cancellation, valid model gating, one batched preference save, Keychain compensation on preference failure, discard confirmation, device-only Keychain migration/filtering, and automatic suggestions default-off/local-only consent.
 - AI task-plan generation: fixed system contract plus editable 4 KiB synced instructions; 4 KiB request, 128 KiB response-content, 8-category/64-task/32-per-task/256-total checklist and depth-six bounds; flat reference mapping; duplicate/orphan/cycle/child-category rejection; native editable preview and explicit Create; one fresh-context transaction for category/task/assignment/checklist creation; rollback at every injected checkpoint; all-present idempotent replay and mixed-ID rejection.
 - Privacy-complete reset: successful “clear all” removes the Keychain API key and device-local automatic-suggestion consent; an injected SwiftData failure restores both external values and leaves the device-local iCloud startup switch unchanged.
@@ -183,12 +192,12 @@ Every screenshot/profile run follows the ownership and cleanup contract above. A
 
 Before handing a build to manual testing:
 
-1. Run macOS unit tests.
+1. Run macOS unit tests (`make test`).
 2. Run macOS UI tests.
-3. Build a generic iOS device archive or export signed artifacts.
-4. Install the exported iOS app bundle on the paired iPad and iPhone with `devicectl`.
+3. Build a generic iOS device archive or export signed artifacts (`make build-ios` or `make export-artifacts`).
+4. Install the exported iOS app bundle on the paired iPad and iPhone with `devicectl`, or use `make build-install-all` to build and install iOS+Watch+macOS in one step.
 5. Launch the app once on each device to catch signing, extension, and launch-time persistence failures.
 
 ## Final Evidence Record
 
-Only the last run against a frozen source state may be reported as final evidence for that exact scope. Record commands, pass/fail/skip counts, signing identity/profile/entitlement checks, simulator screenshots, trace, and cleanup in [Audit-2026-07-14](Audit-2026-07-14.md) under “收口证据与未声明范围”. Targeted suites and earlier green builds remain useful diagnostics but cannot be added together and presented as one full pass. The 2026-07-17 R1 closure records its final targeted tests, performance suite, signed Release archive, and empty owned-resource audit; complete unit/UI/device/trace matrices that were not run are explicitly marked “not executed” rather than left as placeholders. Running such a matrix later requires a separate, bounded release-verification task and does not reopen the completed refactor by default.
+Only the last run against a frozen source state may be reported as final evidence for that exact scope. Record commands, pass/fail/skip counts, signing identity/profile/entitlement checks, simulator screenshots, trace, and cleanup in the commit or PR that ships the change (the dated `Audit-*.md` snapshots were retired on 2026-07-25 in favor of git history). Targeted suites and earlier green builds remain useful diagnostics but cannot be added together and presented as one full pass. The 2026-07-17 R1 closure (commits `e30fd6a`/`55f19ae`) recorded its final targeted tests, performance suite, signed Release archive, and empty owned-resource audit; complete unit/UI/device/trace matrices that were not run are explicitly marked “not executed” rather than left as placeholders. Running such a matrix later requires a separate, bounded release-verification task and does not reopen the completed refactor by default.

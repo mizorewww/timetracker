@@ -1,0 +1,17 @@
+[project]
+name = "timetracker-tools"
+version = "0.1.0"
+description = "Build, release, versioning and hook tooling for the timetracker Apple app"
+requires-python = ">=3.12"
+# 纯标准库实现(subprocess / plistlib / json / argparse / re / pathlib / tempfile),无第三方运行依赖。
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["tools/timetracker_tools"]
+
+[tool.hatch.build.targets.sdist]
+include = ["tools/timetracker_tools"]

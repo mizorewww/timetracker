@@ -20,9 +20,35 @@
 | Sync, AI, data safety | `Docs/PrivacyAndSecurity.md` |
 | SwiftData schema | `Docs/Architecture.md` schema rules, `Docs/Testing.md` schema compatibility, then a new `VersionedSchema` + migration stage + frozen legacy snapshot |
 | Refactoring | `Docs/CodeRefactorPlan.md` |
-| Commit/release automation | `Docs/Versioning.md`, `Docs/Scripts.md` |
+| Commit/release automation | `Docs/Versioning.md`, `Docs/DevelopmentTools.md`, `Docs/Scripts.md` |
 
-`Docs/AgentDecisions.md` records binding engineering decisions (AD-xxx). Accepted decisions must be followed; superseded ones are history. Dated `Docs/Audit-*.md` files are frozen evidence, not current specs.
+`Docs/AgentDecisions.md` records binding engineering decisions (AD-xxx). Accepted decisions must be followed; superseded ones are history. Dated `Docs/Audit-*.md` snapshots were retired on 2026-07-25; one-time verification evidence now lives in the shipping commit/PR, not in a separate dated file.
+
+## Makefile usage
+
+Build, release, versioning, and hook commands enter through the Makefile. `scripts/*.sh` are thin `uv run` wrappers around the Python modules in `tools/timetracker_tools/`; do not call xcodebuild or edit the pbxproj version fields ad hoc — use the targets. Full layout, wrapper mechanism, and troubleshooting are in `Docs/DevelopmentTools.md`; per-script behavior and env vars are in `Docs/Scripts.md`.
+
+| Target | Use it to |
+| --- | --- |
+| `make help` | list all targets |
+| `make venv` | create/sync `.venv` via `uv sync` (optional; wrappers self-bootstrap) |
+| `make install-hooks` | install the pre-commit version hook once per clone |
+| `make check-hooks` | read-only verify the hook is installed |
+| `make test-versioning` | isolated integration test for the version hook — the versioning regression gate |
+| `make bump-version` | manual marketing/build bump only (normal commits bump automatically) |
+| `make build-ios` / `make build-macos` | build for `generic/platform=iOS` / `generic/platform=macOS` |
+| `make build-install-all` | build iOS+Watch and macOS, install to physical devices, copy macOS app to `/Applications` |
+| `make test` | signed macOS unit tests (`timetrackerTests`) — the default verification gate |
+| `make export-artifacts` | archive and export signed IPA + macOS app/zip |
+| `make build-info` | write `AppBuildInfo.plist` (normally invoked by the Xcode build phase; standalone it skips) |
+| `make clean` | remove `build/Exports`, `build/Archives`, `build/Install` |
+
+Conventions:
+
+- Env vars pass through to the underlying module, so `CONFIGURATION=Release make export-artifacts` and `make CONFIGURATION=Release export-artifacts` are equivalent. The inline build/test targets take `DEVELOPMENT_TEAM=<team>` to override the default `LT98S43NKA`.
+- Keep `CODE_SIGN_STYLE=Automatic` and team `LT98S43NKA`; never disable signing to make a build pass.
+- `make build-info` is not a manual gate — the `Write Build Info` Xcode build phase invokes the wrapper, which calls `uv run` then the Python module. If Xcode's PATH lacks uv, the wrapper prepends common install locations; see `Docs/DevelopmentTools.md` for the `.venv/bin/python` fallback.
+- Change business behavior in `tools/timetracker_tools/*.py`, entry points in the `Makefile`, and almost never in the `scripts/*.sh` wrappers.
 
 ## Development workflow
 
@@ -46,24 +72,25 @@ Follow this lifecycle for every task. Do not skip steps to move faster; narrow t
 
 ### 4. Verify at the level the risk requires
 
-- Default gate: signed macOS unit tests (`Docs/Testing.md` baseline command) green.
-- UI changes: simulator runs with scripted XCTest/XCUITest assertions and screenshots at normal text size, on the affected platforms. Release the simulator and every owned process afterward.
-- Performance-sensitive changes: `CorePerformanceBudgetTests` plus a Release trace before/after.
-- System surfaces (Widget, Watch, Live Activity, CloudKit, App Group): simulator evidence is diagnostic only; real-device verification is a separate gate and does not block the commit checkpoint.
+- Default gate: `make test` (signed macOS unit tests; see `Docs/Testing.md`) green.
+- UI changes: simulator runs with scripted XCTest/XCUITest assertions and screenshots at normal text size, on the affected platforms. Release the simulator and every owned process afterward. A build-only sanity check uses `make build-ios` / `make build-macos`.
+- Performance-sensitive changes: `CorePerformanceBudgetTests` (covered by `make test`) plus a Release trace before/after.
+- System surfaces (Widget, Watch, Live Activity, CloudKit, App Group): simulator evidence is diagnostic only; real-device verification is a separate gate and does not block the commit checkpoint. For that gate, `make build-install-all` builds and installs the iOS+Watch and macOS apps to physical devices and `/Applications`; `make export-artifacts` produces the signed IPA and macOS zip.
 - Keep `CODE_SIGN_STYLE=Automatic` and team `LT98S43NKA`; never disable signing to make a check pass.
 
 ### 5. Commit small and complete
 
 - Commit after every small, coherent, verified step — do not wait for the whole repository-wide goal.
-- Before the first commit in a clone, run `scripts/install_git_hooks.sh`; use `scripts/install_git_hooks.sh --check` to verify later checkpoints. The tracked hook must remain active so every normal commit advances the app marketing version and build number.
+- Before the first commit in a clone, run `make install-hooks`; use `make check-hooks` to verify later checkpoints. The tracked hook must remain active so every normal commit advances the app marketing version and build number.
 - Keep each commit focused, reviewable, and safe to revert. Stage only completed work; do not capture another active agent's half-finished edit.
 - Update the affected current docs (UserGuide, CodeGuide, Architecture, ProjectMap, privacy, versioning) in the same commit as the behavior change.
 - Keep repository agent resources, including `AGENTS.md` and `.agents/`, under version control. Do not add them to `.gitignore`; commit new or updated agent instructions and supporting files with the small task that uses them.
-- Run the tests or checks appropriate to that task before committing. Report failed or inconclusive verification honestly.
+- Run the task's verification gate before committing — `make test` for the default macOS unit suite, `make test-versioning` for any hook/versioning change, plus the UI/device checks the risk requires. Report failed or inconclusive verification honestly.
+- Do not run `make bump-version` in the normal commit flow; the pre-commit hook advances the version automatically. `make bump-version` is only for explicit manual bumps or temp-copy verification.
 
 ### 6. Close out
 
-- Release every owned resource: terminate the tested app and runners, shut down and delete simulators created for the batch, remove temporary DerivedData/result/trace artifacts, and audit that no owned `xcodebuild`, `xctest`, UI runner, or Booted device remains. Never shut down a simulator or terminate a process another active agent explicitly owns.
+- Release every owned resource: terminate the tested app and runners, shut down and delete simulators created for the batch, remove temporary DerivedData/result/trace artifacts, and audit that no owned `xcodebuild`, `xctest`, UI runner, or Booted device remains. Never shut down a simulator or terminate a process another active agent explicitly owns. Drop ephemeral build outputs with `make clean` only once `build/Archives`/`build/Exports` are no longer needed as evidence.
 - Update the implementation memory and remove the active link for finished feedback tasks.
 - Report: completed scope, validation performed, resource cleanup, cumulative progress, and remaining expected checkpoints.
 

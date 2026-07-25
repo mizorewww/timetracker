@@ -380,7 +380,7 @@
 
 背景：endpoint/API key 在每次键入时持久化会产生半配置状态、Keychain 噪声和意外请求；“已配置”不等于同意自动发送工作内容。
 
-决策：配置 sheet 使用独立 draft；Test 只校验 credential fingerprint 并加载模型，不保存；选择有效模型后用户明确 Save 才写 endpoint/model 与 device-only Keychain。endpoint、模型列表和已选模型由一个批量 preference command 做一次 SwiftData 提交；Keychain 不是该 transaction 的一部分，提交失败时尽力恢复旧密钥并准确报告补偿失败。修改凭证会取消旧请求和旧测试结果。自动建议是默认关闭、设备本地的第二个明确开关，不参与 CloudKit/JSON。Inbox/checklist 发送前共用 `LLMSuggestionInputPolicy`：候选最多 48 项/16 KiB JSON，prompt 24 KiB，request body 32 KiB，持久化 model ID 256 bytes，文本按 UTF-8/完整 `Character` 有界投影且不回写持久事实。model ID producer 上限必须与同步快照 compact-field restore 上限相同；模型 ID 是 opaque identifier，超限或含控制字符时整体拒绝，不能截断成可能碰撞的另一个 ID。Inbox 候选按固定→高频/近期→稳定补足取舍；模型只看 78 个精选语义图标，返回 UUID/icon 必须属于实际已公告集。
+决策：配置 sheet 使用独立 draft；Test 只校验 credential fingerprint 并加载模型，不保存；选择有效模型后用户明确 Save 才写 endpoint/model 与 device-only Keychain。endpoint、模型列表和已选模型由一个批量 preference command 做一次 SwiftData 提交；Keychain 不是该 transaction 的一部分，提交失败时尽力恢复旧密钥并准确报告补偿失败。修改凭证会取消旧请求和旧测试结果。自动建议是默认关闭、设备本地的第二个明确开关，不参与 CloudKit/JSON。Inbox/checklist 发送前共用 `LLMSuggestionInputPolicy`：候选最多 48 项/12 KiB JSON，prompt 24 KiB，request body 64 KiB，持久化 model ID 256 bytes，文本按 UTF-8/完整 `Character` 有界投影且不回写持久事实。model ID producer 上限必须与同步快照 compact-field restore 上限相同；模型 ID 是 opaque identifier，超限或含控制字符时整体拒绝，不能截断成可能碰撞的另一个 ID。Inbox 候选按固定→高频/近期→稳定补足取舍；模型只看 78 个精选语义图标，返回 UUID/icon 必须属于实际已公告集。
 
 后果：不得把补偿式一致性写成跨存储原子性；失败必须逐项报告。发行前必须确认实际 endpoint 服务方、发送字段、用途、保留期和删除渠道；兼容协议不代表零保留。
 
@@ -661,7 +661,7 @@
 
 后果：Accessibility 字号会使用更多垂直空间，但不会把关键动作变成谜语，也不会以“简化”为名删除任务事实。视觉布局和 VoiceOver 投影可以分别优化呈现方式，字段集合必须保持同步；新增任务行元数据时必须同时更新普通/紧凑/辅助布局、语义快照和测试。
 
-验证：源码契约固定 Today 完整文字操作、Tasks 各布局的同一事实集，单元测试固定语义快照的字段顺序、阻塞状态和重复路径消除。默认回归以正常字号和常规路径为主；只在 AD-057 的风险触发条件下重跑极端字号。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+验证：源码契约固定 Today 完整文字操作、Tasks 各布局的同一事实集，单元测试固定语义快照的字段顺序、阻塞状态和重复路径消除。默认回归以正常字号和常规路径为主；只在 AD-057 的风险触发条件下重跑极端字号。一次性结果见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
 ## AD-051：系统表面把“打开”与“修改”分离并冻结陈旧计时
 
@@ -673,7 +673,7 @@
 
 后果：背景点击不再产生意外账本事实；陈旧系统投影不会伪装成仍在实时同步；大字和窄宽度优先保留任务身份、冻结状态与停止能力。八小时后的主账本计时仍可继续，冻结只描述 Live Activity 投影可信度。
 
-验证：纯行为测试固定 stale date、live/frozen 两种 presentation 与八小时秒数；源码契约固定 Widget 背景 URL、显式 Quick Start、冻结 formatter/value、布局回退和三语键集。受影响系统表面需保持自动签名与严格嵌入产物校验；一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+验证：纯行为测试固定 stale date、live/frozen 两种 presentation 与八小时秒数；源码契约固定 Widget 背景 URL、显式 Quick Start、冻结 formatter/value、布局回退和三语键集。受影响系统表面需保持自动签名与严格嵌入产物校验；一次性结果见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
 ## AD-052：APS 使用 provisioning profile 认可的规范 entitlement 键
 
@@ -685,7 +685,7 @@
 
 后果：开发构建会真正携带 APS entitlement，CloudKit 远程变更通知不再因键名错误被静默剥离。Release/Distribution 的环境值仍由对应 profile 和配置决定，不能把开发构建的 `development` 证据冒充发布证据。
 
-验证：`SigningEntitlementContractTests` 固定规范键和值并禁止旧键。每次签名验收同时检查源 entitlement、`.xcent`、embedded profile、最终 signature 和嵌入产物严格校验；一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+验证：`SigningEntitlementContractTests` 固定规范键和值并禁止旧键。每次签名验收同时检查源 entitlement、`.xcent`、embedded profile、最终 signature 和嵌入产物严格校验；一次性结果见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
 ## AD-053：计时选择与停止使用彼此独立的显式命令
 
@@ -697,7 +697,7 @@
 
 后果：任务行不再把状态伪装成动作，误点运行任务不会丢失正在记录的时间上下文；停止、开始与切换均有单独可发现的触点和稳定的 Voice Control/VoiceOver 名称。`TimeTrackerStore.startTask` 返回真实写入成功值，使 sheet 不会在写入失败时假装完成。其他计时入口如需复用选择器，必须调用同一 policy/Store 编排，不得在 View 中按 `activeSegment` 自行写成 toggle。
 
-验证：行为测试覆盖模式矩阵、运行任务选择严格 no-op、显式 Stop、独占/并行语义和写入失败保留上下文；UI 契约固定分区、独立 Stop、成功后 dismiss 和三语语义。正常字号核心路径是默认 UI 验收；一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+验证：行为测试覆盖模式矩阵、运行任务选择严格 no-op、显式 Stop、独占/并行语义和写入失败保留上下文；UI 契约固定分区、独立 Stop、成功后 dismiss 和三语语义。正常字号核心路径是默认 UI 验收；一次性结果见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
 ## AD-054：任务树 projection 由 mutation-owned read index 与有界缓存发布
 
@@ -769,7 +769,7 @@
 
 后果：重建、清理、清空与两个同步覆盖方向共享相同且可达的系统 presentation 边界，不会因 modifier 顺序让只有最后一个动作能显示。新增 Settings 危险操作必须扩展枚举并复用该入口；普通刷新、检查和导航不进入这个状态机。iOS 27 可能把确认呈现为 popover，并通过弹窗外区域取消，测试不能为了关闭面板点击真实破坏性动作。
 
-验证：UI 回归必须在正常字号下分别打开两个方向的确认，核对说明与 destructive action，并只用系统取消路径退出；源码契约固定 Form-owned 唯一 owner。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+验证：UI 回归必须在正常字号下分别打开两个方向的确认，核对说明与 destructive action，并只用系统取消路径退出；源码契约固定 Form-owned 唯一 owner。一次性结果见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
 ## AD-060：恢复关键本机文件共享耐久提交与有界隔离 primitive
 
@@ -915,7 +915,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：同一 scene 只有一个 App 级 sheet，脏编辑器不会被其他 feature 的 modal 请求覆盖；独立 Settings 不会把 UI 弹到主窗口。保存命令只返回业务成功，presentation 的关闭由 sheet 自己的 `dismiss` 负责；失败保持原草稿。新增 App 级 sheet 必须扩展 typed content 和唯一 host，不得在 feature 或共享 Store 重建平行 `.sheet` 状态。局部确认对话、文件 exporter 和真正属于单个控件的 popover 可以保留局部 owner，但必须与 App 级 slot 的职责区分。
 
-验证：presentation/deep-link 套件固定 matching-ID 仲裁与有界排队；正常字号 UI 覆盖任务编辑→Focus 和 Today→任务选择器。一次性结果、签名与资源清理证据见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+验证：presentation/deep-link 套件固定 matching-ID 仲裁与有界排队；正常字号 UI 覆盖任务编辑→Focus 和 Today→任务选择器。一次性结果、签名与资源清理证据见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
 ## AD-072：任务行的菜单与滑动删除共用一个确认 owner
 
@@ -927,7 +927,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：一行一次只能有一个删除确认，取消与确认路径一致；共享 swipe modifier 不再暗中引入 modal 状态。后续新增任务行入口必须复用 `requestDelete`，不得为了入口便利再在 modifier 中叠加 confirmation。领域层仍保留 tombstone 和历史账本，这不需要成为用户操作名称。
 
-验证：`TaskUIContractTests` 固定 swipe modifier 无独立确认状态、两个 row 各只有一个 dialog、两入口共用 callback，并固定用户文案不暴露 soft-delete 术语。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+验证：`TaskUIContractTests` 固定 swipe modifier 无独立确认状态、两个 row 各只有一个 dialog、两入口共用 callback，并固定用户文案不暴露 soft-delete 术语。一次性结果见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
 ## AD-073：同步覆盖确认绑定精确 conflict token，并在 state lock 内 CAS
 
@@ -939,7 +939,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：旧确认不能覆盖后来到达或后来变化的同步版本；用户必须重新阅读最新摘要并再次选择方向。expected nil 表示“确认时仍应没有 pending conflict”，不是跳过校验。Store 不得在锁外先比较 cached prompt，也不得从当前 persistence mode 推测 queued/immediate。token 只在实际 branch fingerprint 变化时旋转，重复无变化通知不会制造确认风暴；检测时间保留首次冲突发生时间。
 
-验证：冲突与 Settings 套件覆盖 matching/stale ID、expected-none、state/epoch/snapshot/fingerprint/用户数据零副作用、prompt 保留和 branch 变化后旧 token 失效。一次性结果与签名证据见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+验证：冲突与 Settings 套件覆盖 matching/stale ID、expected-none、state/epoch/snapshot/fingerprint/用户数据零副作用、prompt 保留和 branch 变化后旧 token 失效。一次性结果与签名证据见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
 ## AD-074：读取冲突 prompt 失败不能伪装成“没有冲突”
 
@@ -951,7 +951,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：损坏 state 会被隔离并显式报告，不再被解释为“同步安全”；调用方新增 prompt 读取点必须处理错误，禁止重新加 `try?`。同样地，已提交的业务动作与提交后 projection/snapshot/prompt 刷新必须保持不同失败语义。
 
-验证：冲突、resolution identity 与 Watch command 套件覆盖损坏 state 读取抛错/隔离，以及已提交 Watch 命令不反转 terminal result。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+验证：冲突、resolution identity 与 Watch command 套件覆盖损坏 state 读取抛错/隔离，以及已提交 Watch 命令不反转 terminal result。一次性结果见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
 ## AD-075：同步冲突先非阻断导航，再在 Settings 主动确认
 
@@ -963,7 +963,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：App 启动和后台同步不再强迫用户立即做数据覆盖决定；破坏动作发生前总有比较两侧摘要的路径。忽略只隐藏当前 scene 的提示，不清 pending state、不解除恢复保护；Settings 仍可随时解决。后续不得在根层重新加入自动冲突 confirmation，或让 notice 直接执行覆盖。
 
-验证：presentation 契约与正常字号 UI 路径覆盖“提示 → 查看副本 → 两侧摘要”，并确认破坏动作只出现在摘要之后。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+验证：presentation 契约与正常字号 UI 路径覆盖“提示 → 查看副本 → 两侧摘要”，并确认破坏动作只出现在摘要之后。一次性结果见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
 ## AD-076：只有完成恢复门控后才能启动并确认 CloudKit
 
@@ -975,7 +975,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：失败或无法证明安全的恢复不会进入云容器、不会清 pending、不会宣称成功；用户修复文件保护/存储错误后可以在下次启动继续。无 pending 请求是唯一无需删除仍返回 completed 的情形。后续不得重新增加无 token 的 CloudKit-enabled 状态转换，或用 `try?`/Bool 把 deferred 与 failed 合并为可继续。
 
-验证：恢复门控与 MainActor 套件覆盖快照缺失/不可读、不可 reset、无请求、两类删除失败和成功后才清标记。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+验证：恢复门控与 MainActor 套件覆盖快照缺失/不可读、不可 reset、无请求、两类删除失败和成功后才清标记。一次性结果见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
 ## AD-077：瞬时反馈归属发起 scene，共享 Store 不拥有 alert
 
@@ -987,7 +987,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：macOS Settings 的三类数据/同步操作不再在主窗口弹错，连续错误也不相互覆盖。`SyncConflictResolutionResult.failed` 和两个返回 optional 的旧 Store 恢复 facade 被删除，IO/restore/save 错误不再伪装成业务枚举或 `nil`。其他 Settings mutation、编辑器和后台健康错误仍需分批迁移；新代码不得使用过渡桥作为默认反馈 API。
 
-验证：队列核心、scene 接线、JSON/清理 throwing 边界、同步冲突与 stale token 回归必须覆盖 FIFO、matching UUID、场景隔离和失败不伪装成业务结果。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+验证：队列核心、scene 接线、JSON/清理 throwing 边界、同步冲突与 stale token 回归必须覆盖 FIFO、matching UUID、场景隔离和失败不伪装成业务结果。一次性结果见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
 ## AD-078：同步状态只陈述已完成且已在本机处理成功的 CloudKit 活动
 
@@ -999,7 +999,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：失败事件不再短暂或持续显示为绿色；后台错误在 Settings 状态卡中可诊断，不占用 scene alert 队列。最近活动能明确区分 import、export 和 setup，但它仍是当前进程观察到的 CloudKit 事件，不是多设备端到端一致性的证明。
 
-验证：同步活动、账户状态、冲突状态与 Settings 套件必须覆盖 event kind/result、优先级合并、remote-only 不成功、后处理失败、账户独立性与未来/过期时间。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+验证：同步活动、账户状态、冲突状态与 Settings 套件必须覆盖 event kind/result、优先级合并、remote-only 不成功、后处理失败、账户独立性与未来/过期时间。一次性结果见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
 ## AD-079：Quick Start 整行只负责开始或打开，不按运行状态变成停止
 
@@ -1023,7 +1023,7 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 后果：系统表面的停止能力与用户看到的计时一一对应；并行计时、陈旧 Widget/Activity 或重复同步行都不能通过集合顺序误停其它工作。新增停止入口必须传 segment identity；“当前”不得成为“最后一条”的同义词。
 
-验证：command/deep-link 行为测试覆盖唯一无目标兼容、并行拒绝、精确 segment 和过期目标不回退；系统表面契约固定 `Button(intent:)` 与 segment 序列化，并要求 generic iOS 自动签名和嵌入产物校验通过。一次性结果见 [Audit §7](Audit-2026-07-14.md#7-已有定向证据不是最终全套)。
+验证：command/deep-link 行为测试覆盖唯一无目标兼容、并行拒绝、精确 segment 和过期目标不回退；系统表面契约固定 `Button(intent:)` 与 segment 序列化，并要求 generic iOS 自动签名和嵌入产物校验通过。一次性结果见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
 ## AD-081：CloudKit 恢复必须先完成同一 fresh store 的初始导入，再比较或解锁写入
 
@@ -1751,5 +1751,5 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 - [代码文档](CodeGuide.md)
 - [隐私与安全](PrivacyAndSecurity.md)
-- [2026-07-14 审核](Audit-2026-07-14.md)
+- 2026-07-14 审核（`Audit-2026-07-14.md` 已于 2026-07-25 退役，证据见 git 历史）
 - [版本与迁移](Versioning.md)

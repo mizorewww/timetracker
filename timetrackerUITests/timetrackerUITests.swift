@@ -3764,21 +3764,52 @@ final class timetrackerUITests: XCTestCase {
 
         let reasoning = app.descendants(matching: .any)["aiTaskPlan.reasoning"].firstMatch
         let rawOutput = app.descendants(matching: .any)["aiTaskPlan.rawOutput"].firstMatch
-        scrollUntilHittable(reasoning, direction: .up, maximumScrolls: 20, in: app)
+        scrollUntilHittable(reasoning, direction: .up, maximumScrolls: 30, in: app)
         XCTAssertTrue(
             reasoning.waitForExistence(timeout: 10),
             "The preview must expose the model's reasoning trace."
         )
-        scrollUntilHittable(rawOutput, direction: .up, maximumScrolls: 20, in: app)
+        scrollUntilHittable(rawOutput, direction: .up, maximumScrolls: 30, in: app)
         XCTAssertTrue(
             rawOutput.waitForExistence(timeout: 5),
             "The preview must expose the model's raw output."
         )
+        for _ in 0 ..< 5 where !rawOutput.isHittable {
+            app.swipeUp(velocity: .slow)
+        }
+        XCTAssertTrue(
+            rawOutput.isHittable,
+            "The Raw Output row must be fully visible before it can expand."
+        )
 
         activate(rawOutput)
-        let rawContent = app.staticTexts.matching(
-            NSPredicate(format: "label CONTAINS %@", "Read 10 Chapters")
-        ).firstMatch
+        let rawContent = app.descendants(matching: .any)[
+            "aiTaskPlan.rawOutput.content"
+        ].firstMatch
+        if !rawContent.waitForExistence(timeout: 2) {
+            // A missed tap leaves the disclosure closed; retry only then so a
+            // successful first tap is never toggled back shut.
+            for _ in 0 ..< 3 where !rawOutput.isHittable {
+                app.swipeUp(velocity: .slow)
+            }
+            activate(rawOutput)
+        }
+        scrollUntilHittable(rawContent, direction: .up, maximumScrolls: 10, in: app)
+        XCTAssertTrue(
+            rawContent.waitForExistence(timeout: 5),
+            "Expanding Raw Output must reveal the model's JSON answer."
+        )
+        let rawContentText = [
+            rawContent.value as? String,
+            rawContent.label as String?,
+        ]
+        .compactMap { $0 }
+        .first { !$0.isEmpty } ?? ""
+        XCTAssertTrue(
+            rawContentText.contains("Read 10 Chapters"),
+            "Raw Output must contain the model's JSON answer."
+        )
+        try capture("\(screenshotPrefix)-ai-task-plan-observability", app: app)
         XCTAssertTrue(
             rawContent.waitForExistence(timeout: 5),
             "Expanding Raw Output must reveal the model's JSON answer."

@@ -236,7 +236,6 @@
 "settings.llm.taskPlan.error.instructionsTooLarge" = "The task planning instructions are too long. Shorten them in Settings.";
 "settings.llm.taskPlan.error.responseTooLarge" = "The generated plan is too large to review safely.";
 "settings.llm.taskPlan.error.invalidResponse" = "The endpoint returned a task plan that could not be read.";
-"settings.llm.taskPlan.error.limitExceeded" = "The generated plan contains too many categories, tasks, or checklist items.";
 "settings.llm.taskPlan.error.duplicateReference" = "The generated plan contains duplicate items. Generate it again.";
 "settings.llm.taskPlan.error.orphanReference" = "The generated plan contains an item whose parent is missing. Generate it again.";
 "settings.llm.taskPlan.error.cycle" = "The generated plan contains a circular task hierarchy. Generate it again.";

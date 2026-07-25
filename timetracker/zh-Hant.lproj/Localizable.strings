@@ -236,7 +236,6 @@
 "settings.llm.taskPlan.error.instructionsTooLarge" = "任務規劃指令過長，請前往設定縮短內容。";
 "settings.llm.taskPlan.error.responseTooLarge" = "產生的計畫過大，無法安全預覽。";
 "settings.llm.taskPlan.error.invalidResponse" = "端點傳回的任務計畫無法讀取。";
-"settings.llm.taskPlan.error.limitExceeded" = "產生的計畫包含過多分類、任務或清單項目。";
 "settings.llm.taskPlan.error.duplicateReference" = "產生的計畫包含重複項目，請重新產生。";
 "settings.llm.taskPlan.error.orphanReference" = "產生的計畫中有項目缺少父項，請重新產生。";
 "settings.llm.taskPlan.error.cycle" = "產生的任務層級存在循環，請重新產生。";

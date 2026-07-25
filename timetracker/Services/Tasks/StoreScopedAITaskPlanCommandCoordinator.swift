@@ -173,16 +173,6 @@ private extension StoreScopedAITaskPlanCommandCoordinator {
         guard draft.tasks.isEmpty == false else {
             throw LLMTaskPlanServiceError.noTasks
         }
-        let checklistCount = draft.tasks.reduce(0) { $0 + $1.checklistItems.count }
-        guard draft.categories.count <= LLMTaskPlanService.maximumCategoryCount,
-              draft.tasks.count <= LLMTaskPlanService.maximumTaskCount,
-              checklistCount <= LLMTaskPlanService.maximumChecklistItemCount,
-              draft.tasks.allSatisfy({
-                  $0.checklistItems.count <= LLMTaskPlanService.maximumChecklistItemCountPerTask
-              })
-        else {
-            throw LLMTaskPlanServiceError.limitExceeded
-        }
 
         let allIDs = draft.categories.map(\.id) +
             draft.tasks.map(\.id) +

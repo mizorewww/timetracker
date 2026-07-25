@@ -91,7 +91,7 @@ Checklist 标题与所属任务标题各最多 512 UTF-8 bytes，任务显示路
 - “任务规划指令”设置，最多 4 KiB UTF-8 bytes。它是可同步、可导出的普通偏好，不是秘密；不应填写密码或 API key。
 - 允许模型使用的精选系统图标名和颜色列表。
 
-请求不包含现有任务库、历史时间记录、Inbox 或 checklist 内容。固定 system contract 要求模型只返回分类、任务和 checklist 的 flat JSON 草稿；响应正文在服务层再限制为 128 KiB，并校验引用、层级、字段及 16 个分类、128 个任务、每任务 256/总计 1024 个 checklist、最大任务深度 6 的数量上限。通过校验的结果只进入本机可编辑预览；用户点按“创建”后才在一个 SwiftData 事务中新增事实。该流程不会自动修改、删除或覆盖既有任务，任一步失败都不留下半份计划。
+请求不包含现有任务库、历史时间记录、Inbox 或 checklist 内容。固定 system contract 要求模型只返回分类、任务和 checklist 的 flat JSON 草稿；响应正文在服务层限制为 512 KiB，并校验引用、层级、字段合法性与最大任务深度 6；不设分类、任务或清单数量上限，忠实的大计划按字节预算接受。通过校验的结果只进入本机可编辑预览；用户点按“创建”后才在一个 SwiftData 事务中新增事实。该流程不会自动修改、删除或覆盖既有任务，任一步失败都不留下半份计划。
 
 两类建议和任务计划生成的 user prompt 最多 24 KiB，最终 JSON request body 最多 64 KiB，model ID 256 bytes，endpoint/API key 分别最多 4/8 KiB。256-byte model ID 同时符合同步快照的 compact-field restore 上限，避免本机可写入的 AI provenance 无法恢复。用户文本只在发送副本中按完整 Unicode `Character` 边界缩短，不回写 SwiftData 事实。建议模型返回的 reason/model ID 再次有界化，icon 必须属于本次已公告的精选列表，任务 UUID 必须属于实际发送候选。
 

@@ -112,7 +112,6 @@ enum LLMTaskPlanServiceError: LocalizedError, Equatable {
     case instructionsTooLarge
     case responseContentTooLarge
     case invalidResponse
-    case limitExceeded
     case duplicateReference
     case orphanReference
     case cycle
@@ -135,8 +134,6 @@ enum LLMTaskPlanServiceError: LocalizedError, Equatable {
             AppStrings.localized("settings.llm.taskPlan.error.responseTooLarge")
         case .invalidResponse:
             AppStrings.localized("settings.llm.taskPlan.error.invalidResponse")
-        case .limitExceeded:
-            AppStrings.localized("settings.llm.taskPlan.error.limitExceeded")
         case .duplicateReference:
             AppStrings.localized("settings.llm.taskPlan.error.duplicateReference")
         case .orphanReference:
@@ -161,11 +158,10 @@ struct LLMTaskPlanService {
 
     static let maximumRequestByteCount = 4 * 1024
     static let maximumInstructionsByteCount = 4 * 1024
-    static let maximumResponseContentByteCount = 128 * 1024
-    static let maximumCategoryCount = 16
-    static let maximumTaskCount = 128
-    static let maximumChecklistItemCountPerTask = 256
-    static let maximumChecklistItemCount = 1024
+    /// Byte budgets bound the response, not the plan: arbitrary category,
+    /// task, or checklist counts are not rejected. Structural validation
+    /// (references, cycles, depth, fields) still applies.
+    static let maximumResponseContentByteCount = 512 * 1024
     /// Root tasks have depth zero. A task at depth six is accepted.
     static let maximumTaskDepth = 6
 
@@ -395,13 +391,6 @@ struct LLMTaskPlanService {
         guard !payload.tasks.isEmpty else {
             throw LLMTaskPlanServiceError.noTasks
         }
-        guard payload.categories.count <= maximumCategoryCount,
-              payload.tasks.count <= maximumTaskCount,
-              payload.checklistItems.count <= maximumChecklistItemCount
-        else {
-            throw LLMTaskPlanServiceError.limitExceeded
-        }
-
         let categoryReferences = try uniqueReferences(payload.categories.map(\.reference))
         let taskReferences = try uniqueReferences(payload.tasks.map(\.reference))
         _ = try uniqueReferences(payload.checklistItems.map(\.reference))
@@ -451,11 +440,6 @@ struct LLMTaskPlanService {
                 throw LLMTaskPlanServiceError.orphanReference
             }
             checklistPayloadByTaskReference[taskReference, default: []].append(checklistItem)
-            if checklistPayloadByTaskReference[taskReference, default: []].count >
-                maximumChecklistItemCountPerTask
-            {
-                throw LLMTaskPlanServiceError.limitExceeded
-            }
         }
 
         let categories: [AITaskPlanCategoryDraft]
@@ -606,10 +590,8 @@ extension LLMTaskPlanService {
     must use null. The task graph must be acyclic and contain at least one \
     task. Root task depth is zero and maximum task depth is 6.
 
-    Limits: at most \(Self.maximumCategoryCount) categories, \
-    \(Self.maximumTaskCount) tasks, \
-    \(Self.maximumChecklistItemCountPerTask) checklist items per task, and \
-    \(Self.maximumChecklistItemCount) checklist items total. estimatedMinutes \
+    There is no fixed limit on the number of categories, tasks, or checklist \
+    items; produce exactly as many as the request needs. estimatedMinutes \
     is null or an integer from 0 through 600. notes is null or plain text. quantityGoal is null or an \
     object with exactly targetAmount and unitLabel; targetAmount is an integer \
     from 1 through 1000000 and unitLabel is nonempty plain text of at most 128 \

@@ -270,6 +270,9 @@ struct AITaskPlanGeneratorSheet: View {
                                         .foregroundStyle(.secondary)
                                         .textSelection(.enabled)
                                         .frame(maxWidth: .infinity, alignment: .leading)
+                                        .accessibilityIdentifier(
+                                            "aiTaskPlan.rawOutput.content"
+                                        )
                                 }
                                 .frame(maxHeight: 320)
                                 .padding(.vertical, 4)

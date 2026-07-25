@@ -373,57 +373,43 @@ struct CoreLLMTaskPlanServiceTests {
     }
 
     @Test
-    func categoryTaskAndChecklistCountLimitsRejectTheWholePayload() {
-        Self.expectError(.limitExceeded) {
-            _ = try LLMTaskPlanService.makeDraft(
-                from: Self.payload(
-                    categories: (0 ... LLMTaskPlanService.maximumCategoryCount).map {
-                        Self.category("category-\($0)")
-                    },
-                    tasks: [Self.task("root")]
-                ),
-                modelID: "model"
+    func veryLargePlansAreAcceptedWithoutCountLimits() throws {
+        let categories = (0 ..< 24).map { Self.category("category-\($0)") }
+        let rootTasks = categories.map {
+            Self.task("root-\($0.reference)", category: $0.reference)
+        }
+        let childTasks = (0 ..< 200).map { index in
+            Self.task(
+                "child-\(index)",
+                parent: "root-\(categories[index % categories.count].reference)"
             )
         }
-        Self.expectError(.limitExceeded) {
-            _ = try LLMTaskPlanService.makeDraft(
-                from: Self.payload(
-                    tasks: (0 ... LLMTaskPlanService.maximumTaskCount).map {
-                        Self.task("task-\($0)")
-                    }
-                ),
-                modelID: "model"
-            )
-        }
-        Self.expectError(.limitExceeded) {
-            _ = try LLMTaskPlanService.makeDraft(
-                from: Self.payload(
-                    tasks: [Self.task("root")],
-                    checklistItems: (
-                        0 ... LLMTaskPlanService.maximumChecklistItemCountPerTask
-                    ).map {
-                        Self.checklist("item-\($0)", task: "root")
-                    }
-                ),
-                modelID: "model"
-            )
+        let checklistItems = (0 ..< 500).map {
+            Self.checklist("item-\($0)", task: "root-\(categories[0].reference)")
+        } + (0 ..< 900).map {
+            Self.checklist("extra-\($0)", task: "child-\($0 % childTasks.count)")
         }
 
-        let tasks = (0 ..< 9).map { Self.task("task-\($0)") }
-        let tooManyChecklistItems = (
-            0 ... LLMTaskPlanService.maximumChecklistItemCount
-        ).map {
-            Self.checklist("item-\($0)", task: "task-\($0 % tasks.count)")
-        }
-        Self.expectError(.limitExceeded) {
-            _ = try LLMTaskPlanService.makeDraft(
-                from: Self.payload(
-                    tasks: tasks,
-                    checklistItems: tooManyChecklistItems
-                ),
-                modelID: "model"
-            )
-        }
+        let draft = try LLMTaskPlanService.makeDraft(
+            from: Self.payload(
+                categories: categories,
+                tasks: rootTasks + childTasks,
+                checklistItems: checklistItems
+            ),
+            modelID: "model"
+        )
+
+        #expect(draft.categories.count == 24)
+        #expect(draft.tasks.count == 224)
+        #expect(draft.tasks.reduce(0) { $0 + $1.checklistItems.count } == 1400)
+        let busiest = try #require(
+            draft.tasks.first { $0.title == "root-\(categories[0].reference)" }
+        )
+        #expect(busiest.checklistItems.count == 500)
+    }
+
+    @Test
+    func emptyPlanIsStillRejected() {
         Self.expectError(.noTasks) {
             _ = try LLMTaskPlanService.makeDraft(
                 from: Self.payload(tasks: []),

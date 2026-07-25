@@ -236,7 +236,6 @@
 "settings.llm.taskPlan.error.instructionsTooLarge" = "任务规划指令过长，请前往设置缩短内容。";
 "settings.llm.taskPlan.error.responseTooLarge" = "生成的计划过大，无法安全预览。";
 "settings.llm.taskPlan.error.invalidResponse" = "端点返回的任务计划无法读取。";
-"settings.llm.taskPlan.error.limitExceeded" = "生成的计划包含过多分类、任务或清单项。";
 "settings.llm.taskPlan.error.duplicateReference" = "生成的计划包含重复项目，请重新生成。";
 "settings.llm.taskPlan.error.orphanReference" = "生成的计划中有项目缺少父项，请重新生成。";
 "settings.llm.taskPlan.error.cycle" = "生成的任务层级存在循环，请重新生成。";

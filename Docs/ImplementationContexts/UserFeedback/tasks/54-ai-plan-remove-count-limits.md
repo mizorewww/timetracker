@@ -9,7 +9,7 @@
 - [x] 审计数量上限与响应字节上限的所有执行点与文档承诺,确定"字节上限保底、数量上限移除"方案。
 - [x] 实现上限移除 + 响应容量提升 + 行为测试。
 - [x] 模拟器截图验收,`make test` 全绿。
-- [~] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
+- [x] 执行 `CONFIGURATION=Release scripts/build_install_all.sh`(实体机安装失败不阻塞),标记完成并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -38,7 +38,8 @@
 
 ## 已提交 checkpoint
 
-- [ ] 待提交:领取任务、实现记忆与 active link。
+- [x] 实现与测试:`4b8bcec6` feat: accept faithfully large AI plans without count limits(版本 1.1.163)。
+- [x] 已收口:userfeedback 勾选 [x],active link 已移除,任务关闭。Release build_install_all 完成,macOS 装入 /Applications;实体机状态不阻塞。
 
 ## 实现与验收记录
 

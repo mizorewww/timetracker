@@ -3726,6 +3726,70 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testAITaskPlanPreviewExposesReasoningAndRawOutput() throws {
+        #if targetEnvironment(simulator)
+        let app = launchApp(
+            route: "tasks",
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: ["--uitesting-ai-task-plan"]
+        )
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+        openSection(
+            "Tasks",
+            tabIdentifier: "phone.tab.tasks",
+            sidebarIdentifier: "sidebar.Tasks",
+            in: app
+        )
+        let tasksView = app.descendants(matching: .any)["tasks.view"].firstMatch
+        XCTAssertTrue(tasksView.waitForExistence(timeout: 8))
+
+        let addMenu = app.descendants(matching: .any)["tasks.add"].firstMatch
+        XCTAssertTrue(addMenu.waitForExistence(timeout: 3) && addMenu.isHittable)
+        activate(addMenu)
+        let generatePlan = app.descendants(matching: .any)[
+            "tasks.generatePlan"
+        ].firstMatch
+        XCTAssertTrue(
+            generatePlan.waitForExistence(timeout: 3) && generatePlan.isHittable
+        )
+        activate(generatePlan)
+
+        let request = app.descendants(matching: .any)["aiTaskPlan.request"].firstMatch
+        XCTAssertTrue(request.waitForExistence(timeout: 5) && request.isHittable)
+        activate(request)
+        request.typeText("Generate a reading plan")
+        let generate = app.buttons["aiTaskPlan.generate"].firstMatch
+        XCTAssertTrue(generate.waitForExistence(timeout: 3) && generate.isEnabled)
+        activate(generate)
+
+        let reasoning = app.descendants(matching: .any)["aiTaskPlan.reasoning"].firstMatch
+        let rawOutput = app.descendants(matching: .any)["aiTaskPlan.rawOutput"].firstMatch
+        scrollUntilHittable(reasoning, direction: .up, maximumScrolls: 20, in: app)
+        XCTAssertTrue(
+            reasoning.waitForExistence(timeout: 10),
+            "The preview must expose the model's reasoning trace."
+        )
+        scrollUntilHittable(rawOutput, direction: .up, maximumScrolls: 20, in: app)
+        XCTAssertTrue(
+            rawOutput.waitForExistence(timeout: 5),
+            "The preview must expose the model's raw output."
+        )
+
+        activate(rawOutput)
+        let rawContent = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "Read 10 Chapters")
+        ).firstMatch
+        XCTAssertTrue(
+            rawContent.waitForExistence(timeout: 5),
+            "Expanding Raw Output must reveal the model's JSON answer."
+        )
+        try capture("\(screenshotPrefix)-ai-task-plan-observability", app: app)
+        #else
+        throw XCTSkip("AI plan observability is verified on owned simulators.")
+        #endif
+    }
+
+    @MainActor
     func testAITaskPlanWithOneHundredFiftyChecklistItemsRendersAndCreates() throws {
         #if targetEnvironment(simulator)
         let app = launchApp(

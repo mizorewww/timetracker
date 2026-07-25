@@ -1,3 +1,4 @@
+import MarkdownView
 import SwiftUI
 
 enum AITaskPlanCreationFeedback: Equatable {
@@ -22,6 +23,7 @@ struct AITaskPlanGeneratorSheet: View {
     @State private var generationTask: Task<Void, Never>?
     @State private var generationRequestID = UUID()
     @State private var isGenerating = false
+    @State private var generationProgress: LLMGenerationProgress?
     @State private var isCreating = false
     @State private var errorMessage: String?
     @State private var pendingDiscardAction: PendingDiscardAction?
@@ -151,7 +153,20 @@ struct AITaskPlanGeneratorSheet: View {
                         HStack(spacing: 12) {
                             ProgressView()
                                 .controlSize(.small)
-                            Text(.app("aiTaskPlan.generating"))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(.app("aiTaskPlan.generating"))
+                                if let generationProgress {
+                                    Text(
+                                        String.localizedStringWithFormat(
+                                            AppStrings.localized("aiTaskPlan.generating.tokens"),
+                                            Int64(generationProgress.displayedOutputTokens)
+                                        )
+                                    )
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                    .monospacedDigit()
+                                }
+                            }
                             Spacer(minLength: 8)
                             Button(
                                 AppStrings.localized("aiTaskPlan.stopGenerating"),
@@ -225,6 +240,49 @@ struct AITaskPlanGeneratorSheet: View {
                 }
 
                 AITaskPlanDraftPreview(draft: generatedDraftBinding)
+
+                if generatedDraft.reasoningContent != nil ||
+                    generatedDraft.rawResponseContent != nil
+                {
+                    Section {
+                        if let reasoning = generatedDraft.reasoningContent {
+                            DisclosureGroup {
+                                ScrollView {
+                                    MarkdownView(reasoning)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .frame(maxHeight: 320)
+                                .padding(.vertical, 4)
+                            } label: {
+                                Label(
+                                    AppStrings.localized("aiTaskPlan.reasoning.title"),
+                                    systemImage: "brain"
+                                )
+                            }
+                            .accessibilityIdentifier("aiTaskPlan.reasoning")
+                        }
+
+                        if let rawOutput = generatedDraft.rawResponseContent {
+                            DisclosureGroup {
+                                ScrollView {
+                                    Text(rawOutput)
+                                        .font(.caption.monospaced())
+                                        .foregroundStyle(.secondary)
+                                        .textSelection(.enabled)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .frame(maxHeight: 320)
+                                .padding(.vertical, 4)
+                            } label: {
+                                Label(
+                                    AppStrings.localized("aiTaskPlan.rawOutput.title"),
+                                    systemImage: "curlybraces"
+                                )
+                            }
+                            .accessibilityIdentifier("aiTaskPlan.rawOutput")
+                        }
+                    }
+                }
 
                 if generatedDraft.taskCount == 0 {
                     Section {
@@ -303,6 +361,7 @@ struct AITaskPlanGeneratorSheet: View {
         let requestID = UUID()
         generationRequestID = requestID
         errorMessage = nil
+        generationProgress = nil
         isGenerating = true
 
         generationTask = Task { @MainActor in
@@ -315,13 +374,20 @@ struct AITaskPlanGeneratorSheet: View {
                     try await Task.sleep(for: .milliseconds(180))
                     draft = .uiTestFixture
                 } else {
-                    draft = try await LLMTaskPlanService().generate(
+                    draft = try await LLMTaskPlanService().generateStreaming(
                         request: request,
                         instructions: instructions,
                         endpoint: endpoint,
                         apiKey: apiKey,
                         modelID: modelID
-                    )
+                    ) { progress in
+                        Task { @MainActor in
+                            guard generationRequestID == requestID,
+                                  !Task.isCancelled
+                            else { return }
+                            generationProgress = progress
+                        }
+                    }
                 }
                 guard !Task.isCancelled, generationRequestID == requestID else {
                     return
@@ -348,6 +414,7 @@ struct AITaskPlanGeneratorSheet: View {
         generationRequestID = UUID()
         generationTask?.cancel()
         generationTask = nil
+        generationProgress = nil
         isGenerating = false
     }
 
@@ -1100,7 +1167,14 @@ private extension AITaskPlanDraft {
                     }
                 ),
             ],
-            modelID: "ui-test"
+            modelID: "ui-test",
+            reasoningContent: """
+            The user wants a reading and fitness plan. I will create two \
+            categories, put the push-up routine under Fitness with a daily \
+            recurrence, and place the reading task under Reading with one \
+            checklist item per chapter.
+            """,
+            rawResponseContent: #"{"categories":[],"tasks":[{"reference":"root","title":"Read 10 Chapters"}],"checklistItems":[]}"#
         )
     }
 }

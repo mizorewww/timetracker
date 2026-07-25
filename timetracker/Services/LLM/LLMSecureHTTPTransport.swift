@@ -103,7 +103,7 @@ nonisolated enum LLMSecureHTTPTransport {
     }
 }
 
-private final class LLMRedirectPolicyDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+final class LLMRedirectPolicyDelegate: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     nonisolated func urlSession(
         _: URLSession,
         task: URLSessionTask,

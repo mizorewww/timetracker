@@ -254,6 +254,9 @@
 "aiTaskPlan.request.footer" = "描述你想達成的結果、習慣或專案。需求和任務規劃指令會傳送到你設定的端點。AI 只會產生可編輯草稿；你審閱並點按「建立」前，不會寫入任何內容。";
 "aiTaskPlan.generating" = "正在產生可編輯草稿…";
 "aiTaskPlan.stopGenerating" = "停止";
+"aiTaskPlan.generating.tokens" = "已輸出約 %lld 個 token";
+"aiTaskPlan.reasoning.title" = "思考過程";
+"aiTaskPlan.rawOutput.title" = "原始輸出";
 "aiTaskPlan.configurationRequired.title" = "請先設定 AI";
 "aiTaskPlan.configurationRequired.message" = "產生任務計畫前，請加入端點、API 金鑰並選擇模型。";
 "aiTaskPlan.configureAI" = "開啟 AI 設定";

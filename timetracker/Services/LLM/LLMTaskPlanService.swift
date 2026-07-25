@@ -5,17 +5,25 @@ nonisolated struct AITaskPlanDraft: Identifiable, Equatable, Sendable {
     var categories: [AITaskPlanCategoryDraft]
     var tasks: [AITaskPlanTaskDraft]
     var modelID: String
+    /// Display-only generation provenance: the provider's reasoning trace and
+    /// the raw JSON answer. Never persisted as task facts.
+    var reasoningContent: String?
+    var rawResponseContent: String?
 
     init(
         id: UUID = UUID(),
         categories: [AITaskPlanCategoryDraft],
         tasks: [AITaskPlanTaskDraft],
-        modelID: String
+        modelID: String,
+        reasoningContent: String? = nil,
+        rawResponseContent: String? = nil
     ) {
         self.id = id
         self.categories = categories
         self.tasks = tasks
         self.modelID = modelID
+        self.reasoningContent = reasoningContent
+        self.rawResponseContent = rawResponseContent
     }
 }
 
@@ -149,6 +157,7 @@ enum LLMTaskPlanServiceError: LocalizedError, Equatable {
 
 struct LLMTaskPlanService {
     typealias Transport = (URLRequest) async throws -> (Data, URLResponse)
+    typealias StreamingTransport = (URLRequest) -> AsyncThrowingStream<LLMGenerationStreamEvent, Error>
 
     static let maximumRequestByteCount = 4 * 1024
     static let maximumInstructionsByteCount = 4 * 1024
@@ -163,6 +172,10 @@ struct LLMTaskPlanService {
     var transport: Transport = { request in
         try await LLMSecureHTTPTransport.data(for: request)
     }
+
+    /// Nil selects the secure production SSE transport. Tests inject a
+    /// scripted stream to avoid the network.
+    var streamTransport: StreamingTransport?
 
     func generate(
         request: String,
@@ -198,9 +211,7 @@ struct LLMTaskPlanService {
         guard let content = decoded.choices.first?.message.content else {
             throw LLMTaskPlanServiceError.invalidResponse
         }
-        guard content.utf8.count <= Self.maximumResponseContentByteCount else {
-            throw LLMTaskPlanServiceError.responseContentTooLarge
-        }
+        try validateResponseContent(content)
 
         let payload: AITaskPlanPayload
         do {
@@ -208,12 +219,92 @@ struct LLMTaskPlanService {
         } catch {
             throw LLMTaskPlanServiceError.invalidResponse
         }
-        return try Self.makeDraft(
+        var draft = try Self.makeDraft(
             from: payload,
             modelID: Self.preparedModelID(modelID),
             now: now,
             timeZone: timeZone
         )
+        let reasoning = decoded.choices.first?.message.reasoning_content ?? ""
+        draft.reasoningContent = reasoning.isEmpty ? nil : reasoning
+        draft.rawResponseContent = content
+        return draft
+    }
+
+    /// Streaming variant: same request contract with `stream: true`, same
+    /// post-completion validation, but surfaces live output progress and the
+    /// provider's reasoning trace. A nil `streamTransport` uses the secure
+    /// production SSE transport; tests inject a scripted one.
+    func generateStreaming(
+        request: String,
+        instructions: String,
+        endpoint: String,
+        apiKey: String,
+        modelID: String,
+        now: Date = Date(),
+        timeZone: TimeZone = .autoupdatingCurrent,
+        onProgress: (@Sendable (LLMGenerationProgress) -> Void)? = nil
+    ) async throws -> AITaskPlanDraft {
+        let generationRequest = try generationRequest(
+            request: request,
+            instructions: instructions,
+            endpoint: endpoint,
+            apiKey: apiKey,
+            modelID: modelID,
+            stream: true
+        )
+        let openStream = streamTransport ?? { LLMSecureHTTPTransport.streamEvents(for: $0) }
+
+        var content = ""
+        var reasoning = ""
+        var reportedCompletionTokens: Int?
+        for try await event in openStream(generationRequest) {
+            try Task.checkCancellation()
+            switch event {
+            case let .contentDelta(delta):
+                content += delta
+                guard content.utf8.count <= Self.maximumResponseContentByteCount else {
+                    throw LLMTaskPlanServiceError.responseContentTooLarge
+                }
+            case let .reasoningDelta(delta):
+                reasoning += delta
+            case let .usage(usage):
+                reportedCompletionTokens = usage.completion_tokens
+            }
+            onProgress?(
+                LLMGenerationProgress(
+                    contentCharacterCount: content.count,
+                    reasoningCharacterCount: reasoning.count,
+                    reportedCompletionTokens: reportedCompletionTokens
+                )
+            )
+        }
+
+        try validateResponseContent(content)
+        let payload: AITaskPlanPayload
+        do {
+            payload = try JSONDecoder().decode(AITaskPlanPayload.self, from: Data(content.utf8))
+        } catch {
+            throw LLMTaskPlanServiceError.invalidResponse
+        }
+        var draft = try Self.makeDraft(
+            from: payload,
+            modelID: Self.preparedModelID(modelID),
+            now: now,
+            timeZone: timeZone
+        )
+        draft.reasoningContent = reasoning.isEmpty ? nil : reasoning
+        draft.rawResponseContent = content
+        return draft
+    }
+
+    private func validateResponseContent(_ content: String) throws {
+        guard !content.isEmpty else {
+            throw LLMTaskPlanServiceError.invalidResponse
+        }
+        guard content.utf8.count <= Self.maximumResponseContentByteCount else {
+            throw LLMTaskPlanServiceError.responseContentTooLarge
+        }
     }
 
     func generationRequest(
@@ -221,7 +312,8 @@ struct LLMTaskPlanService {
         instructions: String,
         endpoint: String,
         apiKey: String,
-        modelID: String
+        modelID: String,
+        stream: Bool = false
     ) throws -> URLRequest {
         let preparedRequest = try Self.preparedRequest(request)
         let preparedInstructions = try Self.preparedInstructions(instructions)
@@ -270,7 +362,9 @@ struct LLMTaskPlanService {
                     .init(role: "user", content: promptJSON),
                 ],
                 temperature: 0.2,
-                responseFormat: .init(type: "json_object")
+                responseFormat: .init(type: "json_object"),
+                stream: stream ? true : nil,
+                streamOptions: stream ? .init(includeUsage: true) : nil
             )
         )
         guard body.count <= LLMSuggestionInputPolicy.maximumRequestBodyByteCount else {
@@ -279,10 +373,15 @@ struct LLMTaskPlanService {
 
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
-        urlRequest.timeoutInterval = 45
+        // Streaming reads treat this as the idle gap between frames; long
+        // reasoning generations need more headroom than a buffered fetch.
+        urlRequest.timeoutInterval = stream ? 90 : 45
         urlRequest.setValue("Bearer \(trimmedAPIKey)", forHTTPHeaderField: "Authorization")
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+        urlRequest.setValue(
+            stream ? "text/event-stream" : "application/json",
+            forHTTPHeaderField: "Accept"
+        )
         urlRequest.httpBody = body
         return urlRequest
     }

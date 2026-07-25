@@ -17,6 +17,94 @@ struct CoreLLMResponseTransportTests {
     }
 
     @Test
+    func streamingSessionKeepsTheSameHardeningWithAWiderResourceBudget() {
+        let configuration = LLMSecureHTTPTransport.streamingConfiguration()
+
+        #expect(configuration.timeoutIntervalForResource == 300)
+        #expect(configuration.requestCachePolicy == .reloadIgnoringLocalCacheData)
+        #expect(configuration.urlCache == nil)
+        #expect(configuration.httpShouldSetCookies == false)
+        #expect(configuration.httpCookieStorage == nil)
+    }
+
+    @Test
+    func streamEventsParseContentReasoningAndUsageFromRealBytes() async throws {
+        let sseBody = """
+        data: {"choices":[{"delta":{"reasoning_content":"先想"}}]}
+
+        data: {"choices":[{"delta":{"content":"{\\"tasks\\":"}}]}
+
+        data: {"choices":[{"delta":{"content":"[]}"}}],"usage":{"completion_tokens":7}}
+
+        data: [DONE]
+
+        """
+        let exchange = LLMTransportTestExchange(
+            behavior: .complete(statusCode: 200, headers: [:], body: Data(sseBody.utf8))
+        )
+        let fixture = Self.fixture(exchange: exchange)
+        defer { fixture.session.invalidateAndCancel() }
+
+        var events: [LLMGenerationStreamEvent] = []
+        for try await event in LLMSecureHTTPTransport.streamEvents(
+            for: URLRequest(url: fixture.url),
+            session: fixture.session,
+            maximumResponseByteCount: 64 * 1024
+        ) {
+            events.append(event)
+        }
+
+        #expect(
+            events == [
+                .reasoningDelta("先想"),
+                .contentDelta("{\"tasks\":"),
+                .contentDelta("[]}"),
+                .usage(.init(prompt_tokens: nil, completion_tokens: 7, total_tokens: nil)),
+            ]
+        )
+    }
+
+    @Test
+    func streamEventsEnforceTheByteCeilingMidStream() async {
+        let exchange = LLMTransportTestExchange(
+            behavior: .complete(statusCode: 200, headers: [:], body: Data(repeating: 0x42, count: 65))
+        )
+        let fixture = Self.fixture(exchange: exchange)
+        defer { fixture.session.invalidateAndCancel() }
+
+        await Self.expectResponseTooLarge {
+            for try await _ in LLMSecureHTTPTransport.streamEvents(
+                for: URLRequest(url: fixture.url),
+                session: fixture.session,
+                maximumResponseByteCount: 64
+            ) {}
+        }
+        #expect(await Self.eventually { exchange.wasStopped })
+    }
+
+    @Test
+    func streamEventsRejectNonSuccessStatusBeforeParsing() async {
+        let exchange = LLMTransportTestExchange(
+            behavior: .complete(statusCode: 500, headers: [:], body: Data("data: {}\n\n".utf8))
+        )
+        let fixture = Self.fixture(exchange: exchange)
+        defer { fixture.session.invalidateAndCancel() }
+
+        do {
+            for try await _ in LLMSecureHTTPTransport.streamEvents(
+                for: URLRequest(url: fixture.url),
+                session: fixture.session,
+                maximumResponseByteCount: 64
+            ) {}
+            Issue.record("Expected responseStatus(500)")
+        } catch let error as LLMModelServiceError {
+            #expect(error == .responseStatus(500))
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
+    @Test
     func streamingTransportAcceptsTheExactByteLimit() async throws {
         let exchange = LLMTransportTestExchange(
             behavior: .complete(statusCode: 200, headers: [:], body: Data(repeating: 0x41, count: 64))

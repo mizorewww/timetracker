@@ -254,6 +254,9 @@
 "aiTaskPlan.request.footer" = "Describe the outcome, routine, or project. Your request and planning instructions are sent to your configured endpoint. AI creates only an editable draft; nothing is added until you review it and choose Create.";
 "aiTaskPlan.generating" = "Generating an editable draft…";
 "aiTaskPlan.stopGenerating" = "Stop";
+"aiTaskPlan.generating.tokens" = "About %lld tokens generated";
+"aiTaskPlan.reasoning.title" = "Reasoning";
+"aiTaskPlan.rawOutput.title" = "Raw Output";
 "aiTaskPlan.configurationRequired.title" = "Configure AI First";
 "aiTaskPlan.configurationRequired.message" = "Add an endpoint, API key, and model before generating a task plan.";
 "aiTaskPlan.configureAI" = "Open AI Settings";

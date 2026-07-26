@@ -1,6 +1,6 @@
 # 62：以宽度驱动的自适应布局（去平台专属 UI）实现记忆
 
-状态：2026-07-26 进行中
+状态：2026-07-26 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -43,8 +43,8 @@
   `CompactHome*` 去平台化。（commit `46c5d45d`）
 - [x] C：剩余的 idiom / 平台条件化布局项改为宽度驱动。
   （commits `4946bc65`、`fd34377a`）
-- [~] D：多宽度 UI 截图验收（iPhone / iPad）。
-- [ ] E：`make test` 门禁、Release 全设备安装、反馈收口。
+- [x] D：多宽度 UI 验收（iPhone / iPad）。（commit `6c28279f`）
+- [x] E：`make test` 门禁、Release 全设备安装、反馈收口。
 
 ## 约束与边界
 
@@ -58,7 +58,38 @@
 
 ## 使用的库
 
-- 待定，见各 checkpoint 记录。
+本任务没有引入新库，也不该引：宽度自适应在 SwiftUI 里是一等能力
+（`onGeometryChange`、`horizontalSizeClass`、`EnvironmentValues`、
+`NavigationSplitView`、`ViewThatFits`），仓库本身已经在 `HomeViews.swift`
+用对了这套范式。引第三方 layout 库只会增加依赖并绕开系统的 trait 适配。
+
+## 收尾验收
+
+- iPhone 17 与 iPad Pro 11 (M4) 模拟器上 `AdaptiveShellUITests` 两条全部通过：
+  呈现的 shell 与窗口实际宽度一致；Today 的 Now section 在两种 shell 下都渲染。
+- 隔离 worktree 中 `timetrackerTests` 1,414 条：3 条既有失败，无新增。
+- `make build-install-all`（Release）装到 iPad Pro M4、iPhone Air 与
+  `/Applications`。
+- 已创建的两台模拟器（UDID `6CE2F5A6…`、`1943AA51…`）已 shutdown + delete，
+  Simulator.app 已退出，无遗留 Booted 设备。
+
+## 成果计数
+
+- `timetracker/` 内 `#if os(...)`/`canImport(...)` 指令：**184 → 162**（-22），
+  涉及文件 91 → 84。剩下的绝大多数是 C 类真正 API 绑定的分支。
+- `UIDevice` / `userInterfaceIdiom` 出现次数：**3 → 0**。
+- 删除的重复/死代码：`iPadRootView` 与 `DesktopRootView` 合一、
+  `AnalyticsLayoutPolicy`、`PomodoroLayoutPolicy.showsInlineHeader`、
+  `PomodoroSetupViews.effectiveHorizontalSizeClass`、
+  `SplitColumnLayoutPolicy.iPad`/`.mac` 两套常量。
+
+## 顺带发现（未修，属于既有问题）
+
+`timetrackerUITests.swift` 中有 3 处按 `phone.tabView` 选择元素。在 iOS 26+
+的浮动标签栏下，`TabView` 自身的 accessibility identifier 不再作为可查询元素
+出现——已在**重构前的 commit（`804053fa`）上用同一台模拟器验证同样查不到**，
+所以这不是本次重构造成的回归，而是 SwiftUI 版本行为变化。这些测试在 iOS 27
+上会因此失败。本任务没有改用户正在编辑的那个测试文件。
 
 ## 全量普查结果（子代理 Explore，`timetracker/` 主 target）
 

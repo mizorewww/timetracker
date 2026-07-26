@@ -10,7 +10,7 @@
 - [x] 对比反馈前后 Git 历史、当前实现和现有系统表面测试，定义“原设计”的可验证边界。
 - [x] 先建立 UI 验收清单，再做最小回滚。
 - [x] 完成格式化、单元测试、脚本化模拟器截图验收和小 checkpoint 提交。
-- [ ] 执行 `make build-install-all`，关闭反馈并移除活动链接。
+- [x] 执行 `make build-install-all`，关闭反馈并移除活动链接。
 
 ## 唯一反馈边界
 
@@ -30,7 +30,7 @@
 
 - [x] Checkpoint A：领取、历史审计、原设计契约与验收清单。
 - [x] Checkpoint B：最小回滚、定向测试、系统表面截图验收。
-- [~] Checkpoint C：全量测试、Release 全设备安装、反馈收口。
+- [x] Checkpoint C：全量测试、Release 全设备安装、反馈收口。
 
 ## 子代理编排
 
@@ -39,9 +39,10 @@
 
 ## 资源所有权
 
-- 主代理拥有模拟器 `TimeTracker-Task55-LiveActivity-iPhone17Pro`，UDID
-  `A082EBA7-F003-4E4A-9927-8D2EC7C7E6C9`，用于 iOS-only ActivityKit 单测与
-  `LiveActivitySystemSurfaceUITests` 截图；批次结束后必须终止 App/Runner、关机并删除。
+- [x] 主代理拥有的模拟器 `TimeTracker-Task55-LiveActivity-iPhone17Pro`
+  （`A082EBA7-F003-4E4A-9927-8D2EC7C7E6C9`）已终止 App/Runner、关机并删除。
+- [x] 本任务的 `xcodebuild`、XCTest、Live Activity 扩展进程均已退出；临时
+  `.xcresult` 和附件已从 `/tmp` 移至废纸篓，可恢复。
 - 子代理没有 simulator、XCTest、Instruments、物理设备或构建进程。
 
 ## 决策与证据
@@ -79,6 +80,13 @@
 - iOS `LiveActivityCoordinatorTests`：25 个测试全部通过，包括 16 小时计时、无 stale deadline、恢复和结束生命周期。
 - `make format-check`、`make localization-check` 与 `make build-ios`：通过；iOS、Watch、Widget、Live Activity 均以自动签名构建成功。
 - 修改后的 `make test`：仍为 1433 个测试、同样两条既有失败，其余通过；失败集合与修改前基线完全相同。
+- `CONFIGURATION=Release make build-install-all`：通过；Release iOS+Watch 包已签名，内嵌 Watch 伴侣关系校验通过，实际安装到 `iPad Pro M4` 与 `iPhone Air`，macOS Release 已复制到 `/Applications/timetracker.app` 并通过深度签名校验。构建时无实体 Apple Watch 可见，因此实体表上的伴侣安装由配对 iPhone 的系统自动安装设置决定。
 - 第一次系统表面运行在全新 iOS 27 模拟器上被系统 `ChronodWidgetExtensionWatchdog` 杀死；日志显示系统同时预缓存大量扩展，Activity 注册成功但扩展在 10 秒 provision 内未完成。这一轮不作为产品失败结论。
 - 同一已预热模拟器上的干净重跑：`LiveActivitySystemSurfaceUITests` 1/1 通过；紧凑、锁屏、展开三种系统表面均出现，几何、长时 OCR、计时推进、Today 深链和无 Stop 断言通过。
 - 人工截图复核：紧凑态、锁屏态和展开态在 iPhone 17 Pro 普通字号均无裁切计时、重叠或错误操作。
+
+## Checkpoint
+
+- `1f700205`：领取反馈、建立活动记忆并固化历史/验收边界。
+- `8ba4e5c8`：恢复原设计、更新系统表面验收和当前行为文档；版本为 `1.1.166 (221)`。
+- 本任务没有新增第三方依赖；直接复用 Apple ActivityKit、WidgetKit、SwiftUI、SF Symbols、Vision、XCTest/XCUITest。

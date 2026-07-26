@@ -28,9 +28,9 @@
 ## Checkpoint 编排
 
 - [x] A：审计 Apple Health 数据、任务持久化和任务 UI 投影；先添加可复现行为测试。
-- [~] B：按测试结果修复根因，并更新当前架构/设计文档。
-- [ ] C：在受影响设备上完成正常字号 UI 截图验收与回归测试。
-- [ ] D：执行 Release 全设备安装，关闭反馈并移除活动链接。
+- [x] B：按测试结果修复根因，并更新当前架构/设计文档。
+- [x] C：在受影响设备上完成正常字号 UI 截图验收与回归测试。
+- [~] D：执行 Release 全设备安装，关闭反馈并移除活动链接。
 
 ## 库策略
 
@@ -53,3 +53,11 @@
   `refreshStoreScopedTaskReadModels()`，只经 `refreshReadModels` 收敛
   Task/Category/Assignment、任务树和搜索，不记录第二次 mutation、不触发自动建议/
   系统表面，也不请求或持久化 Health 样本。同步更新 Architecture 与 CodeGuide。
+- 2026-07-27 Checkpoint C：修复后的完整 `make test` 执行 1,418 个测试，新增
+  no-op 收敛回归通过，仅保留与本任务无关且与基线一致的 4 个既有失败。owned
+  iPhone 17（iOS 27，`ABC6A7B0-7664-4E56-84AD-989077CC295F`）正常字号
+  XCUITest 1/1 通过；截图确认 Apple Health 固定任务出现在 Tasks，详情明确为仅同步，
+  且 Apple Health 任务不出现在 Quick Start。结果保存在
+  `/tmp/timetracker-64-postfix.xcresult`。
+- 本任务未引入第三方库：可见性收敛应由系统 HealthKit、SwiftData 与 SwiftUI
+  Observation 的既有边界负责，引入额外依赖不会解决 store facade 的竞态。

@@ -46,7 +46,7 @@
 ## Checkpoint 编排
 
 - [x] A：重新领取反馈、建立活动记忆、停止错误的完成/安装流程。
-- [~] B：删除伪造 provider/plan 的 AI 测试与 fixture；加入 live API harness，
+- [x] B：删除伪造 provider/plan 的 AI 测试与 fixture；加入 live API harness，
   运行指定 1...28 提示词并记录真实失败。
 - [ ] C：修复真实协议/提示词/模型兼容问题，以 live 1...28 + 150 计划为准。
 - [ ] D：真实 API 的隔离 UI Preview/Apply、截图与安全清理。
@@ -74,4 +74,12 @@
   与
   `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`。
   本 checkpoint 不修改它们来伪造绿色。
-- 下一步：提交 mock 删除，随后加入只接受真实凭据的 live harness。
+- 已加入 opt-in `make test-llm-live`：从
+  `TIMETRACKER_LIVE_LLM_API_KEY` 或仓库根目录本地 `.env` 读取凭据，不再从反馈
+  文档提取 key；Xcode 隔离测试进程使用完桥接文件后由 Makefile 清理。
+- 2026-07-26 使用新 key 从 `.env` 运行真实 `prompt28`，请求实际到达 DeepSeek；
+  供应商返回 HTTP 400：
+  `invalid_request_error: Thinking mode does not support this tool_choice`。
+  该结果是真实协议失败，不算业务验收通过。
+- 按用户最新要求，本 checkpoint 之后暂停任务 60，不继续修复该 400 或处理下一条
+  反馈。

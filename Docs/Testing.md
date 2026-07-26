@@ -16,6 +16,32 @@ make test
 # xcodebuild test -project timetracker.xcodeproj -scheme timetracker -destination 'platform=macOS' -only-testing:timetrackerTests
 ```
 
+AI task-plan acceptance uses the production DeepSeek endpoint and production
+`LLMTaskWorkspacePlanningService`; provider fakes and prebuilt plans are not
+accepted as evidence. The live gate is opt-in so the ordinary test suite never
+spends API credit:
+
+```sh
+export TIMETRACKER_LIVE_LLM_API_KEY="your-provider-key"
+make test-llm-live
+TIMETRACKER_LIVE_LLM_SCENARIO=prompt150 make test-llm-live
+TIMETRACKER_LIVE_LLM_SCENARIO=all make test-llm-live
+```
+
+For repeated local runs, put the same assignment in the repository-root `.env`;
+the Makefile loads that ignored file automatically. Live tests read only
+`TIMETRACKER_LIVE_LLM_API_KEY` and never fall back to
+`Docs/userfeedback.md`.
+
+The default scenario sends the exact feedback prompt for Checklist 1–28 through
+the production service. `prompt150` additionally applies the real returned
+operations to an isolated in-memory SwiftData store. The endpoint and model
+default to `https://api.deepseek.com` and `deepseek-v4-flash`; optional
+`TIMETRACKER_LIVE_LLM_ENDPOINT` and `TIMETRACKER_LIVE_LLM_MODEL` overrides exist
+for an explicitly requested provider run. The Makefile bridges the environment
+value into the isolated Xcode test process and removes that bridge when the test
+finishes.
+
 Build for iOS device:
 
 ```sh

@@ -24,6 +24,7 @@ nonisolated enum LLMTaskWorkspacePlanningError:
     case mixedFinalizeCall
     case workspaceRequestRejected(
         statusCode: Int,
+        providerMessage: String?,
         categoryCount: Int,
         taskCount: Int,
         checklistItemCount: Int,
@@ -33,34 +34,35 @@ nonisolated enum LLMTaskWorkspacePlanningError:
     var errorDescription: String? {
         switch self {
         case .invalidResponse:
-            Self.localized("aiTaskPlan.error.invalidToolResponse")
+            return Self.localized("aiTaskPlan.error.invalidToolResponse")
         case .toolCallRequired:
-            Self.localized("aiTaskPlan.error.toolCallRequired")
+            return Self.localized("aiTaskPlan.error.toolCallRequired")
         case let .unknownTool(name):
-            String.localizedStringWithFormat(
+            return String.localizedStringWithFormat(
                 Self.localized("aiTaskPlan.error.unknownTool"),
                 name
             )
         case let .invalidToolArguments(name):
-            String.localizedStringWithFormat(
+            return String.localizedStringWithFormat(
                 Self.localized("aiTaskPlan.error.invalidToolArguments"),
                 name
             )
         case let .duplicateToolCallID(id):
-            String.localizedStringWithFormat(
+            return String.localizedStringWithFormat(
                 Self.localized("aiTaskPlan.error.duplicateToolCall"),
                 id
             )
         case .mixedFinalizeCall:
-            Self.localized("aiTaskPlan.error.mixedFinalize")
+            return Self.localized("aiTaskPlan.error.mixedFinalize")
         case let .workspaceRequestRejected(
             statusCode,
+            providerMessage,
             categoryCount,
             taskCount,
             checklistItemCount,
             requestByteCount
         ):
-            String.localizedStringWithFormat(
+            let summary = String.localizedStringWithFormat(
                 Self.localized(
                     "aiTaskPlan.error.workspaceRequestRejected"
                 ),
@@ -70,6 +72,11 @@ nonisolated enum LLMTaskWorkspacePlanningError:
                 checklistItemCount,
                 requestByteCount
             )
+            if let providerMessage {
+                return "\(summary) \(providerMessage)"
+            } else {
+                return summary
+            }
         }
     }
 
@@ -148,11 +155,15 @@ struct LLMTaskWorkspacePlanningService {
             do {
                 (data, urlResponse) = try await transport(urlRequest)
             } catch let error as LLMModelServiceError {
-                if case let .responseStatus(statusCode) = error,
-                   Self.isWorkspaceRequestRejection(statusCode)
+                if case let .responseStatus(
+                    statusCode,
+                    providerMessage
+                ) = error,
+                    Self.isWorkspaceRequestRejection(statusCode)
                 {
                     throw Self.workspaceRequestRejected(
                         statusCode: statusCode,
+                        providerMessage: providerMessage,
                         workspace: workspace,
                         request: urlRequest
                     )
@@ -169,6 +180,7 @@ struct LLMTaskWorkspacePlanningService {
                 ) {
                     throw Self.workspaceRequestRejected(
                         statusCode: httpResponse.statusCode,
+                        providerMessage: nil,
                         workspace: workspace,
                         request: urlRequest
                     )
@@ -454,11 +466,13 @@ private extension LLMTaskWorkspacePlanningService {
 
     static func workspaceRequestRejected(
         statusCode: Int,
+        providerMessage: String?,
         workspace: AITaskWorkspaceSnapshot,
         request: URLRequest
     ) -> LLMTaskWorkspacePlanningError {
         .workspaceRequestRejected(
             statusCode: statusCode,
+            providerMessage: providerMessage,
             categoryCount: workspace.categories.count,
             taskCount: workspace.tasks.count,
             checklistItemCount: workspace.checklistItems.count,

@@ -12,6 +12,9 @@ DEVELOPMENT_TEAM ?= LT98S43NKA
 CONFIGURATION    ?= Debug
 SCRIPTS          := scripts
 
+-include .env
+export TIMETRACKER_LIVE_LLM_API_KEY
+
 .PHONY: help
 help: ## 列出所有目标
 	@echo "Timetracker 开发入口(详见 Docs/DevelopmentTools.md)。运行 make <目标> 即可。"
@@ -68,6 +71,31 @@ test: ## macOS 单元测试(timetrackerTests)
 	xcodebuild test -project $(PROJECT) -scheme $(SCHEME) \
 	  -destination 'platform=macOS' -only-testing:timetrackerTests \
 	  -parallel-testing-enabled NO
+
+.PHONY: test-llm-live
+test-llm-live: ## 用真实 DeepSeek API 验证 AI 任务计划(prompt28/prompt150/all)
+	@test -n "$${TIMETRACKER_LIVE_LLM_API_KEY:-}" || \
+	  { echo "TIMETRACKER_LIVE_LLM_API_KEY must be set in the environment or .env" >&2; exit 2; }
+	@set -eu; \
+	  live_dir="$(CURDIR)/build/LiveLLMHarness"; \
+	  mkdir -p "$$live_dir"; \
+	  umask 077; \
+	  printf '%s' "$${TIMETRACKER_LIVE_LLM_API_KEY}" > "$$live_dir/api-key"; \
+	  printf '%s' "$${TIMETRACKER_LIVE_LLM_SCENARIO:-prompt28}" > "$$live_dir/scenario"; \
+	  printf '%s' "$${TIMETRACKER_LIVE_LLM_ENDPOINT:-https://api.deepseek.com}" > "$$live_dir/endpoint"; \
+	  printf '%s' "$${TIMETRACKER_LIVE_LLM_MODEL:-deepseek-v4-flash}" > "$$live_dir/model"; \
+	  : > "$$live_dir/run"; \
+	  cleanup_live_llm() { \
+	    for name in run api-key scenario endpoint model; do \
+	      test ! -e "$$live_dir/$$name" || unlink "$$live_dir/$$name"; \
+	    done; \
+	    rmdir "$$live_dir" 2>/dev/null || true; \
+	  }; \
+	  trap cleanup_live_llm EXIT INT TERM; \
+	  xcodebuild test -project $(PROJECT) -scheme $(SCHEME) \
+	    -destination 'platform=macOS' \
+	    -only-testing:timetrackerTests/LiveDeepSeekTaskWorkspaceTests \
+	    -parallel-testing-enabled NO
 
 # ── 校验 ──────────────────────────────────────────────────────
 .PHONY: localization-check

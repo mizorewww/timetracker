@@ -5,7 +5,7 @@ enum LLMModelServiceError: LocalizedError, Equatable {
     case missingEndpoint
     case invalidEndpoint
     case missingAPIKey
-    case responseStatus(Int)
+    case responseStatus(Int, providerMessage: String? = nil)
     case responseTooLarge
     case timeout
     case invalidResponse
@@ -18,8 +18,12 @@ enum LLMModelServiceError: LocalizedError, Equatable {
             AppStrings.localized("settings.llm.error.invalidEndpoint")
         case .missingAPIKey:
             AppStrings.localized("settings.llm.error.missingAPIKey")
-        case let .responseStatus(status):
-            String(format: AppStrings.localized("settings.llm.error.responseStatus"), status)
+        case let .responseStatus(status, providerMessage):
+            if let providerMessage {
+                "\(String(format: AppStrings.localized("settings.llm.error.responseStatus"), status)) \(providerMessage)"
+            } else {
+                String(format: AppStrings.localized("settings.llm.error.responseStatus"), status)
+            }
         case .responseTooLarge:
             AppStrings.localized("settings.llm.error.responseTooLarge")
         case .timeout:

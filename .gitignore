@@ -9,3 +9,4 @@ DerivedData/
 **/__pycache__/
 *.py[cod]
 .venv/
+.env

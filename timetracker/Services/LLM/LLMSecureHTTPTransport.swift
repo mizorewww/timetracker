@@ -39,7 +39,7 @@ nonisolated enum LLMSecureHTTPTransport {
             let dataTask = bytes.task
 
             do {
-                try validateResponseHeaders(
+                try validateResponseMetadata(
                     response,
                     maximumResponseByteCount: maximumResponseByteCount
                 )
@@ -68,6 +68,7 @@ nonisolated enum LLMSecureHTTPTransport {
                 }
 
                 try Task.checkCancellation()
+                try validateResponseStatus(response, data: data)
                 return (data, response)
             } onCancel: {
                 dataTask.cancel()
@@ -91,15 +92,65 @@ nonisolated enum LLMSecureHTTPTransport {
         _ response: URLResponse,
         maximumResponseByteCount: Int
     ) throws {
+        try validateResponseMetadata(
+            response,
+            maximumResponseByteCount: maximumResponseByteCount
+        )
+        try validateResponseStatus(response, data: Data())
+    }
+
+    private static func validateResponseMetadata(
+        _ response: URLResponse,
+        maximumResponseByteCount: Int
+    ) throws {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LLMModelServiceError.invalidResponse
-        }
-        guard (200 ..< 300).contains(httpResponse.statusCode) else {
-            throw LLMModelServiceError.responseStatus(httpResponse.statusCode)
         }
         guard response.expectedContentLength <= Int64(maximumResponseByteCount) else {
             throw LLMModelServiceError.responseTooLarge
         }
+    }
+
+    private static func validateResponseStatus(
+        _ response: URLResponse,
+        data: Data
+    ) throws {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw LLMModelServiceError.invalidResponse
+        }
+        guard (200 ..< 300).contains(httpResponse.statusCode) else {
+            throw LLMModelServiceError.responseStatus(
+                httpResponse.statusCode,
+                providerMessage: providerErrorMessage(from: data)
+            )
+        }
+    }
+
+    private static func providerErrorMessage(from data: Data) -> String? {
+        struct Envelope: Decodable {
+            struct ProviderError: Decodable {
+                let message: String?
+                let code: String?
+            }
+
+            let error: ProviderError?
+        }
+
+        guard let error = try? JSONDecoder().decode(
+            Envelope.self,
+            from: data
+        ).error else {
+            return nil
+        }
+        let parts = [error.code, error.message]
+            .compactMap { value in
+                value?.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+            }
+            .filter { $0.isEmpty == false }
+        guard parts.isEmpty == false else { return nil }
+        return String(parts.joined(separator: ": ").prefix(2048))
     }
 }
 

@@ -86,6 +86,63 @@ final class LiveDeepSeekTaskWorkspaceTests: XCTestCase {
             [generatedTaskID]
         )
     }
+
+    func testInboxRoutingPromptUsesTheProductionDeepSeekService() async throws {
+        let configuration = try liveConfiguration(for: "prompts")
+        let readingTaskID = UUID(
+            uuidString: "A1000000-0000-0000-0000-000000000001"
+        )!
+
+        let result = try await LLMInboxSuggestionService().suggest(
+            inboxTitle: "Read chapter 3 of Artificial Intelligence: A Modern Approach",
+            taskCandidates: [
+                LLMTaskCandidate(
+                    id: readingTaskID,
+                    title: "Artificial Intelligence: A Modern Approach",
+                    path: "Reading / Artificial Intelligence: A Modern Approach",
+                    iconName: "book",
+                    colorHex: "1677FF"
+                ),
+            ],
+            categoryCandidates: [],
+            instructions: LLMPromptKind.inboxRouting.defaultInstructions,
+            endpoint: configuration.endpoint,
+            apiKey: configuration.apiKey,
+            modelID: configuration.modelID
+        )
+
+        XCTAssertEqual(
+            result.destination,
+            .checklist(taskID: readingTaskID)
+        )
+        XCTAssertFalse(result.reason.isEmpty)
+        XCTAssertTrue(
+            SymbolCatalog.aiSuggestionSymbolNameSet.contains(result.iconName)
+        )
+        XCTAssertTrue(TaskColorPalette.hexValues.contains(result.colorHex))
+        XCTAssertEqual(result.modelID, configuration.modelID)
+    }
+
+    func testChecklistVisualPromptUsesTheProductionDeepSeekService() async throws {
+        let configuration = try liveConfiguration(for: "prompts")
+
+        let result = try await LLMChecklistVisualSuggestionService().suggest(
+            checklistTitle: "Read chapter 3: Solving Problems by Searching",
+            taskTitle: "Artificial Intelligence: A Modern Approach",
+            taskPath: "Reading / Artificial Intelligence: A Modern Approach",
+            instructions: LLMPromptKind.checklistVisual.defaultInstructions,
+            endpoint: configuration.endpoint,
+            apiKey: configuration.apiKey,
+            modelID: configuration.modelID
+        )
+
+        XCTAssertTrue(
+            SymbolCatalog.aiSuggestionSymbolNameSet.contains(result.iconName)
+        )
+        XCTAssertTrue(TaskColorPalette.hexValues.contains(result.colorHex))
+        XCTAssertFalse(result.reason.isEmpty)
+        XCTAssertEqual(result.modelID, configuration.modelID)
+    }
 }
 
 private extension LiveDeepSeekTaskWorkspaceTests {

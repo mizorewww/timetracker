@@ -73,7 +73,7 @@ test: ## macOS 单元测试(timetrackerTests)
 	  -parallel-testing-enabled NO
 
 .PHONY: test-llm-live
-test-llm-live: ## 用真实 DeepSeek API 验证 AI 任务计划(prompt28/prompt150/all)
+test-llm-live: ## 用真实 DeepSeek API 验证三条提示词与任务计划(prompts/prompt28/prompt150/all)
 	@test -n "$${TIMETRACKER_LIVE_LLM_API_KEY:-}" || \
 	  { echo "TIMETRACKER_LIVE_LLM_API_KEY must be set in the environment or .env" >&2; exit 2; }
 	@set -eu; \

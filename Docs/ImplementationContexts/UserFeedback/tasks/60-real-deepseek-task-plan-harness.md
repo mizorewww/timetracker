@@ -32,6 +32,9 @@
 
 ## 真实验收契约
 
+- [x] 将 `inboxRouting`、`checklistVisual` 与 `taskPlan` 三条 catalog prompt
+  分别送入对应的生产 service 和真实 DeepSeek；不以 request 编码或 provider
+  fixture 代替模型结果。
 - [x] 用生产 `LLMTaskWorkspacePlanningService` 和 hardened transport 调用官方
   DeepSeek endpoint；先记录真实失败，不预先假定协议兼容。
 - [x] 使用反馈中的指定模型与指定 1...28 提示词，断言真实返回包含正确 Category、
@@ -102,3 +105,9 @@
   `StoreScopedAITaskAtomicMutationCoordinator` 将计划 Apply 到独立的内存
   SwiftData store，并重新读取确认 150 条全部持久化。测试同时确认 reasoning
   非空、raw provider response 存在，全程未注入 provider 或预造 plan。
+- 2026-07-26 `prompts` 真实场景通过：`checklistVisual` 用生产 service 在
+  2.220 秒返回目录内 SF Symbol、允许色和非空理由；`inboxRouting` 用生产
+  service 在 3.317 秒把明确的“读第 3 章”路由到现有阅读任务的 Checklist，
+  并返回目录内 symbol、允许色与模型 ID。两条调用都直接使用当前
+  `LLMPromptKind` 默认可编辑说明和 fixed response contract，不检查本地构造的
+  假响应。

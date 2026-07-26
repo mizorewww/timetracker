@@ -18,7 +18,7 @@
 | `make build-macos` | 构建 macOS app(`generic/platform=macOS`) |
 | `make build-install-all` | 构建 iOS+Watch 与 macOS,安装到设备并复制到 /Applications |
 | `make test` | macOS 单元测试(`timetrackerTests`) |
-| `make test-llm-live` | 用真实 DeepSeek API 跑 AI 任务计划验收；从 `TIMETRACKER_LIVE_LLM_API_KEY` 或本地 `.env` 读取凭据 |
+| `make test-llm-live` | 用真实 DeepSeek API 跑三条 AI 提示词与任务计划验收；从 `TIMETRACKER_LIVE_LLM_API_KEY` 或本地 `.env` 读取凭据 |
 | `make localization-check` | 静态校验所有 `.strings` 资源在三语种间 key 一致(无需 `xcodebuild`,也作为 pre-commit 闸门) |
 | `make format` | 用 SwiftFormat 原地格式化所有 Swift 源 |
 | `make format-check` | 只读校验 Swift 源是否符合 SwiftFormat(不修改) |

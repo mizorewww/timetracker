@@ -24,6 +24,7 @@ spends API credit:
 ```sh
 export TIMETRACKER_LIVE_LLM_API_KEY="your-provider-key"
 make test-llm-live
+TIMETRACKER_LIVE_LLM_SCENARIO=prompts make test-llm-live
 TIMETRACKER_LIVE_LLM_SCENARIO=prompt150 make test-llm-live
 TIMETRACKER_LIVE_LLM_SCENARIO=all make test-llm-live
 ```
@@ -34,9 +35,11 @@ the Makefile loads that ignored file automatically. Live tests read only
 `Docs/userfeedback.md`.
 
 The default scenario sends the exact feedback prompt for Checklist 1–28 through
-the production service. `prompt150` additionally applies the real returned
-operations to an isolated in-memory SwiftData store. The endpoint and model
-default to `https://api.deepseek.com` and `deepseek-v4-flash`; optional
+the production service. `prompts` sends the inbox-routing and checklist-visual
+catalog prompts through their production services, and `prompt150` additionally
+applies the real returned operations to an isolated in-memory SwiftData store.
+The endpoint and model default to `https://api.deepseek.com` and
+`deepseek-v4-flash`; optional
 `TIMETRACKER_LIVE_LLM_ENDPOINT` and `TIMETRACKER_LIVE_LLM_MODEL` overrides exist
 for an explicitly requested provider run. The Makefile bridges the environment
 value into the isolated Xcode test process and removes that bridge when the test

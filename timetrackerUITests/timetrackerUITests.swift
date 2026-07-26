@@ -5251,11 +5251,24 @@ final class timetrackerUITests: XCTestCase {
             format: "identifier ENDSWITH %@",
             segmentID
         )).firstMatch
-        scrollUntilHittable(record, direction: .up, in: app)
+        #if os(macOS)
+        // macOS lazily virtualizes the legend rows below the 320-point chart;
+        // XCTest can still read the matching row's value while it is offscreen.
         XCTAssertTrue(
-            record.waitForExistence(timeout: 5) && record.isHittable,
-            "The stopped segment must remain visible in Today's timeline."
+            record.waitForExistence(timeout: 5),
+            "The stopped segment must remain in Today's timeline projection."
         )
+        #else
+        scrollUntilFullyVisibleAboveSystemChrome(record, in: app)
+        XCTAssertTrue(
+            record.waitForExistence(timeout: 5) &&
+                isFrameFullyVisibleAboveSystemChrome(record, in: app),
+            """
+            The stopped segment must remain visible in Today's timeline. \
+            Record frame: \(record.frame); window: \(app.windows.firstMatch.frame)
+            """
+        )
+        #endif
         let fixedTimeRange = String(describing: record.value ?? "")
         XCTAssertFalse(
             ["Now", "现在", "現在"].contains { fixedTimeRange.contains($0) },

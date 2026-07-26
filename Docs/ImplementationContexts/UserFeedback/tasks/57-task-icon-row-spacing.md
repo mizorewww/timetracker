@@ -11,7 +11,7 @@
 - [x] 做最小实现并补充稳定的自动化几何/交互断言。
 - [x] 运行格式、本地化、单元测试和受影响 iPhone/iPad 截图验收；macOS 产品分支未变，
   签名构建成功，UI 启动因主机会话锁屏而无法取得新截图。
-- [~] 提交小 checkpoint，执行 Release 全设备安装，标记反馈完成并移除活动链接。
+- [x] 提交小 checkpoint，执行 Release 全设备安装，标记反馈完成并移除活动链接。
 
 ## 唯一范围
 
@@ -34,7 +34,7 @@
 
 - [x] Checkpoint A：领取、现状/历史/测试审计、验收契约。
 - [x] Checkpoint B：测试先行、最小布局修正和文档更新。
-- [~] Checkpoint C：跨平台截图、完整门禁、Release 全设备安装和反馈收口。
+- [x] Checkpoint C：跨平台截图、完整门禁、Release 全设备安装和反馈收口。
 
 ## 资源所有权
 
@@ -125,6 +125,22 @@
   本任务不修改偏好同步、清单排序、归档命令或时间戳。
 - 新增库：无。实现只使用 SwiftUI 原生
   `navigationLinkIndicatorVisibility` 与项目既有 DesignSystem/XCTest。
+
+## Release 全设备门禁
+
+- `CONFIGURATION=Release make build-install-all` 成功；Apple Development 自动签名保持
+  开启，iOS/iPadOS 产品包含 Watch companion
+  `me.mezorewww.timetracker.watchkitapp`，macOS 产品签名深度校验通过。
+- Time Tracker 1.1.174 (229) 已安装到 iPad Pro M4
+  (`748D0137-ADC3-58AF-855C-1E98B3125F93`)、iPhone Air
+  (`FBA36694-D841-56D4-8ED6-21942873B21B`) 与
+  `/Applications/timetracker.app`；设备安装后查询和 macOS Info.plist 均返回完全一致的
+  版本号。
+- iPad 实机启动成功。iPhone 安装与版本查询成功，但启动请求被 SpringBoard 以设备锁屏
+  拒绝；错误明确为 `Unable to launch ... because the device ... could not be unlocked`，
+  不是产品崩溃或签名失败。
+- 收口提交会由版本 hook 前进版本号；提交后再执行一次增量 Release 全设备安装，使实体
+  设备和 `/Applications` 与最终收口提交一致。
 
 ## 库策略
 

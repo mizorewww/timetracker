@@ -255,3 +255,20 @@ Checkpoint E 与提示词透明度/完整上下文收口尚未完成，反馈条
 - Makefile trap 已终止 App，关闭并删除该模拟器；UDID 与 Booted-device 审计均无
   本轮资源残留。没有新依赖；验收继续使用 XCTest/XCUITest、SwiftData、
   Foundation URLSession 和现有生产 LLM services。
+
+## Release 安装与收口
+
+- `CONFIGURATION=Release make build-install-all` 完成：
+  - iOS + 嵌入 Watch companion Release 构建、签名与 Designated Requirement
+    校验通过；
+  - 已安装到物理 iPad Pro M4
+    `748D0137-ADC3-58AF-855C-1E98B3125F93`；
+  - 已安装到物理 iPhone Air
+    `FBA36694-D841-56D4-8ED6-21942873B21B`；
+  - macOS universal Release 构建、签名通过并复制到
+    `/Applications/timetracker.app`。
+- 本轮没有可见的物理 Apple Watch，所以独立 Watch 设备安装覆盖未验证；嵌入
+  companion 已通过签名校验，并会由配对 iPhone 的 Automatic App Install 安装。
+- `Docs/userfeedback.md` 中 Task 60 的父项、超大 JSON/长度限制子项和
+  prompt150 忠实渲染项均已标为 `[x]`。本实现记忆完成，移除 active `~60` 链接；
+  不认领、不开始后续反馈。

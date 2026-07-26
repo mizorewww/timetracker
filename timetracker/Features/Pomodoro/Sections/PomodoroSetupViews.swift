@@ -52,7 +52,6 @@ struct PomodoroSetupCard: View {
         }
     }
 
-
     private var setupHeader: some View {
         VStack(alignment: .leading, spacing: 6) {
             Label(AppStrings.localized("pomodoro.setup.title"), systemImage: "scope")

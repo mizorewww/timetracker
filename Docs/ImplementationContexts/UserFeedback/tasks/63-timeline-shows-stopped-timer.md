@@ -1,6 +1,6 @@
 # 63：停止计时后主页 timeline 仍显示为进行中 实现记忆
 
-状态：2026-07-26 进行中
+状态：2026-07-27 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -61,7 +61,7 @@ SwiftData 会把 sibling context 的字段更新合并到同一个持久模型�
 - [x] A：认领反馈、建立实现记忆、写出能区分 H1/H2/H3 的测试。
 - [x] B：按测试结果修根因。
 - [x] C：消除图表与 legend 各算一份 snapshot 的重复，并修复分钟时钟竞争。
-- [~] D：macOS UI 验收、Release 全设备安装、反馈收口。
+- [x] D：macOS UI 验收、Release 全设备安装、反馈收口。
 
 ## 约束与边界
 
@@ -110,3 +110,15 @@ SwiftData 会把 sibling context 的字段更新合并到同一个持久模型�
   `homeTimelineSnapshotReferenceDate` 现在保证普通运行时取
   `max(clockDate, liveDate)`。定向 iPhone UI 测试通过，截图确认
   `00:17 - 00:50`；完整 `make test` 仍为 1417 项、仅同一组 4 个基线失败。
+- 2026-07-27 Checkpoint D：定向 iPhone UI 测试通过，结果包为
+  `/tmp/timetracker-63-iphone-run3-20260727.xcresult`，正常字号截图确认对应
+  Timeline 行已显示闭合区间 `00:17 - 00:50`；定向 macOS UI 测试通过，结果包为
+  `/tmp/timetracker-63-macos-run4-20260727.xcresult`，截图确认图表色块在停止时刻
+  闭合。`make format-check`、`make localization-check`、`make check-hooks` 和
+  `git diff --check` 均通过。Checkpoint B、C 和跨平台 UI 验收分别提交为
+  `2e3fe481`、`da3c78a9`、`b6a14540`。
+- 2026-07-27 Release 安装：`make build-install-all` 使用 Release 和自动签名成功，
+  已安装到实体 `iPad Pro M4`、实体 `iPhone Air`，并把通用 macOS App 复制到
+  `/Applications/timetracker.app`。当前未检测到实体 Apple Watch；嵌入的 Watch
+  伴侣 App 已完成签名/描述文件校验，会在配对设备启用自动安装后随 iPhone App
+  安装。

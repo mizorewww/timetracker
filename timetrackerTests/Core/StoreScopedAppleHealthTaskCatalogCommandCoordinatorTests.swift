@@ -388,7 +388,7 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
     }
 
     @Test
-    func tombstonesAndStagedAssignmentsBlockOrdinaryBackgroundCreation()
+    func tombstonedCatalogGraphRestoresAndRepairsStagedAssignments()
         throws
     {
         let context = try makeTestContext()
@@ -414,10 +414,11 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
         exercise.clientMutationID = UUID()
         try mutationContext.save()
 
-        let blockedByCategory = try coordinator.apply(
+        let restoredCategory = try coordinator.apply(
             roles: [.workout(.walking)]
         )
-        #expect(blockedByCategory == .noChanges)
+        #expect(restoredCategory.restoredCategoryIDs == [exerciseID])
+        #expect(restoredCategory.createdTaskIDs == [walking.id])
 
         let stagedContext = ModelContext(context.container)
         let orphan = TaskCategoryAssignment(
@@ -429,15 +430,19 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
         stagedContext.insert(orphan)
         try stagedContext.save()
 
-        let blockedByAssignment = try coordinator.apply(
+        let repairedAssignment = try coordinator.apply(
             roles: [.workout(.walking)]
         )
-        #expect(blockedByAssignment == .noChanges)
+        #expect(
+            repairedAssignment.restoredAssignmentIDs ==
+                [walking.categoryAssignmentID]
+        )
         let fresh = ModelContext(context.container)
         #expect(
             try fresh.fetch(FetchDescriptor<TaskNode>())
                 .filter { $0.id == walking.id }
-                .isEmpty
+                .visibleDeduplicatedByID()
+                .count == 1
         )
     }
 
@@ -481,7 +486,13 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
         try clearContext.save()
 
         let ordinary = try coordinator.apply(roles: [role])
-        #expect(ordinary == .noChanges)
+        #expect(ordinary.restoredCategoryIDs == [definition.categoryID])
+        #expect(ordinary.restoredTaskIDs == [definition.id])
+        #expect(
+            ordinary.restoredAssignmentIDs ==
+                [definition.categoryAssignmentID]
+        )
+        #expect(ordinary.consumedClearRecoveryTaskIDs.isEmpty)
 
         let restored = try coordinator.apply(
             roles: [role],
@@ -494,18 +505,15 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
 
         #expect(
             Set(restored.restoredCategoryIDs) ==
-                [definition.categoryID, previousWorkout.categoryID]
+                [previousWorkout.categoryID]
         )
         #expect(
             Set(restored.restoredTaskIDs) ==
-                [definition.id, previousWorkout.id]
+                [previousWorkout.id]
         )
         #expect(
             Set(restored.restoredAssignmentIDs) ==
-                [
-                    definition.categoryAssignmentID,
-                    previousWorkout.categoryAssignmentID,
-                ]
+                [previousWorkout.categoryAssignmentID]
         )
         let fresh = ModelContext(context.container)
         let restoredTask = try #require(
@@ -653,7 +661,7 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
     }
 
     @Test
-    func staleActiveReceiptIsConsumedWithoutRevivingItsDeletedCategory()
+    func staleActiveReceiptIsConsumedWhileItsFixedCategorySelfHeals()
         throws
     {
         let context = try makeTestContext()
@@ -675,14 +683,14 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinatorTests {
             clearRecoveryTaskIDs: [definition.id]
         )
 
-        #expect(outcome.didMutate == false)
+        #expect(outcome.restoredCategoryIDs == [definition.categoryID])
         #expect(
             outcome.consumedClearRecoveryTaskIDs == [definition.id]
         )
         let fresh = ModelContext(context.container)
         #expect(
             try fresh.fetch(FetchDescriptor<TaskCategory>())
-                .latestByID()[definition.categoryID]?.deletedAt != nil
+                .latestByID()[definition.categoryID]?.deletedAt == nil
         )
     }
 

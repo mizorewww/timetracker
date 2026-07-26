@@ -31,6 +31,8 @@
 - [x] B：按测试结果修复根因，并更新当前架构/设计文档。
 - [x] C：在受影响设备上完成正常字号 UI 截图验收与回归测试。
 - [x] D：执行 Release 全设备安装，关闭反馈并移除活动链接。
+- [x] E：用正式安装版的真实 store 重现并建立跨设备 tombstone 行为回归测试。
+- [~] F：修复跨设备 tombstone 恢复，执行真实 store、UI 和 Release 全设备验收。
 
 ## 库策略
 
@@ -71,3 +73,18 @@
   “持久化目录已存在、当前 facade 仍为空”的 no-op 投影竞态，并未覆盖实际路径。
   第 109 条重新标为 `[~]`；任务 65 停止并撤销认领。接下来以已安装 Release 的真实
   store、catalog 触发时机和 CloudKit 合并/删除路径重新建立复现，未修复前不再关闭。
+- 2026-07-27 Checkpoint E：只读检查正式 macOS App Group store，12 个固定 Task、
+  2 个固定 Category 及其 Assignment 全部只有 tombstone；最新删除由设备
+  `ios-15101DD6-81BF-4FB9-88B7-B00139511413` 写入，而本机 preferences 没有
+  `AppleHealthTaskCatalogClearRecoveryIDs`。根因是旧实现仅允许持有设备本地 Clear All
+  receipt 的设备恢复 canonical tombstone；另一设备或旧版本同步来的删除因此永久遮住
+  固定目录。新增
+  `remoteClearTombstonesRestoreCatalogWithoutDeviceLocalReceipt` 先创建完整目录、
+  模拟远端 Clear All，再以空 receipt 和关闭 Health timeline 的新 facade 刷新；修复前
+  对 12/2/12 三组可见事实的断言全部失败。
+- 2026-07-27 Checkpoint F（进行中）：fresh transaction 现在把已观察到的固定
+  tombstone 本身视为恢复依据，写入严格更新的 active replacement；只有 receipt、尚未
+  到达 row 的情况仍保持 pending，避免迟到墓碑重新赢得 LWW。完整 `make test` 执行
+  1,419 项，新增系统集成测试及更新后的 coordinator 行为测试通过；仅保留与修改前
+  完全相同的 4 个既有基线失败。未引入第三方库，修复复用 SwiftData、CloudKit 的
+  deterministic ID/LWW 边界。

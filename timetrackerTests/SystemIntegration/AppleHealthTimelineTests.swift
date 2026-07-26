@@ -783,6 +783,61 @@ struct AppleHealthTimelineTests {
     }
 
     @Test @MainActor
+    func remoteClearTombstonesRestoreCatalogWithoutDeviceLocalReceipt()
+        async throws
+    {
+        let context = try makeTestContext()
+        _ = try StoreScopedAppleHealthTaskCatalogCommandCoordinator(
+            container: context.container,
+            writeAuthorization: .isolatedTestHarness,
+            deviceID: "catalog-origin"
+        ).apply(roles: AppleHealthTaskCatalog.allRoles)
+        try context.performAtomicMutation {
+            try SeedData.clearAllChanges(
+                context: context,
+                includesPreferences: true
+            )
+        }
+
+        let reader = StubAppleHealthReader(
+            isHealthDataAvailable: false,
+            batch: .empty
+        )
+        let preferences = StubAppleHealthTimelinePreferences(
+            isTimelineEnabled: false
+        )
+        let store = TimeTrackerStore(
+            appleHealthDataReader: reader,
+            appleHealthTimelinePreferenceStore: preferences,
+            writeAuthorization: .isolatedTestHarness
+        )
+        store.configureRepositoriesIfNeeded(context: context)
+        store.hasCompletedStartupConfiguration = true
+
+        #expect(store.tasks.isEmpty)
+        #expect(preferences.taskCatalogClearRecoveryTaskIDs.isEmpty)
+
+        await store.refreshAppleHealthTimelineIfEnabled()
+
+        let plan = AppleHealthTaskCatalog.plan(
+            for: AppleHealthTaskCatalog.allRoles
+        )
+        #expect(Set(store.tasks.map(\.id)) == Set(plan.tasks.map(\.id)))
+        #expect(
+            Set(store.taskCategories.map(\.id)) ==
+                Set(plan.categories.map(\.id))
+        )
+        #expect(
+            Set(store.taskCategoryAssignments.map(\.id)) ==
+                Set(plan.tasks.map(\.categoryAssignmentID))
+        )
+        #expect(preferences.taskCatalogClearRecoveryTaskIDs.isEmpty)
+        #expect(reader.authorizationRequestStatusCount == 0)
+        #expect(reader.authorizationRequestCount == 0)
+        #expect(reader.sampleRequestIntervals.isEmpty)
+    }
+
+    @Test @MainActor
     func enabledRefreshMergesCrossMidnightSleepBeforeVisibleRangeClipping()
         async throws
     {

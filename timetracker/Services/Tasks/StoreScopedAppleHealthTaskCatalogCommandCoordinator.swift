@@ -33,11 +33,11 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinator {
         let definitionByID = Dictionary(
             uniqueKeysWithValues: allDefinitions.map { ($0.id, $0) }
         )
-        let recoverableTaskIDs = clearRecoveryTaskIDs.intersection(
+        let receiptTaskIDs = clearRecoveryTaskIDs.intersection(
             Set(definitionByID.keys)
         )
         let recoveryRoles = Set(
-            recoverableTaskIDs.compactMap { definitionByID[$0]?.role }
+            receiptTaskIDs.compactMap { definitionByID[$0]?.role }
         )
         let reconciliationRoles = roles.union(recoveryRoles)
         guard reconciliationRoles.isEmpty == false else { return .noChanges }
@@ -58,43 +58,63 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinator {
             )
             var state = try PersistenceState(context: context)
             var outcome = AppleHealthTaskCatalogMutationOutcome.noChanges
-            let activeRecoveryTaskIDs = Set(
-                recoverableTaskIDs.filter { taskID in
+            let activeReceiptTaskIDs = Set(
+                receiptTaskIDs.filter { taskID in
                     guard let task = state.tasksByID[taskID] else {
                         return false
                     }
                     return task.deletedAt == nil
                 }
             )
-            let confirmedRecoveryTaskIDs = Set(
-                recoverableTaskIDs.filter { taskID in
+            let confirmedReceiptTaskIDs = Set(
+                receiptTaskIDs.filter { taskID in
                     state.tasksByID[taskID]?.deletedAt != nil
                 }
             )
-            let confirmedRecoveryCategoryIDs = Set(
+            // Fixed catalog tombstones can arrive from another device or an
+            // older app build, where this device cannot possess the local
+            // Clear All receipt. Unlike a staged missing row, an observed
+            // tombstone is sufficient proof that this deterministic
+            // navigation metadata needs a newer active replacement.
+            let tombstonedTaskIDs = Set(
                 reconciliationPlan.tasks.compactMap { definition in
-                    confirmedRecoveryTaskIDs.contains(definition.id)
+                    state.tasksByID[definition.id]?.deletedAt != nil
+                        ? definition.id
+                        : nil
+                }
+            )
+            let restorableTaskIDs =
+                confirmedReceiptTaskIDs.union(tombstonedTaskIDs)
+            let restorableCategoryIDs = Set(
+                reconciliationPlan.tasks.compactMap { definition in
+                    restorableTaskIDs.contains(definition.id)
                         ? definition.categoryID
+                        : nil
+                }
+            ).union(
+                reconciliationPlan.categories.compactMap { definition in
+                    state.categoriesByID[definition.id]?.deletedAt != nil
+                        ? definition.id
                         : nil
                 }
             )
             let creatableCategoryIDs =
                 Set(creationPlan.categories.map(\.id))
-                    .union(confirmedRecoveryCategoryIDs)
+                    .union(restorableCategoryIDs)
             // A receipt whose task row has not arrived yet stays pending. A
             // seed-timestamp replacement could otherwise lose to the delayed
             // Clear All tombstone and consume the only recovery authority.
             let creatableTaskIDs =
                 Set(creationPlan.tasks.map(\.id))
-                    .subtracting(recoverableTaskIDs)
-            for taskID in activeRecoveryTaskIDs {
+                    .subtracting(receiptTaskIDs)
+            for taskID in activeReceiptTaskIDs {
                 outcome = outcome.consumingClearRecoveryTask(taskID)
             }
 
             try createOrRestoreCategories(
                 reconciliationPlan.categories,
                 creatableIDs: creatableCategoryIDs,
-                recoverableIDs: confirmedRecoveryCategoryIDs,
+                recoverableIDs: restorableCategoryIDs,
                 state: &state,
                 repository: repository,
                 now: now,
@@ -103,7 +123,8 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinator {
             try createOrRestoreTasks(
                 reconciliationPlan.tasks,
                 creatableIDs: creatableTaskIDs,
-                recoverableIDs: confirmedRecoveryTaskIDs,
+                recoverableIDs: restorableTaskIDs,
+                receiptIDs: receiptTaskIDs,
                 state: &state,
                 repository: repository,
                 now: now,
@@ -180,6 +201,7 @@ private extension StoreScopedAppleHealthTaskCatalogCommandCoordinator {
         _ definitions: [AppleHealthTaskDefinition],
         creatableIDs: Set<UUID>,
         recoverableIDs: Set<UUID>,
+        receiptIDs: Set<UUID>,
         state: inout PersistenceState,
         repository: SwiftDataTaskRepository,
         now: Date,
@@ -224,9 +246,11 @@ private extension StoreScopedAppleHealthTaskCatalogCommandCoordinator {
                     now: now,
                     outcome: &outcome
                 )
-                outcome = outcome.consumingClearRecoveryTask(
-                    definition.id
-                )
+                if receiptIDs.contains(definition.id) {
+                    outcome = outcome.consumingClearRecoveryTask(
+                        definition.id
+                    )
+                }
                 continue
             }
 
@@ -239,7 +263,7 @@ private extension StoreScopedAppleHealthTaskCatalogCommandCoordinator {
             try repository.createAppleHealthTask(definition)
             outcome = outcome.appendingCreatedTask(definition.id)
             try didReachCheckpoint(.taskCreated(definition.id))
-            if recoverableIDs.contains(definition.id) {
+            if receiptIDs.contains(definition.id) {
                 outcome = outcome.consumingClearRecoveryTask(
                     definition.id
                 )

@@ -30,6 +30,7 @@ final class LiveDeepSeekTaskWorkspaceTests: XCTestCase {
         )
         XCTAssertGreaterThanOrEqual(plan.toolRoundCount, 1)
         XCTAssertGreaterThanOrEqual(plan.toolCallCount, 31)
+        XCTAssertFalse(plan.reasoningContent?.isEmpty ?? true)
         XCTAssertNotNil(plan.rawResponseContent)
     }
 

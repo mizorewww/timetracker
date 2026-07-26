@@ -3,22 +3,26 @@ import Foundation
 nonisolated struct OpenAIChatCompletionRequest: Encodable {
     let model: String
     let messages: [OpenAIChatMessage]
-    let temperature: Double
+    let temperature: Double?
     let responseFormat: OpenAIChatResponseFormat?
     var stream: Bool?
     var streamOptions: OpenAIChatStreamOptions?
     var tools: [OpenAIChatToolDefinition]?
     var toolChoice: String?
+    var thinking: OpenAIChatThinkingConfiguration?
+    var reasoningEffort: String?
 
     init(
         model: String,
         messages: [OpenAIChatMessage],
-        temperature: Double,
+        temperature: Double?,
         responseFormat: OpenAIChatResponseFormat? = nil,
         stream: Bool? = nil,
         streamOptions: OpenAIChatStreamOptions? = nil,
         tools: [OpenAIChatToolDefinition]? = nil,
-        toolChoice: String? = nil
+        toolChoice: String? = nil,
+        thinking: OpenAIChatThinkingConfiguration? = nil,
+        reasoningEffort: String? = nil
     ) {
         self.model = model
         self.messages = messages
@@ -28,6 +32,8 @@ nonisolated struct OpenAIChatCompletionRequest: Encodable {
         self.streamOptions = streamOptions
         self.tools = tools
         self.toolChoice = toolChoice
+        self.thinking = thinking
+        self.reasoningEffort = reasoningEffort
     }
 
     enum CodingKeys: String, CodingKey {
@@ -39,7 +45,13 @@ nonisolated struct OpenAIChatCompletionRequest: Encodable {
         case streamOptions = "stream_options"
         case tools
         case toolChoice = "tool_choice"
+        case thinking
+        case reasoningEffort = "reasoning_effort"
     }
+}
+
+nonisolated struct OpenAIChatThinkingConfiguration: Encodable {
+    let type: String
 }
 
 nonisolated struct OpenAIChatMessage: Encodable, Equatable, Sendable {

@@ -241,7 +241,7 @@ struct LLMTaskWorkspacePlanningService {
 
             let assistantMessage = OpenAIChatMessage(
                 role: "assistant",
-                content: choice.message.content,
+                content: choice.message.content ?? "",
                 reasoningContent: choice.message.reasoning_content,
                 toolCalls: calls
             )
@@ -420,14 +420,21 @@ private extension LLMTaskWorkspacePlanningService {
     ) throws -> URLRequest {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let usesDeepSeekV4Thinking = Self.usesDeepSeekV4Thinking(
+            modelID: modelID
+        )
         let body = try encoder.encode(
             OpenAIChatCompletionRequest(
                 model: modelID,
                 messages: messages,
-                temperature: 0,
+                temperature: usesDeepSeekV4Thinking ? nil : 0,
                 responseFormat: nil,
                 tools: toolDefinitions,
-                toolChoice: "required"
+                toolChoice: usesDeepSeekV4Thinking ? nil : "required",
+                thinking: usesDeepSeekV4Thinking
+                    ? OpenAIChatThinkingConfiguration(type: "enabled")
+                    : nil,
+                reasoningEffort: usesDeepSeekV4Thinking ? "high" : nil
             )
         )
         var request = URLRequest(url: endpointURL)
@@ -447,6 +454,14 @@ private extension LLMTaskWorkspacePlanningService {
         )
         request.httpBody = body
         return request
+    }
+
+    static func usesDeepSeekV4Thinking(modelID: String) -> Bool {
+        let normalizedModelID = modelID
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return normalizedModelID == "deepseek-v4-flash" ||
+            normalizedModelID == "deepseek-v4-pro"
     }
 
     static func decodeResponse(
@@ -504,9 +519,6 @@ private extension LLMTaskWorkspacePlanningService {
               calls.isEmpty == false
         else {
             throw LLMTaskWorkspacePlanningError.toolCallRequired
-        }
-        guard choice.message.content?.isEmpty != false else {
-            throw LLMTaskWorkspacePlanningError.invalidResponse
         }
         for call in calls {
             guard call.type == "function",

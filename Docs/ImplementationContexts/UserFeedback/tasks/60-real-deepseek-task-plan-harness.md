@@ -32,9 +32,9 @@
 
 ## 真实验收契约
 
-- [ ] 用生产 `LLMTaskWorkspacePlanningService` 和 hardened transport 调用官方
+- [x] 用生产 `LLMTaskWorkspacePlanningService` 和 hardened transport 调用官方
   DeepSeek endpoint；先记录真实失败，不预先假定协议兼容。
-- [ ] 使用反馈中的指定模型与指定 1...28 提示词，断言真实返回包含正确 Category、
+- [x] 使用反馈中的指定模型与指定 1...28 提示词，断言真实返回包含正确 Category、
   Task 和 28 个 Checklist 操作。
 - [ ] 使用真实模型请求一个 Task 下 150 个 Checklist，断言模型完成多轮 tool-call、
   Preview 完整到第 150 项并能够通过原子 Apply 写入隔离 store。
@@ -48,7 +48,7 @@
 - [x] A：重新领取反馈、建立活动记忆、停止错误的完成/安装流程。
 - [x] B：删除伪造 provider/plan 的 AI 测试与 fixture；加入 live API harness，
   运行指定 1...28 提示词并记录真实失败。
-- [ ] C：修复真实协议/提示词/模型兼容问题，以 live 1...28 + 150 计划为准。
+- [~] C：修复真实协议/提示词/模型兼容问题，以 live 1...28 + 150 计划为准。
 - [ ] D：真实 API 的隔离 UI Preview/Apply、截图与安全清理。
 - [ ] E：默认回归门禁、Release 全设备安装、反馈收口与逐 checkpoint 提交。
 
@@ -81,5 +81,17 @@
   供应商返回 HTTP 400：
   `invalid_request_error: Thinking mode does not support this tool_choice`。
   该结果是真实协议失败，不算业务验收通过。
-- 按用户最新要求，本 checkpoint 之后暂停任务 60，不继续修复该 400 或处理下一条
-  反馈。
+- 用户已澄清“完成后停止”指完成整个任务 60；当前继续修复该 400，任务 60 完成后
+  才停止，不处理下一条反馈。
+
+## Checkpoint C 进度
+
+- 对照 DeepSeek V4 官方 thinking-mode tool-call 契约，`deepseek-v4-flash/pro`
+  请求现在显式发送 `thinking.enabled` 与 `reasoning_effort=high`，不再发送 thinking
+  模式拒绝的 `tool_choice`，也不发送无效的 `temperature`。
+- assistant 工具调用历史始终包含非空缺的 `content` 字段并完整回传
+  `reasoning_content`；允许 DeepSeek 合法地同时返回可见 `content` 和
+  `tool_calls`。
+- 2026-07-26 真实 `prompt28` 首次通过：30.493 秒内生成唯一 `阅读` Category、
+  唯一 `人工智能：现代方法` Task 与按序 1...28 的 28 个 Checklist；生产
+  hardened transport、真实 DeepSeek、真实工具 overlay 与真实响应内容全部参与。

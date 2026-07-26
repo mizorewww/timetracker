@@ -276,6 +276,7 @@
 "aiTaskPlan.taskActions" = "任务操作";
 "aiTaskPlan.removeChecklist" = "移除清单项";
 "aiTaskPlan.applyFormat" = "应用 %lld 项更改";
+"aiTaskPlan.apply" = "应用";
 "aiTaskPlan.privacy.title" = "完整工作区上下文";
 "aiTaskPlan.privacy.loading" = "正在读取当前工作区…";
 "aiTaskPlan.privacy.countsFormat" = "将向你配置的端点发送 %lld 个分类、%lld 个任务和 %lld 个清单项，包括相关文字、稳定 ID、关系和可编辑任务元数据。";

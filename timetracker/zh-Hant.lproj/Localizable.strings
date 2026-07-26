@@ -276,6 +276,7 @@
 "aiTaskPlan.taskActions" = "任務操作";
 "aiTaskPlan.removeChecklist" = "移除清單項目";
 "aiTaskPlan.applyFormat" = "套用 %lld 項變更";
+"aiTaskPlan.apply" = "套用";
 "aiTaskPlan.privacy.title" = "完整工作區脈絡";
 "aiTaskPlan.privacy.loading" = "正在讀取目前工作區…";
 "aiTaskPlan.privacy.countsFormat" = "將向你設定的端點傳送 %lld 個分類、%lld 個任務和 %lld 個清單項目，包括相關文字、穩定 ID、關係和可編輯任務中繼資料。";

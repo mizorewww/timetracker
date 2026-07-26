@@ -1,9 +1,9 @@
 # 60：真实 DeepSeek 任务计划 Harness 与大计划验收实现记忆
 
-状态：2026-07-26 暂停（用户指示改为从反馈第 105 行开始，见
-[`61-release-build-test-data-isolation.md`](61-release-build-test-data-isolation.md)）
+状态：2026-07-26 进行中
 
-Checkpoint D、E 尚未完成，反馈条目仍保持 `[~]`；active 链接已让给任务 61。
+用户已明确要求继续完成任务 60 后再停，不处理下一条反馈；Checkpoint D 已完成，
+Checkpoint E 与提示词透明度/完整上下文收口尚未完成，反馈条目保持 `[~]`。
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -44,7 +44,7 @@ Checkpoint D、E 尚未完成，反馈条目仍保持 `[~]`；active 链接已�
   Task 和 28 个 Checklist 操作。
 - [x] 使用真实模型请求一个 Task 下 150 个 Checklist，断言模型完成多轮 tool-call、
   Preview 完整到第 150 项并能够通过原子 Apply 写入隔离 store。
-- [ ] 至少一条普通字号 XCUITest 从真实输入页点击 Generate，等待真实网络结果，
+- [x] 至少一条普通字号 XCUITest 从真实输入页点击 Generate，等待真实网络结果，
   检查 token/CoT/raw output/Preview，再 Apply；fixture 不得预造计划。
 - [ ] 若真实 API 失败，以完整、脱敏的 provider 状态/错误/回合信息定位并修复，
   不能改回 mock 输出或把失败写成通过。
@@ -55,7 +55,7 @@ Checkpoint D、E 尚未完成，反馈条目仍保持 `[~]`；active 链接已�
 - [x] B：删除伪造 provider/plan 的 AI 测试与 fixture；加入 live API harness，
   运行指定 1...28 提示词并记录真实失败。
 - [x] C：修复真实协议/提示词/模型兼容问题，以 live 1...28 + 150 计划为准。
-- [~] D：真实 API 的隔离 UI Preview/Apply、截图与安全清理。
+- [x] D：真实 API 的隔离 UI Preview/Apply、截图与安全清理。
 - [ ] E：默认回归门禁、Release 全设备安装、反馈收口与逐 checkpoint 提交。
 
 ## 已知安全边界
@@ -114,3 +114,32 @@ Checkpoint D、E 尚未完成，反馈条目仍保持 `[~]`；active 链接已�
   并返回目录内 symbol、允许色与模型 ID。两条调用都直接使用当前
   `LLMPromptKind` 默认可编辑说明和 fixed response contract，不检查本地构造的
   假响应。
+
+## Checkpoint D 进度
+
+- 加入普通字号、空内存 SwiftData workspace 的 iPhone live UI gate：测试进程只
+  通过环境配置 endpoint/model/key，App 使用内存 credential store；生成器仍直接
+  构造生产 `LLMTaskWorkspacePlanningService`，没有 provider/plan fixture。
+- 首次真实 UI 运行完整进入生产 Generate，最终 accessibility hierarchy 已到真实
+  Preview（可见 Change Request），但 XCTest 没捕捉到短暂的 token 行并按契约失败；
+  这不是 API 失败。根因是同一 MainActor turn 内从最后一次真实 `onProgress` 立即
+  切到 Preview，SwiftUI 可能来不及提交 token 状态。
+- 正在修复为：首次真实 token progress 至少显示 2 秒再切换 Preview。显示值仍来自
+  provider usage/真实响应字符数，不伪造 token，也不延迟网络调用。
+- 真实 UI 门禁第五次运行通过（测试本体 223.504 秒）：从输入页键入反馈指定
+  prompt28，点击生产 Generate，截图捕获约 437 个真实输出 token；随后进入含 30
+  项 create 的 Preview，滚动确认第 28 章，展开并截图真实 reasoning 与 raw provider
+  response，再点击 Apply 并进入标题为“人工智能：现代方法”的真实任务详情。
+- 通过结果保存在
+  `build/LiveLLMUIHarness/LiveLLMUI-20260726-212051.xcresult`，导出的 6 张普通字号
+  iPhone 截图位于
+  `build/LiveLLMUIHarness/exported-20260726-212051/`。截图未包含 API key。
+- 运行使用 `--uitesting` 的内存 SwiftData container 与内存 credential store，
+  没有接触用户 iCloud/生产 store；Make trap 已终止 App、关闭并删除本轮明确拥有的
+  simulator `B29AE3FF-78E2-4B83-B27D-29D52B7E85D9`，资源审计未发现残留 runner、
+  xcodebuild 或 Booted device。
+- 截图验收发现 confirmation toolbar 的 “Apply 30 Changes” 挤压了居中标题；按 HIG
+  改成视觉上简洁的 “Apply”，完整变更数量保留在 accessibility label。生成区的
+  identifier 也移到系统 `ProgressView`，让 token 文本保持独立可读。
+- 本 checkpoint 没有新依赖；继续复用 SwiftUI 原生 Form/List/DisclosureGroup、
+  Foundation URLSession/SwiftData/XCTest，以及项目现有 MarkdownView。

@@ -4190,8 +4190,34 @@ final class timetrackerUITests: XCTestCase {
         let tokenProgress = app.descendants(matching: .any)[
             "aiTaskPlan.generating.tokens"
         ].firstMatch
+        let generationError = app.descendants(matching: .any)[
+            "aiTaskPlan.error"
+        ].firstMatch
+        let changeSummary = app.descendants(matching: .any)[
+            "aiTaskPlan.changeSummary"
+        ].firstMatch
+        let progressDeadline = Date().addingTimeInterval(300)
+        while tokenProgress.exists == false,
+              generationError.exists == false,
+              changeSummary.exists == false,
+              Date() < progressDeadline
+        {
+            RunLoop.current.run(
+                until: Date().addingTimeInterval(0.1)
+            )
+        }
+        if generationError.exists {
+            try capture(
+                "iphone-live-deepseek-generation-error",
+                app: app
+            )
+            XCTFail(
+                "The real provider failed before progress: \(generationError.label)"
+            )
+            return
+        }
         XCTAssertTrue(
-            tokenProgress.waitForExistence(timeout: 150),
+            tokenProgress.exists,
             "The real provider must report output token progress before preview."
         )
         try capture(
@@ -4199,9 +4225,6 @@ final class timetrackerUITests: XCTestCase {
             app: app
         )
 
-        let changeSummary = app.descendants(matching: .any)[
-            "aiTaskPlan.changeSummary"
-        ].firstMatch
         XCTAssertTrue(
             changeSummary.waitForExistence(timeout: 180),
             "The production DeepSeek request must reach Preview."
@@ -4248,6 +4271,8 @@ final class timetrackerUITests: XCTestCase {
         ].firstMatch
         XCTAssertTrue(reasoningContent.waitForExistence(timeout: 5))
         try capture("iphone-live-deepseek-reasoning", app: app)
+        activate(reasoning)
+        XCTAssertTrue(reasoningContent.waitForNonExistence(timeout: 5))
 
         let rawOutput = app.descendants(matching: .any)[
             "aiTaskPlan.rawOutput"

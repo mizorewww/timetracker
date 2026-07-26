@@ -276,6 +276,7 @@
 "aiTaskPlan.taskActions" = "Task actions";
 "aiTaskPlan.removeChecklist" = "Remove checklist item";
 "aiTaskPlan.applyFormat" = "Apply %lld Changes";
+"aiTaskPlan.apply" = "Apply";
 "aiTaskPlan.privacy.title" = "Complete workspace context";
 "aiTaskPlan.privacy.loading" = "Reading the current workspace…";
 "aiTaskPlan.privacy.countsFormat" = "%lld categories, %lld tasks, and %lld checklist items—including their text, stable IDs, relationships, and editable task metadata—will be sent to your configured endpoint.";

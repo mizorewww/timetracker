@@ -75,16 +75,17 @@ struct AITaskPlanGeneratorSheet: View {
                                     ProgressView()
                                         .controlSize(.small)
                                 } else {
-                                    Text(
-                                        String.localizedStringWithFormat(
-                                            AppStrings.localized(
-                                                "aiTaskPlan.applyFormat"
-                                            ),
-                                            Int64(reviewDraft.mutationCount)
-                                        )
-                                    )
+                                    Text(.app("aiTaskPlan.apply"))
                                 }
                             }
+                            .accessibilityLabel(
+                                String.localizedStringWithFormat(
+                                    AppStrings.localized(
+                                        "aiTaskPlan.applyFormat"
+                                    ),
+                                    Int64(reviewDraft.mutationCount)
+                                )
+                            )
                             .disabled(
                                 isApplying || reviewDraft.mutationCount == 0
                             )
@@ -198,6 +199,9 @@ struct AITaskPlanGeneratorSheet: View {
                         HStack(spacing: 12) {
                             ProgressView()
                                 .controlSize(.small)
+                                .accessibilityIdentifier(
+                                    "aiTaskPlan.generating"
+                                )
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(.app("aiTaskPlan.generating.workspace"))
                                 if let generationProgress {
@@ -234,7 +238,6 @@ struct AITaskPlanGeneratorSheet: View {
                         .frame(
                             minHeight: AppLayout.minimumInteractiveTarget
                         )
-                        .accessibilityIdentifier("aiTaskPlan.generating")
                     }
                 }
 
@@ -332,6 +335,8 @@ struct AITaskPlanGeneratorSheet: View {
         isGenerating = true
 
         generationTask = Task { @MainActor in
+            let progressClock = ContinuousClock()
+            var firstProgressInstant: ContinuousClock.Instant?
             defer {
                 if generationRequestID == requestID {
                     isGenerating = false
@@ -359,6 +364,9 @@ struct AITaskPlanGeneratorSheet: View {
                             else {
                                 return
                             }
+                            if firstProgressInstant == nil {
+                                firstProgressInstant = progressClock.now
+                            }
                             generationProgress = progress
                         }
                     )
@@ -366,6 +374,18 @@ struct AITaskPlanGeneratorSheet: View {
                       generationRequestID == requestID
                 else {
                     return
+                }
+                if let firstProgressInstant {
+                    let minimumPresentationDuration =
+                        Duration.seconds(2)
+                    let elapsed = firstProgressInstant.duration(
+                        to: progressClock.now
+                    )
+                    if elapsed < minimumPresentationDuration {
+                        try await progressClock.sleep(
+                            for: minimumPresentationDuration - elapsed
+                        )
+                    }
                 }
                 withAnimation(
                     reduceMotion ? nil : .snappy(duration: 0.22)

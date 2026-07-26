@@ -70,13 +70,17 @@ private struct AnalyticsPeriodFilter: View {
         .accessibilityIdentifier("analytics.periodFilter")
     }
 
-    @ViewBuilder
     private var refreshIndicator: some View {
-        if isRefreshing {
-            ProgressView()
-                .controlSize(.small)
-                .accessibilityLabel(AppStrings.localized("analytics.loading"))
-        }
+        ProgressView()
+            .controlSize(.small)
+            .frame(width: 20, height: 20)
+            .opacity(isRefreshing ? 1 : 0)
+            .accessibilityElement(children: .ignore)
+            .accessibilityHidden(!isRefreshing)
+            .accessibilityLabel(AppStrings.localized("analytics.loading"))
+            .accessibilityIdentifier(
+                isRefreshing ? "analytics.refreshing" : "analytics.refreshing.idle"
+            )
     }
 
     private var rangePicker: some View {

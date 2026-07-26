@@ -9,8 +9,7 @@ struct AnalyticsCategoryDetailView: View {
     @Binding var referenceDate: Date
     let liveNow: Date
     @Binding var monthNavigationAnchor: AnalyticsMonthNavigationAnchor?
-    @State private var snapshot: AnalyticsSnapshot?
-    @State private var loadedRequest: AnalyticsSnapshotRequest?
+    @State private var loadedPresentation: AnalyticsLoadedSnapshot?
 
     var body: some View {
         let evaluation = range.evaluation(referenceDate: referenceDate, liveNow: liveNow)
@@ -20,9 +19,17 @@ struct AnalyticsCategoryDetailView: View {
             revision: store.analyticsRevision,
             liveRefreshBucket: store.analyticsLiveRefreshBucket(for: evaluation)
         )
-        let canKeepDisplayingSnapshot = loadedRequest.map {
-            $0.canRemainVisible(whileLoading: request)
-        } ?? false
+        let exactCachedPresentation = store.cachedAnalyticsSnapshot(
+            for: range,
+            evaluation: evaluation
+        ).map {
+            AnalyticsLoadedSnapshot(snapshot: $0, request: request)
+        }
+        let displayedPresentation = exactCachedPresentation ?? loadedPresentation
+        let presentationPhase = AnalyticsSnapshotPresentationPhase.resolve(
+            loadedRequest: displayedPresentation?.request,
+            currentRequest: request
+        )
 
         List {
             AnalyticsPeriodSection(
@@ -30,17 +37,40 @@ struct AnalyticsCategoryDetailView: View {
                 referenceDate: $referenceDate,
                 liveNow: liveNow,
                 monthNavigationAnchor: $monthNavigationAnchor,
-                isRefreshing: loadedRequest != request
+                isRefreshing: presentationPhase.isRefreshing
             )
-            if let snapshot, canKeepDisplayingSnapshot {
-                categoryContent(snapshot: snapshot)
+            if let displayedPresentation {
+                categoryContent(
+                    snapshot: displayedPresentation.snapshot,
+                    displayedRange: displayedPresentation.request.range,
+                    displayedReferenceDate:
+                    displayedPresentation.request.evaluationKey.interval.start,
+                    isPlaceholder: presentationPhase.obscuresLoadedMetrics
+                )
             } else {
                 ProgressView()
                     .frame(maxWidth: .infinity, minHeight: 160)
                     .accessibilityLabel(AppStrings.localized("analytics.loading"))
+                    .accessibilityIdentifier("analytics.detail.initialLoading")
             }
         }
         .task(id: request) {
+            guard await AnalyticsLoadUITestHook.pauseRangeReloadIfRequested(
+                hasLoadedSnapshot: loadedPresentation != nil
+            ) else {
+                return
+            }
+            if let cachedSnapshot = store.cachedAnalyticsSnapshot(
+                for: range,
+                evaluation: evaluation
+            ) {
+                guard Task.isCancelled == false else { return }
+                loadedPresentation = AnalyticsLoadedSnapshot(
+                    snapshot: cachedSnapshot,
+                    request: request
+                )
+                return
+            }
             await Task.yield()
             guard Task.isCancelled == false else { return }
             guard let resolvedSnapshot = await store.loadAnalyticsSnapshot(
@@ -49,9 +79,11 @@ struct AnalyticsCategoryDetailView: View {
             ) else {
                 return
             }
-            snapshot = resolvedSnapshot
             guard Task.isCancelled == false else { return }
-            loadedRequest = request
+            loadedPresentation = AnalyticsLoadedSnapshot(
+                snapshot: resolvedSnapshot,
+                request: request
+            )
         }
         #if os(iOS)
         .listStyle(.insetGrouped)

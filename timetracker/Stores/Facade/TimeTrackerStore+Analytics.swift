@@ -53,8 +53,19 @@ extension TimeTrackerStore {
         return snapshot
     }
 
-    func cachedAnalyticsSnapshot(for range: AnalyticsRange) -> AnalyticsSnapshot? {
-        analyticsDomainStore.cachedSnapshot(for: range)
+    func cachedAnalyticsSnapshot(
+        for range: AnalyticsRange,
+        evaluation: AnalyticsPeriodEvaluation,
+        calendar: Calendar = .current
+    ) -> AnalyticsSnapshot? {
+        analyticsDomainStore.cachedSnapshot(
+            for: range,
+            evaluationKey: AnalyticsEvaluationCacheKey(
+                evaluation: evaluation,
+                liveRefreshBucket: analyticsLiveRefreshBucket(for: evaluation),
+                calendar: calendar
+            )
+        )
     }
 
     func refreshAnalyticsSnapshot(for range: AnalyticsRange, now: Date = Date()) {

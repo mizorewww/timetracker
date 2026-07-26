@@ -2,12 +2,18 @@ import SwiftUI
 
 extension AnalyticsCategoryDetailView {
     @ViewBuilder
-    func categoryContent(snapshot: AnalyticsSnapshot) -> some View {
+    func categoryContent(
+        snapshot: AnalyticsSnapshot,
+        displayedRange: AnalyticsRange,
+        displayedReferenceDate: Date,
+        isPlaceholder: Bool
+    ) -> some View {
         switch category {
         case .overview:
             AnalyticsDetailSection(
                 title: AppStrings.localized("analytics.summary.title"),
-                subtitle: AppStrings.localized("analytics.category.overview.subtitle")
+                subtitle: AppStrings.localized("analytics.category.overview.subtitle"),
+                isPlaceholder: isPlaceholder
             ) {
                 AnalyticsMetricList(
                     overview: snapshot.overview,
@@ -22,16 +28,18 @@ extension AnalyticsCategoryDetailView {
                 AnalyticsGlossaryList()
             }
         case .time:
-            if range == .today {
+            if displayedRange == .today {
                 AnalyticsDetailSection(
                     title: AppStrings.localized("analytics.hourDistribution.title"),
-                    subtitle: AppStrings.localized("analytics.hourDistribution.subtitle")
+                    subtitle: AppStrings.localized("analytics.hourDistribution.subtitle"),
+                    isPlaceholder: isPlaceholder
                 ) {
                     TodayActivityContent(activity: snapshot.todayActivity)
                 }
                 AnalyticsDetailSection(
                     title: AppStrings.localized("analytics.timeline.title"),
-                    subtitle: AppStrings.localized("analytics.timeline.subtitle")
+                    subtitle: AppStrings.localized("analytics.timeline.subtitle"),
+                    isPlaceholder: isPlaceholder
                 ) {
                     OverlappingTimelineContent(timeline: snapshot.timeline)
                 }
@@ -39,7 +47,8 @@ extension AnalyticsCategoryDetailView {
             } else {
                 AnalyticsDetailSection(
                     title: AppStrings.localized("analytics.dailyTrend.title"),
-                    subtitle: AppStrings.localized("analytics.dailyTrend.subtitle")
+                    subtitle: AppStrings.localized("analytics.dailyTrend.subtitle"),
+                    isPlaceholder: isPlaceholder
                 ) {
                     DailyTrendContent(daily: snapshot.daily)
                 }
@@ -48,7 +57,8 @@ extension AnalyticsCategoryDetailView {
             AnalyticsDetailSection(
                 title: AppStrings.localized("analytics.categoryUsage.title"),
                 subtitle: AppStrings.localized("analytics.categoryUsage.subtitle"),
-                headerIdentifier: "analytics.categoryUsage.header"
+                headerIdentifier: "analytics.categoryUsage.header",
+                isPlaceholder: isPlaceholder
             ) {
                 AnalyticsGroupBreakdownContent(
                     items: snapshot.categoryBreakdown,
@@ -59,7 +69,8 @@ extension AnalyticsCategoryDetailView {
             }
             AnalyticsDetailSection(
                 title: AppStrings.localized("analytics.taskUsage.title"),
-                subtitle: AppStrings.localized("analytics.taskUsage.subtitle")
+                subtitle: AppStrings.localized("analytics.taskUsage.subtitle"),
+                isPlaceholder: isPlaceholder
             ) {
                 TaskDonutContent(
                     tasks: snapshot.taskBreakdown,
@@ -68,7 +79,8 @@ extension AnalyticsCategoryDetailView {
             }
             AnalyticsDetailSection(
                 title: AppStrings.localized("analytics.rootUsage.title"),
-                subtitle: AppStrings.localized("analytics.rootUsage.subtitle")
+                subtitle: AppStrings.localized("analytics.rootUsage.subtitle"),
+                isPlaceholder: isPlaceholder
             ) {
                 AnalyticsGroupBreakdownContent(
                     items: snapshot.rootBreakdown,
@@ -80,7 +92,8 @@ extension AnalyticsCategoryDetailView {
         case .pomodoro:
             AnalyticsDetailSection(
                 title: AppStrings.localized("analytics.category.pomodoro.title"),
-                subtitle: AppStrings.localized("analytics.category.pomodoro.subtitle")
+                subtitle: AppStrings.localized("analytics.category.pomodoro.subtitle"),
+                isPlaceholder: isPlaceholder
             ) {
                 AnalyticsFocusRoundsContent(
                     store: store,
@@ -90,14 +103,16 @@ extension AnalyticsCategoryDetailView {
         case .decisions:
             AnalyticsDetailSection(
                 title: AppStrings.localized("analytics.decisions.title"),
-                subtitle: AppStrings.localized("analytics.decisions.subtitle")
+                subtitle: AppStrings.localized("analytics.decisions.subtitle"),
+                isPlaceholder: isPlaceholder
             ) {
                 AnalyticsInsightList(insights: snapshot.insights)
             }
-            if range.isCurrentPeriod(referenceDate, liveNow: liveNow) {
+            if displayedRange.isCurrentPeriod(displayedReferenceDate, liveNow: liveNow) {
                 AnalyticsDetailSection(
                     title: AppStrings.localized("analytics.forecasts.title"),
-                    subtitle: AppStrings.localized("analytics.forecasts.subtitle")
+                    subtitle: AppStrings.localized("analytics.forecasts.subtitle"),
+                    isPlaceholder: isPlaceholder
                 ) {
                     TaskForecastsContent(store: store)
                 }
@@ -105,19 +120,22 @@ extension AnalyticsCategoryDetailView {
         case .quality:
             AnalyticsDetailSection(
                 title: AppStrings.localized("analytics.rhythm.title"),
-                subtitle: AppStrings.localized("analytics.rhythm.subtitle")
+                subtitle: AppStrings.localized("analytics.rhythm.subtitle"),
+                isPlaceholder: isPlaceholder
             ) {
                 AnalyticsRhythmContent(rhythm: snapshot.rhythm)
             }
             AnalyticsDetailSection(
                 title: AppStrings.localized("analytics.quality.title"),
-                subtitle: AppStrings.localized("analytics.quality.subtitle")
+                subtitle: AppStrings.localized("analytics.quality.subtitle"),
+                isPlaceholder: isPlaceholder
             ) {
                 AnalyticsQualityContent(quality: snapshot.quality)
             }
             AnalyticsDetailSection(
                 title: AppStrings.localized("analytics.overlap.title"),
-                subtitle: AppStrings.localized("analytics.overlap.subtitle")
+                subtitle: AppStrings.localized("analytics.overlap.subtitle"),
+                isPlaceholder: isPlaceholder
             ) {
                 AnalyticsOverlapContent(overlaps: snapshot.overlaps)
             }

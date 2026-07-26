@@ -244,6 +244,38 @@ struct AnalyticsRefreshPlanTests {
         #expect(initial.canRemainVisible(whileLoading: refreshed))
         #expect(initial.canRemainVisible(whileLoading: anotherDay) == false)
         #expect(initial.canRemainVisible(whileLoading: sameDateDifferentRange) == false)
+
+        #expect(
+            AnalyticsSnapshotPresentationPhase.resolve(
+                loadedRequest: nil,
+                currentRequest: initial
+            ) == .initialLoading
+        )
+        #expect(
+            AnalyticsSnapshotPresentationPhase.resolve(
+                loadedRequest: initial,
+                currentRequest: initial
+            ) == .current
+        )
+        #expect(
+            AnalyticsSnapshotPresentationPhase.resolve(
+                loadedRequest: initial,
+                currentRequest: refreshed
+            ) == .refreshingVisiblePeriod
+        )
+        let newDayPhase = AnalyticsSnapshotPresentationPhase.resolve(
+            loadedRequest: initial,
+            currentRequest: anotherDay
+        )
+        #expect(newDayPhase == .loadingNewPeriod)
+        #expect(newDayPhase.isRefreshing)
+        #expect(newDayPhase.obscuresLoadedMetrics)
+        #expect(
+            AnalyticsSnapshotPresentationPhase.resolve(
+                loadedRequest: initial,
+                currentRequest: sameDateDifferentRange
+            ) == .loadingNewPeriod
+        )
     }
 
     @Test @MainActor

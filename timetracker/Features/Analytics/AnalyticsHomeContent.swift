@@ -4,10 +4,10 @@ struct AnalyticsContent: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     let store: TimeTrackerStore
-    /// `nil` while a newly selected period is still loading. The period
-    /// controls stay mounted so switching Day/Week/Month never unmounts the
-    /// picker; only the data sections swap to an in-place loading state.
+    /// `nil` only during the first uncached load. Later period changes keep
+    /// the last section shells mounted with redacted, non-interactive content.
     let snapshot: AnalyticsSnapshot?
+    let contentIsPlaceholder: Bool
     @Binding var range: AnalyticsRange
     @Binding var referenceDate: Date
     let liveNow: Date
@@ -30,6 +30,7 @@ struct AnalyticsContent: View {
                 ProgressView()
                     .frame(maxWidth: .infinity, minHeight: 240)
                     .accessibilityLabel(AppStrings.localized("analytics.loading"))
+                    .accessibilityIdentifier("analytics.initialLoading")
             }
 
             // The tracked-task heatmaps have their own data chain and period,
@@ -62,6 +63,7 @@ struct AnalyticsContent: View {
     private func dataSections(snapshot: AnalyticsSnapshot) -> some View {
         Section {
             AnalyticsHomeSummaryRow(snapshot: snapshot)
+                .analyticsLoadingPlaceholder(contentIsPlaceholder)
         } header: {
             Text(AppStrings.localized("analytics.summary.title"))
         } footer: {
@@ -107,6 +109,20 @@ struct AnalyticsContent: View {
                 AnalyticsCategoryRow(category: category, snapshot: snapshot)
             }
             .accessibilityIdentifier("analytics.category.\(category.rawValue)")
+            .analyticsLoadingPlaceholder(contentIsPlaceholder)
+        }
+    }
+}
+
+extension View {
+    @ViewBuilder
+    func analyticsLoadingPlaceholder(_ isActive: Bool) -> some View {
+        if isActive {
+            redacted(reason: .placeholder)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        } else {
+            self
         }
     }
 }

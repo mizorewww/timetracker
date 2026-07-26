@@ -1417,7 +1417,7 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 ## AD-113：Analytics 仅在同一日历周期内保留刷新中的快照
 
-状态：Accepted
+状态：Superseded by AD-131
 
 背景：Analytics request identity 同时包含 range、calendar period、revision、live day 和分钟 bucket。旧页面在任何 identity 变化时立即把整个 landing/category list 换成 spinner；一次普通的 minute refresh 或本机 mutation 因而产生明显闪烁。若反过来无条件保留旧 snapshot，又会在用户切换日期、周或月时把旧指标显示在新控制器下，造成更严重的统计语义错误。
 
@@ -1726,6 +1726,25 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：重复模板继续承担组织、说明和父级语义，但每天只有一个真实实例承担计时与任务量。多设备重试和生命周期触发不会制造重复，用户编辑不会被后台覆盖，分阶段同步与墓碑不会被“修复”成复活数据。当前决策只完成运行时；没有创建规则与任务量录入 UI 前，用户反馈项仍保持未完成。
 
 验证：纯日键和 store-scoped 回归覆盖未来开始日、当前日无回填、暂停重放、归档间隔、时钟偏移、非 canonical 规则、活动工作拒绝、每个原子 checkpoint 回滚、用户编辑保留、墓碑和 staged partial graph。入口回归覆盖 Timer/Pomodoro/manual/App Intent direct-work 拒绝、parent/content 保留和 picker 祖先容器。实现沟通与边界记录在 `Docs/ImplementationContexts/2026-07-20-daily-recurrence-runtime.md`。
+
+## AD-131：Analytics 周期切换保留稳定壳并遮蔽旧指标
+
+状态：Accepted
+
+背景：AD-113 通过跨 range/interval 卸载数据 section 来避免旧指标冒充新周期，但这会把已经显示的 Summary、Review、Explore 和 detail 内容整组换成大块 loading row。period controls 虽然常驻，数据区高度仍先坍缩再恢复，独立 heatmap 也随之跳动；`Task.yield()` 还保证用户能看到这次空载帧。条件插入的 spinner 同时会改变 `ViewThatFits` 的理想尺寸，在临界宽度放大横竖布局切换。
+
+决策：
+
+- landing 与 category detail 将 `AnalyticsSnapshot` 和对应 request 作为一个 atomic loaded presentation 发布。取消或过期任务不得先写 snapshot 再写 request。
+- 精确 `AnalyticsEvaluationCacheKey` 命中可以在启动异步任务前同步呈现；不得为了展示 loading UI 强制先让出一个空帧。只按 range 判断的缓存不够安全。
+- 首次进入且没有任何 presentation 时可以使用原生 loading row。已经显示过内容后，跨 range/interval 的冷缓存切换保留相同 section、card 和 period-control 布局，但数据内容使用系统 redaction，并从辅助功能树隐藏、禁止 hit testing；旧数值、旧可访问性值和旧导航不能冒充新周期。section 标题与当前所选周期说明可以继续可见。
+- 同一 range/interval 的 revision、live-day 或 live-minute refresh 继续显示真实当前 snapshot，因为其日历语义未改变。跨周期 placeholder 的分支判断必须使用其 loaded request，不能把 Today 专属图表套到 Week/Month 控件下。
+- refresh indicator 始终占用固定尺寸布局槽，只有刷新时才可见、可被辅助功能与 UI 测试识别；它不得改变 `ViewThatFits` 的 fit 结果。独立 heatmap 不参与 snapshot loading replacement。
+- 根页与 category detail 共用上述 presentation phase；不引入全量预取、人工 debounce、第三方动画或图表框架。
+
+后果：Day、Week、Month 切换期间仍能明确看到正在刷新，但页面结构、滚动上下文和周期控件不再闪白或上下跳。缓存命中直接呈现目标数据；冷缓存则只展示稳定的无语义占位，不泄露旧周期统计。AD-113 的“跨周期必须卸载内容”被本决定取代，其 request identity 与同周期保留规则继续有效。
+
+验证：纯 presentation-phase 测试覆盖首屏、精确 request、同周期刷新、跨日和跨 range；带受控 test-only 延迟的 XCUITest 在刷新中断言 period controls 与 Review shell 持续存在且垂直位置变化不超过 2pt，分别截取 Week/Month 中途画面，并验证返回精确缓存的 Day 不出现 loading frame。生产与 Release 不接受该延迟参数时的任何行为变化。
 
 ## 2. Agent 工作清单
 

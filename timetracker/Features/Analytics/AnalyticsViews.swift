@@ -9,8 +9,7 @@ struct AnalyticsView: View {
     @State private var range: AnalyticsRange = .today
     @State private var referenceDate = Date()
     @State private var liveNow = Date()
-    @State private var snapshot: AnalyticsSnapshot?
-    @State private var loadedRequest: AnalyticsSnapshotRequest?
+    @State private var loadedPresentation: AnalyticsLoadedSnapshot?
     @State private var followsCurrentPeriod = true
     @State private var monthNavigationAnchor: AnalyticsMonthNavigationAnchor?
 
@@ -43,20 +42,45 @@ struct AnalyticsView: View {
                 followsCurrentPeriod = range.isCurrentPeriod(newDate, liveNow: actionNow)
             }
         )
-        let canKeepDisplayingSnapshot = loadedRequest.map {
-            $0.canRemainVisible(whileLoading: request)
-        } ?? false
+        let exactCachedPresentation = store.cachedAnalyticsSnapshot(
+            for: range,
+            evaluation: evaluation
+        ).map {
+            AnalyticsLoadedSnapshot(snapshot: $0, request: request)
+        }
+        let displayedPresentation = exactCachedPresentation ?? loadedPresentation
+        let presentationPhase = AnalyticsSnapshotPresentationPhase.resolve(
+            loadedRequest: displayedPresentation?.request,
+            currentRequest: request
+        )
 
         AnalyticsContent(
             store: store,
-            snapshot: canKeepDisplayingSnapshot ? snapshot : nil,
+            snapshot: displayedPresentation?.snapshot,
+            contentIsPlaceholder: presentationPhase.obscuresLoadedMetrics,
             range: $range,
             referenceDate: effectiveReferenceDateBinding,
             liveNow: liveNow,
             monthNavigationAnchor: $monthNavigationAnchor,
-            isRefreshing: loadedRequest != request
+            isRefreshing: presentationPhase.isRefreshing
         )
         .task(id: request) {
+            guard await AnalyticsLoadUITestHook.pauseRangeReloadIfRequested(
+                hasLoadedSnapshot: loadedPresentation != nil
+            ) else {
+                return
+            }
+            if let cachedSnapshot = store.cachedAnalyticsSnapshot(
+                for: range,
+                evaluation: evaluation
+            ) {
+                guard Task.isCancelled == false else { return }
+                loadedPresentation = AnalyticsLoadedSnapshot(
+                    snapshot: cachedSnapshot,
+                    request: request
+                )
+                return
+            }
             await Task.yield()
             guard Task.isCancelled == false else { return }
             guard let resolvedSnapshot = await store.loadAnalyticsSnapshot(
@@ -65,9 +89,11 @@ struct AnalyticsView: View {
             ) else {
                 return
             }
-            snapshot = resolvedSnapshot
             guard Task.isCancelled == false else { return }
-            loadedRequest = request
+            loadedPresentation = AnalyticsLoadedSnapshot(
+                snapshot: resolvedSnapshot,
+                request: request
+            )
         }
         .task(id: refreshPlan) {
             await waitForRefresh(refreshPlan)
@@ -120,5 +146,64 @@ struct AnalyticsView: View {
         }
         guard Task.isCancelled == false else { return }
         liveNow = Date()
+    }
+}
+
+struct AnalyticsLoadedSnapshot {
+    let snapshot: AnalyticsSnapshot
+    let request: AnalyticsSnapshotRequest
+}
+
+nonisolated enum AnalyticsSnapshotPresentationPhase: Equatable, Sendable {
+    case initialLoading
+    case loadingNewPeriod
+    case refreshingVisiblePeriod
+    case current
+
+    static func resolve(
+        loadedRequest: AnalyticsSnapshotRequest?,
+        currentRequest: AnalyticsSnapshotRequest
+    ) -> Self {
+        guard let loadedRequest else { return .initialLoading }
+        guard loadedRequest != currentRequest else { return .current }
+        if loadedRequest.canRemainVisible(whileLoading: currentRequest) {
+            return .refreshingVisiblePeriod
+        }
+        return .loadingNewPeriod
+    }
+
+    var isRefreshing: Bool {
+        self != .current
+    }
+
+    var obscuresLoadedMetrics: Bool {
+        self == .loadingNewPeriod
+    }
+}
+
+nonisolated enum AnalyticsLoadUITestHook {
+    private static let slowRangeReloadArgument = "--uitesting-slow-analytics-range-reload"
+
+    static func pauseRangeReloadIfRequested(
+        hasLoadedSnapshot: Bool,
+        arguments: [String] = CommandLine.arguments
+    ) async -> Bool {
+        #if DEBUG
+        guard hasLoadedSnapshot,
+              arguments.contains("--uitesting"),
+              arguments.contains(slowRangeReloadArgument)
+        else {
+            return Task.isCancelled == false
+        }
+
+        do {
+            try await Task.sleep(for: .seconds(4))
+        } catch {
+            return false
+        }
+        return Task.isCancelled == false
+        #else
+        return Task.isCancelled == false
+        #endif
     }
 }

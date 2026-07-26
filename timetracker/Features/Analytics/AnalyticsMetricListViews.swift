@@ -4,17 +4,20 @@ struct AnalyticsDetailSection<Content: View>: View {
     let title: String
     let subtitle: String?
     let headerIdentifier: String?
+    let isPlaceholder: Bool
     @ViewBuilder var content: Content
 
     init(
         title: String,
         subtitle: String?,
         headerIdentifier: String? = nil,
+        isPlaceholder: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.subtitle = subtitle
         self.headerIdentifier = headerIdentifier
+        self.isPlaceholder = isPlaceholder
         self.content = content()
     }
 
@@ -29,6 +32,7 @@ struct AnalyticsDetailSection<Content: View>: View {
                 }
 
                 content
+                    .analyticsLoadingPlaceholder(isPlaceholder)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 6)

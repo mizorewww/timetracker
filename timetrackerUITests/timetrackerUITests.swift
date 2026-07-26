@@ -4781,7 +4781,12 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     func testAnalyticsRangeSwitchKeepsPeriodControlsMounted() throws {
-        let app = launchApp(route: "analytics")
+        let app = launchApp(
+            route: "analytics",
+            additionalLaunchArguments: [
+                "--uitesting-slow-analytics-range-reload",
+            ]
+        )
         XCTAssertTrue(analyticsIsReady(in: app))
 
         let periodFilter = app.descendants(matching: .any)[
@@ -4794,8 +4799,14 @@ final class timetrackerUITests: XCTestCase {
         let reviewSection = app.descendants(matching: .any)[
             "analytics.section.review"
         ].firstMatch
+        XCTAssertTrue(reviewSection.waitForExistence(timeout: 5))
+        let refreshing = app.descendants(matching: .any)[
+            "analytics.refreshing"
+        ].firstMatch
 
-        for segment in ["Week", "Month", "Day"] {
+        for segment in ["Week", "Month"] {
+            let periodFilterFrameBeforeSwitch = periodFilter.frame
+            let reviewFrameBeforeSwitch = reviewSection.frame
             #if os(macOS)
             let button = app.radioButtons[segment].firstMatch
             #else
@@ -4807,14 +4818,47 @@ final class timetrackerUITests: XCTestCase {
             )
             activate(button)
             XCTAssertTrue(
-                periodFilter.exists,
-                "The period controls must stay mounted while \(segment) loads."
+                refreshing.waitForExistence(timeout: 2),
+                "The \(segment) switch must expose its in-place refresh state."
             )
             XCTAssertTrue(
-                reviewSection.waitForExistence(timeout: 10),
+                periodFilter.exists && reviewSection.exists,
+                "Period controls and Review must stay mounted while \(segment) loads."
+            )
+            XCTAssertLessThanOrEqual(
+                abs(periodFilter.frame.minY - periodFilterFrameBeforeSwitch.minY),
+                2,
+                "The period controls must not jump while \(segment) loads."
+            )
+            XCTAssertLessThanOrEqual(
+                abs(reviewSection.frame.minY - reviewFrameBeforeSwitch.minY),
+                2,
+                "The Review section must not collapse while \(segment) loads."
+            )
+            let prefix = platformScreenshotPrefix(in: app)
+            try capture(
+                "\(prefix)-analytics-\(segment.lowercased())-mid-refresh",
+                app: app
+            )
+            XCTAssertTrue(
+                refreshing.waitForNonExistence(timeout: 10),
                 "The \(segment) data sections must return after loading."
             )
+            XCTAssertTrue(reviewSection.waitForExistence(timeout: 5))
         }
+
+        #if os(macOS)
+        let dayButton = app.radioButtons["Day"].firstMatch
+        #else
+        let dayButton = app.segmentedControls.buttons["Day"].firstMatch
+        #endif
+        XCTAssertTrue(dayButton.waitForExistence(timeout: 5) && dayButton.isHittable)
+        activate(dayButton)
+        XCTAssertTrue(
+            refreshing.waitForNonExistence(timeout: 2),
+            "Returning to the exact cached Day request must not force a loading frame."
+        )
+        XCTAssertTrue(periodFilter.exists && reviewSection.waitForExistence(timeout: 5))
 
         let prefix = platformScreenshotPrefix(in: app)
         try capture("\(prefix)-analytics-range-switch-stable", app: app)

@@ -168,3 +168,32 @@ Checkpoint E 与提示词透明度/完整上下文收口尚未完成，反馈条
   `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`。
   加入生产 tool schema 披露后第二次完整运行仍为相同三项失败，新增测试继续通过；
   本任务不修改这些断言来制造全绿。
+
+## 完整请求上下文 Checkpoint 进度
+
+- 删除两组以人工 48 候选、12 KiB candidate JSON、24 KiB prompt、64 KiB request body
+  为正确答案的 budget 测试；没有再注入任何预制 provider response。
+- 新的 request-serialization 行为测试通过 production service 与 capture transport
+  检查实际 HTTP request：Inbox 完整序列化 120 个 Task、40 个 Category 和完整
+  Unicode 字段；Inbox/checklist/task-plan 都发送与 picker 相同的完整规范
+  SF Symbols 目录，并确认 request body 可以超过旧 64 KiB 而不丢最后一项。
+- `TimeTrackerStore` 不再用本机 Quick Start/频率启发式替模型删除候选；
+  Task/Category 只规范化、去重、确定性排序后全部发送。三条生产 service 和旧兼容
+  service 都移除了人工字段/prompt/body 截断。
+- model ID 继续使用真实 256-byte 同步 compact-field 边界，但作为 opaque ID 必须
+  整体通过，不会截断为另一个服务端 ID；endpoint/API key、2 MiB response 和
+  512-byte reason 持久化边界保留。API key 仍只在 Authorization header。
+- 三个可编辑提示词改为按既有 `PreferenceJSON` 编码后的 256 KiB 同步偏好边界
+  验证，不再额外套 4 KiB 请求限制。
+- 继续复用 Foundation `JSONEncoder`、`URLRequest` 和项目已有 `SymbolCatalog`，
+  没有引入新依赖。
+- `make format-check` 通过（829 个文件、0 个格式问题），三语
+  `make localization-check` 通过（每种语言 1,275 keys），`git diff --check`
+  通过。
+- `make test` 编译并运行 1,412 项；本 checkpoint 新增的完整请求测试全部通过，
+  总结果仍只有三个不在本改动路径的既有失败：
+  `CoreLLMResponseTransportTests.nonSuccessStatusTakesPriorityOverDeclaredBodySize`、
+  `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd`
+  与
+  `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`。
+  本任务不修改这些断言来制造全绿。

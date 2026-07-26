@@ -71,7 +71,7 @@ iOS 的 `SyncConflictState.json`、pending forced-upload 恢复镜像和腐损�
 - 候选任务标题与层级路径。
 - 候选任务图标名与颜色十六进制值。
 
-一次最多选取 48 个可工作任务，先保留 Quick Start 固定任务，再使用已有计时索引选高频/近期任务，最后才按稳定路径顺序补足。候选 JSON 最多 12 KiB；Inbox 标题最多 512 UTF-8 bytes，单个候选标题/路径最多 256/512 bytes。候选去重和取舍是输入顺序无关的确定结果。
+请求包含全部可工作的 Task 和全部可见 Category。候选只做规范化、去重和确定性排序，不按人工数量、JSON 或字段预算静默丢弃；完整 Unicode 标题与路径只存在于发送副本，不会因为请求构造而改写本地事实。
 
 ### 清单视觉建议
 
@@ -81,15 +81,15 @@ iOS 的 `SyncConflictState.json`、pending forced-upload 恢复镜像和腐损�
 - 所属任务标题与任务路径。
 - 允许选择的系统图标名和颜色列表。
 
-Checklist 标题与所属任务标题各最多 512 UTF-8 bytes，任务显示路径最多 1,024 bytes。Inbox 与 checklist 共用 78 个常见语义 SF Symbols 的精选发送列表，不会把完整的 8,000+ 图标目录附在每个请求中；这不会缩减用户本机图标选择器。
+Checklist 请求发送完整标题、所属任务标题和完整任务显示路径。Inbox、checklist 与任务计划共用本机 picker 的完整规范 SF Symbols 目录，模型返回的 icon 必须属于请求已公告的同一目录。
 
 ### 任务计划生成
 
 请求只在用户从任务页填写需求并明确点按“生成”后发出。Request 页会先显示当前 Category、Task 和 Checklist 的准确数量。发送内容包括：
 
-- 用户当次输入的计划需求，最多 4 KiB UTF-8 bytes。
-- “任务规划指令”设置，最多 4 KiB UTF-8 bytes。它是可同步、可导出的普通偏好，不是秘密；不应填写密码或 API key。
-- 允许模型使用的精选系统图标名和颜色列表。
+- 用户当次输入的完整计划需求。
+- 完整的“任务规划指令”设置。它是可同步、可导出的普通偏好，按 JSON 编码后的 256 KiB 偏好 payload 边界验证，不是秘密；不应填写密码或 API key。
+- 允许模型使用的完整规范系统图标名和颜色列表。
 - 完整的 provider-visible 当前工作区，不按任意实体数量或 Task path 深度静默截断：
   - Category：稳定 UUID、完整标题、图标、颜色、是否计入预测和排序。
   - Task：稳定 UUID、完整标题与备注、完整父级路径、parent/category 关系、预计时长、截止时间、图标、颜色、排序、归档状态、任务量目标和每日重复设置。
@@ -98,11 +98,11 @@ Checklist 标题与所属任务标题各最多 512 UTF-8 bytes，任务显示路
 
 工作区 prompt 不包含 Inbox 内容、时间片/时间历史、Pomodoro 历史、Health samples、Keychain 数据、设备 ID、同步 metadata 或任何 `clientMutationID`。API key 不进入 prompt 或工具结果，但会按配置作为 Authorization header 发给 endpoint。Category/Task/Checklist 的本地 revision map 与完整 CAS baseline 只留在内存中，绝不编码到 provider DTO。
 
-任务计划完整工作区刻意不复用 Inbox/checklist 建议的 24 KiB prompt 与 64 KiB request-body 投影，因为那会静默漏掉模型需要引用的实体。编码失败不会发出 partial context；endpoint 以 HTTP 400/413/422 拒绝完整请求时，以 typed error 报告 Category/Task/Checklist counts 与实际 encoded request bytes。客户端不发送截断版本，也不回退到旧 create-only JSON。工具会话不按固定回合或调用次数截断；只有 `finalize_plan` 结束生成。用户取消、加固传输的 timeout/单响应 2 MiB 边界、provider context 拒绝、工具结构与字段校验继续作为显式资源和安全边界。
+任务计划、Inbox 和 checklist 都不使用人工 prompt/request-body 预算截断相关上下文，因为那会静默漏掉模型需要引用的实体或图标。编码失败不会发出 partial context；endpoint 以 HTTP 400/413/422 拒绝完整任务计划请求时，以 typed error 报告 Category/Task/Checklist counts 与实际 encoded request bytes。客户端不发送截断版本，也不回退到旧 create-only JSON。工具会话不按固定回合或调用次数截断；只有 `finalize_plan` 结束生成。用户取消、加固传输的 timeout/单响应 2 MiB 边界、provider context 拒绝、工具结构与字段校验继续作为显式资源和安全边界。
 
 模型只能通过严格的结构化工具读取和修改一个本机内存 overlay；它不能直接访问 SwiftData。已有 Task/Checklist 必须按稳定 UUID 引用，Category 名称只有唯一规范化匹配时才可复用，多个同名会显式失败。新 ID 由 App 生成。Finalize 后只产生 create/update/archive/delete/reuse 的只读 diff；破坏性影响需要用户再次确认。Apply 时会在共享 store lock 下用 fresh context 对完整 provider-visible snapshot 和本地 revision baseline 做 CAS，再原子应用全部操作。Task removal 只会 Archive。任何 stale、校验或保存失败均为零写入并保留预览。
 
-Inbox/checklist 两类建议的 user prompt 最多 24 KiB，最终 JSON request body 最多 64 KiB；所有 AI 流程的 model ID 为 256 bytes，endpoint/API key 分别最多 4/8 KiB。256-byte model ID 同时符合同步快照的 compact-field restore 上限，避免本机可写入的 AI provenance 无法恢复。建议流程的用户文本只在发送副本中按完整 Unicode `Character` 边界缩短，不回写 SwiftData 事实。建议模型返回的 reason/model ID 再次有界化，icon 必须属于本次已公告的精选列表，任务 UUID 必须属于实际发送候选。
+所有 AI 流程的 model ID 为 256 bytes，endpoint/API key 分别最多 4/8 KiB。256-byte model ID 同时符合同步快照的 compact-field restore 上限，避免本机可写入的 AI provenance 无法恢复；opaque model ID 必须完整通过校验，不会截断成另一个 ID。模型返回的 reason 按 512-byte 持久化字段归一化，icon 必须属于本次已公告的完整目录，任务/分类 UUID 必须属于实际发送候选。provider 响应继续受 2 MiB transport 边界约束。
 
 ### 凭证与传输
 
@@ -217,7 +217,7 @@ JSON 导出包含可同步业务数据的快照，并过滤敏感 preference。�
 - [ ] App Store 隐私标签与 AI/CloudKit 实际数据流一致。
 - [ ] AI 默认/推荐 endpoint 的运营方、用途、保留期、训练用途、跨境处理与删除渠道已确认并写入发行披露；未确认时不作“零保留”承诺。
 - [ ] AI 配置 Test→Save、自动建议默认关闭和用户显式开启行为通过测试/人工检查。
-- [ ] Inbox/checklist 请求的候选数、字段/prompt/body UTF-8 预算、精选图标列表、非候选 UUID 拒绝和结果字段归一化通过回归。
+- [ ] Inbox/checklist 请求完整序列化全部候选、完整 Unicode 字段和完整 SF Symbols 目录；非候选 UUID 拒绝、opaque model ID 与结果持久化字段边界通过回归。
 - [ ] 任务计划的显式生成与发送前 counts 披露、完整 workspace/fingerprint、counts+bytes typed failure、严格工具协议、只读 diff、破坏性确认、完整 CAS、stale 预览保留和原子混合 CRUD 回滚通过回归。
 - [ ] Widget App Group 在真机和发行 profile 上验证。
 - [ ] Watch DTO 不包含 secret；codec/queue 的字段、数量、唯一 ID、时间和 512 KiB 恢复边界通过自动测试；持久离线队列、typed terminal result、20 秒 timeout、30 秒旧命令拒绝、retry/discard 和同 ID 幂等通过配对真机验证。

@@ -64,7 +64,7 @@ struct LLMSettingsTests {
     }
 
     @Test
-    func taskPlanInstructionsAreUTF8BoundedAndPreserveSupportedMultilineText() throws {
+    func taskPlanInstructionsUseTheSyncedValueBoundaryAndPreserveMultilineText() throws {
         let multiline = "Prefer concise categories.\n\tKeep checklist items actionable."
         #expect(
             try AppPreferenceValueSanitizer.llmTaskPlanInstructions(multiline) ==
@@ -73,26 +73,39 @@ struct LLMSettingsTests {
 
         let exactASCII = String(
             repeating: "a",
-            count: AppPreferenceValueSanitizer.maximumLLMTaskPlanInstructionsByteCount
+            count:
+            AppPreferenceValueSanitizer
+                .maximumLLMTaskPlanInstructionsByteCount - 2
+        )
+        #expect(
+            AppPreferenceValueSanitizer
+                .llmPromptInstructionsStoredByteCount(exactASCII) ==
+                AppPreferenceValueSanitizer
+                .maximumLLMTaskPlanInstructionsByteCount
         )
         #expect(
             try AppPreferenceValueSanitizer.llmTaskPlanInstructions(exactASCII) ==
                 exactASCII
         )
 
-        let exactUnicode = String(repeating: "🧭", count: 1024)
-        #expect(exactUnicode.utf8.count == 4 * 1024)
+        let exactUnicode = String(repeating: "🧭", count: 16384)
+        #expect(exactUnicode.utf8.count > 4 * 1024)
         #expect(
             try AppPreferenceValueSanitizer.llmTaskPlanInstructions(exactUnicode) ==
                 exactUnicode
         )
 
-        let oversizedUnicode = exactUnicode + "🧭"
+        let oversizedValue = exactASCII + "a"
+        let oversizedStorageByteCount =
+            AppPreferenceValueSanitizer
+                .llmPromptInstructionsStoredByteCount(oversizedValue)
         #expect(throws: LLMTaskPlanInstructionsValidationError.byteLimitExceeded(
-            actual: oversizedUnicode.utf8.count,
+            actual: oversizedStorageByteCount,
             maximum: AppPreferenceValueSanitizer.maximumLLMTaskPlanInstructionsByteCount
         )) {
-            try AppPreferenceValueSanitizer.llmTaskPlanInstructions(oversizedUnicode)
+            try AppPreferenceValueSanitizer.llmTaskPlanInstructions(
+                oversizedValue
+            )
         }
 
         #expect(throws: LLMTaskPlanInstructionsValidationError.controlCharacter) {
@@ -113,7 +126,8 @@ struct LLMSettingsTests {
         #expect(instructions.localizedCaseInsensitiveContains("quantity"))
         #expect(instructions.localizedCaseInsensitiveContains("daily"))
         #expect(
-            instructions.utf8.count <=
+            AppPreferenceValueSanitizer
+                .llmPromptInstructionsStoredByteCount(instructions) <=
                 AppPreferenceValueSanitizer.maximumLLMTaskPlanInstructionsByteCount
         )
     }
@@ -181,6 +195,26 @@ struct LLMSettingsTests {
     }
 
     @Test
+    func promptInstructionsUseTheSyncedPreferenceBoundaryNotALegacy4KiBWindow() throws {
+        let instructions = String(
+            repeating: "Keep this complete rule with JSON: {\"步骤\":\"完整\"}\n",
+            count: 400
+        )
+
+        #expect(instructions.utf8.count > 4 * 1024)
+        for kind in LLMPromptKind.allCases {
+            #expect(
+                try AppPreferenceValueSanitizer.llmPromptInstructions(
+                    instructions,
+                    for: kind
+                ) == instructions.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+            )
+        }
+    }
+
+    @Test
     func everyDefaultPromptIncludesATypedWorkedExample() {
         for kind in LLMPromptKind.allCases {
             let instructions = kind.defaultInstructions
@@ -226,7 +260,7 @@ struct LLMSettingsTests {
             #expect(disclosure.contains("never enters the prompt"))
             #expect(
                 disclosure.contains(
-                    String(SymbolCatalog.aiSuggestionSymbolNames.count)
+                    String(SymbolCatalog.symbolNames.count)
                 )
             )
         }
@@ -721,7 +755,7 @@ struct LLMSettingsTests {
     }
 
     @Test
-    func checklistVisualSuggestionRequestUsesCuratedSymbols() throws {
+    func checklistVisualSuggestionRequestUsesTheCompleteSymbolCatalog() throws {
         let service = LLMChecklistVisualSuggestionService()
         let request = try service.suggestionRequest(
             checklistTitle: "Polish spacing",
@@ -735,14 +769,10 @@ struct LLMSettingsTests {
 
         #expect(request.url?.absoluteString == "https://example.test/v1/chat/completions")
         #expect(body.contains("allowedSymbols"))
-        if let lastSymbol = SymbolCatalog.aiSuggestionSymbolNames.last {
+        if let lastSymbol = SymbolCatalog.symbolNames.last {
             #expect(body.contains(lastSymbol))
         }
-        if let excludedSymbol = SymbolCatalog.symbolNames.first(where: {
-            !SymbolCatalog.aiSuggestionSymbolNameSet.contains($0)
-        }) {
-            #expect(!body.contains(excludedSymbol))
-        }
+        #expect(SymbolCatalog.symbolNames.count > 1000)
         #expect(body.contains("prefix(400)") == false)
     }
 

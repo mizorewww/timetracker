@@ -28,7 +28,8 @@ enum AppPreferenceValueSanitizer {
     nonisolated static let maximumLLMModelCount = 256
     nonisolated static let maximumLLMModelIDByteCount = 256
     static let maximumLLMEndpointLength = 2048
-    static let maximumLLMPromptInstructionsByteCount = 4 * 1024
+    static let maximumLLMPromptInstructionsByteCount =
+        PreferenceJSON.maximumPayloadByteCount
     static let maximumLLMTaskPlanInstructionsByteCount = maximumLLMPromptInstructionsByteCount
 
     static func preferredColorScheme(_ value: String) -> String {
@@ -134,7 +135,9 @@ enum AppPreferenceValueSanitizer {
             throw LLMPromptInstructionsValidationError.controlCharacter
         }
 
-        let actualByteCount = resolved.utf8.count
+        let actualByteCount = llmPromptInstructionsStoredByteCount(
+            resolved
+        )
         guard actualByteCount <= maximumLLMPromptInstructionsByteCount else {
             throw LLMPromptInstructionsValidationError.byteLimitExceeded(
                 actual: actualByteCount,
@@ -142,6 +145,12 @@ enum AppPreferenceValueSanitizer {
             )
         }
         return resolved
+    }
+
+    static func llmPromptInstructionsStoredByteCount(
+        _ value: String
+    ) -> Int {
+        (try? JSONEncoder().encode(value).count) ?? .max
     }
 
     static func llmPromptInstructions(

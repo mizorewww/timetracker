@@ -377,11 +377,11 @@ LLMService 面向用户配置的 OpenAI-compatible endpoint。边界要求：
 - 带 Authorization 的 redirect 只允许保持相同 scheme、host 和有效端口；跨源、HTTPS 降级或模糊主机跳转必须拒绝，防止 credential 泄漏。
 - 生产 transport 使用专用 `URLSessionConfiguration.ephemeral`：禁用 URL cache、cookie 与 cookie store，资源超时 60 秒。响应通过 `URLSession.AsyncBytes` 流式读取；HTTP 非 2xx 与声明超过 2 MiB 的 Content-Length 在 headers 阶段取消，未声明/不可信长度仍以实际读取字节硬限制 2 MiB。父 Task 取消必须取消底层 URLSession task，`URLError.timedOut` 转为可操作超时错误。
 - 注入 transport 仍须在 Model/Inbox/Checklist service 层对成功响应执行 2 MiB 二次防御；响应类型和 HTTP 状态优先于 buffered-body 上限，保持真实与替代 transport 的错误语义一致。
-- 发送前按功能构造最小请求，不附带无关数据。`LLMSuggestionInputPolicy` 是 Inbox/checklist 共用的 request projection 边界：候选最多 48 项/12 KiB JSON，prompt 最多 24 KiB，request body 最多 64 KiB，持久化 model ID 最多 256 bytes，字段按 UTF-8 bytes 以完整 `Character` 裁剪。model ID 上限必须与同步快照 compact-field restore 上限保持一致；这些裁剪仅用于网络 DTO，不回写 canonical facts。
+- 发送前按功能构造完整而相关的请求，不附带无关数据。`LLMSuggestionInputPolicy` 对 Inbox/checklist 候选做规范化、去重和确定性排序，但不得按人工候选数、JSON、字段、prompt 或 request-body 预算丢弃上下文。真实边界继续生效：model ID 必须完整通过 256 UTF-8 bytes 的同步 compact-field 上限，endpoint/API key 保持配置上限，响应保持 2 MiB transport 上限，模型 reason 按 512-byte 持久化字段归一化；这些处理不回写 canonical facts。
 - 模型 ID 是 opaque identifier，不是可安全缩写的展示文本。偏好 sanitizer 只接受最多 256 UTF-8 bytes 且不含控制字符的完整 ID；超限项从模型列表过滤、超限选择变为空配置，绝不能截断后向服务端发送另一个标识。
 - 模型发现不得先把服务端 `data` 全量物化为数组或无界 Set。`LLMModelListResponse` 逐项解码到 `LLMModelIDAccumulator`，只保留与偏好 sanitizer 相同的升序前 256 个唯一有效完整 ID；总响应仍同时受 transport 的 2 MiB 上限约束。
-- Inbox 候选集先取 Quick Start 固定任务，再取高频/近期任务，最后稳定补足。候选归一化去重后再按实际 JSON 字节预算取舍；不能回退成对全库纯字母截断。
-- `SymbolCatalog.symbolNames` 保留完整本机 picker 目录，`aiSuggestionSymbolNames` 是请求中的 78 项精选语义集。普通 icon sanitizer 用 `symbolNameSet` O(1) 查找；AI 返回 icon 只接受已公告精选集，Inbox task UUID 只接受实际发送候选。
+- Inbox 发送全部可工作的 Task 和全部可见 Category；规范化去重后按稳定身份/路径排序，不能用本地启发式优先级或字节预算替模型静默删除候选。
+- `SymbolCatalog.symbolNames` 是 picker 与所有 AI 请求共用的唯一完整 SF Symbols 目录，`symbolNameSet` 提供 O(1) 校验。AI 返回 icon 只接受这份已公告目录，Inbox task/category UUID 只接受实际发送候选。
 - 日志和错误信息不得打印密钥或完整敏感请求。
 - 解码错误、限流、超时和无效模型必须转换为可操作错误。
 

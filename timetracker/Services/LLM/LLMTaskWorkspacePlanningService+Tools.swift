@@ -485,7 +485,7 @@ extension LLMTaskWorkspacePlanningService {
         colorHex: String,
         toolName: String
     ) throws {
-        guard SymbolCatalog.aiSuggestionSymbolNames.contains(iconName),
+        guard SymbolCatalog.symbolNameSet.contains(iconName),
               TaskColorPalette.hexValues.contains(colorHex)
         else {
             throw LLMTaskWorkspacePlanningError.invalidToolArguments(

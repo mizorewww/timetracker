@@ -204,7 +204,7 @@ extension LLMPromptKind {
         """
         let symbolSummary = """
         - `allowedSymbols`: \
-        \(SymbolCatalog.aiSuggestionSymbolNames.count) exact SF Symbol names.
+        \(SymbolCatalog.symbolNames.count) exact SF Symbol names.
         - `allowedColors`: \(TaskColorPalette.hexValues.count) exact color values.
         """
 

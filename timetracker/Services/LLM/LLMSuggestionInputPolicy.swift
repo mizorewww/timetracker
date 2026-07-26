@@ -24,29 +24,11 @@ nonisolated struct LLMChecklistVisualSuggestionPreparedInput: Equatable, Sendabl
 }
 
 nonisolated enum LLMSuggestionInputPolicy {
-    static let maximumCandidateCount = 48
-    // Candidate JSON is embedded as a JSON string in the outer chat request.
-    // Leave enough headroom for the second escaping pass and fixed prompt data.
-    static let maximumCandidateJSONByteCount = 12 * 1024
-    static let maximumInboxTitleByteCount = 512
-    static let maximumChecklistTitleByteCount = 512
-    static let maximumTaskTitleByteCount = 512
-    static let maximumTaskPathByteCount = 1024
-    static let maximumCandidateTitleByteCount = 256
-    static let maximumCandidatePathByteCount = 512
-    static let maximumIconNameByteCount = 128
-    static let maximumColorByteCount = 32
     // AI provenance is persisted in sync snapshot compact fields. Keep this
     // producer limit aligned with the restore contract so locally-created
     // suggestions always remain restorable.
     static let maximumModelIDByteCount = 256
     static let maximumReasonByteCount = 512
-    static let maximumPromptByteCount = 24 * 1024
-    // The prompt is embedded as a JSON string in the outer request. A valid
-    // prompt made entirely of quotes or backslashes can nearly double during
-    // that second encoding pass, so keep a bounded envelope with enough room
-    // for the full prompt plus the fixed system message and request metadata.
-    static let maximumRequestBodyByteCount = 64 * 1024
     static let maximumEndpointByteCount = 4 * 1024
     static let maximumAPIKeyByteCount = 8 * 1024
     static let maximumTaskIDByteCount = 64
@@ -57,21 +39,15 @@ nonisolated enum LLMSuggestionInputPolicy {
         categoryCandidates: [LLMCategoryCandidate],
         modelID: String
     ) -> LLMInboxSuggestionPreparedInput {
-        let boundedCandidates = boundedDestinationCandidates(
+        let completeCandidates = completeDestinationCandidates(
             tasks: taskCandidates,
             categories: categoryCandidates
         )
         return LLMInboxSuggestionPreparedInput(
-            inboxTitle: boundedTrimmedUTF8(
-                inboxTitle,
-                maximumByteCount: maximumInboxTitleByteCount
-            ),
-            taskCandidates: boundedCandidates.tasks,
-            categoryCandidates: boundedCandidates.categories,
-            modelID: boundedTrimmedUTF8(
-                modelID,
-                maximumByteCount: maximumModelIDByteCount
-            )
+            inboxTitle: normalizedText(inboxTitle),
+            taskCandidates: completeCandidates.tasks,
+            categoryCandidates: completeCandidates.categories,
+            modelID: AppPreferenceValueSanitizer.llmModelID(modelID)
         )
     }
 
@@ -82,100 +58,40 @@ nonisolated enum LLMSuggestionInputPolicy {
         modelID: String
     ) -> LLMChecklistVisualSuggestionPreparedInput {
         LLMChecklistVisualSuggestionPreparedInput(
-            checklistTitle: boundedTrimmedUTF8(
-                checklistTitle,
-                maximumByteCount: maximumChecklistTitleByteCount
-            ),
-            taskTitle: boundedTrimmedUTF8(
-                taskTitle,
-                maximumByteCount: maximumTaskTitleByteCount
-            ),
-            taskPath: boundedTrimmedUTF8(
-                taskPath,
-                maximumByteCount: maximumTaskPathByteCount
-            ),
-            modelID: boundedTrimmedUTF8(
-                modelID,
-                maximumByteCount: maximumModelIDByteCount
-            )
+            checklistTitle: normalizedText(checklistTitle),
+            taskTitle: normalizedText(taskTitle),
+            taskPath: normalizedText(taskPath),
+            modelID: AppPreferenceValueSanitizer.llmModelID(modelID)
         )
     }
 
-    static func boundedCandidates(_ candidates: [LLMTaskCandidate]) -> [LLMTaskCandidate] {
-        boundedDestinationCandidates(tasks: candidates, categories: []).tasks
+    static func completeCandidates(
+        _ candidates: [LLMTaskCandidate]
+    ) -> [LLMTaskCandidate] {
+        completeDestinationCandidates(
+            tasks: candidates,
+            categories: []
+        ).tasks
     }
 
-    static func boundedCategoryCandidates(
+    static func completeCategoryCandidates(
         _ candidates: [LLMCategoryCandidate]
     ) -> [LLMCategoryCandidate] {
-        boundedDestinationCandidates(tasks: [], categories: candidates).categories
+        completeDestinationCandidates(
+            tasks: [],
+            categories: candidates
+        ).categories
     }
 
-    /// Applies one shared count and encoded-byte budget to both destination
-    /// tables. Categories are considered before tasks in every round so an
-    /// available category cannot be displaced by a full task window.
-    static func boundedDestinationCandidates(
+    /// Normalizes, de-duplicates, and deterministically orders the complete
+    /// destination tables without dropping facts to fit a client-side budget.
+    static func completeDestinationCandidates(
         tasks: [LLMTaskCandidate],
         categories: [LLMCategoryCandidate]
     ) -> LLMInboxSuggestionCandidates {
-        let rankedTasks = uniqueRankedTasks(tasks)
-        let rankedCategories = uniqueRankedCategories(categories)
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-
-        var acceptedTasks: [LLMTaskCandidate] = []
-        var acceptedCategories: [LLMCategoryCandidate] = []
-        acceptedTasks.reserveCapacity(min(rankedTasks.count, maximumCandidateCount))
-        acceptedCategories.reserveCapacity(min(rankedCategories.count, maximumCandidateCount))
-        var taskIndex = 0
-        var categoryIndex = 0
-
-        func canAccept(
-            tasks: [LLMTaskCandidate],
-            categories: [LLMCategoryCandidate]
-        ) -> Bool {
-            guard tasks.count + categories.count <= maximumCandidateCount else {
-                return false
-            }
-            let payload = LLMInboxSuggestionCandidates(
-                tasks: tasks,
-                categories: categories
-            )
-            guard let data = try? encoder.encode(payload) else { return false }
-            return data.count <= maximumCandidateJSONByteCount
-        }
-
-        while taskIndex < rankedTasks.count || categoryIndex < rankedCategories.count {
-            guard acceptedTasks.count + acceptedCategories.count < maximumCandidateCount else {
-                break
-            }
-
-            if categoryIndex < rankedCategories.count {
-                let candidate = rankedCategories[categoryIndex].candidate
-                categoryIndex += 1
-                let proposed = acceptedCategories + [candidate]
-                if canAccept(tasks: acceptedTasks, categories: proposed) {
-                    acceptedCategories = proposed
-                }
-            }
-
-            guard acceptedTasks.count + acceptedCategories.count < maximumCandidateCount else {
-                break
-            }
-
-            if taskIndex < rankedTasks.count {
-                let candidate = rankedTasks[taskIndex].candidate
-                taskIndex += 1
-                let proposed = acceptedTasks + [candidate]
-                if canAccept(tasks: proposed, categories: acceptedCategories) {
-                    acceptedTasks = proposed
-                }
-            }
-        }
-
-        return LLMInboxSuggestionCandidates(
-            tasks: acceptedTasks,
-            categories: acceptedCategories
+        LLMInboxSuggestionCandidates(
+            tasks: uniqueRankedTasks(tasks).map(\.candidate),
+            categories: uniqueRankedCategories(categories).map(\.candidate)
         )
     }
 
@@ -184,18 +100,15 @@ nonisolated enum LLMSuggestionInputPolicy {
     }
 
     static func sanitizedSuggestedIcon(_ iconName: String) -> String {
-        let bounded = boundedTrimmedUTF8(
-            iconName,
-            maximumByteCount: maximumIconNameByteCount
-        )
-        return SymbolCatalog.aiSuggestionSymbolNameSet.contains(bounded)
-            ? bounded
+        let normalized = normalizedText(iconName)
+        return SymbolCatalog.symbolNameSet.contains(normalized)
+            ? normalized
             : ChecklistVisualSanitizer.defaultIcon
     }
 
     static func sanitizedSuggestedColor(_ colorHex: String, fallback: String) -> String {
         let candidates = [
-            boundedTrimmedUTF8(colorHex, maximumByteCount: maximumColorByteCount),
+            normalizedText(colorHex),
             fallback,
             ChecklistVisualSanitizer.defaultColor,
         ]
@@ -263,30 +176,20 @@ nonisolated enum LLMSuggestionInputPolicy {
     }
 
     private static func normalizedCandidate(_ candidate: LLMTaskCandidate) -> RankedCandidate? {
-        let title = boundedTrimmedUTF8(
-            candidate.title,
-            maximumByteCount: maximumCandidateTitleByteCount
-        )
+        let title = normalizedText(candidate.title)
         guard !title.isEmpty else { return nil }
-        let boundedPath = boundedTrimmedUTF8(
-            candidate.path,
-            maximumByteCount: maximumCandidatePathByteCount
-        )
-        let path = boundedPath.isEmpty ? title : boundedPath
-        let boundedIcon = boundedTrimmedUTF8(
-            candidate.iconName,
-            maximumByteCount: maximumIconNameByteCount
-        )
-        let boundedColor = boundedTrimmedUTF8(
-            candidate.colorHex,
-            maximumByteCount: maximumColorByteCount
-        )
+        let normalizedPath = normalizedText(candidate.path)
+        let path = normalizedPath.isEmpty ? title : normalizedPath
         let normalized = LLMTaskCandidate(
             id: candidate.id,
             title: title,
             path: path,
-            iconName: ChecklistVisualSanitizer.sanitizedIcon(boundedIcon),
-            colorHex: ChecklistVisualSanitizer.sanitizedColor(boundedColor)
+            iconName: ChecklistVisualSanitizer.sanitizedIcon(
+                candidate.iconName
+            ),
+            colorHex: ChecklistVisualSanitizer.sanitizedColor(
+                candidate.colorHex
+            )
         )
         return RankedCandidate(
             candidate: normalized,
@@ -320,25 +223,18 @@ nonisolated enum LLMSuggestionInputPolicy {
     private static func normalizedCategoryCandidate(
         _ candidate: LLMCategoryCandidate
     ) -> RankedCategoryCandidate? {
-        let title = boundedTrimmedUTF8(
-            candidate.title,
-            maximumByteCount: maximumCandidateTitleByteCount
-        )
+        let title = normalizedText(candidate.title)
         guard !title.isEmpty else { return nil }
-        let boundedIcon = boundedTrimmedUTF8(
-            candidate.iconName,
-            maximumByteCount: maximumIconNameByteCount
-        )
-        let boundedColor = boundedTrimmedUTF8(
-            candidate.colorHex,
-            maximumByteCount: maximumColorByteCount
-        )
         return RankedCategoryCandidate(
             candidate: LLMCategoryCandidate(
                 id: candidate.id,
                 title: title,
-                iconName: ChecklistVisualSanitizer.sanitizedIcon(boundedIcon),
-                colorHex: ChecklistVisualSanitizer.sanitizedColor(boundedColor)
+                iconName: ChecklistVisualSanitizer.sanitizedIcon(
+                    candidate.iconName
+                ),
+                colorHex: ChecklistVisualSanitizer.sanitizedColor(
+                    candidate.colorHex
+                )
             ),
             titleKey: title.lowercased()
         )
@@ -361,5 +257,9 @@ nonisolated enum LLMSuggestionInputPolicy {
             return lhs.candidate.colorHex < rhs.candidate.colorHex
         }
         return lhs.candidate.id.uuidString < rhs.candidate.id.uuidString
+    }
+
+    private static func normalizedText(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

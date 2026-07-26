@@ -156,8 +156,6 @@ struct LLMTaskPlanService {
     typealias Transport = (URLRequest) async throws -> (Data, URLResponse)
     typealias StreamingTransport = (URLRequest) -> AsyncThrowingStream<LLMGenerationStreamEvent, Error>
 
-    static let maximumRequestByteCount = 4 * 1024
-    static let maximumInstructionsByteCount = 4 * 1024
     /// Byte budgets bound the response, not the plan: arbitrary category,
     /// task, or checklist counts are not rejected. Structural validation
     /// (references, cycles, depth, fields) still applies.
@@ -340,14 +338,12 @@ struct LLMTaskPlanService {
         let prompt = AITaskPlanPromptEnvelope(
             instructions: preparedInstructions,
             request: preparedRequest,
-            allowedSymbols: SymbolCatalog.aiSuggestionSymbolNames,
+            allowedSymbols: SymbolCatalog.symbolNames,
             allowedColors: TaskColorPalette.hexValues
         )
         let promptData = try JSONEncoder().encode(prompt)
-        guard promptData.count <= LLMSuggestionInputPolicy.maximumPromptByteCount,
-              let promptJSON = String(data: promptData, encoding: .utf8)
-        else {
-            throw LLMTaskPlanServiceError.requestTooLarge
+        guard let promptJSON = String(data: promptData, encoding: .utf8) else {
+            throw LLMTaskPlanServiceError.invalidResponse
         }
 
         let body = try JSONEncoder().encode(
@@ -363,10 +359,6 @@ struct LLMTaskPlanService {
                 streamOptions: stream ? .init(includeUsage: true) : nil
             )
         )
-        guard body.count <= LLMSuggestionInputPolicy.maximumRequestBodyByteCount else {
-            throw LLMTaskPlanServiceError.requestTooLarge
-        }
-
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
         // Streaming reads treat this as the idle gap between frames; long
@@ -614,9 +606,6 @@ private extension LLMTaskPlanService {
         guard !prepared.isEmpty else {
             throw LLMTaskPlanServiceError.missingRequest
         }
-        guard prepared.utf8.count <= maximumRequestByteCount else {
-            throw LLMTaskPlanServiceError.requestTooLarge
-        }
         return prepared
     }
 
@@ -636,10 +625,7 @@ private extension LLMTaskPlanService {
     }
 
     static func preparedModelID(_ value: String) -> String {
-        LLMSuggestionInputPolicy.boundedTrimmedUTF8(
-            value,
-            maximumByteCount: LLMSuggestionInputPolicy.maximumModelIDByteCount
-        )
+        AppPreferenceValueSanitizer.llmModelID(value)
     }
 
     static func uniqueReferences(_ values: [String]) throws -> [String] {

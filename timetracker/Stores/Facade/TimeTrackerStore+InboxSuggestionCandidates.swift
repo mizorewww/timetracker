@@ -1,14 +1,7 @@
 import Foundation
 
 extension TimeTrackerStore {
-    func llmTaskCandidates(
-        maximumCount: Int = LLMSuggestionInputPolicy.maximumCandidateCount
-    ) -> [LLMTaskCandidate] {
-        let candidateLimit = min(
-            max(0, maximumCount),
-            LLMSuggestionInputPolicy.maximumCandidateCount
-        )
-        guard candidateLimit > 0 else { return [] }
+    func llmTaskCandidates() -> [LLMTaskCandidate] {
         let availableTasks = tasks.filter(isTaskEligibleAsParent)
         var pinnedIDs = Set<UUID>()
         let pinnedTasks: [TaskNode] = preferences.quickStartTaskIDs.compactMap {
@@ -23,7 +16,7 @@ extension TimeTrackerStore {
         }
         let frequentTasks = frequentRecentTasks(
             excluding: pinnedIDs,
-            limit: candidateLimit
+            limit: availableTasks.count
         )
         let priorityIDs = Set((pinnedTasks + frequentTasks).map(\.id))
         let remainingTasks = availableTasks
@@ -41,30 +34,25 @@ extension TimeTrackerStore {
                 }
                 return lhs.id.uuidString < rhs.id.uuidString
             }
-        let candidateWindow = (pinnedTasks + frequentTasks + remainingTasks)
-            .prefix(candidateLimit)
 
-        return LLMSuggestionInputPolicy.boundedCandidates(
-            candidateWindow.map { task in
+        return LLMSuggestionInputPolicy.completeCandidates(
+            (pinnedTasks + frequentTasks + remainingTasks).map { task in
                 LLMTaskCandidate(
                     id: task.id,
                     title: task.title,
                     path: taskPath(for: task),
-                    iconName: ChecklistVisualSanitizer.sanitizedIcon(task.iconName),
-                    colorHex: ChecklistVisualSanitizer.sanitizedColor(task.colorHex)
+                    iconName: ChecklistVisualSanitizer.sanitizedIcon(
+                        task.iconName
+                    ),
+                    colorHex: ChecklistVisualSanitizer.sanitizedColor(
+                        task.colorHex
+                    )
                 )
             }
         )
     }
 
-    func llmCategoryCandidates(
-        maximumCount: Int = LLMSuggestionInputPolicy.maximumCandidateCount
-    ) -> [LLMCategoryCandidate] {
-        let candidateLimit = min(
-            max(0, maximumCount),
-            LLMSuggestionInputPolicy.maximumCandidateCount
-        )
-        guard candidateLimit > 0 else { return [] }
+    func llmCategoryCandidates() -> [LLMCategoryCandidate] {
         let availableCategories = taskCategories
             .visibleDeduplicatedByID()
             .sorted { lhs, rhs in
@@ -81,53 +69,29 @@ extension TimeTrackerStore {
                 }
                 return lhs.id.uuidString < rhs.id.uuidString
             }
-            .prefix(candidateLimit)
             .map { category in
                 LLMCategoryCandidate(
                     id: category.id,
                     title: category.title,
                     iconName: ChecklistVisualSanitizer.sanitizedIcon(
-                        category.iconName ?? ChecklistVisualSanitizer.defaultIcon
+                        category.iconName ??
+                            ChecklistVisualSanitizer.defaultIcon
                     ),
                     colorHex: ChecklistVisualSanitizer.sanitizedColor(
-                        category.colorHex ?? ChecklistVisualSanitizer.defaultColor
+                        category.colorHex ??
+                            ChecklistVisualSanitizer.defaultColor
                     )
                 )
             }
-        return LLMSuggestionInputPolicy.boundedCategoryCandidates(
-            Array(availableCategories)
+        return LLMSuggestionInputPolicy.completeCategoryCandidates(
+            availableCategories
         )
     }
 
     func llmInboxSuggestionCandidates() -> LLMInboxSuggestionCandidates {
-        let maximumCount = LLMSuggestionInputPolicy.maximumCandidateCount
-        let balancedCount = maximumCount / 2
-        let availableTaskCount = llmTaskCandidates(
-            maximumCount: maximumCount
-        ).count
-        let availableCategoryCount = llmCategoryCandidates(
-            maximumCount: maximumCount
-        ).count
-        var taskCount = min(availableTaskCount, balancedCount)
-        var categoryCount = min(availableCategoryCount, balancedCount)
-        var remainingCount = maximumCount - taskCount - categoryCount
-
-        let additionalTaskCount = min(
-            remainingCount,
-            availableTaskCount - taskCount
-        )
-        taskCount += additionalTaskCount
-        remainingCount -= additionalTaskCount
-        categoryCount += min(
-            remainingCount,
-            availableCategoryCount - categoryCount
-        )
-
-        let categories = llmCategoryCandidates(maximumCount: categoryCount)
-        let tasks = llmTaskCandidates(maximumCount: taskCount)
-        return LLMSuggestionInputPolicy.boundedDestinationCandidates(
-            tasks: tasks,
-            categories: categories
+        LLMSuggestionInputPolicy.completeDestinationCandidates(
+            tasks: llmTaskCandidates(),
+            categories: llmCategoryCandidates()
         )
     }
 }

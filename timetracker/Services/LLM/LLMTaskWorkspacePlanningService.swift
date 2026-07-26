@@ -324,12 +324,6 @@ private extension LLMTaskWorkspacePlanningService {
         guard preparedRequest.isEmpty == false else {
             throw LLMTaskPlanServiceError.missingRequest
         }
-        guard preparedRequest.utf8.count <=
-            LLMTaskPlanService.maximumRequestByteCount
-        else {
-            throw LLMTaskPlanServiceError.requestTooLarge
-        }
-
         let preparedInstructions: String
         do {
             preparedInstructions = try AppPreferenceValueSanitizer
@@ -370,11 +364,8 @@ private extension LLMTaskWorkspacePlanningService {
             throw LLMModelServiceError.invalidEndpoint
         }
 
-        let preparedModelID = LLMSuggestionInputPolicy.boundedTrimmedUTF8(
-            modelID,
-            maximumByteCount:
-            LLMSuggestionInputPolicy.maximumModelIDByteCount
-        )
+        let preparedModelID =
+            AppPreferenceValueSanitizer.llmModelID(modelID)
         guard preparedModelID.isEmpty == false else {
             throw LLMTaskPlanServiceError.missingModel
         }
@@ -397,7 +388,7 @@ private extension LLMTaskWorkspacePlanningService {
             instructions: instructions,
             request: request,
             workspace: workspace,
-            allowedSymbols: SymbolCatalog.aiSuggestionSymbolNames,
+            allowedSymbols: SymbolCatalog.symbolNames,
             allowedColors: TaskColorPalette.hexValues
         )
         let encoder = JSONEncoder()
@@ -407,8 +398,8 @@ private extension LLMTaskWorkspacePlanningService {
         guard let result = String(data: data, encoding: .utf8) else {
             throw LLMTaskWorkspacePlanningError.invalidResponse
         }
-        // The complete canonical workspace is intentionally not projected
-        // through the Inbox/checklist 24 KiB prompt or 64 KiB body budgets.
+        // The provider receives the complete canonical workspace, instructions,
+        // request, and symbol catalogue without a smaller client projection.
         return result
     }
 

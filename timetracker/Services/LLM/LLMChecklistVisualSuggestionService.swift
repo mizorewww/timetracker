@@ -131,9 +131,6 @@ struct LLMChecklistVisualSuggestionService {
                 responseFormat: .init(type: "json_object")
             )
         )
-        guard body.count <= LLMSuggestionInputPolicy.maximumRequestBodyByteCount else {
-            throw LLMInboxSuggestionServiceError.requestTooLarge
-        }
         request.httpBody = body
         return request
     }
@@ -149,10 +146,7 @@ struct LLMChecklistVisualSuggestionService {
                 fallback: ChecklistVisualSanitizer.defaultColor
             ),
             reason: LLMSuggestionInputPolicy.sanitizedReason(payload.reason),
-            modelID: LLMSuggestionInputPolicy.boundedTrimmedUTF8(
-                modelID,
-                maximumByteCount: LLMSuggestionInputPolicy.maximumModelIDByteCount
-            )
+            modelID: AppPreferenceValueSanitizer.llmModelID(modelID)
         )
     }
 
@@ -165,14 +159,12 @@ struct LLMChecklistVisualSuggestionService {
             checklistTitle: input.checklistTitle,
             taskTitle: input.taskTitle,
             taskPath: input.taskPath,
-            allowedSymbols: SymbolCatalog.aiSuggestionSymbolNames,
+            allowedSymbols: SymbolCatalog.symbolNames,
             allowedColors: TaskColorPalette.hexValues
         )
         let data = try JSONEncoder().encode(payload)
-        guard data.count <= LLMSuggestionInputPolicy.maximumPromptByteCount,
-              let json = String(data: data, encoding: .utf8)
-        else {
-            throw LLMInboxSuggestionServiceError.requestTooLarge
+        guard let json = String(data: data, encoding: .utf8) else {
+            throw LLMInboxSuggestionServiceError.invalidResponse
         }
         return json
     }

@@ -117,7 +117,7 @@ final class LiveDeepSeekTaskWorkspaceTests: XCTestCase {
         )
         XCTAssertFalse(result.reason.isEmpty)
         XCTAssertTrue(
-            SymbolCatalog.aiSuggestionSymbolNameSet.contains(result.iconName)
+            SymbolCatalog.symbolNameSet.contains(result.iconName)
         )
         XCTAssertTrue(TaskColorPalette.hexValues.contains(result.colorHex))
         XCTAssertEqual(result.modelID, configuration.modelID)
@@ -137,7 +137,7 @@ final class LiveDeepSeekTaskWorkspaceTests: XCTestCase {
         )
 
         XCTAssertTrue(
-            SymbolCatalog.aiSuggestionSymbolNameSet.contains(result.iconName)
+            SymbolCatalog.symbolNameSet.contains(result.iconName)
         )
         XCTAssertTrue(TaskColorPalette.hexValues.contains(result.colorHex))
         XCTAssertFalse(result.reason.isEmpty)

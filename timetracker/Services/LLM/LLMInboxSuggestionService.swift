@@ -188,9 +188,6 @@ struct LLMInboxSuggestionService {
                 responseFormat: .init(type: "json_object")
             )
         )
-        guard body.count <= LLMSuggestionInputPolicy.maximumRequestBodyByteCount else {
-            throw LLMInboxSuggestionServiceError.requestTooLarge
-        }
         request.httpBody = body
         return request
     }
@@ -220,16 +217,16 @@ struct LLMInboxSuggestionService {
         categoryCandidates: [LLMCategoryCandidate],
         modelID: String
     ) throws -> LLMInboxSuggestionResult {
-        let boundedCandidates = LLMSuggestionInputPolicy.boundedDestinationCandidates(
+        let completeCandidates = LLMSuggestionInputPolicy.completeDestinationCandidates(
             tasks: taskCandidates,
             categories: categoryCandidates
         )
-        let taskCandidateByID = boundedCandidates.tasks.reduce(
+        let taskCandidateByID = completeCandidates.tasks.reduce(
             into: [UUID: LLMTaskCandidate]()
         ) { result, candidate in
             result[candidate.id] = candidate
         }
-        let categoryCandidateByID = boundedCandidates.categories.reduce(
+        let categoryCandidateByID = completeCandidates.categories.reduce(
             into: [UUID: LLMCategoryCandidate]()
         ) { result, candidate in
             result[candidate.id] = candidate
@@ -276,10 +273,7 @@ struct LLMInboxSuggestionService {
             reason: reason,
             iconName: iconName,
             colorHex: colorHex,
-            modelID: LLMSuggestionInputPolicy.boundedTrimmedUTF8(
-                modelID,
-                maximumByteCount: LLMSuggestionInputPolicy.maximumModelIDByteCount
-            )
+            modelID: AppPreferenceValueSanitizer.llmModelID(modelID)
         )
     }
 
@@ -290,16 +284,14 @@ struct LLMInboxSuggestionService {
         let payload = PromptPayload(
             instructions: instructions,
             inboxTitle: input.inboxTitle,
-            allowedSymbols: SymbolCatalog.aiSuggestionSymbolNames,
+            allowedSymbols: SymbolCatalog.symbolNames,
             allowedColors: TaskColorPalette.hexValues,
             tasks: input.taskCandidates,
             categories: input.categoryCandidates
         )
         let data = try JSONEncoder().encode(payload)
-        guard data.count <= LLMSuggestionInputPolicy.maximumPromptByteCount,
-              let json = String(data: data, encoding: .utf8)
-        else {
-            throw LLMInboxSuggestionServiceError.requestTooLarge
+        guard let json = String(data: data, encoding: .utf8) else {
+            throw LLMInboxSuggestionServiceError.invalidResponse
         }
         return json
     }

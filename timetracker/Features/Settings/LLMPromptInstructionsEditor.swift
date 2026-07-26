@@ -47,7 +47,8 @@ struct LLMPromptInstructionsEditor: View {
 
     private var byteCount: Int {
         if let normalizedDraft {
-            return normalizedDraft.utf8.count
+            return AppPreferenceValueSanitizer
+                .llmPromptInstructionsStoredByteCount(normalizedDraft)
         }
         if case let .some(.byteLimitExceeded(actual, _)) = validationError {
             return actual
@@ -195,7 +196,7 @@ struct LLMPromptInstructionsEditor: View {
                             spacing: 8
                         ) {
                             ForEach(
-                                SymbolCatalog.aiSuggestionSymbolNames,
+                                SymbolCatalog.symbolNames,
                                 id: \.self
                             ) { symbol in
                                 Image(systemName: symbol)

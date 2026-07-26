@@ -1,6 +1,6 @@
 # 59：Inbox AI 完整上下文与任务增删改查实现记忆
 
-状态：进行中
+状态：已完成
 反馈来源：`Docs/userfeedback.md` 中 Inbox AI 无法复用已有 Category、需要完整上下文并把增删改查作为工具调用的子项。
 
 ## 当前阶段
@@ -10,7 +10,7 @@
 - [x] 先定义完整任务树上下文、稳定身份和 CRUD 工具调用的行为契约与失败测试。
 - [x] 实现最小安全变更，复用既有 Commands / Repositories / SwiftData 分层。
 - [x] 验证 AI harness、持久化命令、普通字号 UI 预览及三平台行为。
-- [~] 提交小 checkpoint，执行 Release 全设备安装，标记反馈完成并移除活动链接。
+- [x] 提交小 checkpoint，执行 Release 全设备安装，标记反馈完成并移除活动链接。
 
 ## 唯一范围
 
@@ -39,7 +39,7 @@
 - [x] Checkpoint A：领取、现状/历史/测试/库审计、行为契约。
 - [x] Checkpoint B：失败测试、结构化工具协议和安全命令执行。
 - [x] Checkpoint C：UI 预览/确认、回归验证、文档与小提交。
-- [~] Checkpoint D：跨平台验收、Release 全设备安装和反馈收口。
+- [x] Checkpoint D：跨平台验收、Release 全设备安装和反馈收口。
 
 ## 子代理编排
 
@@ -261,3 +261,17 @@
   Foundation/Codable、CryptoKit SHA-256、SwiftData 与 hardened transport。
   MacPaw/OpenAI、官方 MCP Swift SDK、Swift OpenAPI 和 FoundationModels 均完成
   质量/适配审计，但没有为了依赖数量而替换已验证的安全传输与本地事务边界。
+
+## Checkpoint D Release 安装与收口
+
+- 实现/复核 checkpoint 已提交为 `06f1daeb`。
+- `CONFIGURATION=Release make build-install-all` 完整成功：
+  - Release iOS/iPadOS app 已安装到 iPad Pro M4
+    (`748D0137-ADC3-58AF-855C-1E98B3125F93`)；
+  - Release iOS app 已安装到 iPhone Air
+    (`FBA36694-D841-56D4-8ED6-21942873B21B`)；
+  - iOS 包确认嵌入 `me.mezorewww.timetracker.watchkitapp`，配对 Watch 在
+    Automatic App Install 开启时安装 companion；
+  - Release macOS app 已复制到 `/Applications/timetracker.app`，磁盘签名与
+    Designated Requirement 验证通过。
+- 反馈状态改为 `[x]`，活动链接移除；本记忆保留为后续回归与编排依据。

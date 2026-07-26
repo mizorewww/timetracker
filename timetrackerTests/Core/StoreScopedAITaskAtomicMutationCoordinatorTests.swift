@@ -353,6 +353,63 @@ struct StoreScopedAITaskAtomicMutationCoordinatorTests {
             ] == nil
         )
     }
+
+    @Test
+    func replayPreflightRejectsDepthSevenBeforeAnyWrite() throws {
+        let context = try makeTestContext()
+        let fixture = try seedWorkspace(in: context)
+        var checkpoints: [AITaskAtomicMutationCheckpoint] = []
+        let command = coordinator(
+            container: context.container,
+            checkpoint: { checkpoints.append($0) }
+        )
+        let baseline = try command.captureBaseline()
+        var operations: [AITaskWorkspaceOperation] = []
+        var parentID = fixture.rootTaskID
+        var path = "Root"
+        var proposedIDs: [UUID] = []
+
+        for depth in 1 ... 7 {
+            let taskID = UUID()
+            proposedIDs.append(taskID)
+            path += " / Depth \(depth)"
+            operations.append(
+                .createTask(
+                    AITaskWorkspaceTask(
+                        id: taskID,
+                        title: "Depth \(depth)",
+                        parentID: parentID,
+                        categoryID: nil,
+                        path: path,
+                        notes: "",
+                        estimatedMinutes: nil,
+                        dueAt: nil,
+                        iconName: "checkmark.circle",
+                        colorHex: "1677FF",
+                        sortOrder: 10,
+                        isArchived: false
+                    )
+                )
+            )
+            parentID = taskID
+        }
+
+        #expect(throws: AITaskWorkspaceOverlayError.depthExceeded) {
+            try command.apply(
+                AITaskAtomicMutationPlan(
+                    baseline: baseline,
+                    operations: operations
+                )
+            )
+        }
+        #expect(checkpoints.isEmpty)
+
+        let fresh = ModelContext(context.container)
+        let persistedIDs = try Set(
+            fresh.fetch(FetchDescriptor<TaskNode>()).map(\.id)
+        )
+        #expect(proposedIDs.allSatisfy { persistedIDs.contains($0) == false })
+    }
 }
 
 private extension StoreScopedAITaskAtomicMutationCoordinatorTests {

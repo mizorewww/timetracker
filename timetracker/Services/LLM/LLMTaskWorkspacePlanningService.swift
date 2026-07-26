@@ -24,35 +24,63 @@ nonisolated enum LLMTaskWorkspacePlanningError:
     case mixedFinalizeCall
     case toolRoundLimitExceeded
     case toolCallLimitExceeded
+    case workspaceRequestRejected(
+        statusCode: Int,
+        categoryCount: Int,
+        taskCount: Int,
+        checklistItemCount: Int,
+        requestByteCount: Int
+    )
 
     var errorDescription: String? {
         switch self {
         case .invalidResponse:
-            AppStrings.localized("aiTaskPlan.error.invalidToolResponse")
+            Self.localized("aiTaskPlan.error.invalidToolResponse")
         case .toolCallRequired:
-            AppStrings.localized("aiTaskPlan.error.toolCallRequired")
+            Self.localized("aiTaskPlan.error.toolCallRequired")
         case let .unknownTool(name):
             String.localizedStringWithFormat(
-                AppStrings.localized("aiTaskPlan.error.unknownTool"),
+                Self.localized("aiTaskPlan.error.unknownTool"),
                 name
             )
         case let .invalidToolArguments(name):
             String.localizedStringWithFormat(
-                AppStrings.localized("aiTaskPlan.error.invalidToolArguments"),
+                Self.localized("aiTaskPlan.error.invalidToolArguments"),
                 name
             )
         case let .duplicateToolCallID(id):
             String.localizedStringWithFormat(
-                AppStrings.localized("aiTaskPlan.error.duplicateToolCall"),
+                Self.localized("aiTaskPlan.error.duplicateToolCall"),
                 id
             )
         case .mixedFinalizeCall:
-            AppStrings.localized("aiTaskPlan.error.mixedFinalize")
+            Self.localized("aiTaskPlan.error.mixedFinalize")
         case .toolRoundLimitExceeded:
-            AppStrings.localized("aiTaskPlan.error.toolRoundLimit")
+            Self.localized("aiTaskPlan.error.toolRoundLimit")
         case .toolCallLimitExceeded:
-            AppStrings.localized("aiTaskPlan.error.toolCallLimit")
+            Self.localized("aiTaskPlan.error.toolCallLimit")
+        case let .workspaceRequestRejected(
+            statusCode,
+            categoryCount,
+            taskCount,
+            checklistItemCount,
+            requestByteCount
+        ):
+            String.localizedStringWithFormat(
+                Self.localized(
+                    "aiTaskPlan.error.workspaceRequestRejected"
+                ),
+                statusCode,
+                categoryCount,
+                taskCount,
+                checklistItemCount,
+                requestByteCount
+            )
         }
+    }
+
+    private static func localized(_ key: String) -> String {
+        NSLocalizedString(key, comment: "")
     }
 }
 
@@ -122,12 +150,36 @@ struct LLMTaskWorkspacePlanningService {
                 modelID: prepared.modelID,
                 messages: messages
             )
-            let (data, urlResponse) = try await transport(urlRequest)
+            let data: Data
+            let urlResponse: URLResponse
+            do {
+                (data, urlResponse) = try await transport(urlRequest)
+            } catch let error as LLMModelServiceError {
+                if case let .responseStatus(statusCode) = error,
+                   Self.isWorkspaceRequestRejection(statusCode)
+                {
+                    throw Self.workspaceRequestRejected(
+                        statusCode: statusCode,
+                        workspace: workspace,
+                        request: urlRequest
+                    )
+                }
+                throw error
+            }
             try Task.checkCancellation()
             guard let httpResponse = urlResponse as? HTTPURLResponse else {
                 throw LLMTaskWorkspacePlanningError.invalidResponse
             }
             guard (200 ..< 300).contains(httpResponse.statusCode) else {
+                if Self.isWorkspaceRequestRejection(
+                    httpResponse.statusCode
+                ) {
+                    throw Self.workspaceRequestRejected(
+                        statusCode: httpResponse.statusCode,
+                        workspace: workspace,
+                        request: urlRequest
+                    )
+                }
                 throw LLMModelServiceError.responseStatus(
                     httpResponse.statusCode
                 )
@@ -409,6 +461,24 @@ private extension LLMTaskWorkspacePlanningService {
             throw LLMTaskWorkspacePlanningError.invalidResponse
         }
         return response
+    }
+
+    static func workspaceRequestRejected(
+        statusCode: Int,
+        workspace: AITaskWorkspaceSnapshot,
+        request: URLRequest
+    ) -> LLMTaskWorkspacePlanningError {
+        .workspaceRequestRejected(
+            statusCode: statusCode,
+            categoryCount: workspace.categories.count,
+            taskCount: workspace.tasks.count,
+            checklistItemCount: workspace.checklistItems.count,
+            requestByteCount: request.httpBody?.count ?? 0
+        )
+    }
+
+    static func isWorkspaceRequestRejection(_ statusCode: Int) -> Bool {
+        statusCode == 400 || statusCode == 413 || statusCode == 422
     }
 
     static func validatedChoice(

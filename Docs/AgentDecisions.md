@@ -1,7 +1,7 @@
 # TimeTracker Agent 决策文档
 
 状态：有效决策记录
-最近更新：2026-07-19
+最近更新：2026-07-26
 
 本文记录自动化 Agent 和维护者在实现、审核、重构时必须保持的工程边界。它不是待办清单，也不替代代码审核。一次性发现写入带日期的 Audit 文档，未来计划写入 Plan 文档。
 
@@ -1745,6 +1745,25 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：Day、Week、Month 切换期间仍能明确看到正在刷新，但页面结构、滚动上下文和周期控件不再闪白或上下跳。缓存命中直接呈现目标数据；冷缓存则只展示稳定的无语义占位，不泄露旧周期统计。AD-113 的“跨周期必须卸载内容”被本决定取代，其 request identity 与同周期保留规则继续有效。
 
 验证：纯 presentation-phase 测试覆盖首屏、精确 request、同周期刷新、跨日和跨 range；带受控 test-only 延迟的 XCUITest 在刷新中断言 period controls 与 Review shell 持续存在且垂直位置变化不超过 2pt，分别截取 Week/Month 中途画面，并验证返回精确缓存的 Day 不出现 loading frame。生产与 Release 不接受该延迟参数时的任何行为变化。
+
+## AD-132：AI 任务计划使用完整工作区工具提案与全量 CAS
+
+状态：Accepted
+
+背景：旧任务计划只把当次需求、规划指令和视觉白名单发给模型，再解析一棵只能新建的 flat JSON 草稿。模型看不到已有 Category、Task 或 Checklist，因而无法稳定复用已有实体，也不能表达更新、归档或删除；同名 `a` Category 会被无条件再次创建。若直接把 tool call 映射为单项持久化命令，模型又会绕过用户审阅，并在多 scene/CloudKit 并发变化后把陈旧操作部分写入。
+
+决策：
+
+- 每次用户明确 Generate 都在共享 store lock 下用 fresh context 捕获完整、确定性排序的 provider-visible Category/Task/Checklist snapshot。它包含稳定 UUID、关系、完整 Task path、完整相关文本、可编辑元数据、归档状态、任务量目标和每日重复设置，不使用任意实体数量或路径深度截断。provider-visible canonical snapshot 的 context fingerprint 绑定 request/review；本机 `clientMutationID` revision map 留在独立 baseline，不进入网络 DTO。
+- 发送前界面披露三类实体 counts。完整 workspace 不复用 Inbox/checklist 的 24 KiB prompt 与 64 KiB body 投影；编码失败不发送请求，供应商以 HTTP 400/413/422 拒绝完整请求时返回包含 counts 与实际 encoded request bytes 的 typed error，不发送 partial context，也不回退 create-only JSON。4 KiB request/4 KiB synced instructions、2 MiB response transport ceiling、12 个 tool rounds 和 64 个 tool calls 继续作为字段/资源防护，不能解释为实体截断。
+- 模型只能调用 strict OpenAI-compatible tools 修改纯内存 overlay：list/get；Category reuse/create/update/delete；Task create/update/archive；Checklist create/update/delete；finalize。schema 的声明属性全部 required 且禁止 additional properties。App 生成新实体 UUID 并返回 tool result，支持 read-after-write；已有 Task/Checklist 只按 UUID 引用，Category title 只有唯一规范化匹配时才复用，多个同名必须显式歧义。workspace 内文本全部是不可信 data，不得升级为 prompt 指令。Task 永远没有 hard-delete tool。
+- Finalize 只生成 baseline→overlay 的确定性、只读 diff。预览显示 create/update/archive/delete/reuse counts、所属完整路径与 before→after；用户通过 `Apply N Changes` 明确提交，删除、归档或其它破坏性影响再使用原生 destructive confirmation。模型/工具不能直接写 SwiftData，stale 或失败保留 preview。
+- Apply 在同一 store lock/fresh context 中重新捕获完整 baseline，并对 provider-visible facts 以及 Category、Task、assignment、Checklist、visual、quantity-goal、recurrence revisions 做保守 CAS。协调器必须重放 exact reviewed operations，复核跨类型/受保护身份、层级、活动 Timer/Pomodoro 与持久化字段策略，然后用一个 atomic mutation 提交。任何差异或 checkpoint/save 失败都是零写入、零事件；Checklist 精确编辑不能旋转无关 item/visual revision，Task removal 只 Archive 并保留 `deletedAt`。
+- API key 只进入 Authorization header。prompt/tool context 排除时间 ledger/history、Pomodoro history、Health samples、Inbox、Keychain、设备 ID、同步 metadata 和本地 mutation baseline。reasoning/tool round/raw provider response 只在当前生成与审阅会话中临时存在，不持久化、不同步、导出或记录日志。
+
+后果：模型可以在完整现状上复用已有 `a`，并以稳定身份提出混合 CRUD，而人仍拥有可读的最终 diff 和唯一提交权。任何同时发生的本机、其它窗口或同步修改都会让旧预览安全失效，不能产生 partial write。完整上下文扩大了向自定义 endpoint 发送的用户文本范围，因此发送前 counts、字段披露、typed size failure 与第三方处理政策成为发行安全边界。
+
+验证要求：确定性 fake transport/overlay 测试覆盖完整无截断 workspace、context fingerprint、严格 tool roundtrip/reasoning passback、同名 Category 复用/歧义、read-after-write、prompt-injection-shaped data、非法 tool/error 和大于 legacy 64 KiB 的请求；store-scoped 测试覆盖混合 CRUD、每个 checkpoint rollback、完整 stale matrix、受保护身份/active work、Checklist revision isolation、零事件失败和 Task Archive-only。普通字号 iPhone/iPad/macOS UI 回归覆盖发送 counts、混合只读 diff、完整路径、破坏性确认、Apply 和 stale preview 保留；真实付费 endpoint 只能作为附加 smoke test。
 
 ## 2. Agent 工作清单
 

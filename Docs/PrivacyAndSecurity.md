@@ -1,7 +1,7 @@
 # TimeTracker 隐私与安全说明
 
 状态：工程级数据流说明，非法律隐私政策
-校对日期：2026-07-25
+校对日期：2026-07-26
 
 本文说明仓库当前实现如何存储和传输数据，并列出发行前安全门禁。最终上架文案仍需根据实际发行地区、服务方和 App Store 隐私申报单独审核。
 
@@ -9,7 +9,7 @@
 
 | 数据 | 本机存储 | 可能传输到 | 导出 |
 | --- | --- | --- | --- |
-| 任务、分类、收件箱、清单 | SwiftData | 用户的 CloudKit；启用 AI 时的部分字段发送到配置的 LLM 服务 | JSON |
+| 任务、分类、收件箱、清单 | SwiftData | 用户的 CloudKit；启用建议时发送必要投影，明确生成任务计划时发送完整的当前 Category/Task/Checklist 工作区到配置的 LLM 服务 | JSON |
 | 时间片、番茄记录 | SwiftData | 用户的 CloudKit；Watch/Live Activity 使用必要状态投影 | JSON |
 | 重复任务规则、每日生成回执、任务量目标与增量记录 | SwiftData | 用户的 CloudKit | JSON；旧快照缺少该表表示未知，显式空数组才表示清空 |
 | 普通设置 | SwiftData / UserDefaults | 部分偏好通过 CloudKit 同步；iCloud enablement 仅限当前设备 | JSON 中的可同步偏好，不含设备本地开关 |
@@ -85,15 +85,24 @@ Checklist 标题与所属任务标题各最多 512 UTF-8 bytes，任务显示路
 
 ### 任务计划生成
 
-请求只在用户从任务页填写需求并明确点按“生成”后发出，可能包含：
+请求只在用户从任务页填写需求并明确点按“生成”后发出。Request 页会先显示当前 Category、Task 和 Checklist 的准确数量。发送内容包括：
 
 - 用户当次输入的计划需求，最多 4 KiB UTF-8 bytes。
 - “任务规划指令”设置，最多 4 KiB UTF-8 bytes。它是可同步、可导出的普通偏好，不是秘密；不应填写密码或 API key。
 - 允许模型使用的精选系统图标名和颜色列表。
+- 完整的 provider-visible 当前工作区，不按任意实体数量或 Task path 深度静默截断：
+  - Category：稳定 UUID、完整标题、图标、颜色、是否计入预测和排序。
+  - Task：稳定 UUID、完整标题与备注、完整父级路径、parent/category 关系、预计时长、截止时间、图标、颜色、排序、归档状态、任务量目标和每日重复设置。
+  - Checklist：稳定 UUID、所属 Task UUID、完整标题、完成状态、图标、颜色和排序。
+- 上述 canonical provider snapshot 的确定性 `contextFingerprint`。它只指纹化同一份会发送的工作区内容，用于把请求与审阅绑定在一起；不包含额外的本机事实或 revision baseline。
 
-请求不包含现有任务库、历史时间记录、Inbox 或 checklist 内容。固定 system contract 要求模型只返回分类、任务和 checklist 的 flat JSON 草稿；响应正文在服务层限制为 512 KiB，并校验引用、层级、字段合法性与最大任务深度 6；不设分类、任务或清单数量上限，忠实的大计划按字节预算接受。通过校验的结果只进入本机可编辑预览；用户点按“创建”后才在一个 SwiftData 事务中新增事实。该流程不会自动修改、删除或覆盖既有任务，任一步失败都不留下半份计划。
+工作区 prompt 不包含 Inbox 内容、时间片/时间历史、Pomodoro 历史、Health samples、Keychain 数据、设备 ID、同步 metadata 或任何 `clientMutationID`。API key 不进入 prompt 或工具结果，但会按配置作为 Authorization header 发给 endpoint。Category/Task/Checklist 的本地 revision map 与完整 CAS baseline 只留在内存中，绝不编码到 provider DTO。
 
-两类建议和任务计划生成的 user prompt 最多 24 KiB，最终 JSON request body 最多 64 KiB，model ID 256 bytes，endpoint/API key 分别最多 4/8 KiB。256-byte model ID 同时符合同步快照的 compact-field restore 上限，避免本机可写入的 AI provenance 无法恢复。用户文本只在发送副本中按完整 Unicode `Character` 边界缩短，不回写 SwiftData 事实。建议模型返回的 reason/model ID 再次有界化，icon 必须属于本次已公告的精选列表，任务 UUID 必须属于实际发送候选。
+任务计划完整工作区刻意不复用 Inbox/checklist 建议的 24 KiB prompt 与 64 KiB request-body 投影，因为那会静默漏掉模型需要引用的实体。编码失败不会发出 partial context；endpoint 以 HTTP 400/413/422 拒绝完整请求时，以 typed error 报告 Category/Task/Checklist counts 与实际 encoded request bytes。客户端不发送截断版本，也不回退到旧 create-only JSON。12 个工具回合与 64 次工具调用是防循环资源上限，不是 workspace 实体数量上限。
+
+模型只能通过严格的结构化工具读取和修改一个本机内存 overlay；它不能直接访问 SwiftData。已有 Task/Checklist 必须按稳定 UUID 引用，Category 名称只有唯一规范化匹配时才可复用，多个同名会显式失败。新 ID 由 App 生成。Finalize 后只产生 create/update/archive/delete/reuse 的只读 diff；破坏性影响需要用户再次确认。Apply 时会在共享 store lock 下用 fresh context 对完整 provider-visible snapshot 和本地 revision baseline 做 CAS，再原子应用全部操作。Task removal 只会 Archive。任何 stale、校验或保存失败均为零写入并保留预览。
+
+Inbox/checklist 两类建议的 user prompt 最多 24 KiB，最终 JSON request body 最多 64 KiB；所有 AI 流程的 model ID 为 256 bytes，endpoint/API key 分别最多 4/8 KiB。256-byte model ID 同时符合同步快照的 compact-field restore 上限，避免本机可写入的 AI provenance 无法恢复。建议流程的用户文本只在发送副本中按完整 Unicode `Character` 边界缩短，不回写 SwiftData 事实。建议模型返回的 reason/model ID 再次有界化，icon 必须属于本次已公告的精选列表，任务 UUID 必须属于实际发送候选。
 
 ### 凭证与传输
 
@@ -101,8 +110,8 @@ Checklist 标题与所属任务标题各最多 512 UTF-8 bytes，任务显示路
 - 远程服务地址必须使用 HTTPS。
 - HTTP 仅允许 localhost、以 .localhost 结尾的保留主机，以及经数值解析确认的 ::1 和 127.0.0.0/8 回环地址；不能用字符串前缀接受 `127.evil.com` 等伪装主机。
 - 携带 Authorization 的重定向只允许 scheme、host 和有效端口全部相同；跨源、端口变化和 HTTPS 降级会被拒绝。
-- 响应通过禁用缓存与 cookie 的 ephemeral 会话流式读取；缓冲路径资源超时 60 秒，任务计划生成的 SSE 流式路径资源超时 300 秒（长推理生成），Content-Length 与实际读取正文都限制为 2 MiB。非 2xx 在 headers 后立即取消，不为错误页继续读取正文；用户取消会传递给底层网络 task。
-- 任务计划生成使用 SSE 流式请求（`stream: true` + `include_usage`）；模型的推理内容（reasoning_content）与原始 JSON 输出只作为界面展示的临时来源显示在预览中，不写入 SwiftData、不同步、不导出、不进入日志。
+- 响应通过禁用缓存与 cookie 的 ephemeral 会话读取；缓冲路径资源超时 60 秒，旧 create-only SSE 兼容路径使用 300 秒资源预算，Content-Length 与实际读取正文都限制为 2 MiB。非 2xx 在 headers 后立即取消，不为错误页继续读取正文；用户取消会传递给底层 network task。
+- 当前任务工作区计划使用多轮 buffered function-calling，而不是旧 create-only SSE 路径。assistant `tool_calls`、对应 `tool_call_id` 结果与 reasoning passback 只存在于本次 generation session；推理内容和原始 provider 响应只作为预览的临时来源，不写入 SwiftData、不同步、不导出、不进入日志。
 - 选择第三方 endpoint 等同于授权该服务按其条款处理上述字段。
 - 请求、响应和错误日志不得输出密钥；生产诊断应避免记录完整用户文本。
 
@@ -206,7 +215,7 @@ JSON 导出包含可同步业务数据的快照，并过滤敏感 preference。�
 - [ ] AI 默认/推荐 endpoint 的运营方、用途、保留期、训练用途、跨境处理与删除渠道已确认并写入发行披露；未确认时不作“零保留”承诺。
 - [ ] AI 配置 Test→Save、自动建议默认关闭和用户显式开启行为通过测试/人工检查。
 - [ ] Inbox/checklist 请求的候选数、字段/prompt/body UTF-8 预算、精选图标列表、非候选 UUID 拒绝和结果字段归一化通过回归。
-- [ ] 任务计划的显式生成、可编辑预览、同步指令、字段/数量/层级上限、原子创建回滚和幂等重放通过回归。
+- [ ] 任务计划的显式生成与发送前 counts 披露、完整 workspace/fingerprint、counts+bytes typed failure、严格工具协议、只读 diff、破坏性确认、完整 CAS、stale 预览保留和原子混合 CRUD 回滚通过回归。
 - [ ] Widget App Group 在真机和发行 profile 上验证。
 - [ ] Watch DTO 不包含 secret；codec/queue 的字段、数量、唯一 ID、时间和 512 KiB 恢复边界通过自动测试；持久离线队列、typed terminal result、20 秒 timeout、30 秒旧命令拒绝、retry/discard 和同 ID 幂等通过配对真机验证。
 - [ ] V8→V9 `DailySummary` cache 移除与 V9→V10 Inbox suggestion identity/dismissal 迁移都在真实磁盘 fixture 上保留用户事实；旧 JSON 快照缺少新 UUID 字段时也能兼容恢复。

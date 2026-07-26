@@ -11,6 +11,7 @@ nonisolated enum AITaskWorkspaceOverlayError: Error, Equatable, Sendable {
     case taskArchived(UUID)
     case childTaskCannotHaveCategory
     case hierarchyCycle
+    case depthExceeded
     case invalidEstimate(Int)
     case invalidSortOrder
     case invalidDueDate
@@ -154,7 +155,9 @@ struct AITaskWorkspaceOverlay: Equatable, Sendable {
             colorHex: colorHex,
             iconName: iconName
         )
-        try requireCategoryNameAvailable(prepared.title, excluding: id)
+        if prepared.title != before.title {
+            try requireCategoryNameAvailable(prepared.title, excluding: id)
+        }
         var proposed = before
         proposed.title = prepared.title
         proposed.iconName = ChecklistVisualSanitizer.sanitizedIcon(
@@ -528,6 +531,45 @@ private extension AITaskWorkspaceOverlay {
             try requireAvailableTask(parentID)
             if parentID == taskID || descendantIDs(of: taskID).contains(parentID) {
                 throw AITaskWorkspaceOverlayError.hierarchyCycle
+            }
+        }
+        try validateMaximumTaskDepth(
+            taskID: taskID,
+            parentID: parentID
+        )
+    }
+
+    func validateMaximumTaskDepth(
+        taskID: UUID,
+        parentID: UUID?
+    ) throws {
+        var parentByTaskID = snapshot.tasks.reduce(
+            into: [UUID: UUID]()
+        ) { result, task in
+            if let parentID = task.parentID {
+                result[task.id] = parentID
+            }
+        }
+        if let parentID {
+            parentByTaskID[taskID] = parentID
+        } else {
+            parentByTaskID.removeValue(forKey: taskID)
+        }
+
+        let affectedTaskIDs = [taskID] + descendantIDs(of: taskID)
+        for affectedTaskID in affectedTaskIDs {
+            var depth = 0
+            var visited: Set<UUID> = [affectedTaskID]
+            var cursor = affectedTaskID
+            while let parentID = parentByTaskID[cursor] {
+                guard visited.insert(parentID).inserted else {
+                    throw AITaskWorkspaceOverlayError.hierarchyCycle
+                }
+                depth += 1
+                guard depth <= 6 else {
+                    throw AITaskWorkspaceOverlayError.depthExceeded
+                }
+                cursor = parentID
             }
         }
     }

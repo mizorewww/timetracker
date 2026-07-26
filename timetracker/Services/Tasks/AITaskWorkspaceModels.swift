@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 nonisolated struct AITaskWorkspaceCategory:
@@ -61,6 +62,14 @@ nonisolated struct AITaskWorkspaceSnapshot: Codable, Equatable, Sendable {
     let categories: [AITaskWorkspaceCategory]
     let tasks: [AITaskWorkspaceTask]
     let checklistItems: [AITaskWorkspaceChecklistItem]
+    var contextFingerprint: String {
+        Self.contextFingerprint(
+            schemaVersion: schemaVersion,
+            categories: categories,
+            tasks: tasks,
+            checklistItems: checklistItems
+        )
+    }
 
     init(
         schemaVersion: Int = currentSchemaVersion,
@@ -82,10 +91,15 @@ nonisolated struct AITaskWorkspaceSnapshot: Codable, Equatable, Sendable {
         case categories
         case tasks
         case checklistItems
+        case contextFingerprint
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let transmittedFingerprint = try container.decode(
+            String.self,
+            forKey: .contextFingerprint
+        )
         try self.init(
             schemaVersion: container.decode(Int.self, forKey: .schemaVersion),
             categories: container.decode(
@@ -101,6 +115,14 @@ nonisolated struct AITaskWorkspaceSnapshot: Codable, Equatable, Sendable {
                 forKey: .checklistItems
             )
         )
+        guard transmittedFingerprint == contextFingerprint else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .contextFingerprint,
+                in: container,
+                debugDescription:
+                "The task workspace context fingerprint does not match its facts."
+            )
+        }
     }
 
     func encode(to encoder: Encoder) throws {
@@ -109,6 +131,10 @@ nonisolated struct AITaskWorkspaceSnapshot: Codable, Equatable, Sendable {
         try container.encode(categories, forKey: .categories)
         try container.encode(tasks, forKey: .tasks)
         try container.encode(checklistItems, forKey: .checklistItems)
+        try container.encode(
+            contextFingerprint,
+            forKey: .contextFingerprint
+        )
     }
 }
 
@@ -296,7 +322,39 @@ nonisolated struct AITaskWorkspaceCapture: Equatable, Sendable {
 }
 
 private extension AITaskWorkspaceSnapshot {
+    struct FingerprintFacts: Encodable {
+        let schemaVersion: Int
+        let categories: [AITaskWorkspaceCategory]
+        let tasks: [AITaskWorkspaceTask]
+        let checklistItems: [AITaskWorkspaceChecklistItem]
+    }
+
     static let comparisonLocale = Locale(identifier: "en_US_POSIX")
+
+    static func contextFingerprint(
+        schemaVersion: Int,
+        categories: [AITaskWorkspaceCategory],
+        tasks: [AITaskWorkspaceTask],
+        checklistItems: [AITaskWorkspaceChecklistItem]
+    ) -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        encoder.dateEncodingStrategy = .iso8601
+        // Every value in FingerprintFacts uses app-owned, nonthrowing Codable
+        // synthesis. A failure here is an internal contract violation rather
+        // than a provider or user-data recovery path.
+        let data = try! encoder.encode(
+            FingerprintFacts(
+                schemaVersion: schemaVersion,
+                categories: categories,
+                tasks: tasks,
+                checklistItems: checklistItems
+            )
+        )
+        return SHA256.hash(data: data)
+            .map { String(format: "%02x", $0) }
+            .joined()
+    }
 
     static func canonicalCategories(
         _ categories: [AITaskWorkspaceCategory]

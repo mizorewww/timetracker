@@ -3867,7 +3867,7 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testAITaskPlanWithOneHundredFiftyChecklistItemsRendersAndCreates() throws {
+    func testAITaskPlanWithOneHundredFiftyChecklistItemsRendersAndApplies() throws {
         #if targetEnvironment(simulator)
         let app = launchApp(
             route: "tasks",
@@ -3904,39 +3904,44 @@ final class timetrackerUITests: XCTestCase {
         activate(generate)
 
         let summary = app.staticTexts[
-            "1 categories · 1 tasks · 150 checklist items"
+            "151 create · 0 update · 0 archive · 0 delete · 1 reuse"
         ].firstMatch
         XCTAssertTrue(
-            summary.waitForExistence(timeout: 10),
-            "The preview must summarize the full 150-item plan."
+            summary.waitForExistence(timeout: 30),
+            "The preview must summarize the full 150-item workspace diff."
         )
-        let lastChapter = app.textFields.matching(
-            NSPredicate(format: "value == %@", "Chapter 150")
-        ).firstMatch
+        let lastChapter = app.descendants(matching: .any)[
+            "aiTaskPlan.operation.151"
+        ].firstMatch
         for _ in 0 ..< 12 {
             app.swipeUp(velocity: .fast)
         }
         scrollUntilHittable(lastChapter, direction: .up, maximumScrolls: 30, in: app)
         XCTAssertTrue(
             lastChapter.waitForExistence(timeout: 8),
-            "The preview must render every checklist row, including Chapter 150."
+            "The read-only diff must render every operation, including Chapter 150."
+        )
+        XCTAssertTrue(
+            lastChapter.label.contains("Chapter 150"),
+            "The final operation must preserve the complete checklist title."
         )
         try capture("\(screenshotPrefix)-ai-task-plan-large-preview", app: app)
 
-        let create = app.buttons["aiTaskPlan.create"].firstMatch
-        XCTAssertTrue(create.waitForExistence(timeout: 5) && create.isHittable)
-        activate(create)
+        let apply = app.buttons["aiTaskPlan.apply"].firstMatch
+        XCTAssertTrue(apply.waitForExistence(timeout: 5) && apply.isHittable)
+        XCTAssertTrue(apply.label.contains("151"))
+        activate(apply)
         XCTAssertTrue(
             app.descendants(matching: .any)["aiTaskPlan.sheet"]
                 .waitForNonExistence(timeout: 15),
-            "The 150-item plan must be created without failure."
+            "The 150-item workspace diff must apply without failure."
         )
 
-        // Creating a plan opens the first created task directly.
+        // Applying a plan opens the first created root task directly.
         let detail = app.descendants(matching: .any)["task.detail"].firstMatch
         XCTAssertTrue(
             detail.waitForExistence(timeout: 15),
-            "Creating the plan must open the created task."
+            "Applying the plan must open the created task."
         )
         let titleField = app.descendants(matching: .any)[
             "task.editor.title.field"
@@ -3947,8 +3952,8 @@ final class timetrackerUITests: XCTestCase {
             "task.editor.category"
         ].firstMatch
         XCTAssertTrue(categoryRow.waitForExistence(timeout: 5))
-        XCTAssertEqual(categoryRow.value as? String, "Reading")
-        try capture("\(screenshotPrefix)-ai-task-plan-large-created", app: app)
+        XCTAssertEqual(categoryRow.value as? String, "Study")
+        try capture("\(screenshotPrefix)-ai-task-plan-large-applied", app: app)
         #else
         throw XCTSkip("Large plan rendering is verified on owned simulators.")
         #endif
@@ -4284,8 +4289,8 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testAITaskPlanDraftReviewAtomicCreate() throws {
-        #if targetEnvironment(simulator)
+    func testAITaskWorkspaceReviewReusesUpdatesArchivesDeletesAndAppliesAtomically() throws {
+        #if targetEnvironment(simulator) || os(macOS)
         let app = launchApp(
             route: "tasks",
             replacesDemoDataOnLaunch: true,
@@ -4329,8 +4334,15 @@ final class timetrackerUITests: XCTestCase {
             }
         }
         let generate = app.buttons["aiTaskPlan.generate"].firstMatch
+        let privacyDisclosure = app.descendants(matching: .any)[
+            "aiTaskPlan.privacy"
+        ].firstMatch
         XCTAssertTrue(request.waitForExistence(timeout: 5) && request.isHittable)
         XCTAssertTrue(generate.waitForExistence(timeout: 3))
+        XCTAssertTrue(
+            privacyDisclosure.waitForExistence(timeout: 3),
+            "The request page must disclose the complete workspace context before sending."
+        )
         XCTAssertFalse(generate.isEnabled)
         activate(request)
         request.typeText("Build a practical daily fitness and learning plan")
@@ -4371,60 +4383,47 @@ final class timetrackerUITests: XCTestCase {
 
         activate(generate)
 
-        let create = app.buttons["aiTaskPlan.create"].firstMatch
+        let apply = app.buttons["aiTaskPlan.apply"].firstMatch
         let editRequest = app.buttons["aiTaskPlan.editRequest"].firstMatch
         let summary = app.staticTexts[
-            "2 categories · 3 tasks · 13 checklist items"
+            "13 create · 1 update · 1 archive · 1 delete · 1 reuse"
         ].firstMatch
-        XCTAssertTrue(create.waitForExistence(timeout: 8) && create.isHittable)
+        XCTAssertTrue(apply.waitForExistence(timeout: 8) && apply.isHittable)
         XCTAssertTrue(editRequest.waitForExistence(timeout: 3))
         XCTAssertTrue(summary.waitForExistence(timeout: 3))
-        XCTAssertGreaterThanOrEqual(create.frame.height, 28)
+        XCTAssertTrue(apply.label.contains("16"))
+        XCTAssertGreaterThanOrEqual(apply.frame.height, 28)
 
-        let pushupsIdentifier =
-            "aiTaskPlan.task.20000000-0000-4000-8000-000000000101"
-        let quantityToggle = app.descendants(matching: .any)[
-            "\(pushupsIdentifier).quantity.toggle"
+        let reusedCategory = app.descendants(matching: .any)[
+            "aiTaskPlan.operation.0"
         ].firstMatch
-        let quantityTarget = app.descendants(matching: .any)[
-            "\(pushupsIdentifier).quantity.target"
+        let updatedTask = app.descendants(matching: .any)[
+            "aiTaskPlan.operation.14"
         ].firstMatch
-        let quantityUnit = app.descendants(matching: .any)[
-            "\(pushupsIdentifier).quantity.unit"
+        let archivedTask = app.descendants(matching: .any)[
+            "aiTaskPlan.operation.15"
         ].firstMatch
-        let dailyRecurrence = app.descendants(matching: .any)[
-            "\(pushupsIdentifier).recurrence.daily"
+        let deletedChecklist = app.descendants(matching: .any)[
+            "aiTaskPlan.operation.16"
         ].firstMatch
-        for control in [
-            quantityToggle,
-            quantityTarget,
-            quantityUnit,
-            dailyRecurrence,
+        for (operation, expectedLabel) in [
+            (reusedCategory, "Study"),
+            (updatedTask, "Read Apple HIG Carefully"),
+            (archivedTask, "SwiftData Docs"),
+            (deletedChecklist, ""),
         ] {
-            scrollUntilHittable(control, direction: .up, in: app)
-            XCTAssertTrue(control.waitForExistence(timeout: 3) && control.isHittable)
+            scrollUntilHittable(operation, direction: .up, in: app)
+            XCTAssertTrue(operation.waitForExistence(timeout: 3))
+            if expectedLabel.isEmpty == false {
+                XCTAssertTrue(
+                    operation.label.contains(expectedLabel),
+                    "Expected \(expectedLabel) in operation label: \(operation.label)"
+                )
+            }
         }
-        XCTAssertEqual(quantityTarget.value as? String, "50")
-        XCTAssertEqual(quantityUnit.value as? String, "push-ups")
-        try capture("\(screenshotPrefix)-ai-task-plan-typed-preview", app: app)
-
-        let chapterTen = app.textFields.matching(
-            NSPredicate(format: "value == %@", "Chapter 10")
-        ).firstMatch
-        scrollUntilHittable(
-            chapterTen,
-            direction: .up,
-            maximumScrolls: 16,
-            in: app
-        )
-        XCTAssertTrue(chapterTen.waitForExistence(timeout: 3) && chapterTen.isHittable)
-        try capture("\(screenshotPrefix)-ai-task-plan-chapters-1-to-10", app: app)
-        chapterTen.coordinate(
-            withNormalizedOffset: CGVector(dx: 0.5, dy: -0.25)
-        ).tap()
-        XCTAssertTrue(
-            app.keyboards.firstMatch.waitForExistence(timeout: 3),
-            "The 44-point checklist hit shape must focus the field above its text glyphs."
+        try capture(
+            "\(screenshotPrefix)-ai-task-workspace-mixed-preview",
+            app: app
         )
 
         let returnedEditRequest = app.buttons["aiTaskPlan.editRequest"].firstMatch
@@ -4456,17 +4455,155 @@ final class timetrackerUITests: XCTestCase {
                 generate.isHittable
         )
         activate(generate)
-        XCTAssertTrue(create.waitForExistence(timeout: 8) && create.isHittable)
+        XCTAssertTrue(apply.waitForExistence(timeout: 8) && apply.isHittable)
 
-        activate(create)
+        activate(apply)
+        let destructiveConfirm = app.buttons[
+            "aiTaskPlan.destructive.confirm"
+        ].firstMatch
+        XCTAssertTrue(
+            destructiveConfirm.waitForExistence(timeout: 3) &&
+                destructiveConfirm.isHittable,
+            "Archive and delete operations must require native destructive confirmation."
+        )
+        let destructiveCancel = try XCTUnwrap(
+            ["Cancel", "取消"].flatMap { label in
+                app.buttons
+                    .matching(NSPredicate(format: "label == %@", label))
+                    .allElementsBoundByIndex
+            }.max { lhs, rhs in
+                lhs.frame.minY < rhs.frame.minY
+            },
+            "The native destructive confirmation must expose a Cancel action."
+        )
+        XCTAssertTrue(destructiveCancel.waitForExistence(timeout: 3))
+        try capture(
+            "\(screenshotPrefix)-ai-task-workspace-destructive-confirmation",
+            app: app
+        )
+        if destructiveCancel.isHittable {
+            activate(destructiveCancel)
+        } else {
+            destructiveCancel.coordinate(
+                withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)
+            ).tap()
+        }
+        XCTAssertTrue(apply.waitForExistence(timeout: 3))
+
+        activate(apply)
+        XCTAssertTrue(
+            destructiveConfirm.waitForExistence(timeout: 3) &&
+                destructiveConfirm.isHittable
+        )
+        activate(destructiveConfirm)
         XCTAssertTrue(
             app.descendants(matching: .any)["aiTaskPlan.sheet"]
                 .waitForNonExistence(timeout: 8)
         )
         XCTAssertTrue(taskDetailIsReady(in: app))
-        try capture("\(screenshotPrefix)-ai-task-plan-created-detail", app: app)
+        let titleField = app.descendants(matching: .any)[
+            "task.editor.title.field"
+        ].firstMatch
+        let categoryRow = app.descendants(matching: .any)[
+            "task.editor.category"
+        ].firstMatch
+        XCTAssertTrue(titleField.waitForExistence(timeout: 5))
+        XCTAssertEqual(titleField.value as? String, "Read 10 Chapters")
+        XCTAssertTrue(categoryRow.waitForExistence(timeout: 5))
+        XCTAssertEqual(categoryRow.value as? String, "Study")
+        try capture("\(screenshotPrefix)-ai-task-workspace-applied-detail", app: app)
         #else
-        throw XCTSkip("Task-plan review geometry runs only on an explicitly owned simulator.")
+        throw XCTSkip("Task workspace review runs only on an explicitly owned simulator.")
+        #endif
+    }
+
+    @MainActor
+    func testAITaskWorkspaceStaleApplyKeepsThePreviewVisible() throws {
+        #if targetEnvironment(simulator) || os(macOS)
+        let app = launchApp(
+            route: "tasks",
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: [
+                "--uitesting-ai-task-plan",
+                "--uitesting-ai-task-plan-stale-apply",
+            ]
+        )
+        openSection(
+            "Tasks",
+            tabIdentifier: "phone.tab.tasks",
+            sidebarIdentifier: "sidebar.Tasks",
+            in: app
+        )
+        let addMenu = app.descendants(matching: .any)["tasks.add"].firstMatch
+        XCTAssertTrue(addMenu.waitForExistence(timeout: 5) && addMenu.isHittable)
+        activate(addMenu)
+        let generatePlan = app.descendants(matching: .any)[
+            "tasks.generatePlan"
+        ].firstMatch
+        XCTAssertTrue(
+            generatePlan.waitForExistence(timeout: 3) && generatePlan.isHittable
+        )
+        activate(generatePlan)
+
+        let request = app.descendants(matching: .any)["aiTaskPlan.request"].firstMatch
+        XCTAssertTrue(request.waitForExistence(timeout: 5) && request.isHittable)
+        activate(request)
+        request.typeText("Propose a mixed workspace update")
+        let generate = app.buttons["aiTaskPlan.generate"].firstMatch
+        XCTAssertTrue(generate.waitForExistence(timeout: 3) && generate.isEnabled)
+        activate(generate)
+
+        let apply = app.buttons["aiTaskPlan.apply"].firstMatch
+        XCTAssertTrue(apply.waitForExistence(timeout: 8) && apply.isHittable)
+        activate(apply)
+        let destructiveConfirm = app.buttons[
+            "aiTaskPlan.destructive.confirm"
+        ].firstMatch
+        XCTAssertTrue(
+            destructiveConfirm.waitForExistence(timeout: 3) &&
+                destructiveConfirm.isHittable
+        )
+        activate(destructiveConfirm)
+
+        let error = app.descendants(matching: .any)[
+            "aiTaskPlan.error"
+        ].firstMatch
+        scrollUntilHittable(error, direction: .up, maximumScrolls: 30, in: app)
+        XCTAssertTrue(
+            error.waitForExistence(timeout: 5),
+            "A stale workspace must produce a visible error."
+        )
+        let changeSummary = app.descendants(matching: .any)[
+            "aiTaskPlan.changeSummary"
+        ].firstMatch
+        scrollUntilHittable(
+            changeSummary,
+            direction: .down,
+            maximumScrolls: 30,
+            in: app
+        )
+        XCTAssertTrue(
+            changeSummary.waitForExistence(timeout: 3),
+            "A stale apply must preserve the review preview."
+        )
+        #if os(macOS)
+        XCTAssertTrue(
+            app.buttons["aiTaskPlan.apply"].waitForExistence(timeout: 3),
+            "A stale apply must keep the desktop review actions visible."
+        )
+        #else
+        XCTAssertTrue(
+            app.descendants(matching: .any)["aiTaskPlan.sheet"]
+                .waitForExistence(timeout: 3),
+            "A stale apply must not dismiss the review."
+        )
+        #endif
+        try capture(
+            "\(platformScreenshotPrefix(in: app))-ai-task-workspace-stale-preview",
+            app: app
+        )
+        #else
+        throw XCTSkip("Stale workspace UI behavior runs only on an owned simulator.")
         #endif
     }
 

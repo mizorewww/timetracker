@@ -80,6 +80,11 @@ struct CoreAITaskWorkspaceTests {
         )
 
         #expect(forward.snapshot == reversed.snapshot)
+        #expect(
+            forward.snapshot.contextFingerprint ==
+                reversed.snapshot.contextFingerprint
+        )
+        #expect(forward.snapshot.contextFingerprint.count == 64)
         #expect(forward.snapshot.tasks.count == 80)
         #expect(forward.snapshot.checklistItems.count == 80)
         #expect(forward.snapshot.tasks.first?.categoryID == category.id)
@@ -110,9 +115,26 @@ struct CoreAITaskWorkspaceTests {
         let reversedEncoded = try encoder.encode(reversed.snapshot)
         let json = try #require(String(data: encoded, encoding: .utf8))
         #expect(encoded == reversedEncoded)
+        #expect(
+            json.contains(
+                #""contextFingerprint":"\#(forward.snapshot.contextFingerprint)""#
+            )
+        )
         #expect(json.contains("private-device") == false)
         #expect(json.contains(category.clientMutationID.uuidString) == false)
         #expect(json.contains(tasks[79].clientMutationID.uuidString) == false)
+
+        var changedTasks = forward.snapshot.tasks
+        changedTasks[0].notes += " changed"
+        let changedSnapshot = AITaskWorkspaceSnapshot(
+            categories: forward.snapshot.categories,
+            tasks: changedTasks,
+            checklistItems: forward.snapshot.checklistItems
+        )
+        #expect(
+            changedSnapshot.contextFingerprint !=
+                forward.snapshot.contextFingerprint
+        )
     }
 
     @Test
@@ -143,11 +165,13 @@ struct CoreAITaskWorkspaceTests {
         }
 
         let duplicateIDs = [Self.id(11), Self.id(12)]
+        let renamedID = Self.id(13)
         var ambiguous = AITaskWorkspaceOverlay(
             snapshot: AITaskWorkspaceSnapshot(
                 categories: [
                     Self.category(id: duplicateIDs[1], title: "a"),
                     Self.category(id: duplicateIDs[0], title: "A"),
+                    Self.category(id: renamedID, title: "Work"),
                 ],
                 tasks: [],
                 checklistItems: []
@@ -159,6 +183,31 @@ struct CoreAITaskWorkspaceTests {
             )
         ) {
             try ambiguous.useExistingCategory(named: "a")
+        }
+
+        let updated = try ambiguous.updateCategory(
+            id: duplicateIDs[0],
+            title: "A",
+            iconName: "briefcase",
+            colorHex: "FF9500",
+            includesInForecast: false
+        )
+        #expect(updated.title == "A")
+        #expect(updated.colorHex == "FF9500")
+        #expect(updated.includesInForecast == false)
+
+        #expect(
+            throws: AITaskWorkspaceOverlayError.ambiguousCategoryName(
+                categoryIDs: duplicateIDs
+            )
+        ) {
+            try ambiguous.updateCategory(
+                id: renamedID,
+                title: "Ａ",
+                iconName: "square.grid.2x2",
+                colorHex: "1677FF",
+                includesInForecast: true
+            )
         }
     }
 
@@ -391,6 +440,94 @@ struct CoreAITaskWorkspaceTests {
                 colorHex: "1677FF"
             )
         }
+    }
+
+    @Test
+    func overlayAcceptsDepthSixAndRejectsDepthSeven() throws {
+        var overlay = AITaskWorkspaceOverlay(
+            snapshot: AITaskWorkspaceSnapshot(
+                categories: [],
+                tasks: [],
+                checklistItems: []
+            )
+        )
+        var parentID: UUID?
+
+        for depth in 0 ... 6 {
+            let taskID = Self.id(100 + depth)
+            _ = try overlay.createTask(
+                id: taskID,
+                title: "Depth \(depth)",
+                parentID: parentID,
+                categoryID: nil,
+                notes: "",
+                estimatedMinutes: nil,
+                dueAt: nil,
+                iconName: "checkmark.circle",
+                colorHex: "1677FF"
+            )
+            parentID = taskID
+        }
+
+        #expect(
+            overlay.task(id: Self.id(106))?.path.components(
+                separatedBy: " / "
+            ).count == 7
+        )
+        #expect(throws: AITaskWorkspaceOverlayError.depthExceeded) {
+            try overlay.createTask(
+                id: Self.id(107),
+                title: "Depth 7",
+                parentID: parentID,
+                categoryID: nil,
+                notes: "",
+                estimatedMinutes: nil,
+                dueAt: nil,
+                iconName: "checkmark.circle",
+                colorHex: "1677FF"
+            )
+        }
+        #expect(overlay.task(id: Self.id(107)) == nil)
+    }
+
+    @Test
+    func overlaySupportsOneHundredFiftyChecklistItemsOnOneRootTask() throws {
+        let categoryID = Self.id(1)
+        let taskID = Self.id(1000)
+        var overlay = AITaskWorkspaceOverlay(
+            snapshot: AITaskWorkspaceSnapshot(
+                categories: [Self.category(id: categoryID, title: "Study")],
+                tasks: [],
+                checklistItems: []
+            )
+        )
+
+        _ = try overlay.useExistingCategory(named: "Study")
+        _ = try overlay.createTask(
+            id: taskID,
+            title: "Read 150 Chapters",
+            parentID: nil,
+            categoryID: categoryID,
+            notes: "",
+            estimatedMinutes: 600,
+            dueAt: nil,
+            iconName: "book",
+            colorHex: "16A34A"
+        )
+        for index in 1 ... 150 {
+            _ = try overlay.createChecklistItem(
+                id: Self.id(10000 + index),
+                taskID: taskID,
+                title: "Chapter \(index)",
+                isCompleted: false,
+                iconName: "book.pages",
+                colorHex: "16A34A"
+            )
+        }
+
+        #expect(overlay.snapshot.checklistItems.count == 150)
+        #expect(overlay.operations.count == 152)
+        #expect(overlay.checklistItem(id: Self.id(10150))?.title == "Chapter 150")
     }
 }
 

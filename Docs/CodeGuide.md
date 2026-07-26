@@ -1,7 +1,7 @@
 # TimeTracker 代码文档
 
 状态：当前实现说明
-校对日期：2026-07-25
+校对日期：2026-07-26
 
 本文面向维护者，说明当前代码边界、数据流、扩展方式和验证入口。架构目标与未完成计划分别见 [Architecture](Architecture.md) 和 [NextDevelopmentPlan](NextDevelopmentPlan.md)。
 
@@ -391,7 +391,13 @@ Settings 采用 `LLMConfigurationDraft`：endpoint/API key/模型/提示词指�
 
 Inbox 和 checklist 视觉自动建议各自最多同时发出 3 个请求；一个请求完成或过期后再补下一项。Checklist 失败按请求指纹记录并至少退避 60 秒，配置或内容变化后才立即形成新请求；保存失败必须保留对应错误状态，不能让网络成功掩盖持久化失败。
 
-任务计划生成（`LLMTaskPlanService` → `StoreScopedAITaskPlanCommandCoordinator` → `TimeTrackerStore+AITaskPlanCommands`，UI 在 `Features/Tasks/Generation`）只在用户从任务页填写需求并明确点按“生成”后发出一次请求。请求只含当次需求（≤4 KiB）、可同步的任务规划指令偏好（≤4 KiB）和精选图标/颜色列表，不含现有任务库或历史时间记录；固定 system contract 要求模型只返回分类、任务和 checklist 的 flat JSON 草稿。服务层再限制响应正文为 128 KiB，并校验层级、引用与数量上限：≤16 个分类、≤128 个任务、每任务 ≤256 个 checklist、总计 ≤1024 个 checklist、最大任务深度 6。请求的 user prompt 与 JSON request body 复用 `LLMSuggestionInputPolicy` 的 24 KiB / 64 KiB 上限。通过校验的结果只进入本机可编辑预览（`AITaskPlanGeneratorViews`），用户点按“创建”后才在一个 SwiftData 事务中新增事实；任一步失败都不留下半份计划，也不会修改、删除或覆盖既有任务。
+任务计划的生产链是 `LLMTaskWorkspacePlanningService` → `AITaskWorkspaceOverlay` → `AITaskWorkspacePlanGeneratorViews` → `StoreScopedAITaskAtomicMutationCoordinator` → `TimeTrackerStore+AITaskPlanCommands`。旧 `LLMTaskPlanService`、create-only draft view 和 `StoreScopedAITaskPlanCommandCoordinator` 只保留兼容测试，不是生产入口；新代码不得静默回退到旧 flat JSON。
+
+用户明确点按“生成”时，先由 store-scoped coordinator 在共享锁下用 fresh context 捕获 `AITaskAtomicMutationBaseline`。其中 provider-facing `AITaskWorkspaceSnapshot` 确定性排序并携带全部可见 Category、Task、Checklist 的稳定 UUID、关系、完整 Task path、文本、可编辑元数据、归档状态、任务量目标和每日重复设置；不按任意实体数量或路径深度截断。provider-visible canonical snapshot 的 `contextFingerprint` 用于绑定一次请求/审阅；Category、Task、assignment、Checklist、visual、quantity-goal 和 recurrence 的 `clientMutationID` 只存在本机 baseline，不能编码进请求。Request UI 必须先显示三类实体数量。编码失败不会发送请求；供应商以 HTTP 400/413/422 拒绝完整 workspace 时，抛出包含 counts 与实际 encoded request bytes 的 typed error，不能静默丢字段。
+
+多轮 OpenAI-compatible 工具协议通过 `OpenAIChatCompletionModels`、`OpenAIChatToolModels` 和 tool-call assembler 表达 assistant `tool_calls`、匹配的 `role=tool` / `tool_call_id`、finish reason 与 reasoning passback。每个工具 schema 都要求全部声明属性且 `additionalProperties: false`。工具只读或修改纯内存 overlay：list/get；Category reuse/create/update/delete；Task create/update/archive；Checklist create/update/delete；finalize。App 为新实体生成 UUID 并在 tool result 返回，所以 overlay 支持 read-after-write。已有 Task/Checklist 只能按稳定 ID 操作；Category 名称只允许唯一规范化匹配，多个同名必须返回歧义。未知工具、重复/缺失 call ID、混合 finalize、畸形或多余参数、content-only/create-only 回答以及不支持的 finish reason 都是显式失败。12 个工具回合和 64 次调用只是循环防护，不是 workspace 实体上限。
+
+模型 finalize 后从 baseline→overlay 产生确定性操作 diff。SwiftUI 只读预览显示 create/update/archive/delete/reuse 汇总、完整所属路径与 before→after；`Apply N Changes` 是唯一提交入口，存在删除、归档或进度重置等破坏性影响时使用原生 destructive confirmation。模型工具不能接触 SwiftData。Apply 在同一 store lock/fresh context 中重新捕获完整 baseline 做保守 CAS，重放并验证被审阅的操作、跨类型/受保护身份、层级、active work 和字段策略，最后只执行一次 atomic mutation。任一事实或 revision 变化、任一操作失败或保存失败都整批回滚且不发布事件；stale/失败保留 preview。Task delete 只编译为 Archive，Checklist update/delete 只触碰目标内容或视觉 revision。
 
 精确的数据字段与安全边界见 [PrivacyAndSecurity](PrivacyAndSecurity.md)。
 

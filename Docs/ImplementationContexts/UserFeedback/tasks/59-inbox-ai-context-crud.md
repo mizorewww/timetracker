@@ -8,9 +8,9 @@
 - [x] 按文档顺序领取反馈并建立可恢复的活动记忆。
 - [x] 审计现有 Inbox AI 输入、提示词、流式协议、计划预览、命令边界和持久化测试。
 - [x] 先定义完整任务树上下文、稳定身份和 CRUD 工具调用的行为契约与失败测试。
-- [~] 实现最小安全变更，复用既有 Commands / Repositories / SwiftData 分层。
-- [ ] 验证 AI harness、持久化命令、普通字号 UI 预览及三平台行为。
-- [ ] 提交小 checkpoint，执行 Release 全设备安装，标记反馈完成并移除活动链接。
+- [x] 实现最小安全变更，复用既有 Commands / Repositories / SwiftData 分层。
+- [x] 验证 AI harness、持久化命令、普通字号 UI 预览及三平台行为。
+- [~] 提交小 checkpoint，执行 Release 全设备安装，标记反馈完成并移除活动链接。
 
 ## 唯一范围
 
@@ -38,8 +38,8 @@
 
 - [x] Checkpoint A：领取、现状/历史/测试/库审计、行为契约。
 - [x] Checkpoint B：失败测试、结构化工具协议和安全命令执行。
-- [~] Checkpoint C：UI 预览/确认、回归验证、文档与小提交。
-- [ ] Checkpoint D：跨平台验收、Release 全设备安装和反馈收口。
+- [x] Checkpoint C：UI 预览/确认、回归验证、文档与小提交。
+- [~] Checkpoint D：跨平台验收、Release 全设备安装和反馈收口。
 
 ## 子代理编排
 
@@ -50,7 +50,36 @@
 ## 资源所有权
 
 - 主代理统一拥有后续 Xcode build/test、设备和模拟器批次。
-- 子代理当前只做只读审计，不创建模拟器、不运行 Xcode、不修改共享文件。
+- `task59_core_gaps` 只修改 workspace/overlay/provider error 与对应单元测试；
+  不运行 UI 测试、不创建模拟器、不提交。
+- `task59_ui_diff` 只修改只读 diff 呈现与纯 presentation 测试；不运行 UI 测试、
+  不创建模拟器、不提交。
+- `task59_docs` 只更新当前架构、代码、测试、隐私、项目地图、用户指南与必要决定；
+  不修改反馈状态、活动链接或实现记忆，不提交。
+- 主代理独占 `AppPresentationHost` 的确定性 stale UI test hook、
+  `timetrackerUITests`、全部 Xcode build/test、设备/模拟器批次、暂存、提交与安装。
+- 当前尚未创建或启动模拟器，未启动 Xcode 测试进程。
+
+## Checkpoint C 复核补充
+
+只读子代理在 UI 验收前发现以下发布阻塞，Checkpoint C 在补齐前不得关闭：
+
+- overlay 缺少任务层级深度 6 的强制边界；深度 7 必须在纯 overlay 与最终 replay
+  边界拒绝。
+- 已有同名 Category 通过稳定 UUID 做非标题更新时不应被同名查找规则误拒绝；
+  改名到另一现有规范化同名仍须明确歧义失败。
+- provider-visible canonical workspace 需要确定性的 `contextFingerprint`；本地 mutation
+  revision baseline 继续留在非 Codable 的本机确认边界，不随请求发送。
+- 完整上下文遭供应商 HTTP 400 / 413 / 422（工具、schema 或 context-window）
+  拒绝时，用户错误必须包含实际
+  Category / Task / Checklist 数量与请求字节数；不得静默截断或回退旧协议。
+- 更新预览必须覆盖全部可编辑字段的 before→after，而不只显示标题或路径；
+  UI 仍不得直接显示内部 UUID。
+- 旧 UI 回归仍依赖 editable draft / `Create`；主代理已开始改为只读 operation row、
+  `Apply N Changes`、原生 destructive confirmation、stale preview preservation 与
+  最终原子 apply。
+- `PrivacyAndSecurity.md` 等当前文档仍包含“不会发送现有任务库”的过期说法，
+  与实际完整 workspace 上传范围相反，发布前必须修正。
 
 ## 审计结论
 
@@ -196,3 +225,39 @@
 - `make build-macos`：Debug 签名构建通过。
 - `make test`：编译并运行 1452 tests / 163 suites；本任务新增与修改测试通过，全套仍只有 Checkpoint B 已记录的同两条既有失败，没有新增失败。
 - 下一步：更新确定性 UI 测试到只读 diff/破坏性确认语义，在显式拥有的 iPhone/iPad/macOS 环境进行普通字号截图与交互验收。
+
+## Checkpoint C 最终复核与三平台验收
+
+- 补齐发布前只读审计发现的安全边界：任务层级最多 6 层、稳定 ID 命中的同名
+  Category 可更新、provider-visible `contextFingerprint`、HTTP 400/413/422
+  请求拒绝的 counts/bytes typed error，以及全部可编辑字段的 before→after。
+- 加入一个 root Task 下 150 个 Checklist 的 overlay 和 UI 回归；Preview 显示
+  `Apply 151 Changes`，能够滚动到第 150 项并原子应用，证明不再沿用旧的小 JSON
+  数量上限。
+- 审阅行使用稳定 operation identity；iOS/iPadOS/macOS 均不显示 UUID，长标题、
+  path 与 before→after 可换行。macOS 主 Apply 控件提高到至少 28pt，并为每条
+  只读操作提供包含类型、对象、上下文和字段差异的完整可访问摘要。
+- iPhone 普通字号（拥有的模拟器
+  `5887A6BA-4687-4EAB-AEC6-A75269C6A181`）：混合
+  reuse/create/update/archive/delete、原生破坏性确认、Cancel、原子 Apply、
+  stale preview 和 150 Checklist 容量路径通过并截图。
+- iPad 普通字号（拥有的模拟器
+  `6908FD62-2914-4DB1-A8A8-D3EFECFE0272`）：横屏 mixed CRUD、破坏性
+  Cancel/Apply 与 stale preview 通过并截图。
+- macOS 普通字号：mixed CRUD、28pt Apply、破坏性 Cancel/Apply、成功后的 Task
+  detail 与 stale preview 通过并截图。
+- 最终 focused gate：20 tests / 4 suites 全绿，包括完整 workspace/overlay、
+  provider tool loop、atomic coordinator 和 UI presentation contract。
+- 最终静态门禁：`make format-check` 为 0/833；`make localization-check` 为
+  9/9，主资源三语各 1275 keys；`git diff --check` 与 `make check-hooks` 通过。
+- `make build-ios` 与 `make build-macos` 的 Debug 自动签名 generic build 均通过。
+- 全量 `make test` 编译并运行 1459 tests / 164 suites；本任务测试全绿，仍只有
+  两条与本任务无 diff 的既有失败：
+  `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd`
+  与
+  `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`。
+  两者没有被误报为绿色，也没有在本任务中扩大范围。
+- 依赖结论不变：没有新增第三方库；继续复用现有 MarkdownView、Apple
+  Foundation/Codable、CryptoKit SHA-256、SwiftData 与 hardened transport。
+  MacPaw/OpenAI、官方 MCP Swift SDK、Swift OpenAPI 和 FoundationModels 均完成
+  质量/适配审计，但没有为了依赖数量而替换已验证的安全传输与本地事务边界。

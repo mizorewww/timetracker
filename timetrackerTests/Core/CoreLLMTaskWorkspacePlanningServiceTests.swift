@@ -89,6 +89,7 @@ struct CoreLLMTaskWorkspacePlanningServiceTests {
         let userContent = try #require(firstMessages.last?["content"] as? String)
         #expect(userContent.contains(categoryID.uuidString))
         #expect(userContent.contains(#""title":"a""#))
+        #expect(userContent.contains(snapshot.contextFingerprint))
         #expect(userContent.contains("clientMutationID") == false)
         #expect(firstBody["tools"] != nil)
         #expect(firstBody["response_format"] == nil)
@@ -230,6 +231,85 @@ struct CoreLLMTaskWorkspacePlanningServiceTests {
                 modelID: "model-1"
             )
         }
+    }
+
+    @MainActor
+    @Test
+    func providerRequestRejectionsReportCountsAndActualBytesWithoutRetry()
+        async throws
+    {
+        let categoryID = Self.id(1)
+        let taskID = Self.id(2)
+        let checklistID = Self.id(3)
+        let snapshot = AITaskWorkspaceSnapshot(
+            categories: [Self.category(id: categoryID, title: "Work")],
+            tasks: [
+                AITaskWorkspaceTask(
+                    id: taskID,
+                    title: "Task",
+                    parentID: nil,
+                    categoryID: categoryID,
+                    path: "Task",
+                    notes: "Complete provider context",
+                    estimatedMinutes: nil,
+                    dueAt: nil,
+                    iconName: "checkmark.circle",
+                    colorHex: "1677FF",
+                    sortOrder: 10,
+                    isArchived: false
+                ),
+            ],
+            checklistItems: [
+                AITaskWorkspaceChecklistItem(
+                    id: checklistID,
+                    taskID: taskID,
+                    title: "Checklist",
+                    isCompleted: false,
+                    iconName: "checkmark.circle",
+                    colorHex: "1677FF",
+                    sortOrder: 10
+                ),
+            ]
+        )
+        for statusCode in [400, 413, 422] {
+            var requestByteCounts: [Int] = []
+            let service = LLMTaskWorkspacePlanningService { request in
+                let requestByteCount = try #require(request.httpBody?.count)
+                requestByteCounts.append(requestByteCount)
+                throw LLMModelServiceError.responseStatus(statusCode)
+            }
+            var capturedError: Error?
+
+            do {
+                _ = try await service.generate(
+                    request: "Plan with the full workspace",
+                    instructions: "",
+                    workspace: snapshot,
+                    endpoint: "https://example.test/v1",
+                    apiKey: "key",
+                    modelID: "model-1"
+                )
+            } catch {
+                capturedError = error
+            }
+
+            let requestByteCount = try #require(requestByteCounts.first)
+            #expect(requestByteCounts.count == 1)
+            #expect(requestByteCount > 0)
+            #expect(
+                capturedError as? LLMTaskWorkspacePlanningError ==
+                    .workspaceRequestRejected(
+                        statusCode: statusCode,
+                        categoryCount: 1,
+                        taskCount: 1,
+                        checklistItemCount: 1,
+                        requestByteCount: requestByteCount
+                    )
+            )
+        }
+        #expect(snapshot.categories.count == 1)
+        #expect(snapshot.tasks.count == 1)
+        #expect(snapshot.checklistItems.count == 1)
     }
 }
 

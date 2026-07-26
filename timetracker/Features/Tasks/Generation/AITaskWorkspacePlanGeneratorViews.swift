@@ -108,6 +108,9 @@ struct AITaskPlanGeneratorSheet: View {
                             .disabled(
                                 isApplying || reviewDraft.mutationCount == 0
                             )
+                            #if os(macOS)
+                            .controlSize(.large)
+                            #endif
                             .accessibilityIdentifier("aiTaskPlan.apply")
                         }
                     } else if isConfigured {
@@ -155,6 +158,7 @@ struct AITaskPlanGeneratorSheet: View {
                 .accessibilityIdentifier("aiTaskPlan.destructive.confirm")
             }
             Button(AppStrings.cancel, role: .cancel) {}
+                .accessibilityIdentifier("aiTaskPlan.destructive.cancel")
         } message: {
             Text(.app("aiTaskPlan.destructive.message"))
         }
@@ -370,15 +374,16 @@ struct AITaskPlanGeneratorSheet: View {
                             endpoint: store.preferences.llmEndpoint,
                             apiKey: store.preferences.llmAPIKey,
                             modelID:
-                            store.preferences.llmSelectedModel
-                        ) { progress in
-                            guard generationRequestID == requestID,
-                                  Task.isCancelled == false
-                            else {
-                                return
+                            store.preferences.llmSelectedModel,
+                            onProgress: { progress in
+                                guard generationRequestID == requestID,
+                                      Task.isCancelled == false
+                                else {
+                                    return
+                                }
+                                generationProgress = progress
                             }
-                            generationProgress = progress
-                        }
+                        )
                 }
                 guard Task.isCancelled == false,
                       generationRequestID == requestID
@@ -477,6 +482,25 @@ private struct AITaskWorkspaceReviewView: View {
     let errorMessage: String?
     let isApplying: Bool
     let onChangeRequest: () -> Void
+    private let operationPresentations:
+        [AITaskWorkspaceOperationPresentation]
+
+    init(
+        draft: AITaskWorkspaceReviewDraft,
+        errorMessage: String?,
+        isApplying: Bool,
+        onChangeRequest: @escaping () -> Void
+    ) {
+        self.draft = draft
+        self.errorMessage = errorMessage
+        self.isApplying = isApplying
+        self.onChangeRequest = onChangeRequest
+        operationPresentations = AITaskWorkspaceReviewPresentation(
+            operations: draft.plan.operations,
+            original: draft.plan.originalSnapshot,
+            resulting: draft.plan.resultingSnapshot
+        ).operations
+    }
 
     var body: some View {
         List {
@@ -508,15 +532,9 @@ private struct AITaskWorkspaceReviewView: View {
             }
 
             Section(AppStrings.localized("aiTaskPlan.changes.header")) {
-                ForEach(
-                    Array(draft.plan.operations.enumerated()),
-                    id: \.offset
-                ) { index, operation in
+                ForEach(operationPresentations) { presentation in
                     AITaskWorkspaceOperationRow(
-                        operation: operation,
-                        index: index,
-                        original: draft.plan.originalSnapshot,
-                        resulting: draft.plan.resultingSnapshot
+                        presentation: presentation
                     )
                 }
             }
@@ -614,37 +632,327 @@ private struct AITaskWorkspaceReviewView: View {
 }
 
 private struct AITaskWorkspaceOperationRow: View {
-    let operation: AITaskWorkspaceOperation
-    let index: Int
-    let original: AITaskWorkspaceSnapshot
-    let resulting: AITaskWorkspaceSnapshot
+    let presentation: AITaskWorkspaceOperationPresentation
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: operation.previewSymbolName)
-                .foregroundStyle(operation.previewTint)
+            Image(systemName: presentation.operation.previewSymbolName)
+                .foregroundStyle(presentation.operation.previewTint)
                 .frame(width: 24, height: 24)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(operation.localizedKind)
+                Text(presentation.operation.localizedKind)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(operation.previewTint)
-                Text(operation.previewTitle)
+                    .foregroundStyle(presentation.operation.previewTint)
+                Text(presentation.title)
                     .font(.body.weight(.medium))
                     .fixedSize(horizontal: false, vertical: true)
-                Text(operation.previewDetail(
-                    original: original,
-                    resulting: resulting
-                ))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+                if presentation.context.isEmpty == false {
+                    Text(presentation.context)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if presentation.fieldChanges.isEmpty == false {
+                    AITaskWorkspaceFieldChangesView(
+                        changes: presentation.fieldChanges
+                    )
+                    .padding(.top, 4)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("aiTaskPlan.operation.\(index)")
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(presentation.accessibilityLabel)
+        .accessibilityIdentifier(
+            "aiTaskPlan.operation.\(presentation.accessibilityIndex)"
+        )
+    }
+}
+
+private struct AITaskWorkspaceFieldChangesView: View {
+    let changes: [AITaskWorkspaceFieldChange]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(changes) { change in
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(change.field.localizedTitle)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    AITaskWorkspaceDiffValueView(
+                        label: AppStrings.localized(
+                            "aiTaskPlan.diff.before"
+                        ),
+                        value: change.before
+                    )
+                    AITaskWorkspaceDiffValueView(
+                        label: AppStrings.localized(
+                            "aiTaskPlan.diff.after"
+                        ),
+                        value: change.after
+                    )
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct AITaskWorkspaceDiffValueView: View {
+    let label: String
+    let value: AITaskWorkspacePreviewValue
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+            valueContent
+                .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var valueContent: some View {
+        switch value {
+        case let .icon(iconName):
+            Label(value.localizedText, systemImage: iconName)
+        case let .color(colorHex):
+            Label {
+                Text(value.localizedText)
+            } icon: {
+                Circle()
+                    .fill(Color(hex: colorHex) ?? .secondary)
+                    .frame(width: 10, height: 10)
+            }
+        case .text,
+             .optionalText,
+             .minutes,
+             .date,
+             .boolean,
+             .quantityGoal,
+             .recurrence:
+            Text(value.localizedText)
+        }
+    }
+}
+
+struct AITaskWorkspaceReviewPresentation: Equatable {
+    let operations: [AITaskWorkspaceOperationPresentation]
+
+    init(
+        operations: [AITaskWorkspaceOperation],
+        original: AITaskWorkspaceSnapshot,
+        resulting: AITaskWorkspaceSnapshot
+    ) {
+        var occurrences:
+            [AITaskWorkspaceOperationPresentation.IdentitySeed: Int] = [:]
+        self.operations = operations.enumerated().map { index, operation in
+            let seed = operation.presentationIdentitySeed
+            let occurrence = occurrences[seed, default: 0]
+            occurrences[seed] = occurrence + 1
+            return AITaskWorkspaceOperationPresentation(
+                id: .init(seed: seed, occurrence: occurrence),
+                accessibilityIndex: index,
+                operation: operation,
+                original: original,
+                resulting: resulting
+            )
+        }
+    }
+}
+
+struct AITaskWorkspaceOperationPresentation: Identifiable, Equatable {
+    struct IdentitySeed: Hashable {
+        let kind: Kind
+        let entityID: UUID
+    }
+
+    struct ID: Hashable {
+        let seed: IdentitySeed
+        let occurrence: Int
+    }
+
+    enum Kind: Hashable {
+        case reuseCategory
+        case createCategory
+        case updateCategory
+        case deleteCategory
+        case createTask
+        case updateTask
+        case archiveTask
+        case createChecklistItem
+        case updateChecklistItem
+        case deleteChecklistItem
+    }
+
+    let id: ID
+    let accessibilityIndex: Int
+    let operation: AITaskWorkspaceOperation
+    let title: String
+    let context: String
+    let fieldChanges: [AITaskWorkspaceFieldChange]
+
+    var accessibilityLabel: String {
+        var components = [operation.localizedKind, title]
+        if context.isEmpty == false {
+            components.append(context)
+        }
+        for change in fieldChanges {
+            components.append(change.field.localizedTitle)
+            components.append(
+                "\(AppStrings.localized("aiTaskPlan.diff.before")): " +
+                    change.before.localizedText
+            )
+            components.append(
+                "\(AppStrings.localized("aiTaskPlan.diff.after")): " +
+                    change.after.localizedText
+            )
+        }
+        return components.joined(separator: ", ")
+    }
+
+    init(
+        id: ID,
+        accessibilityIndex: Int,
+        operation: AITaskWorkspaceOperation,
+        original: AITaskWorkspaceSnapshot,
+        resulting: AITaskWorkspaceSnapshot
+    ) {
+        self.id = id
+        self.accessibilityIndex = accessibilityIndex
+        self.operation = operation
+        title = operation.previewTitle(
+            original: original,
+            resulting: resulting
+        )
+        context = operation.previewContext(
+            original: original,
+            resulting: resulting
+        )
+        fieldChanges = operation.fieldChanges(
+            original: original,
+            resulting: resulting
+        )
+    }
+}
+
+enum AITaskWorkspacePreviewField: String, Hashable, Identifiable {
+    case title
+    case path
+    case category
+    case notes
+    case estimatedTime
+    case dueDate
+    case icon
+    case color
+    case forecast
+    case quantityGoal
+    case recurrence
+    case completion
+
+    var id: Self {
+        self
+    }
+
+    var localizedTitle: String {
+        AppStrings.localized("aiTaskPlan.diff.field.\(rawValue)")
+    }
+}
+
+struct AITaskWorkspaceFieldChange: Equatable, Identifiable {
+    let field: AITaskWorkspacePreviewField
+    let before: AITaskWorkspacePreviewValue
+    let after: AITaskWorkspacePreviewValue
+
+    var id: AITaskWorkspacePreviewField {
+        field
+    }
+}
+
+enum AITaskWorkspacePreviewValue: Equatable {
+    case text(String)
+    case optionalText(String?)
+    case minutes(Int?)
+    case date(Date?)
+    case boolean(Bool)
+    case icon(String)
+    case color(String)
+    case quantityGoal(TaskQuantityGoalDraft?)
+    case recurrence(TaskDailyRecurrenceDraft?)
+
+    var localizedText: String {
+        switch self {
+        case let .text(value):
+            return value.isEmpty
+                ? AppStrings.localized("common.none")
+                : value
+        case let .optionalText(value):
+            return value ?? AppStrings.localized("common.none")
+        case let .minutes(value):
+            guard let value else {
+                return AppStrings.localized("common.none")
+            }
+            return String.localizedStringWithFormat(
+                AppStrings.localized("common.minutes"),
+                value
+            )
+        case let .date(value):
+            guard let value else {
+                return AppStrings.localized("common.none")
+            }
+            return value.formatted(
+                .dateTime
+                    .year()
+                    .month(.abbreviated)
+                    .day()
+                    .hour()
+                    .minute()
+            )
+        case let .boolean(value):
+            return AppStrings.localized(
+                value
+                    ? "aiTaskPlan.diff.value.yes"
+                    : "aiTaskPlan.diff.value.no"
+            )
+        case let .icon(value):
+            return value
+        case let .color(value):
+            return TaskColorPalette.accessibilityName(for: value)
+        case let .quantityGoal(value):
+            guard let value else {
+                return AppStrings.localized("common.none")
+            }
+            return String.localizedStringWithFormat(
+                AppStrings.localized(
+                    "aiTaskPlan.diff.value.quantityGoalFormat"
+                ),
+                Int64(value.targetAmount),
+                value.unitLabel
+            )
+        case let .recurrence(value):
+            guard let value else {
+                return AppStrings.localized("common.none")
+            }
+            return String.localizedStringWithFormat(
+                AppStrings.localized(
+                    "aiTaskPlan.diff.value.recurrenceFormat"
+                ),
+                AppStrings.localized("task.recurrence.editor.everyDay"),
+                AppStrings.localized(
+                    value.isEnabled
+                        ? "aiTaskPlan.diff.value.active"
+                        : "aiTaskPlan.diff.value.paused"
+                ),
+                value.startDayKey,
+                value.timeZoneIdentifier
+            )
+        }
     }
 }
 
@@ -773,10 +1081,60 @@ private extension AITaskWorkspaceOperation {
         }
     }
 
-    var previewTitle: String {
+    var presentationIdentitySeed:
+        AITaskWorkspaceOperationPresentation.IdentitySeed
+    {
+        let kind: AITaskWorkspaceOperationPresentation.Kind
+        let entityID: UUID
         switch self {
         case let .useExistingCategory(categoryID):
-            categoryID.uuidString
+            kind = .reuseCategory
+            entityID = categoryID
+        case let .createCategory(category):
+            kind = .createCategory
+            entityID = category.id
+        case let .updateCategory(before, _):
+            kind = .updateCategory
+            entityID = before.id
+        case let .deleteCategory(category, _):
+            kind = .deleteCategory
+            entityID = category.id
+        case let .createTask(task):
+            kind = .createTask
+            entityID = task.id
+        case let .updateTask(before, _):
+            kind = .updateTask
+            entityID = before.id
+        case let .archiveTask(before, _, _):
+            kind = .archiveTask
+            entityID = before.id
+        case let .createChecklistItem(item):
+            kind = .createChecklistItem
+            entityID = item.id
+        case let .updateChecklistItem(before, _):
+            kind = .updateChecklistItem
+            entityID = before.id
+        case let .deleteChecklistItem(item):
+            kind = .deleteChecklistItem
+            entityID = item.id
+        }
+        return AITaskWorkspaceOperationPresentation.IdentitySeed(
+            kind: kind,
+            entityID: entityID
+        )
+    }
+
+    func previewTitle(
+        original _: AITaskWorkspaceSnapshot,
+        resulting: AITaskWorkspaceSnapshot
+    ) -> String {
+        switch self {
+        case let .useExistingCategory(categoryID):
+            resulting.categories.first {
+                $0.id == categoryID
+            }?.title ?? AppStrings.localized(
+                "aiTaskPlan.diff.value.unavailable"
+            )
         case let .createCategory(category):
             category.title
         case let .updateCategory(_, after):
@@ -798,7 +1156,7 @@ private extension AITaskWorkspaceOperation {
         }
     }
 
-    func previewDetail(
+    func previewContext(
         original: AITaskWorkspaceSnapshot,
         resulting: AITaskWorkspaceSnapshot
     ) -> String {
@@ -806,7 +1164,9 @@ private extension AITaskWorkspaceOperation {
         case let .useExistingCategory(categoryID):
             let title = resulting.categories.first {
                 $0.id == categoryID
-            }?.title ?? categoryID.uuidString
+            }?.title ?? AppStrings.localized(
+                "aiTaskPlan.diff.value.unavailable"
+            )
             return String.localizedStringWithFormat(
                 AppStrings.localized(
                     "aiTaskPlan.operation.reuseCategoryFormat"
@@ -817,8 +1177,8 @@ private extension AITaskWorkspaceOperation {
             return AppStrings.localized(
                 "aiTaskPlan.operation.categoryCreated"
             )
-        case let .updateCategory(before, after):
-            return before.title + " → " + after.title
+        case .updateCategory:
+            return ""
         case let .deleteCategory(_, affectedRootTaskIDs):
             return String.localizedStringWithFormat(
                 AppStrings.localized(
@@ -828,8 +1188,8 @@ private extension AITaskWorkspaceOperation {
             )
         case let .createTask(task):
             return taskContext(task, snapshot: resulting)
-        case let .updateTask(before, after):
-            return before.path + " → " + after.path
+        case let .updateTask(_, after):
+            return taskContext(after, snapshot: resulting)
         case let .archiveTask(_, _, affectedDescendantIDs):
             return String.localizedStringWithFormat(
                 AppStrings.localized(
@@ -839,17 +1199,141 @@ private extension AITaskWorkspaceOperation {
             )
         case let .createChecklistItem(item):
             return checklistContext(item, snapshot: resulting)
-        case let .updateChecklistItem(before, after):
-            return checklistContext(
-                after,
-                snapshot: resulting
-            ) + "\n" + before.title + " → " + after.title
+        case let .updateChecklistItem(_, after):
+            return checklistContext(after, snapshot: resulting)
         case let .deleteChecklistItem(item):
             return checklistContext(item, snapshot: original)
         }
     }
 
-    func taskContext(
+    func fieldChanges(
+        original: AITaskWorkspaceSnapshot,
+        resulting: AITaskWorkspaceSnapshot
+    ) -> [AITaskWorkspaceFieldChange] {
+        var changes: [AITaskWorkspaceFieldChange] = []
+        switch self {
+        case let .updateCategory(before, after):
+            changes.append(
+                field: .title,
+                before: .text(before.title),
+                after: .text(after.title)
+            )
+            changes.append(
+                field: .icon,
+                before: .icon(before.iconName),
+                after: .icon(after.iconName)
+            )
+            changes.append(
+                field: .color,
+                before: .color(before.colorHex),
+                after: .color(after.colorHex)
+            )
+            changes.append(
+                field: .forecast,
+                before: .boolean(before.includesInForecast),
+                after: .boolean(after.includesInForecast)
+            )
+        case let .updateTask(before, after):
+            changes.append(
+                field: .title,
+                before: .text(before.title),
+                after: .text(after.title)
+            )
+            if before.parentID != after.parentID ||
+                before.path != after.path
+            {
+                changes.append(
+                    AITaskWorkspaceFieldChange(
+                        field: .path,
+                        before: .text(before.path),
+                        after: .text(after.path)
+                    )
+                )
+            }
+            if before.categoryID != after.categoryID {
+                changes.append(
+                    AITaskWorkspaceFieldChange(
+                        field: .category,
+                        before: categoryValue(
+                            id: before.categoryID,
+                            snapshot: original
+                        ),
+                        after: categoryValue(
+                            id: after.categoryID,
+                            snapshot: resulting
+                        )
+                    )
+                )
+            }
+            changes.append(
+                field: .notes,
+                before: .text(before.notes),
+                after: .text(after.notes)
+            )
+            changes.append(
+                field: .estimatedTime,
+                before: .minutes(before.estimatedMinutes),
+                after: .minutes(after.estimatedMinutes)
+            )
+            changes.append(
+                field: .dueDate,
+                before: .date(before.dueAt),
+                after: .date(after.dueAt)
+            )
+            changes.append(
+                field: .icon,
+                before: .icon(before.iconName),
+                after: .icon(after.iconName)
+            )
+            changes.append(
+                field: .color,
+                before: .color(before.colorHex),
+                after: .color(after.colorHex)
+            )
+            changes.append(
+                field: .quantityGoal,
+                before: .quantityGoal(before.quantityGoal),
+                after: .quantityGoal(after.quantityGoal)
+            )
+            changes.append(
+                field: .recurrence,
+                before: .recurrence(before.dailyRecurrence),
+                after: .recurrence(after.dailyRecurrence)
+            )
+        case let .updateChecklistItem(before, after):
+            changes.append(
+                field: .title,
+                before: .text(before.title),
+                after: .text(after.title)
+            )
+            changes.append(
+                field: .completion,
+                before: .boolean(before.isCompleted),
+                after: .boolean(after.isCompleted)
+            )
+            changes.append(
+                field: .icon,
+                before: .icon(before.iconName),
+                after: .icon(after.iconName)
+            )
+            changes.append(
+                field: .color,
+                before: .color(before.colorHex),
+                after: .color(after.colorHex)
+            )
+        case .useExistingCategory,
+             .createCategory,
+             .deleteCategory,
+             .createTask,
+             .archiveTask,
+             .createChecklistItem,
+             .deleteChecklistItem:
+            break
+        }
+        return changes
+    }
+
+    private func taskContext(
         _ task: AITaskWorkspaceTask,
         snapshot: AITaskWorkspaceSnapshot
     ) -> String {
@@ -868,18 +1352,47 @@ private extension AITaskWorkspaceOperation {
         return AppStrings.localized("aiTaskPlan.uncategorized")
     }
 
-    func checklistContext(
+    private func checklistContext(
         _ item: AITaskWorkspaceChecklistItem,
         snapshot: AITaskWorkspaceSnapshot
     ) -> String {
         let path = snapshot.tasks.first {
             $0.id == item.taskID
-        }?.path ?? item.taskID.uuidString
+        }?.path ?? AppStrings.localized(
+            "aiTaskPlan.diff.value.unavailable"
+        )
         return String.localizedStringWithFormat(
             AppStrings.localized(
                 "aiTaskPlan.operation.checklistTaskFormat"
             ),
             path
+        )
+    }
+
+    private func categoryValue(
+        id: UUID?,
+        snapshot: AITaskWorkspaceSnapshot
+    ) -> AITaskWorkspacePreviewValue {
+        guard let id else { return .optionalText(nil) }
+        let title = snapshot.categories.first { $0.id == id }?.title ??
+            AppStrings.localized("aiTaskPlan.diff.value.unavailable")
+        return .optionalText(title)
+    }
+}
+
+private extension [AITaskWorkspaceFieldChange] {
+    mutating func append(
+        field: AITaskWorkspacePreviewField,
+        before: AITaskWorkspacePreviewValue,
+        after: AITaskWorkspacePreviewValue
+    ) {
+        guard before != after else { return }
+        append(
+            AITaskWorkspaceFieldChange(
+                field: field,
+                before: before,
+                after: after
+            )
         )
     }
 }
@@ -909,7 +1422,7 @@ private enum AITaskWorkspaceUITestPlan {
             parentID: nil,
             categoryID: studyCategory?.id,
             notes: "A complete AI-reviewed reading plan.",
-            estimatedMinutes: large ? 900 : 300,
+            estimatedMinutes: large ? 600 : 300,
             dueAt: nil,
             iconName: "book",
             colorHex: "16A34A"

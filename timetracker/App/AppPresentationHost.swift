@@ -135,7 +135,7 @@ private struct AppPresentationSheet: View {
                     )
                 },
                 onApply: { draft in
-                    let result = store.applyAITaskWorkspaceReview(draft)
+                    let result = applyAITaskWorkspaceReview(draft)
                     if case let .applied(firstRootTaskID) = result {
                         if let firstRootTaskID {
                             store.openTaskDetail(firstRootTaskID)
@@ -145,6 +145,23 @@ private struct AppPresentationSheet: View {
                 }
             )
         }
+    }
+
+    private func applyAITaskWorkspaceReview(
+        _ draft: AITaskWorkspaceReviewDraft
+    ) -> AITaskWorkspaceApplyResult {
+        #if DEBUG
+        if CommandLine.arguments.contains(
+            "--uitesting-ai-task-plan-stale-apply"
+        ) {
+            return .workspaceChanged(
+                message: AppStrings.localized(
+                    "aiTaskPlan.error.workspaceChanged"
+                )
+            )
+        }
+        #endif
+        return store.applyAITaskWorkspaceReview(draft)
     }
 }
 

@@ -24,7 +24,8 @@ final class TimeTrackerStore {
         syncConflictService: SyncConflictService? = nil,
         taskDraftRecoveryStore: TaskDraftRecoveryStore? = nil
     ) {
-        self.llmCredentialStore = llmCredentialStore ?? KeychainLLMCredentialStore()
+        self.llmCredentialStore =
+            llmCredentialStore ?? Self.defaultLLMCredentialStore()
         self.inboxSuggestionService = inboxSuggestionService ?? LLMInboxSuggestionService()
         self.checklistVisualSuggestionService =
             checklistVisualSuggestionService ?? LLMChecklistVisualSuggestionService()
@@ -57,6 +58,19 @@ final class TimeTrackerStore {
         }
         #endif
         return UserDefaultsAppleHealthTimelinePreferenceStore()
+    }
+
+    private static func defaultLLMCredentialStore()
+        -> any LLMCredentialStoring
+    {
+        #if DEBUG
+        if CommandLine.arguments.contains("--uitesting"),
+           CommandLine.arguments.contains("--uitesting-live-llm")
+        {
+            return UITestLLMCredentialStore()
+        }
+        #endif
+        return KeychainLLMCredentialStore()
     }
 
     deinit {

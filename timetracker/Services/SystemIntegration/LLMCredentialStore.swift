@@ -6,6 +6,23 @@ protocol LLMCredentialStoring {
     func writeAPIKey(_ apiKey: String) throws
 }
 
+#if DEBUG
+final class UITestLLMCredentialStore: LLMCredentialStoring {
+    private var apiKey: String?
+
+    func readAPIKey() throws -> String? {
+        apiKey
+    }
+
+    func writeAPIKey(_ apiKey: String) throws {
+        let normalized = apiKey.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        self.apiKey = normalized.isEmpty ? nil : normalized
+    }
+}
+#endif
+
 struct KeychainLLMCredentialStore: LLMCredentialStoring {
     static let credentialAccessibility = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
 

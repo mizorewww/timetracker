@@ -1,6 +1,9 @@
 # 60：真实 DeepSeek 任务计划 Harness 与大计划验收实现记忆
 
-状态：2026-07-26 进行中
+状态：2026-07-26 暂停（用户指示改为从反馈第 105 行开始，见
+[`61-release-build-test-data-isolation.md`](61-release-build-test-data-isolation.md)）
+
+Checkpoint D、E 尚未完成，反馈条目仍保持 `[~]`；active 链接已让给任务 61。
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。

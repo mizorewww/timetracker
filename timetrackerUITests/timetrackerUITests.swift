@@ -15,15 +15,26 @@ final class timetrackerUITests: XCTestCase {
         let titleField: XCUIElement
     }
 
+    private struct LiveLLMUITestConfiguration {
+        let endpoint: String
+        let apiKey: String
+        let modelID: String
+    }
+
+    private enum LiveLLMUITestConfigurationError: Error {
+        case emptyValue
+    }
+
     private var screenshotRunDirectoryURL: URL?
 
     override func setUpWithError() throws {
         continueAfterFailure = false
         #if os(iOS)
-        let root = FileManager.default.urls(
-            for: .documentDirectory,
-            in: .userDomainMask
-        )[0]
+        let root = try liveLLMUIScreenshotDirectoryURL() ??
+            FileManager.default.urls(
+                for: .documentDirectory,
+                in: .userDomainMask
+            )[0]
             .appendingPathComponent("UITestScreenshots", isDirectory: true)
         let testDirectoryName = name.map { character in
             character.isLetter || character.isNumber ? character : "-"
@@ -4097,6 +4108,190 @@ final class timetrackerUITests: XCTestCase {
         }
         #else
         throw XCTSkip("AI prompt editing and screenshots run only on an explicitly owned simulator.")
+        #endif
+    }
+
+    @MainActor
+    func testLiveDeepSeekTaskPlanGeneratePreviewAndApply() throws {
+        #if os(iOS) && targetEnvironment(simulator)
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+
+        let configuration = try liveLLMUITestConfiguration()
+        let prompt =
+            "帮我生成 category阅读，下放一个任务：人工智能：现代方法，生成checklist 1-28"
+        let app = launchApp(
+            route: "tasks",
+            seedsDemoData: false,
+            additionalLaunchArguments: ["--uitesting-live-llm"],
+            additionalLaunchEnvironment: [
+                "TIMETRACKER_UI_TEST_LIVE_LLM_ENDPOINT":
+                    configuration.endpoint,
+                "TIMETRACKER_UI_TEST_LIVE_LLM_API_KEY":
+                    configuration.apiKey,
+                "TIMETRACKER_UI_TEST_LIVE_LLM_MODEL":
+                    configuration.modelID,
+            ]
+        )
+
+        let tasksView = app.descendants(matching: .any)[
+            "tasks.view"
+        ].firstMatch
+        XCTAssertTrue(tasksView.waitForExistence(timeout: 15))
+
+        let addMenu = app.descendants(matching: .any)[
+            "tasks.add"
+        ].firstMatch
+        XCTAssertTrue(
+            addMenu.waitForExistence(timeout: 5) && addMenu.isHittable
+        )
+        activate(addMenu)
+
+        let generatePlan = app.descendants(matching: .any)[
+            "tasks.generatePlan"
+        ].firstMatch
+        XCTAssertTrue(
+            generatePlan.waitForExistence(timeout: 5) &&
+                generatePlan.isHittable
+        )
+        activate(generatePlan)
+
+        let sheet = app.descendants(matching: .any)[
+            "aiTaskPlan.sheet"
+        ].firstMatch
+        let request = app.descendants(matching: .any)[
+            "aiTaskPlan.request"
+        ].firstMatch
+        XCTAssertTrue(sheet.waitForExistence(timeout: 8))
+        XCTAssertTrue(
+            request.waitForExistence(timeout: 5) && request.isHittable
+        )
+        activate(request)
+        replaceText(prompt, in: request)
+        XCTAssertTrue(
+            (request.value as? String ?? request.label).contains(
+                "人工智能：现代方法"
+            )
+        )
+
+        let generate = app.buttons[
+            "aiTaskPlan.generate"
+        ].firstMatch
+        XCTAssertTrue(
+            generate.waitForExistence(timeout: 5) && generate.isHittable
+        )
+        activate(generate)
+
+        let generating = app.descendants(matching: .any)[
+            "aiTaskPlan.generating"
+        ].firstMatch
+        XCTAssertTrue(generating.waitForExistence(timeout: 10))
+
+        let tokenProgress = app.descendants(matching: .any)[
+            "aiTaskPlan.generating.tokens"
+        ].firstMatch
+        XCTAssertTrue(
+            tokenProgress.waitForExistence(timeout: 150),
+            "The real provider must report output token progress before preview."
+        )
+        try capture(
+            "iphone-live-deepseek-generating-tokens",
+            app: app
+        )
+
+        let changeSummary = app.descendants(matching: .any)[
+            "aiTaskPlan.changeSummary"
+        ].firstMatch
+        XCTAssertTrue(
+            changeSummary.waitForExistence(timeout: 180),
+            "The production DeepSeek request must reach Preview."
+        )
+        try capture("iphone-live-deepseek-preview", app: app)
+
+        let finalChecklistOperation = app.descendants(matching: .any)[
+            "aiTaskPlan.operation.29"
+        ].firstMatch
+        gentlyScrollUntilHittable(
+            finalChecklistOperation,
+            direction: .up,
+            maximumScrolls: 60,
+            in: app
+        )
+        XCTAssertTrue(
+            finalChecklistOperation.waitForExistence(timeout: 5) &&
+                finalChecklistOperation.isHittable
+        )
+        XCTAssertTrue(
+            finalChecklistOperation.label.contains("28"),
+            "The real Preview must faithfully include Checklist 28."
+        )
+        try capture(
+            "iphone-live-deepseek-preview-checklist-28",
+            app: app
+        )
+
+        let reasoning = app.descendants(matching: .any)[
+            "aiTaskPlan.reasoning"
+        ].firstMatch
+        gentlyScrollUntilHittable(
+            reasoning,
+            direction: .up,
+            maximumScrolls: 30,
+            in: app
+        )
+        XCTAssertTrue(
+            reasoning.waitForExistence(timeout: 5) && reasoning.isHittable
+        )
+        activate(reasoning)
+        let reasoningContent = app.descendants(matching: .any)[
+            "aiTaskPlan.reasoning.content"
+        ].firstMatch
+        XCTAssertTrue(reasoningContent.waitForExistence(timeout: 5))
+        try capture("iphone-live-deepseek-reasoning", app: app)
+
+        let rawOutput = app.descendants(matching: .any)[
+            "aiTaskPlan.rawOutput"
+        ].firstMatch
+        gentlyScrollUntilHittable(
+            rawOutput,
+            direction: .up,
+            maximumScrolls: 30,
+            in: app
+        )
+        XCTAssertTrue(
+            rawOutput.waitForExistence(timeout: 5) &&
+                rawOutput.isHittable
+        )
+        activate(rawOutput)
+        let rawOutputContent = app.descendants(matching: .any)[
+            "aiTaskPlan.rawOutput.content"
+        ].firstMatch
+        XCTAssertTrue(rawOutputContent.waitForExistence(timeout: 5))
+        try capture("iphone-live-deepseek-raw-output", app: app)
+
+        let apply = app.buttons[
+            "aiTaskPlan.apply"
+        ].firstMatch
+        XCTAssertTrue(
+            apply.waitForExistence(timeout: 5) && apply.isHittable
+        )
+        activate(apply)
+        XCTAssertTrue(sheet.waitForNonExistence(timeout: 15))
+        XCTAssertTrue(taskDetailIsReady(in: app))
+
+        let titleField = app.descendants(matching: .any)[
+            "task.editor.title.field"
+        ].firstMatch
+        XCTAssertTrue(titleField.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            titleField.value as? String,
+            "人工智能：现代方法"
+        )
+        try capture("iphone-live-deepseek-applied-task", app: app)
+        #else
+        throw XCTSkip(
+            "The paid live DeepSeek UI gate runs only on an owned iPhone simulator."
+        )
         #endif
     }
 
@@ -8533,6 +8728,7 @@ final class timetrackerUITests: XCTestCase {
         replacesDemoDataOnLaunch: Bool = false,
         taskTitle: String? = nil,
         additionalLaunchArguments: [String] = [],
+        additionalLaunchEnvironment: [String: String] = [:],
         autosaveDelayMilliseconds: Int? = nil
     ) -> XCUIApplication {
         let app = XCUIApplication()
@@ -8568,6 +8764,9 @@ final class timetrackerUITests: XCTestCase {
             ]
         }
         app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
+        for (key, value) in additionalLaunchEnvironment {
+            app.launchEnvironment[key] = value
+        }
         app.launchEnvironment["TIMETRACKER_UI_AUDIT_ROUTE"] = route
         if let taskTitle {
             app.launchEnvironment["TIMETRACKER_UI_AUDIT_TASK_TITLE"] = taskTitle
@@ -8585,6 +8784,63 @@ final class timetrackerUITests: XCTestCase {
             assertNoAppleHealthAuthorizationSheet(in: app)
         }
         return app
+    }
+
+    private func liveLLMUITestConfiguration()
+        throws -> LiveLLMUITestConfiguration
+    {
+        let directory = liveLLMUIHarnessDirectoryURL()
+        guard FileManager.default.fileExists(
+            atPath: directory.appendingPathComponent("run").path
+        ) else {
+            throw XCTSkip(
+                "Live DeepSeek UI verification is opt-in; use make test-llm-live-ui."
+            )
+        }
+
+        func value(named name: String) throws -> String {
+            let value = try String(
+                contentsOf: directory.appendingPathComponent(name),
+                encoding: .utf8
+            ).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard value.isEmpty == false else {
+                throw LiveLLMUITestConfigurationError.emptyValue
+            }
+            return value
+        }
+
+        return try LiveLLMUITestConfiguration(
+            endpoint: value(named: "endpoint"),
+            apiKey: value(named: "api-key"),
+            modelID: value(named: "model")
+        )
+    }
+
+    private func liveLLMUIScreenshotDirectoryURL() throws -> URL? {
+        let directory = liveLLMUIHarnessDirectoryURL()
+        guard FileManager.default.fileExists(
+            atPath: directory.appendingPathComponent("run").path
+        ) else {
+            return nil
+        }
+        let path = try String(
+            contentsOf: directory.appendingPathComponent("screenshot-dir"),
+            encoding: .utf8
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard path.isEmpty == false else {
+            throw LiveLLMUITestConfigurationError.emptyValue
+        }
+        return URL(fileURLWithPath: path, isDirectory: true)
+    }
+
+    private func liveLLMUIHarnessDirectoryURL() -> URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent(
+                "build/LiveLLMUIHarness",
+                isDirectory: true
+            )
     }
 
     @MainActor

@@ -215,6 +215,9 @@ struct AITaskPlanGeneratorSheet: View {
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
                                     .monospacedDigit()
+                                    .accessibilityIdentifier(
+                                        "aiTaskPlan.generating.tokens"
+                                    )
                                 }
                             }
                             Spacer(minLength: 8)
@@ -223,6 +226,9 @@ struct AITaskPlanGeneratorSheet: View {
                                     "aiTaskPlan.stopGenerating"
                                 ),
                                 action: stopGenerating
+                            )
+                            .accessibilityIdentifier(
+                                "aiTaskPlan.stopGenerating"
                             )
                         }
                         .frame(
@@ -519,6 +525,9 @@ private struct AITaskWorkspaceReviewView: View {
                                     maxWidth: .infinity,
                                     alignment: .leading
                                 )
+                                .accessibilityIdentifier(
+                                    "aiTaskPlan.reasoning.content"
+                                )
                         }
                         .frame(maxHeight: 320)
                         .padding(.vertical, 4)
@@ -575,6 +584,7 @@ private struct AITaskWorkspaceReviewView: View {
                             "aiTaskPlan.noChanges.message"
                         ))
                     )
+                    .accessibilityIdentifier("aiTaskPlan.noChanges")
                 }
             }
 
@@ -599,6 +609,7 @@ private struct AITaskWorkspaceReviewView: View {
         #else
         .listStyle(.inset)
         #endif
+        .accessibilityIdentifier("aiTaskPlan.preview")
     }
 }
 

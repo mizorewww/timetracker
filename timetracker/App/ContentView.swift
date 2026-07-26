@@ -66,6 +66,7 @@ struct ContentView: View {
                 }
                 #endif
                 #if DEBUG
+                store.applyLiveLLMConfigurationIfRequested()
                 store.applyUIAuditRouteIfRequested()
                 #endif
             }

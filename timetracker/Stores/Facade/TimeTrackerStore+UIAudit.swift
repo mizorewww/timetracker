@@ -2,6 +2,35 @@
 import Foundation
 
 extension TimeTrackerStore {
+    func applyLiveLLMConfigurationIfRequested(
+        arguments: [String] = CommandLine.arguments,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) {
+        #if os(iOS) && targetEnvironment(simulator)
+        guard arguments.contains("--uitesting"),
+              arguments.contains("--uitesting-live-llm"),
+              let endpoint = environment[
+                  "TIMETRACKER_UI_TEST_LIVE_LLM_ENDPOINT"
+              ],
+              let apiKey = environment[
+                  "TIMETRACKER_UI_TEST_LIVE_LLM_API_KEY"
+              ],
+              let modelID = environment[
+                  "TIMETRACKER_UI_TEST_LIVE_LLM_MODEL"
+              ]
+        else {
+            return
+        }
+
+        _ = setLLMConfiguration(
+            endpoint: endpoint,
+            apiKey: apiKey,
+            selectedModel: modelID,
+            availableModelIDs: [modelID]
+        )
+        #endif
+    }
+
     func applyUIAuditRouteIfRequested(environment: [String: String] = ProcessInfo.processInfo.environment) {
         guard let rawRoute = environment["TIMETRACKER_UI_AUDIT_ROUTE"]?
             .trimmingCharacters(in: .whitespacesAndNewlines)

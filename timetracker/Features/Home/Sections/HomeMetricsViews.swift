@@ -9,7 +9,7 @@ struct TodayOverviewSection: View {
                 container: .card,
                 showsWallTime: store.preferences.showGrossAndWallTogether
             )
-            PhoneTodaySummaryRow(store: store)
+            CompactTodaySummaryRow(store: store)
                 .padding(14)
                 .frame(maxWidth: .infinity)
                 .appCard(padding: 0)

@@ -1294,7 +1294,7 @@ struct AppleHealthTimelineTests {
             "timetracker/Features/Home/Sections/HomeTimelineViews.swift"
         )
         let phone = try sourceText(
-            "timetracker/Features/Home/PhoneHomeSections.swift"
+            "timetracker/Features/Home/CompactHomeSections.swift"
         )
         let sharedLegend = try sourceText(
             "timetracker/SharedUI/Components/TimelineLegendRow.swift"

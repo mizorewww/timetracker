@@ -1,6 +1,6 @@
 import SwiftUI
 
-private struct PhoneTabNavigationSafetyModifier: ViewModifier {
+private struct CompactTabNavigationSafetyModifier: ViewModifier {
     @Binding var isPresented: Bool
     @Binding var requestID: UUID?
     let navigationGuard: TaskDetailNavigationGuard
@@ -48,13 +48,13 @@ private struct PhoneTabNavigationSafetyModifier: ViewModifier {
 }
 
 extension View {
-    func phoneTabNavigationSafety(
+    func compactTabNavigationSafety(
         isPresented: Binding<Bool>,
         requestID: Binding<UUID?>,
         navigationGuard: TaskDetailNavigationGuard
     ) -> some View {
         modifier(
-            PhoneTabNavigationSafetyModifier(
+            CompactTabNavigationSafetyModifier(
                 isPresented: isPresented,
                 requestID: requestID,
                 navigationGuard: navigationGuard

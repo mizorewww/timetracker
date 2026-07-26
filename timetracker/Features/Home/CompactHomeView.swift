@@ -1,7 +1,8 @@
-#if os(iOS)
 import SwiftUI
 
-struct PhoneHomeView: View {
+/// Today at compact width: one grouped `List` of sections, as opposed to the
+/// width-driven card canvas `DesktopMainView` draws when there is room for it.
+struct CompactHomeView: View {
     let store: TimeTrackerStore
     let openSettings: () -> Void
     let openTask: (UUID) -> Void
@@ -12,7 +13,7 @@ struct PhoneHomeView: View {
         let content = TodayHomeContent(store: store)
 
         List {
-            PhoneNowSection(
+            CompactNowSection(
                 store: store,
                 segments: content.activeSegments,
                 allowsParallelTimers: store.preferences.allowParallelTimers,
@@ -21,7 +22,7 @@ struct PhoneHomeView: View {
             )
 
             Section {
-                PhoneTodaySummaryRow(store: store)
+                CompactTodaySummaryRow(store: store)
                     .accessibilityIdentifier("home.overview")
             } header: {
                 HomeOverviewHeader(
@@ -43,7 +44,7 @@ struct PhoneHomeView: View {
             )
             .homeVisualizationListSection()
 
-            PhoneQuickStartSection(
+            CompactQuickStartSection(
                 store: store,
                 tasks: content.quickStartTasks,
                 startTimer: { presentationRouter.presentStartTaskPicker() },
@@ -51,14 +52,14 @@ struct PhoneHomeView: View {
                 openTask: openTask
             )
 
-            PhoneTimelineSection(
+            CompactTimelineSection(
                 store: store,
                 segments: content.timelineSegments,
                 openTask: openTask
             )
 
             if !content.forecasts.isEmpty {
-                PhoneForecastSection(
+                CompactForecastSection(
                     store: store,
                     forecasts: content.forecasts,
                     openTask: openTask
@@ -66,26 +67,34 @@ struct PhoneHomeView: View {
             }
 
             if !content.countdownEvents.isEmpty {
-                PhoneCountdownSection(events: content.countdownEvents)
+                CompactCountdownSection(events: content.countdownEvents)
             }
         }
+        // `.insetGrouped` and keyboard dismissal have no AppKit equivalent.
+        #if os(iOS)
         .listStyle(.insetGrouped)
-        .contentMargins(.bottom, dynamicTypeSize.isAccessibilitySize ? 112 : 16, for: .scrollContent)
         .scrollDismissesKeyboard(.interactively)
+        #else
+        .listStyle(.inset)
+        #endif
+        .contentMargins(.bottom, dynamicTypeSize.isAccessibilitySize ? 112 : 16, for: .scrollContent)
         .scrollContentBackground(.hidden)
         .background(AppColors.background)
         .navigationTitle(AppStrings.today)
-        .navigationBarTitleDisplayMode(.large)
-        .accessibilityIdentifier("home.view")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(action: openSettings) {
-                    Label(AppStrings.settings, systemImage: "gearshape")
-                        .labelStyle(.iconOnly)
+        #if os(iOS)
+            .navigationBarTitleDisplayMode(.large)
+        #endif
+            .accessibilityIdentifier("home.view")
+            .toolbar {
+                // `.primaryAction` resolves to the navigation bar's trailing slot on
+                // iOS and the window toolbar on macOS, so no branch is needed.
+                ToolbarItem(placement: .primaryAction) {
+                    Button(action: openSettings) {
+                        Label(AppStrings.settings, systemImage: "gearshape")
+                            .labelStyle(.iconOnly)
+                    }
+                    .accessibilityIdentifier("settings.open")
                 }
-                .accessibilityIdentifier("settings.open")
             }
-        }
     }
 }
-#endif

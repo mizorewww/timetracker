@@ -1,7 +1,6 @@
-#if os(iOS)
 import SwiftUI
 
-struct PhoneNowSection: View {
+struct CompactNowSection: View {
     let store: TimeTrackerStore
     let segments: [TimeSegment]
     let allowsParallelTimers: Bool
@@ -36,7 +35,7 @@ struct PhoneNowSection: View {
     }
 }
 
-struct PhoneQuickStartSection: View {
+struct CompactQuickStartSection: View {
     let store: TimeTrackerStore
     let tasks: [TaskNode]
     let startTimer: () -> Void
@@ -110,7 +109,7 @@ struct PhoneQuickStartSection: View {
     }
 }
 
-struct PhoneTimelineSection: View {
+struct CompactTimelineSection: View {
     let store: TimeTrackerStore
     let segments: [TimeSegment]
     let openTask: (UUID) -> Void
@@ -155,9 +154,12 @@ struct PhoneTimelineSection: View {
                 }
             }
 
+            // HealthKit has no macOS counterpart, so neither does this row.
+            #if os(iOS)
             if store.shouldShowAppleHealthTimelineStatusInline {
                 AppleHealthTimelineAccessRow(store: store)
             }
+            #endif
         } header: {
             Text(AppStrings.todayTimeline)
                 .accessibilityIdentifier("home.timeline")
@@ -165,7 +167,7 @@ struct PhoneTimelineSection: View {
     }
 }
 
-struct PhoneForecastSection: View {
+struct CompactForecastSection: View {
     let store: TimeTrackerStore
     let forecasts: [ForecastDisplayItem]
     let openTask: (UUID) -> Void
@@ -193,7 +195,7 @@ struct PhoneForecastSection: View {
     }
 }
 
-struct PhoneCountdownSection: View {
+struct CompactCountdownSection: View {
     let events: [CountdownEvent]
 
     var body: some View {
@@ -205,4 +207,3 @@ struct PhoneCountdownSection: View {
         .accessibilityIdentifier("home.countdown")
     }
 }
-#endif

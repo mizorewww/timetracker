@@ -9,8 +9,8 @@ struct TimelineRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var pendingDeletionRequest: SegmentEditorDraftBaseline?
 
-    private var isCompactPhone: Bool {
-        SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompactPhone
+    private var isCompact: Bool {
+        SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompact
     }
 
     private var tag: String {
@@ -66,8 +66,8 @@ struct TimelineRow: View {
             Text(pendingDeletionImpact.confirmationMessage)
         }
         .padding(.leading, 14)
-        .padding(.trailing, isCompactPhone ? 0 : 14)
-        .padding(.vertical, isCompactPhone ? 11 : 10)
+        .padding(.trailing, isCompact ? 0 : 14)
+        .padding(.vertical, isCompact ? 11 : 10)
     }
 
     private func taskButton(at now: Date) -> some View {
@@ -81,7 +81,7 @@ struct TimelineRow: View {
             Group {
                 if dynamicTypeSize.isAccessibilitySize {
                     accessibilityContent(display: display)
-                } else if isCompactPhone {
+                } else if isCompact {
                     compactContent(display: display)
                 } else {
                     ViewThatFits(in: .horizontal) {
@@ -181,7 +181,7 @@ struct TimelineRow: View {
             Text(timeRangeText(display: display))
                 .font(.subheadline.monospacedDigit())
                 .foregroundStyle(.secondary)
-                .frame(width: isCompactPhone ? 82 : 120, alignment: .leading)
+                .frame(width: isCompact ? 82 : 120, alignment: .leading)
 
             Text(store.displayTitle(for: segment))
                 .lineLimit(1)

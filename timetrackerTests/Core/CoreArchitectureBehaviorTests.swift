@@ -6,16 +6,49 @@ import Testing
 @Suite(.serialized)
 struct CoreArchitectureBehaviorTests {
     @Test @MainActor
-    func rootLayoutPolicyUsesStableInterfaceIdiom() {
-        #expect(RootLayoutPolicy(interfaceIdiom: .phone).shell == .phone)
-        #expect(RootLayoutPolicy(interfaceIdiom: .pad).shell == .pad)
-        #expect(RootLayoutPolicy(interfaceIdiom: .unsupported).shell == .phone)
+    func rootLayoutPolicyChoosesTheShellFromWidthNotTheDevice() {
+        let breakpoint = RootLayoutPolicy.regularShellMinimumWidth
+        #expect(breakpoint == WidthLayoutPolicy.narrowMaximumWidth)
 
-        #if os(iOS)
-        #expect(RootLayoutPolicy(userInterfaceIdiom: .phone).shell == .phone)
-        #expect(RootLayoutPolicy(userInterfaceIdiom: .pad).shell == .pad)
-        #expect(RootLayoutPolicy(userInterfaceIdiom: .unspecified).shell == .phone)
-        #endif
+        // A compact size class always wins, whatever the width says. This is
+        // what keeps an ordinary iPhone in landscape on the tab shell.
+        #expect(
+            RootLayoutPolicy(measuredWidth: 1024, horizontalSizeClass: .compact)
+                .shell == .compact
+        )
+
+        // macOS reports `.regular` at every width, so width alone decides — a
+        // narrow window gets the same shell an iPhone gets.
+        #expect(
+            RootLayoutPolicy(measuredWidth: breakpoint - 1, horizontalSizeClass: .regular)
+                .shell == .compact
+        )
+        #expect(
+            RootLayoutPolicy(measuredWidth: breakpoint, horizontalSizeClass: .regular)
+                .shell == .regular
+        )
+
+        // An iPad at half width is below the breakpoint and must not try to
+        // keep both split-view columns.
+        #expect(
+            RootLayoutPolicy(measuredWidth: 507, horizontalSizeClass: nil)
+                .shell == .compact
+        )
+        #expect(
+            RootLayoutPolicy(measuredWidth: 1024, horizontalSizeClass: nil)
+                .shell == .regular
+        )
+
+        // Before the first measurement the size class is the only signal, so
+        // the shell must not flash the wrong way for one frame.
+        #expect(
+            RootLayoutPolicy(measuredWidth: nil, horizontalSizeClass: .regular)
+                .shell == .regular
+        )
+        #expect(
+            RootLayoutPolicy(measuredWidth: nil, horizontalSizeClass: .compact)
+                .shell == .compact
+        )
     }
 
     @Test
@@ -59,10 +92,17 @@ struct CoreArchitectureBehaviorTests {
         )
         #expect(widestToday.currentStatePrimaryColumnWidth == 620)
         #expect(widestToday.currentStateOverviewColumnWidth == 538)
-        #expect(AnalyticsLayoutPolicy(horizontalSizeClass: nil).showsPageTitleInContent)
-        #expect(SplitColumnLayoutPolicy.iPad.detail == ColumnWidth(min: 480, ideal: 760, max: nil))
-        #expect(SplitColumnLayoutPolicy.mac.sidebar == ColumnWidth(min: 220, ideal: 240, max: 270))
-        #expect(SplitColumnLayoutPolicy.mac.detail == ColumnWidth(min: 420, ideal: 720, max: nil))
+        // One split preset for every platform that shows the split shell. Its
+        // detail minimum must stay under the shell breakpoint, otherwise there
+        // would be a band of widths the split view cannot satisfy and the
+        // compact shell has not taken over yet.
+        #expect(SplitColumnLayoutPolicy.standard.sidebar == ColumnWidth(min: 220, ideal: 250, max: 300))
+        #expect(SplitColumnLayoutPolicy.standard.detail == ColumnWidth(min: 420, ideal: 760, max: nil))
+        #expect(
+            SplitColumnLayoutPolicy.standard.sidebar.min +
+                SplitColumnLayoutPolicy.standard.detail.min <=
+                RootLayoutPolicy.regularShellMinimumWidth
+        )
         #expect(PomodoroLayoutPolicy(horizontalSizeClass: .compact).setupCardPadding == 18)
         #expect(PomodoroLayoutPolicy(horizontalSizeClass: .compact).setupSectionSpacing == 20)
         #expect(PomodoroLayoutPolicy(horizontalSizeClass: .regular).setupCardPadding == 24)

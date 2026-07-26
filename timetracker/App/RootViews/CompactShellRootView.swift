@@ -1,43 +1,9 @@
 import SwiftUI
 
-#if os(iOS)
-import UIKit
-
-struct iOSRootView<SyncConflictContent: View>: View {
-    let store: TimeTrackerStore
-    let syncConflictContent: SyncConflictContent
-    private let layoutPolicy: RootLayoutPolicy
-
-    init(
-        store: TimeTrackerStore,
-        layoutPolicy: RootLayoutPolicy = RootLayoutPolicy(
-            userInterfaceIdiom: UIDevice.current.userInterfaceIdiom
-        ),
-        @ViewBuilder syncConflictContent: () -> SyncConflictContent
-    ) {
-        self.store = store
-        self.layoutPolicy = layoutPolicy
-        self.syncConflictContent = syncConflictContent()
-    }
-
-    var body: some View {
-        switch layoutPolicy.shell {
-        case .phone:
-            PhoneRootView(
-                store: store,
-                syncConflictContent: syncConflictContent
-            )
-        case .pad:
-            iPadRootView(store: store)
-                .safeAreaInset(edge: .top, spacing: 0) {
-                    syncConflictContent
-                        .padding(8)
-                }
-        }
-    }
-}
-
-struct PhoneRootView<SyncConflictContent: View>: View {
+/// Tab bar over a single navigation stack, for widths too narrow for a split
+/// view. Used by iPhone, by an iPad in Split View or Slide Over, and by a Mac
+/// window dragged below `RootLayoutPolicy.regularShellMinimumWidth`.
+struct CompactShellRootView<SyncConflictContent: View>: View {
     let store: TimeTrackerStore
     let syncConflictContent: SyncConflictContent
     @Environment(AppPresentationRouter.self) private var presentationRouter
@@ -50,7 +16,7 @@ struct PhoneRootView<SyncConflictContent: View>: View {
         TabView(selection: selectedDestinationBinding) {
             Tab(value: .today) {
                 NavigationStack {
-                    PhoneHomeView(
+                    CompactHomeView(
                         store: store,
                         openSettings: openSettings,
                         openTask: openTask
@@ -99,8 +65,10 @@ struct PhoneRootView<SyncConflictContent: View>: View {
                     .accessibilityIdentifier("phone.tab.analytics")
             }
         }
+        #if os(iOS)
         .tabBarMinimizeBehavior(.onScrollDown)
-        .phoneTabNavigationSafety(
+        #endif
+        .compactTabNavigationSafety(
             isPresented: $isTabDiscardConfirmationPresented,
             requestID: $tabNavigationConfirmationRequestID,
             navigationGuard: store.taskDetailNavigationGuard
@@ -109,6 +77,7 @@ struct PhoneRootView<SyncConflictContent: View>: View {
             syncConflictContent
                 .padding(8)
         }
+        // Kept verbatim: this is the identifier the existing XCUITests select on.
         .accessibilityIdentifier("phone.tabView")
         .onAppear {
             synchronize(with: store.desktopDestination)
@@ -175,5 +144,3 @@ struct PhoneRootView<SyncConflictContent: View>: View {
         store.desktopDestination = selectedDestination == .settings ? .today : selectedDestination
     }
 }
-
-#endif

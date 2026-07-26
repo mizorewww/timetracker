@@ -26,13 +26,9 @@ struct ContentView: View {
     var body: some View {
         Group {
             if store.effectivePersistenceWriteSafety == .ready {
-                #if os(macOS)
-                DesktopRootView(store: store)
-                #else
-                iOSRootView(store: store) {
+                AppRootView(store: store) {
                     syncConflictNotice
                 }
-                #endif
             } else {
                 PersistenceRecoveryView(safety: store.effectivePersistenceWriteSafety)
             }
@@ -46,88 +42,84 @@ struct ContentView: View {
             feedbackRouter: feedbackRouter
         )
         .appSceneFeedbackHost(router: feedbackRouter)
-        #if os(macOS)
-            .safeAreaInset(edge: .top, spacing: 0) {
-                syncConflictNotice
-                    .padding(8)
+        // The sync-conflict banner is installed by whichever shell `AppRootView`
+        // picks, so it no longer needs a second macOS-only insertion here.
+        .task {
+            store.configureIfNeeded(context: modelContext)
+            guard store.persistenceWriteSafety == .ready else { return }
+            hasFinishedInitialConfiguration = true
+            drainPendingDeepLinks()
+            registerForWatchCommandsIfNeeded()
+            store.materializeCurrentDailyTaskRecurrences()
+            await store.refreshAppleHealthTimelineIfEnabled()
+            #if DEBUG
+            if await CloudSyncSmokeTestRunner.runIfRequested(context: modelContext, store: store) {
+                return
             }
-        #endif
-            .task {
-                store.configureIfNeeded(context: modelContext)
-                guard store.persistenceWriteSafety == .ready else { return }
-                hasFinishedInitialConfiguration = true
-                drainPendingDeepLinks()
-                registerForWatchCommandsIfNeeded()
-                store.materializeCurrentDailyTaskRecurrences()
+            #endif
+            #if DEBUG
+            store.applyLiveLLMConfigurationIfRequested()
+            store.applyUIAuditRouteIfRequested()
+            #endif
+        }
+        .onChange(of: scenePhase) { _, phase in
+            updateWatchCommandRoute(for: phase)
+            guard phase == .active,
+                  hasFinishedInitialConfiguration,
+                  AppCloudSync.allowsUserWrites else { return }
+            Task { @MainActor in
+                await store.refreshForForeground()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+            guard hasFinishedInitialConfiguration, scenePhase == .active else { return }
+            Task { @MainActor in
                 await store.refreshAppleHealthTimelineIfEnabled()
-                #if DEBUG
-                if await CloudSyncSmokeTestRunner.runIfRequested(context: modelContext, store: store) {
-                    return
-                }
-                #endif
-                #if DEBUG
-                store.applyLiveLLMConfigurationIfRequested()
-                store.applyUIAuditRouteIfRequested()
-                #endif
             }
-            .onChange(of: scenePhase) { _, phase in
-                updateWatchCommandRoute(for: phase)
-                guard phase == .active,
-                      hasFinishedInitialConfiguration,
-                      AppCloudSync.allowsUserWrites else { return }
-                Task { @MainActor in
-                    await store.refreshForForeground()
-                }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
-                guard hasFinishedInitialConfiguration, scenePhase == .active else { return }
-                Task { @MainActor in
-                    await store.refreshAppleHealthTimelineIfEnabled()
-                }
-            }
-            .onChange(of: store.persistenceWriteSafety) { _, safety in
-                guard safety == .ready else {
-                    hasFinishedInitialConfiguration = false
-                    unregisterFromWatchCommands()
-                    return
-                }
-                guard hasFinishedInitialConfiguration == false else { return }
-                hasFinishedInitialConfiguration = true
-                drainPendingDeepLinks()
-                registerForWatchCommandsIfNeeded()
-                Task { @MainActor in
-                    store.materializeCurrentDailyTaskRecurrences()
-                    await store.refreshAppleHealthTimelineIfEnabled()
-                }
-            }
-            .taskRecurrenceLifecycle(store: store, isConfigured: hasFinishedInitialConfiguration)
-            .onOpenURL { url in
-                guard AppDeepLinkRouter().action(for: url) != nil else { return }
-                guard AppCloudSync.allowsUserWrites, store.taskRepository != nil else {
-                    pendingDeepLinks.enqueue(url)
-                    return
-                }
-                deepLinkCoordinator.enqueueAndDrain(url)
-            }
-            .onDisappear {
-                pendingDeepLinks.removeAll()
+        }
+        .onChange(of: store.persistenceWriteSafety) { _, safety in
+            guard safety == .ready else {
                 hasFinishedInitialConfiguration = false
                 unregisterFromWatchCommands()
+                return
             }
-            .onChange(of: store.errorMessage) { _, message in
-                relayStoreError(message)
+            guard hasFinishedInitialConfiguration == false else { return }
+            hasFinishedInitialConfiguration = true
+            drainPendingDeepLinks()
+            registerForWatchCommandsIfNeeded()
+            Task { @MainActor in
+                store.materializeCurrentDailyTaskRecurrences()
+                await store.refreshAppleHealthTimelineIfEnabled()
             }
-            .onChange(of: store.pendingSyncConflict?.id) { _, _ in
-                dismissedSyncConflictID = nil
+        }
+        .taskRecurrenceLifecycle(store: store, isConfigured: hasFinishedInitialConfiguration)
+        .onOpenURL { url in
+            guard AppDeepLinkRouter().action(for: url) != nil else { return }
+            guard AppCloudSync.allowsUserWrites, store.taskRepository != nil else {
+                pendingDeepLinks.enqueue(url)
+                return
             }
-            .onChange(of: presentationRouter.sheet?.id) { _, presentationID in
-                guard presentationID == nil else { return }
-                drainPendingDeepLinks()
-            }
-            .onChange(of: store.taskDetailNavigationGuard.hasPendingNavigation) { _, hasPendingNavigation in
-                guard hasPendingNavigation == false else { return }
-                drainPendingDeepLinks()
-            }
+            deepLinkCoordinator.enqueueAndDrain(url)
+        }
+        .onDisappear {
+            pendingDeepLinks.removeAll()
+            hasFinishedInitialConfiguration = false
+            unregisterFromWatchCommands()
+        }
+        .onChange(of: store.errorMessage) { _, message in
+            relayStoreError(message)
+        }
+        .onChange(of: store.pendingSyncConflict?.id) { _, _ in
+            dismissedSyncConflictID = nil
+        }
+        .onChange(of: presentationRouter.sheet?.id) { _, presentationID in
+            guard presentationID == nil else { return }
+            drainPendingDeepLinks()
+        }
+        .onChange(of: store.taskDetailNavigationGuard.hasPendingNavigation) { _, hasPendingNavigation in
+            guard hasPendingNavigation == false else { return }
+            drainPendingDeepLinks()
+        }
     }
 
     private func drainPendingDeepLinks() {

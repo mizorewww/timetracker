@@ -1,49 +1,54 @@
 import SwiftUI
 
-#if os(iOS)
-import UIKit
-#endif
-
+/// Chooses the app shell from the space actually available, never from the
+/// device model.
+///
+/// An idiom check gets this wrong in both directions: an iPad in Split View or
+/// Slide Over has phone-sized width, and a Mac window dragged narrow should
+/// behave the same way. HIG `layout.md` asks iPadOS apps to "support the full
+/// range of window sizes" and to "defer switching to compact view as long as
+/// possible", which is a statement about width, not hardware.
 struct RootLayoutPolicy: Equatable, Sendable {
-    enum InterfaceIdiom: Equatable, Sendable {
-        case phone
-        case pad
-        case unsupported
-    }
-
     enum Shell: Equatable, Sendable {
-        case phone
-        case pad
+        /// Tab bar over a single navigation stack.
+        case compact
+        /// Sidebar plus detail split.
+        case regular
     }
 
-    let interfaceIdiom: InterfaceIdiom
+    /// Below this the split view cannot keep both columns usable, so the
+    /// compact shell takes over. Shared with `WidthLayoutPolicy` so the app
+    /// has exactly one shell breakpoint.
+    static let regularShellMinimumWidth: CGFloat = WidthLayoutPolicy.narrowMaximumWidth
+
+    /// `nil` until the first layout pass has measured the window.
+    let measuredWidth: CGFloat?
+    let horizontalSizeClass: UserInterfaceSizeClass?
 
     var shell: Shell {
-        interfaceIdiom == .pad ? .pad : .phone
-    }
-}
-
-#if os(iOS)
-extension RootLayoutPolicy {
-    init(userInterfaceIdiom: UIUserInterfaceIdiom) {
-        let interfaceIdiom: InterfaceIdiom = switch userInterfaceIdiom {
-        case .phone:
-            .phone
-        case .pad:
-            .pad
-        default:
-            .unsupported
+        // The system's own compactness signal wins whenever it says compact:
+        // that covers iPhone landscape and iPad Slide Over, where raw width
+        // would over-promote to a split view. macOS always reports `.regular`,
+        // so there width is the only signal — which is exactly what lets a
+        // narrow Mac window fall back to the compact shell.
+        if horizontalSizeClass == .compact {
+            return .compact
         }
-        self.init(interfaceIdiom: interfaceIdiom)
+        // Before the first measurement, trust the size class rather than
+        // flashing the wrong shell for one frame.
+        guard let measuredWidth else { return .regular }
+        return measuredWidth >= Self.regularShellMinimumWidth ? .regular : .compact
     }
 }
-#endif
 
 struct WidthLayoutPolicy {
+    /// The one narrow/wide breakpoint in the app.
+    static let narrowMaximumWidth: CGFloat = 720
+
     let width: CGFloat
 
     var isNarrow: Bool {
-        width < 720
+        width < Self.narrowMaximumWidth
     }
 }
 
@@ -115,20 +120,10 @@ struct HomeLayoutPolicy {
 struct SizeClassLayoutPolicy {
     let horizontalSizeClass: UserInterfaceSizeClass?
 
-    var isCompactPhone: Bool {
+    /// Named for the width it describes, not for a device: a narrow Mac window
+    /// and an iPad in Slide Over are both compact.
+    var isCompact: Bool {
         horizontalSizeClass == .compact
-    }
-}
-
-struct AnalyticsLayoutPolicy {
-    private let sizeClassPolicy: SizeClassLayoutPolicy
-
-    init(horizontalSizeClass: UserInterfaceSizeClass?) {
-        sizeClassPolicy = SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass)
-    }
-
-    var showsPageTitleInContent: Bool {
-        !sizeClassPolicy.isCompactPhone
     }
 }
 
@@ -155,16 +150,12 @@ struct PomodoroLayoutPolicy {
         sizeClassPolicy = SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass)
     }
 
-    var showsInlineHeader: Bool {
-        !sizeClassPolicy.isCompactPhone
-    }
-
     var setupCardPadding: CGFloat {
-        sizeClassPolicy.isCompactPhone ? 18 : 24
+        sizeClassPolicy.isCompact ? 18 : 24
     }
 
     var setupSectionSpacing: CGFloat {
-        sizeClassPolicy.isCompactPhone ? 20 : 24
+        sizeClassPolicy.isCompact ? 20 : 24
     }
 }
 
@@ -172,14 +163,16 @@ struct SplitColumnLayoutPolicy {
     var sidebar: ColumnWidth = .init(min: 220, ideal: 240, max: 300)
     var detail: ColumnWidth = .init(min: 520, ideal: 760, max: nil)
 
-    static let iPad = SplitColumnLayoutPolicy(
-        sidebar: ColumnWidth(min: 240, ideal: 260, max: 300),
-        detail: ColumnWidth(min: 480, ideal: 760, max: nil)
-    )
-
-    static let mac = SplitColumnLayoutPolicy(
-        sidebar: ColumnWidth(min: 220, ideal: 240, max: 270),
-        detail: ColumnWidth(min: 420, ideal: 720, max: nil)
+    /// One preset for every platform that shows the split shell.
+    ///
+    /// The previous `.iPad` and `.mac` presets differed by 20pt of sidebar and
+    /// 60pt of detail minimum, for no reason either one recorded. The more
+    /// permissive bound of each pair is kept, so the split view stays usable
+    /// all the way down to `RootLayoutPolicy.regularShellMinimumWidth` — below
+    /// which the compact shell takes over regardless.
+    static let standard = SplitColumnLayoutPolicy(
+        sidebar: ColumnWidth(min: 220, ideal: 250, max: 300),
+        detail: ColumnWidth(min: 420, ideal: 760, max: nil)
     )
 }
 

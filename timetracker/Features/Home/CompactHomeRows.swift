@@ -1,13 +1,13 @@
 import SwiftUI
 
-struct PhoneTodaySummaryRow: View {
+struct CompactTodaySummaryRow: View {
     let store: TimeTrackerStore
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let snapshot = store.todayMetricsSnapshot(now: context.date)
             VStack(spacing: 12) {
-                PhoneSummaryMetric(
+                CompactSummaryMetric(
                     title: AppStrings.grossTime,
                     value: DurationFormatter.compact(snapshot.grossSeconds),
                     systemImage: "square.stack.3d.up",
@@ -16,7 +16,7 @@ struct PhoneTodaySummaryRow: View {
 
                 if store.preferences.showGrossAndWallTogether {
                     Divider()
-                    PhoneSummaryMetric(
+                    CompactSummaryMetric(
                         title: AppStrings.wallTime,
                         value: DurationFormatter.compact(snapshot.wallSeconds),
                         systemImage: "timeline.selection",
@@ -28,7 +28,7 @@ struct PhoneTodaySummaryRow: View {
     }
 }
 
-struct PhoneSummaryMetric: View {
+struct CompactSummaryMetric: View {
     let title: String
     let value: String
     let systemImage: String

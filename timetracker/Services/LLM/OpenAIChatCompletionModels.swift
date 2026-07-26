@@ -1,12 +1,34 @@
 import Foundation
 
-struct OpenAIChatCompletionRequest: Encodable {
+nonisolated struct OpenAIChatCompletionRequest: Encodable {
     let model: String
     let messages: [OpenAIChatMessage]
     let temperature: Double
-    let responseFormat: OpenAIChatResponseFormat
+    let responseFormat: OpenAIChatResponseFormat?
     var stream: Bool?
     var streamOptions: OpenAIChatStreamOptions?
+    var tools: [OpenAIChatToolDefinition]?
+    var toolChoice: String?
+
+    init(
+        model: String,
+        messages: [OpenAIChatMessage],
+        temperature: Double,
+        responseFormat: OpenAIChatResponseFormat? = nil,
+        stream: Bool? = nil,
+        streamOptions: OpenAIChatStreamOptions? = nil,
+        tools: [OpenAIChatToolDefinition]? = nil,
+        toolChoice: String? = nil
+    ) {
+        self.model = model
+        self.messages = messages
+        self.temperature = temperature
+        self.responseFormat = responseFormat
+        self.stream = stream
+        self.streamOptions = streamOptions
+        self.tools = tools
+        self.toolChoice = toolChoice
+    }
 
     enum CodingKeys: String, CodingKey {
         case model
@@ -15,19 +37,46 @@ struct OpenAIChatCompletionRequest: Encodable {
         case responseFormat = "response_format"
         case stream
         case streamOptions = "stream_options"
+        case tools
+        case toolChoice = "tool_choice"
     }
 }
 
-struct OpenAIChatMessage: Encodable {
+nonisolated struct OpenAIChatMessage: Encodable, Equatable, Sendable {
     let role: String
-    let content: String
+    let content: String?
+    let reasoningContent: String?
+    let toolCalls: [OpenAIChatToolCall]?
+    let toolCallID: String?
+
+    init(
+        role: String,
+        content: String?,
+        reasoningContent: String? = nil,
+        toolCalls: [OpenAIChatToolCall]? = nil,
+        toolCallID: String? = nil
+    ) {
+        self.role = role
+        self.content = content
+        self.reasoningContent = reasoningContent
+        self.toolCalls = toolCalls
+        self.toolCallID = toolCallID
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case role
+        case content
+        case reasoningContent = "reasoning_content"
+        case toolCalls = "tool_calls"
+        case toolCallID = "tool_call_id"
+    }
 }
 
-struct OpenAIChatResponseFormat: Encodable {
+nonisolated struct OpenAIChatResponseFormat: Encodable {
     let type: String
 }
 
-struct OpenAIChatStreamOptions: Encodable {
+nonisolated struct OpenAIChatStreamOptions: Encodable {
     let includeUsage: Bool
 
     enum CodingKeys: String, CodingKey {
@@ -35,16 +84,20 @@ struct OpenAIChatStreamOptions: Encodable {
     }
 }
 
-struct OpenAIChatCompletionResponse: Decodable {
-    struct Choice: Decodable {
-        struct Message: Decodable {
-            let content: String
+nonisolated struct OpenAIChatCompletionResponse: Decodable, Sendable {
+    nonisolated struct Choice: Decodable, Sendable {
+        nonisolated struct Message: Decodable, Sendable {
+            let role: String?
+            let content: String?
             /// Reasoning-capable providers return the chain of thought beside
             /// the JSON answer; absent for ordinary models.
             let reasoning_content: String?
+            let tool_calls: [OpenAIChatToolCall]?
         }
 
+        let index: Int?
         let message: Message
+        let finish_reason: String?
     }
 
     let choices: [Choice]

@@ -7,8 +7,8 @@
 
 - [x] 按文档顺序领取反馈并建立可恢复的活动记忆。
 - [x] 审计现有 Inbox AI 输入、提示词、流式协议、计划预览、命令边界和持久化测试。
-- [~] 先定义完整任务树上下文、稳定身份和 CRUD 工具调用的行为契约与失败测试。
-- [ ] 实现最小安全变更，复用既有 Commands / Repositories / SwiftData 分层。
+- [x] 先定义完整任务树上下文、稳定身份和 CRUD 工具调用的行为契约与失败测试。
+- [~] 实现最小安全变更，复用既有 Commands / Repositories / SwiftData 分层。
 - [ ] 验证 AI harness、持久化命令、普通字号 UI 预览及三平台行为。
 - [ ] 提交小 checkpoint，执行 Release 全设备安装，标记反馈完成并移除活动链接。
 
@@ -37,8 +37,8 @@
 ## Checkpoint 编排
 
 - [x] Checkpoint A：领取、现状/历史/测试/库审计、行为契约。
-- [~] Checkpoint B：失败测试、结构化工具协议和安全命令执行。
-- [ ] Checkpoint C：UI 预览/确认、回归验证、文档与小提交。
+- [x] Checkpoint B：失败测试、结构化工具协议和安全命令执行。
+- [~] Checkpoint C：UI 预览/确认、回归验证、文档与小提交。
 - [ ] Checkpoint D：跨平台验收、Release 全设备安装和反馈收口。
 
 ## 子代理编排
@@ -153,3 +153,27 @@
 - 专用 Swift JSON Schema/Agent 候选没有达到用户要求的 1k stars 或成熟度/许可门槛，因此不采用。
 - Apple FoundationModels 的 Tool/Generable/Evaluations API 只借鉴工具形状与 stub-tool 测试思路；其当前上下文限制与 OS 可用性不满足现有多平台、完整大上下文要求，不替换供应商路径。
 - 当前决定：保留已经验证的安全 transport，依据官方协议补齐最小 DTO、tool delta assembler 与 overlay runtime；不为“使用库”牺牲现有安全边界。如果后续 spike 能证明成熟库可注入并复用现有 transport，再重新评估。
+
+## Checkpoint B 实现结果
+
+- 新增完整、确定性排序、无条数截断的 Category/Task/Checklist workspace DTO；保留稳定 UUID 与完整 Task path，provider JSON 不含 device ID 或本地 mutation baseline。
+- 新增纯内存 CRUD overlay：写后即读、跨类型身份冲突、同名 Category 唯一复用/多重歧义、孤儿/循环/child Category、字段与排序校验；Task delete 只产生 archive operation。
+- 补齐 OpenAI-compatible assistant `tool_calls`、tool response、`tool_call_id`、`finish_reason=tool_calls`、`reasoning_content` 回传和 `tool_choice=required` DTO。
+- 新增按 choice index + tool-call index 组装流式碎片的 assembler；未知、重复、缺失、畸形参数和不支持的 finish reason 都显式失败。
+- 新增 buffered 多轮工具服务：完整 workspace 不走旧 24 KiB prompt / 64 KiB body 投影；所有写工具只改 overlay，新 UUID 由 App 分配，finalize 前不触碰 SwiftData。
+- 新增单一 store-scoped atomic Coordinator：共享锁内 fresh context、完整 workspace + progress revision CAS、operation replay 防伪、Apple Health/active work/identity preflight、一次最终 save；Checklist update/delete 只触碰目标 revision。
+- 无新增第三方依赖；实现复用 Foundation Codable/JSON、现有 hardened transport、SwiftData transaction、Task/Checklist persistence policy。
+
+## Checkpoint B 验证证据
+
+- `make format`：2 个本任务新文件被规范化；随后 `make format-check` 为 0/831。
+- 两次 `make test` 都成功编译并运行 1451 tests / 163 suites。
+- 本任务新增 18 个测试两次全部通过：
+  - 4 个完整 workspace/overlay 测试；
+  - 3 个 buffered tool-loop/完整大上下文/失败语义测试；
+  - 7 个 OpenAI DTO/stream assembler 测试；
+  - 4 个原子 CRUD/stale/rollback/targeted checklist 测试。
+- 全套门禁仍有两个与本任务文件无 diff 的既有时序断言失败，两次结果相同：
+  - `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd`
+  - `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`
+- 这两个失败不被记为绿色，也不在本任务中擅自改行为；UI wiring 后继续运行全套并诚实记录最终结果。

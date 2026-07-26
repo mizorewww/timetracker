@@ -5,17 +5,40 @@ import Foundation
 /// of thought in `reasoning_content` alongside the regular `content` delta;
 /// a final chunk may carry token `usage` when the request opted in via
 /// `stream_options.include_usage`.
-struct OpenAIChatCompletionStreamChunk: Decodable, Sendable {
-    struct Choice: Decodable, Sendable {
-        struct Delta: Decodable, Sendable {
+nonisolated struct OpenAIChatCompletionStreamChunk: Decodable, Sendable {
+    nonisolated struct Choice: Decodable, Sendable {
+        nonisolated struct Delta: Decodable, Sendable {
+            nonisolated struct ToolCall: Decodable, Sendable {
+                nonisolated struct Function: Decodable, Sendable {
+                    let name: String?
+                    let arguments: String?
+                }
+
+                let index: Int
+                let id: String?
+                let type: String?
+                let function: Function?
+            }
+
+            let role: String?
             let content: String?
             let reasoning_content: String?
+            let tool_calls: [ToolCall]?
+
+            var hasPayload: Bool {
+                role != nil ||
+                    content != nil ||
+                    reasoning_content != nil ||
+                    tool_calls?.isEmpty == false
+            }
         }
 
+        let index: Int
         let delta: Delta?
+        let finish_reason: String?
     }
 
-    struct Usage: Decodable, Sendable, Equatable {
+    nonisolated struct Usage: Decodable, Sendable, Equatable {
         let prompt_tokens: Int?
         let completion_tokens: Int?
         let total_tokens: Int?

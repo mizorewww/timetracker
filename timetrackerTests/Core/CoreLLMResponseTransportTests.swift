@@ -30,11 +30,11 @@ struct CoreLLMResponseTransportTests {
     @Test
     func streamEventsParseContentReasoningAndUsageFromRealBytes() async throws {
         let sseBody = """
-        data: {"choices":[{"delta":{"reasoning_content":"先想"}}]}
+        data: {"choices":[{"index":0,"delta":{"reasoning_content":"先想"}}]}
 
-        data: {"choices":[{"delta":{"content":"{\\"tasks\\":"}}]}
+        data: {"choices":[{"index":0,"delta":{"content":"{\\"tasks\\":"}}]}
 
-        data: {"choices":[{"delta":{"content":"[]}"}}],"usage":{"completion_tokens":7}}
+        data: {"choices":[{"index":0,"delta":{"content":"[]}"}}],"usage":{"completion_tokens":7}}
 
         data: [DONE]
 

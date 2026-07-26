@@ -228,3 +228,30 @@ Checkpoint E 与提示词透明度/完整上下文收口尚未完成，反馈条
 - 没有新依赖；UI 使用 SwiftUI 原生 `Picker`，请求继续使用 Foundation 编码和项目
   现有生产 LLM services。AD-133 明确取代 AD-027/AD-132 中旧的人工请求投影与
   fake-provider 生成验收条款。
+
+## DeepSeek V4 max 真实验收 Checkpoint
+
+- `TIMETRACKER_LIVE_LLM_SCENARIO=all make test-llm-live` 从忽略跟踪的 `.env`
+  读取新 key，直接调用配置的 DeepSeek V4 endpoint/model；没有 provider fixture、
+  预制 response 或回退数据。四项生产边界测试 4/4 通过：
+  - Checklist Visual 和 Inbox Routing 都取得真实模型结果；
+  - prompt28 真实生成并通过生产解析；
+  - prompt150 在约 127 秒完成真实生成，并通过生产 Apply 路径写入隔离
+    SwiftData store。
+- macOS 真实 API 结果保存在
+  `/Users/aac6fef/Library/Developer/Xcode/DerivedData/timetracker-ccmijjertbbodwfuuctazftvuorp/Logs/Test/Test-timetracker-2026.07.26_22-14-58-+0800.xcresult`；
+  4 项共约 167 秒，0 失败。
+- `make test-llm-live-ui` 在明确拥有的 iPhone 模拟器
+  `94ED5C47-AC40-4B24-9B6B-35D883E1CE99` 使用同一真实配置运行，201 秒、0 失败。
+  gate 先实际切换 `High → Maximum`，再使用 prompt28 完成真实
+  Generate → token progress → Preview → 第 28 项 → Reasoning → Raw Output →
+  Apply → Task Detail。
+- 本轮 7 张普通字号截图位于
+  `build/LiveLLMUIHarness/screenshots-20260726-221946/`；人工验收确认：
+  `Maximum` 选择清晰且 API key 不可见，Preview 忠实出现第 28 章，
+  reasoning/raw output 可展开，Apply 后标题和阅读分类进入真实任务详情。
+  xcresult 位于
+  `build/LiveLLMUIHarness/LiveLLMUI-20260726-221946.xcresult`。
+- Makefile trap 已终止 App，关闭并删除该模拟器；UDID 与 Booted-device 审计均无
+  本轮资源残留。没有新依赖；验收继续使用 XCTest/XCUITest、SwiftData、
+  Foundation URLSession 和现有生产 LLM services。

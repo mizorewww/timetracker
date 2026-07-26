@@ -4128,18 +4128,80 @@ final class timetrackerUITests: XCTestCase {
         let configuration = try liveLLMUITestConfiguration()
         let prompt =
             "帮我生成 category阅读，下放一个任务：人工智能：现代方法，生成checklist 1-28"
+        let liveEnvironment = [
+            "TIMETRACKER_UI_TEST_LIVE_LLM_ENDPOINT":
+                configuration.endpoint,
+            "TIMETRACKER_UI_TEST_LIVE_LLM_API_KEY":
+                configuration.apiKey,
+            "TIMETRACKER_UI_TEST_LIVE_LLM_MODEL":
+                configuration.modelID,
+        ]
+
+        let settingsApp = launchApp(
+            route: "settings",
+            seedsDemoData: false,
+            additionalLaunchArguments: ["--uitesting-live-llm"],
+            additionalLaunchEnvironment: liveEnvironment
+        )
+        let settingsView = settingsApp.descendants(matching: .any)[
+            "settings.view"
+        ].firstMatch
+        XCTAssertTrue(settingsView.waitForExistence(timeout: 15))
+        let intelligence = settingsApp.descendants(matching: .any)[
+            "settings.category.intelligence"
+        ].firstMatch
+        scrollUntilHittable(
+            intelligence,
+            direction: .up,
+            in: settingsApp
+        )
+        XCTAssertTrue(
+            intelligence.waitForExistence(timeout: 5) &&
+                intelligence.isHittable
+        )
+        activate(intelligence)
+
+        let configureAI = settingsApp.descendants(matching: .any)[
+            "settings.llm.configure"
+        ].firstMatch
+        scrollUntilHittable(
+            configureAI,
+            direction: .up,
+            in: settingsApp
+        )
+        XCTAssertTrue(
+            configureAI.waitForExistence(timeout: 5) &&
+                configureAI.isHittable
+        )
+        activate(configureAI)
+
+        let reasoningEffort = settingsApp.descendants(matching: .any)[
+            "settings.llm.reasoningEffort"
+        ].firstMatch
+        XCTAssertTrue(reasoningEffort.waitForExistence(timeout: 5))
+        let high = settingsApp.buttons["High"].firstMatch
+        let maximum = settingsApp.buttons["Maximum"].firstMatch
+        XCTAssertTrue(high.waitForExistence(timeout: 3) && high.isHittable)
+        XCTAssertTrue(
+            maximum.waitForExistence(timeout: 3) &&
+                maximum.isHittable
+        )
+        XCTAssertTrue(maximum.isSelected)
+        activate(high)
+        XCTAssertTrue(high.isSelected)
+        activate(maximum)
+        XCTAssertTrue(maximum.isSelected)
+        try capture(
+            "iphone-live-deepseek-reasoning-effort-maximum",
+            app: settingsApp
+        )
+        settingsApp.terminate()
+
         let app = launchApp(
             route: "tasks",
             seedsDemoData: false,
             additionalLaunchArguments: ["--uitesting-live-llm"],
-            additionalLaunchEnvironment: [
-                "TIMETRACKER_UI_TEST_LIVE_LLM_ENDPOINT":
-                    configuration.endpoint,
-                "TIMETRACKER_UI_TEST_LIVE_LLM_API_KEY":
-                    configuration.apiKey,
-                "TIMETRACKER_UI_TEST_LIVE_LLM_MODEL":
-                    configuration.modelID,
-            ]
+            additionalLaunchEnvironment: liveEnvironment
         )
 
         let tasksView = app.descendants(matching: .any)[

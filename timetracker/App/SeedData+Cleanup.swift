@@ -14,19 +14,19 @@ extension SeedData {
         let deviceID = DeviceIdentity.current
         let allTasks = try context.fetch(FetchDescriptor<TaskNode>())
         let seededDemoTaskIDs = Set(
-            allTasks.lazy.filter { $0.deviceID == "demo" }.map(\.id)
+            allTasks.lazy.filter { SyntheticDataOrigin.marks($0.deviceID) }.map(\.id)
         )
         let demoRules = try context.fetch(
             FetchDescriptor<TaskRecurrenceRule>()
         ).filter {
-            $0.deviceID == "demo" ||
+            SyntheticDataOrigin.marks($0.deviceID) ||
                 seededDemoTaskIDs.contains($0.templateTaskID)
         }
         let demoRuleIDs = Set(demoRules.map(\.id))
         let demoOccurrences = try context.fetch(
             FetchDescriptor<TaskRecurrenceOccurrence>()
         ).filter {
-            $0.deviceID == "demo" ||
+            SyntheticDataOrigin.marks($0.deviceID) ||
                 demoRuleIDs.contains($0.ruleID) ||
                 seededDemoTaskIDs.contains($0.templateTaskID) ||
                 seededDemoTaskIDs.contains($0.generatedTaskID)
@@ -37,27 +37,27 @@ extension SeedData {
         let demoTasks = allTasks.filter { demoTaskIDs.contains($0.id) }
         let demoSessions = try context.fetch(FetchDescriptor<TimeSession>())
             .filter {
-                $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID)
+                SyntheticDataOrigin.marks($0.deviceID) || demoTaskIDs.contains($0.taskID)
             }
         let demoSessionIDs = Set(demoSessions.map(\.id))
         let demoGoals = try context.fetch(
             FetchDescriptor<TaskQuantityGoal>()
         ).filter {
-            $0.deviceID == "demo" ||
+            SyntheticDataOrigin.marks($0.deviceID) ||
                 demoTaskIDs.contains($0.taskID)
         }
         let demoGoalIDs = Set(demoGoals.map(\.id))
 
         try tombstone(
             context.fetch(FetchDescriptor<PomodoroRun>()).filter {
-                $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID)
+                SyntheticDataOrigin.marks($0.deviceID) || demoTaskIDs.contains($0.taskID)
             },
             now: now,
             deviceID: deviceID
         )
         try tombstone(
             context.fetch(FetchDescriptor<TimeSegment>()).filter {
-                $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID) || demoSessionIDs.contains($0.sessionID)
+                SyntheticDataOrigin.marks($0.deviceID) || demoTaskIDs.contains($0.taskID) || demoSessionIDs.contains($0.sessionID)
             },
             now: now,
             deviceID: deviceID
@@ -67,7 +67,7 @@ extension SeedData {
         try tombstone(
             context.fetch(FetchDescriptor<TaskQuantityEntry>())
                 .filter {
-                    $0.deviceID == "demo" ||
+                    SyntheticDataOrigin.marks($0.deviceID) ||
                         demoTaskIDs.contains($0.taskID) ||
                         demoGoalIDs.contains($0.quantityGoalID)
                 },
@@ -81,32 +81,32 @@ extension SeedData {
         tombstone(demoChecklistItems, now: now, deviceID: deviceID)
         try tombstone(
             context.fetch(FetchDescriptor<ChecklistItemVisual>()).filter {
-                $0.deviceID == "demo" || demoChecklistIDs.contains($0.checklistItemID)
+                SyntheticDataOrigin.marks($0.deviceID) || demoChecklistIDs.contains($0.checklistItemID)
             },
             now: now,
             deviceID: deviceID
         )
         try tombstone(
             context.fetch(FetchDescriptor<InboxSuggestion>()).filter {
-                $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID)
+                SyntheticDataOrigin.marks($0.deviceID) || demoTaskIDs.contains($0.taskID)
             },
             now: now,
             deviceID: deviceID
         )
         try tombstone(
-            context.fetch(FetchDescriptor<InboxItem>()).filter { $0.deviceID == "demo" },
+            context.fetch(FetchDescriptor<InboxItem>()).filter { SyntheticDataOrigin.marks($0.deviceID) },
             now: now,
             deviceID: deviceID
         )
         tombstone(demoTasks, now: now, deviceID: deviceID)
         try tombstone(
-            context.fetch(FetchDescriptor<TaskCategory>()).filter { $0.deviceID == "demo" },
+            context.fetch(FetchDescriptor<TaskCategory>()).filter { SyntheticDataOrigin.marks($0.deviceID) },
             now: now,
             deviceID: deviceID
         )
         try tombstone(
             context.fetch(FetchDescriptor<TaskCategoryAssignment>()).filter {
-                $0.deviceID == "demo" || demoTaskIDs.contains($0.taskID)
+                SyntheticDataOrigin.marks($0.deviceID) || demoTaskIDs.contains($0.taskID)
             },
             now: now,
             deviceID: deviceID

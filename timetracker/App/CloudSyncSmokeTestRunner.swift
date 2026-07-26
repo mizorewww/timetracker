@@ -13,7 +13,7 @@ enum CloudSyncSmokeTestRunner {
     private static let argument = "--cloud-smoke-test"
     private static let tokenKey = "TimeTrackerCloudSmokeToken"
     private static let taskIDKey = "TimeTrackerCloudSmokeTaskID"
-    private static let deviceID = "cloud-smoke"
+    private static let deviceID = SyntheticDataOrigin.cloudSmokeTest
 
     enum Mode: String {
         case seed

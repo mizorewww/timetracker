@@ -228,6 +228,47 @@ struct DemoDataLifecycleTests {
         #expect(demoURL.deletingLastPathComponent() == productionURL.deletingLastPathComponent())
     }
 
+    @Test @MainActor
+    func clearingDemoDataAlsoRemovesSmokeTestAndUITestResidue() throws {
+        defer { resetDemoSeedingDefaults() }
+        let context = try makeTestContext()
+
+        // A cloud smoke-test probe used to survive "clear demo data", because
+        // the cleanup only recognised the `demo` device ID.
+        let smokeTask = TaskNode(
+            title: "Cloud Smoke a1b2c3d4",
+            parentID: nil,
+            deviceID: SyntheticDataOrigin.cloudSmokeTest
+        )
+        let fixtureItem = InboxItem(
+            title: "UI fixture item",
+            sortOrder: 10,
+            deviceID: SyntheticDataOrigin.uiTest
+        )
+        let userTask = TaskNode(title: "Real Work", parentID: nil, deviceID: "local-device")
+        let userItem = InboxItem(title: "first", sortOrder: 20, deviceID: "local-device")
+        [smokeTask, userTask].forEach(context.insert)
+        [fixtureItem, userItem].forEach(context.insert)
+        try context.save()
+
+        try SeedData.clearDemoData(context: context)
+
+        #expect(smokeTask.deletedAt != nil)
+        #expect(fixtureItem.deletedAt != nil)
+        // Rows the user authored are never touched, whatever they are titled.
+        #expect(userTask.deletedAt == nil)
+        #expect(userItem.deletedAt == nil)
+    }
+
+    @Test
+    func syntheticOriginsCoverEveryProducerOfNonUserRows() {
+        #expect(SyntheticDataOrigin.marks(SyntheticDataOrigin.demo))
+        #expect(SyntheticDataOrigin.marks(SyntheticDataOrigin.cloudSmokeTest))
+        #expect(SyntheticDataOrigin.marks(SyntheticDataOrigin.uiTest))
+        #expect(SyntheticDataOrigin.marks("local-device") == false)
+        #expect(SyntheticDataOrigin.marks(DeviceIdentity.current) == false)
+    }
+
     @Test
     func theShippedBuildConfigurationNeverEnablesAutomaticSeeding() throws {
         // A configuration gate, not a logic scan: the pbxproj is the only place

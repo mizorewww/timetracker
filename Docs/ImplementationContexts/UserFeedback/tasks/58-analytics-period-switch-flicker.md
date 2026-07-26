@@ -9,7 +9,7 @@
 - [x] 审计闪烁的状态流、视图身份、动画/transition、异步加载与历史回归边界。
 - [x] 先写普通字号 UI 验收清单、稳定行为测试和修复前失败/录屏证据。
 - [x] 做最小分层修复，保留图表计算、交互、缓存与跨平台语义。
-- [~] 运行格式、本地化、单元测试和受影响 iPhone/iPad/macOS 截图/录屏验收。
+- [x] 运行格式、本地化、单元测试和受影响 iPhone/iPad/macOS 截图/录屏验收。
 - [ ] 提交小 checkpoint，执行 Release 全设备安装，标记反馈完成并移除活动链接。
 
 ## 唯一范围
@@ -30,8 +30,8 @@
 ## Checkpoint 编排
 
 - [x] Checkpoint A：领取、现状/历史/测试审计、验收契约。
-- [~] Checkpoint B：测试先行、最小根因修正和文档更新。
-- [ ] Checkpoint C：跨平台截图/录屏、完整门禁、Release 全设备安装和反馈收口。
+- [x] Checkpoint B：测试先行、最小根因修正和文档更新。
+- [~] Checkpoint C：跨平台截图/录屏、完整门禁、Release 全设备安装和反馈收口。
 
 ## 子代理编排
 
@@ -45,6 +45,13 @@
   (`0C76DF8C-112D-4F12-B9FC-0F9F537CC902`，本任务创建)，App
   `me.mezorewww.timetracker`、UI runner，产物根目录
   `/private/tmp/codex-task58-red.GO0Iut`；本批次不开 Simulator/Xcode/DeviceHub UI。
+- iPad Green 批次：主代理，`codex-task58-ipad`
+  (`B1FE8603-6376-4D5A-B057-816C0C05B962`，本任务创建)，App
+  `me.mezorewww.timetracker`、UI runner，产物根目录
+  `/private/tmp/codex-task58-ipad.jDdOj4`；本批次不开 Simulator/Xcode/DeviceHub UI。
+- macOS Green 批次：主代理，host `My Mac`，App `me.mezorewww.timetracker`、UI runner，
+  产物根目录 `/private/tmp/codex-task58-mac.pTh9ap`；仅使用命令行测试，不主动打开
+  Xcode/Simulator。
 - 完成失败证据后必须终止 App/runner、shutdown、delete，并审计无 owned
   `xcodebuild`/XCTest/Booted device 残留。
 
@@ -139,6 +146,17 @@
   2pt；返回精确缓存 Day 不出现 refresh identifier。
 - 已逐张检查修复后的三个 iPhone 附件：Week/Month 中途画面为稳定的系统 redacted section，
   无整块白屏或位置坍缩；Day settled 画面恢复真实值与交互。
+- iPad UI 结果：
+  `/private/tmp/codex-task58-ipad.jDdOj4/task58-green-ipad.xcresult`，
+  1 test / 0 failures。已逐张检查 Week/Month 中途与 Day settled 三张截图；宽屏的 Summary、
+  Review、Explore 与独立 heatmap 位置稳定。
+- macOS UI 最终结果：
+  `/private/tmp/codex-task58-mac.pTh9ap/task58-green2-mac.xcresult`，
+  1 test / 0 failures。第一次
+  `/private/tmp/codex-task58-mac.pTh9ap/task58-green-mac.xcresult` 在 Week 的结构/frame 断言通过后
+  遇到一次 XCTest `Image creation failed`；系统 `screencapture` 同时可用，复用冻结产物重跑后
+  Week/Month 中途与 Day settled 三张截图全部成功。已逐张检查深色 macOS 画面，无白屏、跳位
+  或错误周期真实值。
 - `make format-check`：817 个 Swift 文件均无需格式修正；`make localization-check`：
   9/9 资源、三语 key parity 通过。
 - `make test`：1433 tests / 1431 passed；仅保留任务开始前已经复现的两个无关失败：

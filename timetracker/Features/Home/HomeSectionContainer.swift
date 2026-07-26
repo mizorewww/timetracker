@@ -40,10 +40,11 @@ struct HomeSectionHeader<Trailing: View>: View {
             }
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isHeader)
-            .accessibilityIdentifier(accessibilityIdentifier)
 
             trailing
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 
     @ViewBuilder

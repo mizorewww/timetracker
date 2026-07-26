@@ -9,8 +9,8 @@
 - [x] 审计主页现有标题、卡片容器、heatmap 与 Gross Time 图表实现和历史边界。
 - [x] 先写可验证的 UI 验收清单，再做最小实现。
 - [x] 为相对标题/卡片几何补充 UI 验收，并统一实现 owner。
-- [~] 完成针对性回归与实现后截图核对。
-- [ ] 完成格式、单元测试和 iPhone/iPad/macOS 普通字号截图验收。
+- [x] 完成针对性回归与实现后截图核对。
+- [x] 完成格式、单元测试和 iPhone/iPad/macOS 普通字号截图验收。
 - [ ] 提交小 checkpoint，执行 Release 全设备安装，标记反馈完成并移除活动链接。
 
 ## 唯一范围
@@ -45,6 +45,11 @@
 - iPhone 红灯/首轮实现批次：`codex-task56-red-iPhone17Pro`，
   UDID `1F22694D-8D21-43C6-8F8A-37C3FDFB3662`；当前保持 Booted，供实现后
   同一针对性测试与截图复用。没有仍在运行的 owned XCTest/xcodebuild。
+- iPad 普通字号批次：`codex-task56-iPadPro13`，
+  UDID `46C294A9-6AA9-43E4-872E-C6128FC56813`；当前保持 Booted，供最终
+  Analytics 共享回归复用。没有仍在运行的 owned XCTest/xcodebuild。
+- macOS 批次使用当前 Mac destination；测试已终止 App，没有仍在运行的 owned
+  XCTest/xcodebuild。最终清理阶段会再次审计进程。
 
 ## 待形成的 UI 验收清单
 
@@ -119,9 +124,21 @@
 - `make format-check localization-check`：通过；817 个 Swift 文件无需格式调整，
   9/9 本地化资源键一致。
 - iPhone `testTodayVisualizationCardsAreVisuallyIndependent`：
-  `FinalLayout.xcresult` 通过；截图确认背景 16 pt、内容/标题列 32 pt、卡片独立。
+  `FinalLayout.xcresult` 与最新可访问性 owner 修改后的
+  `FinalCompatibility.xcresult` 均通过；截图确认背景 16 pt、内容/标题列 32 pt、
+  卡片独立。
 - 同一测试此前有一次 fixture 未装载 Heatmap 选择而失败；保留失败结果后独立重跑
   通过。该间歇现象在实现前基线也出现，失败点在 Heatmap header 不存在，不是布局断言。
+- iPad `testTodayVisualizationCardsAreVisuallyIndependent`：
+  `iPadVisualizationRetry.xcresult` 与最新修改后的 `iPadCompatibilityRetry.xcresult`
+  通过；普通字号竖屏、横屏截图均确认图表卡片独立且标题/内容列一致。首个 iPad
+  几何版测试错误地假定宽屏也暴露 iPhone 原生 List cell，已把这组 cell 几何断言
+  收窄到 compact-width；最终一次运行同样遇到 Heatmap 夹具未载入，独立重跑通过。
+- macOS `testTodayWeeklyGrossTimeChartIsVisible`：
+  `macWeeklyRetry.xcresult` 通过；普通字号常规窗口截图确认 Overview、Weekly 标题、
+  摘要、Info 和卡片边界一致。首次运行发现共享 header identifier 落在合并后的
+  leaf 会改变旧 XCU descendant 查询，已把 identifier owner 移到保留 children
+  的外层容器；macOS、iPhone 和 iPad 最新回归均验证兼容。
 - `make test`：1433 个测试中 1431 通过；本任务相关的
   `TodayActivityHeatmapRefreshTests`、`TodayActivityHeatmapTests` 与
   `TodayHeatmapRecurrenceProjectionTests` 全部通过。默认门禁仍有两个开始本任务前已知、

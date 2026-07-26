@@ -7201,18 +7201,24 @@ final class timetrackerUITests: XCTestCase {
                 "Client Work activity Heatmap"
             )
         ).firstMatch
+        let usesNativeTodayList = app.windows.firstMatch.frame.width < 700
 
         scrollUntilFullyVisibleAboveSystemChrome(weeklyCard, in: app)
-        XCTAssertTrue(overview.waitForExistence(timeout: 5))
         XCTAssertTrue(weeklyCard.waitForExistence(timeout: 5))
-        XCTAssertTrue(weeklyRow.waitForExistence(timeout: 5))
-        assertHorizontalHomeCardAlignment(
-            weeklyRow,
-            nativeReference: overview,
-            in: app
-        )
-        let expectedCardMinX = weeklyRow.frame.minX
-        let expectedCardMaxX = weeklyRow.frame.maxX
+        var expectedNativeCardBounds: (minX: CGFloat, maxX: CGFloat)?
+        if usesNativeTodayList {
+            XCTAssertTrue(overview.waitForExistence(timeout: 5))
+            XCTAssertTrue(weeklyRow.waitForExistence(timeout: 5))
+            assertHorizontalHomeCardAlignment(
+                weeklyRow,
+                nativeReference: overview,
+                in: app
+            )
+            expectedNativeCardBounds = (
+                minX: weeklyRow.frame.minX,
+                maxX: weeklyRow.frame.maxX
+            )
+        }
 
         scrollUntilHittable(
             heatmapsHeader,
@@ -7225,35 +7231,47 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(checklistGrid.waitForExistence(timeout: 8))
         let checklistCard = heatmapCard(for: checklistGrid, in: app)
         assertHeatmapCard(checklistCard, contains: checklistGrid)
-        let checklistRow = app.cells
-            .containing(.any, identifier: checklistCard.identifier)
-            .firstMatch
-        XCTAssertTrue(checklistRow.waitForExistence(timeout: 5))
-        XCTAssertEqual(
-            checklistRow.frame.minX,
-            expectedCardMinX,
-            accuracy: 2,
-            "Heatmap and Gross Time cards must share their leading boundary."
-        )
-        XCTAssertEqual(
-            checklistRow.frame.maxX,
-            expectedCardMaxX,
-            accuracy: 2,
-            "Heatmap and Gross Time cards must share their trailing boundary."
-        )
-        assertSymmetricHorizontalInsets(for: checklistRow, in: app)
+        if let expectedNativeCardBounds {
+            let checklistRow = app.cells
+                .containing(.any, identifier: checklistCard.identifier)
+                .firstMatch
+            XCTAssertTrue(checklistRow.waitForExistence(timeout: 5))
+            XCTAssertEqual(
+                checklistRow.frame.minX,
+                expectedNativeCardBounds.minX,
+                accuracy: 2,
+                "Heatmap and Gross Time cards must share their leading boundary."
+            )
+            XCTAssertEqual(
+                checklistRow.frame.maxX,
+                expectedNativeCardBounds.maxX,
+                accuracy: 2,
+                "Heatmap and Gross Time cards must share their trailing boundary."
+            )
+            assertSymmetricHorizontalInsets(for: checklistRow, in: app)
+        }
 
         scrollUntilHittable(durationGrid, direction: .up, in: app)
         XCTAssertTrue(durationGrid.waitForExistence(timeout: 8))
         let durationCard = heatmapCard(for: durationGrid, in: app)
         assertHeatmapCard(durationCard, contains: durationGrid)
-        let durationRow = app.cells
-            .containing(.any, identifier: durationCard.identifier)
-            .firstMatch
-        XCTAssertTrue(durationRow.waitForExistence(timeout: 5))
-        XCTAssertEqual(durationRow.frame.minX, expectedCardMinX, accuracy: 2)
-        XCTAssertEqual(durationRow.frame.maxX, expectedCardMaxX, accuracy: 2)
-        assertSymmetricHorizontalInsets(for: durationRow, in: app)
+        if let expectedNativeCardBounds {
+            let durationRow = app.cells
+                .containing(.any, identifier: durationCard.identifier)
+                .firstMatch
+            XCTAssertTrue(durationRow.waitForExistence(timeout: 5))
+            XCTAssertEqual(
+                durationRow.frame.minX,
+                expectedNativeCardBounds.minX,
+                accuracy: 2
+            )
+            XCTAssertEqual(
+                durationRow.frame.maxX,
+                expectedNativeCardBounds.maxX,
+                accuracy: 2
+            )
+            assertSymmetricHorizontalInsets(for: durationRow, in: app)
+        }
         XCTAssertNotEqual(checklistCard.identifier, durationCard.identifier)
         XCTAssertTrue(
             scrollUntilCardBoundaryIsVisible(checklistCard, durationCard, in: app),

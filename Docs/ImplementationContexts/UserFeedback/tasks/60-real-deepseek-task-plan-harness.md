@@ -36,7 +36,7 @@
   DeepSeek endpoint；先记录真实失败，不预先假定协议兼容。
 - [x] 使用反馈中的指定模型与指定 1...28 提示词，断言真实返回包含正确 Category、
   Task 和 28 个 Checklist 操作。
-- [ ] 使用真实模型请求一个 Task 下 150 个 Checklist，断言模型完成多轮 tool-call、
+- [x] 使用真实模型请求一个 Task 下 150 个 Checklist，断言模型完成多轮 tool-call、
   Preview 完整到第 150 项并能够通过原子 Apply 写入隔离 store。
 - [ ] 至少一条普通字号 XCUITest 从真实输入页点击 Generate，等待真实网络结果，
   检查 token/CoT/raw output/Preview，再 Apply；fixture 不得预造计划。
@@ -48,8 +48,8 @@
 - [x] A：重新领取反馈、建立活动记忆、停止错误的完成/安装流程。
 - [x] B：删除伪造 provider/plan 的 AI 测试与 fixture；加入 live API harness，
   运行指定 1...28 提示词并记录真实失败。
-- [~] C：修复真实协议/提示词/模型兼容问题，以 live 1...28 + 150 计划为准。
-- [ ] D：真实 API 的隔离 UI Preview/Apply、截图与安全清理。
+- [x] C：修复真实协议/提示词/模型兼容问题，以 live 1...28 + 150 计划为准。
+- [~] D：真实 API 的隔离 UI Preview/Apply、截图与安全清理。
 - [ ] E：默认回归门禁、Release 全设备安装、反馈收口与逐 checkpoint 提交。
 
 ## 已知安全边界
@@ -95,3 +95,10 @@
 - 2026-07-26 真实 `prompt28` 首次通过：30.493 秒内生成唯一 `阅读` Category、
   唯一 `人工智能：现代方法` Task 与按序 1...28 的 28 个 Checklist；生产
   hardened transport、真实 DeepSeek、真实工具 overlay 与真实响应内容全部参与。
+- 同一真实 `prompt28` 在加入 CoT 非空断言后再次通过（34.695 秒），确认不是只验证
+  最终结构，还实际收到 reasoning 与 raw provider response。
+- 2026-07-26 真实 `prompt150` 通过（127.055 秒）：模型通过至少 153 次工具调用
+  生成唯一 Category、唯一 Task 与按序 1...150 的 Checklist；随后使用生产
+  `StoreScopedAITaskAtomicMutationCoordinator` 将计划 Apply 到独立的内存
+  SwiftData store，并重新读取确认 150 条全部持久化。测试同时确认 reasoning
+  非空、raw provider response 存在，全程未注入 provider 或预造 plan。

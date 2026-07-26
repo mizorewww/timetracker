@@ -53,6 +53,9 @@ final class LiveDeepSeekTaskWorkspaceTests: XCTestCase {
             plan.resultingSnapshot,
             expectedChecklistCount: 150
         )
+        XCTAssertGreaterThanOrEqual(plan.toolCallCount, 153)
+        XCTAssertFalse(plan.reasoningContent?.isEmpty ?? true)
+        XCTAssertNotNil(plan.rawResponseContent)
 
         let outcome = try coordinator.apply(
             AITaskAtomicMutationPlan(

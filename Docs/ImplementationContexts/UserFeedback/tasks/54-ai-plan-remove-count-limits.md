@@ -15,12 +15,12 @@
 
 ## 2026-07-26 重新打开
 
-- [~] 在任务 59 的完整 workspace tool-call 架构上重新审计所有“组件长度”、单次
+- [x] 在任务 59 的完整 workspace tool-call 架构上重新审计所有“组件长度”、单次
   tool arguments、回合/调用、响应与传输限制，定位用户仍遇到的大计划失败。
-- [ ] 先增加能够复现当前失败的行为测试；区分安全字节边界、产品字段合法性与
+- [x] 先增加能够复现当前失败的行为测试；区分安全字节边界、产品字段合法性与
   任意业务数量/字符串截断。
-- [ ] 最小修复生产路径与当前文档，保留显式失败和原子写入，不允许静默截断。
-- [ ] 普通字号 UI 验收大计划 preview/apply，执行默认门禁、小提交、Release
+- [x] 最小修复生产路径与当前文档，保留显式失败和原子写入，不允许静默截断。
+- [~] 普通字号 UI 验收大计划 preview/apply，执行默认门禁、小提交、Release
   全设备安装并再次收口。
 
 重新打开后的范围以当前 `Docs/userfeedback.md` 的 `[~]` 原文为准；旧实现与验收
@@ -42,9 +42,9 @@
 ## Checkpoint 编排
 
 - [x] Checkpoint A:领取任务、创建实现记忆与 active link。
-- [~] Checkpoint B:审计上限执行点与契约文本。
-- [ ] Checkpoint C:实现 + 补齐行为测试。
-- [ ] Checkpoint D:模拟器验收与资源清理。
+- [x] Checkpoint B:审计上限执行点与契约文本。
+- [x] Checkpoint C:实现 + 补齐行为测试。
+- [~] Checkpoint D:模拟器验收与资源清理。
 - [ ] Checkpoint E:Release 构建安装、核验与收口。
 
 ## 资源所有权
@@ -57,6 +57,45 @@
 - [x] 已收口:userfeedback 勾选 [x],active link 已移除,任务关闭。Release build_install_all 完成,macOS 装入 /Applications;实体机状态不阻塞。
 
 ## 实现与验收记录
+
+### 2026-07-26 重新打开后的根因与修复
+
+- 真实生产入口已从旧 flat JSON 服务切换到
+  `LLMTaskWorkspacePlanningService`，但新入口重新加入了 12 个工具回合与 64 次
+  工具调用硬上限。旧“大 JSON”测试仍覆盖旧服务；150 Checklist 的 UI 夹具直接
+  构造 overlay，也绕开了生产工具对话，因此形成了假绿。
+- 先加入两条确定性 fake-transport 行为测试：单轮 65 次 Category CRUD 在旧实现
+  抛出 `toolCallLimitExceeded`；串行 provider 完成 13 个 mutation round 后在旧
+  实现抛出 `toolRoundLimitExceeded`。
+- 删除固定回合数、固定调用次数与对应死错误文案。工具对话仅由单独的
+  `finalize_plan` 正常结束，可兼容单轮并行和逐轮串行的 provider；保留用户 Stop
+  取消、单响应 2 MiB、timeout、provider context 明确拒绝、严格工具/字段验证、
+  proposal-only review 与 full-CAS 原子 Apply。这些是显式安全边界，不按业务组件
+  数量静默截断。
+- 同步更新 Architecture、CodeGuide、Testing、PrivacyAndSecurity，删除此前
+  “12/64 不是实体截断”的错误承诺。
+- 参考的官方能力边界：
+  - DeepSeek Tool Calls：
+    <https://api-docs.deepseek.com/guides/tool_calls>
+  - DeepSeek multi-round chat（客户端完整回传会话）：
+    <https://api-docs.deepseek.com/guides/multi_round_chat>
+  - DeepSeek Chat Completion：
+    <https://api-docs.deepseek.com/api/create-chat-completion>
+  - OpenAI Responses API：
+    <https://platform.openai.com/docs/api-reference/responses>
+- 未新增第三方依赖；这一层复用 Foundation/Codable、现有 OpenAI-compatible
+  tool models、加固 URLSession transport 和内存 overlay。大计划所需能力属于现有
+  协议循环修复，引入额外 SDK 不会消除错误的客户端硬上限。
+- 当前验证：
+  - 新服务 suite：6 tests 全过，包含 65-call 与 14-round（13 mutation +
+    finalize）回归。
+  - `make format`、`make format-check`、`make localization-check` 全过（三语
+    Localizable 1,273 keys）。
+  - `make test`：1,462 tests / 164 suites；仅两个重复可复现的既有时间/排序
+    flake 失败：
+    `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd`
+    与
+    `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`。
 
 ### 设计(Checkpoint B 结论)
 

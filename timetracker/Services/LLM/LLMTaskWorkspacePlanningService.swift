@@ -22,8 +22,6 @@ nonisolated enum LLMTaskWorkspacePlanningError:
     case invalidToolArguments(String)
     case duplicateToolCallID(String)
     case mixedFinalizeCall
-    case toolRoundLimitExceeded
-    case toolCallLimitExceeded
     case workspaceRequestRejected(
         statusCode: Int,
         categoryCount: Int,
@@ -55,10 +53,6 @@ nonisolated enum LLMTaskWorkspacePlanningError:
             )
         case .mixedFinalizeCall:
             Self.localized("aiTaskPlan.error.mixedFinalize")
-        case .toolRoundLimitExceeded:
-            Self.localized("aiTaskPlan.error.toolRoundLimit")
-        case .toolCallLimitExceeded:
-            Self.localized("aiTaskPlan.error.toolCallLimit")
         case let .workspaceRequestRejected(
             statusCode,
             categoryCount,
@@ -90,9 +84,6 @@ nonisolated enum LLMTaskWorkspacePlanningError:
 @MainActor
 struct LLMTaskWorkspacePlanningService {
     typealias Transport = @MainActor (URLRequest) async throws -> (Data, URLResponse)
-
-    static let maximumToolRoundCount = 12
-    static let maximumToolCallCount = 64
 
     var transport: Transport = { request in
         try await LLMSecureHTTPTransport.data(for: request)
@@ -141,8 +132,10 @@ struct LLMTaskWorkspacePlanningService {
         var reportedCompletionTokens = 0
         var hasReportedCompletionTokens = false
         var totalToolCallCount = 0
+        var round = 0
 
-        for round in 1 ... Self.maximumToolRoundCount {
+        while true {
+            round += 1
             try Task.checkCancellation()
             let urlRequest = try Self.chatRequest(
                 endpointURL: prepared.endpointURL,
@@ -215,9 +208,6 @@ struct LLMTaskWorkspacePlanningService {
                 )
             )
             totalToolCallCount += calls.count
-            guard totalToolCallCount <= Self.maximumToolCallCount else {
-                throw LLMTaskWorkspacePlanningError.toolCallLimitExceeded
-            }
             for call in calls {
                 guard seenToolCallIDs.insert(call.id).inserted else {
                     throw LLMTaskWorkspacePlanningError
@@ -284,7 +274,6 @@ struct LLMTaskWorkspacePlanningService {
                 )
             }
         }
-        throw LLMTaskWorkspacePlanningError.toolRoundLimitExceeded
     }
 }
 

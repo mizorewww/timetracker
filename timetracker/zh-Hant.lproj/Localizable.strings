@@ -330,8 +330,6 @@
 "aiTaskPlan.error.invalidToolArguments" = "模型向 %@ 提供了無效參數，沒有套用任何變更。";
 "aiTaskPlan.error.duplicateToolCall" = "模型重複呼叫了工具 %@，沒有套用任何變更。";
 "aiTaskPlan.error.mixedFinalize" = "模型在完成計畫的同時又提交了其他變更，請重新產生。";
-"aiTaskPlan.error.toolRoundLimit" = "模型未能在安全的工具輪次內完成。請精簡需求後再試。";
-"aiTaskPlan.error.toolCallLimit" = "模型超過了安全的工具呼叫上限。請將需求拆成較小的可審閱批次。";
 "aiTaskPlan.error.workspaceRequestRejected" = "端點拒絕了完整工作區請求（HTTP %d）：%d 個分類、%d 個任務、%d 個清單項目，請求實際為 %d 位元組。該請求未重試，也未套用任何變更。請確認模型支援所需工具和內容大小。";
 "aiTaskPlan.error.workspaceChanged" = "產生預覽後任務工作區已發生變化。沒有套用任何變更，請重新產生建議。";
 "aiTaskPlan.error.invalidOperation" = "建議已不再符合審閱時的變更，沒有套用任何內容。";

@@ -98,7 +98,7 @@ Checklist 标题与所属任务标题各最多 512 UTF-8 bytes，任务显示路
 
 工作区 prompt 不包含 Inbox 内容、时间片/时间历史、Pomodoro 历史、Health samples、Keychain 数据、设备 ID、同步 metadata 或任何 `clientMutationID`。API key 不进入 prompt 或工具结果，但会按配置作为 Authorization header 发给 endpoint。Category/Task/Checklist 的本地 revision map 与完整 CAS baseline 只留在内存中，绝不编码到 provider DTO。
 
-任务计划完整工作区刻意不复用 Inbox/checklist 建议的 24 KiB prompt 与 64 KiB request-body 投影，因为那会静默漏掉模型需要引用的实体。编码失败不会发出 partial context；endpoint 以 HTTP 400/413/422 拒绝完整请求时，以 typed error 报告 Category/Task/Checklist counts 与实际 encoded request bytes。客户端不发送截断版本，也不回退到旧 create-only JSON。12 个工具回合与 64 次工具调用是防循环资源上限，不是 workspace 实体数量上限。
+任务计划完整工作区刻意不复用 Inbox/checklist 建议的 24 KiB prompt 与 64 KiB request-body 投影，因为那会静默漏掉模型需要引用的实体。编码失败不会发出 partial context；endpoint 以 HTTP 400/413/422 拒绝完整请求时，以 typed error 报告 Category/Task/Checklist counts 与实际 encoded request bytes。客户端不发送截断版本，也不回退到旧 create-only JSON。工具会话不按固定回合或调用次数截断；只有 `finalize_plan` 结束生成。用户取消、加固传输的 timeout/单响应 2 MiB 边界、provider context 拒绝、工具结构与字段校验继续作为显式资源和安全边界。
 
 模型只能通过严格的结构化工具读取和修改一个本机内存 overlay；它不能直接访问 SwiftData。已有 Task/Checklist 必须按稳定 UUID 引用，Category 名称只有唯一规范化匹配时才可复用，多个同名会显式失败。新 ID 由 App 生成。Finalize 后只产生 create/update/archive/delete/reuse 的只读 diff；破坏性影响需要用户再次确认。Apply 时会在共享 store lock 下用 fresh context 对完整 provider-visible snapshot 和本地 revision baseline 做 CAS，再原子应用全部操作。Task removal 只会 Archive。任何 stale、校验或保存失败均为零写入并保留预览。
 

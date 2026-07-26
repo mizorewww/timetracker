@@ -330,8 +330,6 @@
 "aiTaskPlan.error.invalidToolArguments" = "模型向 %@ 提供了无效参数，没有应用任何更改。";
 "aiTaskPlan.error.duplicateToolCall" = "模型重复调用了工具 %@，没有应用任何更改。";
 "aiTaskPlan.error.mixedFinalize" = "模型在完成计划的同时又提交了其他更改，请重新生成。";
-"aiTaskPlan.error.toolRoundLimit" = "模型未能在安全的工具轮次内完成。请精简需求后重试。";
-"aiTaskPlan.error.toolCallLimit" = "模型超过了安全的工具调用上限。请将需求拆成较小的可审阅批次。";
 "aiTaskPlan.error.workspaceRequestRejected" = "端点拒绝了完整工作区请求（HTTP %d）：%d 个分类、%d 个任务、%d 个清单项，请求实际为 %d 字节。该请求未重试，也未应用任何更改。请确认模型支持所需工具和上下文大小。";
 "aiTaskPlan.error.workspaceChanged" = "生成预览后任务工作区已发生变化。没有应用任何更改，请重新生成建议。";
 "aiTaskPlan.error.invalidOperation" = "建议已不再符合审阅时的更改，没有应用任何内容。";

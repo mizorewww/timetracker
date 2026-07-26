@@ -170,6 +170,114 @@ struct CoreLLMTaskWorkspacePlanningServiceTests {
 
     @MainActor
     @Test
+    func largeProposalIsNotRejectedByToolCallCount() async throws {
+        let categoryCount = 65
+        let calls = try (1 ... categoryCount).map { index in
+            try (
+                "call_category_\(index)",
+                "create_category",
+                Self.arguments([
+                    "title": "Category \(index)",
+                    "iconName": "square.grid.2x2",
+                    "colorHex": "1677FF",
+                    "includesInForecast": true,
+                ])
+            )
+        }
+        let generatedIDs = (1 ... categoryCount).map(Self.id)
+        let transport = try ScriptedWorkspacePlanningTransport(
+            responses: [
+                Self.toolResponse(calls: calls),
+                Self.toolResponse(
+                    calls: [
+                        ("call_finalize", "finalize_plan", "{}"),
+                    ]
+                ),
+            ],
+            generatedIDs: generatedIDs
+        )
+        let service = LLMTaskWorkspacePlanningService(
+            transport: transport.data(for:)
+        )
+
+        let plan = try await service.generate(
+            request: "Create all 65 requested categories",
+            instructions: "",
+            workspace: AITaskWorkspaceSnapshot(
+                categories: [],
+                tasks: [],
+                checklistItems: []
+            ),
+            endpoint: "https://example.test/v1",
+            apiKey: "key",
+            modelID: "model-1",
+            makeID: transport.nextGeneratedID
+        )
+
+        #expect(plan.resultingSnapshot.categories.count == categoryCount)
+        #expect(plan.resultingSnapshot.categories.last?.title == "Category 65")
+        #expect(plan.operations.count == categoryCount)
+        #expect(plan.toolRoundCount == 2)
+        #expect(plan.toolCallCount == categoryCount + 1)
+    }
+
+    @MainActor
+    @Test
+    func serializedProviderCanFinishAfterMoreThanTwelveToolRounds() async throws {
+        let mutationRoundCount = 13
+        let categoryResponses = try (1 ... mutationRoundCount).map { index in
+            try Self.toolResponse(
+                calls: [
+                    (
+                        "call_category_\(index)",
+                        "create_category",
+                        Self.arguments([
+                            "title": "Round \(index)",
+                            "iconName": "square.grid.2x2",
+                            "colorHex": "1677FF",
+                            "includesInForecast": true,
+                        ])
+                    ),
+                ]
+            )
+        }
+        let transport = try ScriptedWorkspacePlanningTransport(
+            responses: categoryResponses + [
+                Self.toolResponse(
+                    calls: [
+                        ("call_finalize", "finalize_plan", "{}"),
+                    ]
+                ),
+            ],
+            generatedIDs: (1 ... mutationRoundCount).map(Self.id)
+        )
+        let service = LLMTaskWorkspacePlanningService(
+            transport: transport.data(for:)
+        )
+
+        let plan = try await service.generate(
+            request: "Create every requested category",
+            instructions: "",
+            workspace: AITaskWorkspaceSnapshot(
+                categories: [],
+                tasks: [],
+                checklistItems: []
+            ),
+            endpoint: "https://example.test/v1",
+            apiKey: "key",
+            modelID: "model-1",
+            makeID: transport.nextGeneratedID
+        )
+
+        #expect(plan.resultingSnapshot.categories.count == mutationRoundCount)
+        #expect(plan.resultingSnapshot.categories.last?.title == "Round 13")
+        #expect(plan.operations.count == mutationRoundCount)
+        #expect(plan.toolRoundCount == mutationRoundCount + 1)
+        #expect(plan.toolCallCount == mutationRoundCount + 1)
+    }
+
+    @MainActor
+    @Test
     func unknownToolAndContentOnlyFallbackFailExplicitly() async throws {
         let empty = AITaskWorkspaceSnapshot(
             categories: [],

@@ -330,8 +330,6 @@
 "aiTaskPlan.error.invalidToolArguments" = "The model supplied invalid arguments to %@. No changes were applied.";
 "aiTaskPlan.error.duplicateToolCall" = "The model repeated tool call %@. No changes were applied.";
 "aiTaskPlan.error.mixedFinalize" = "The model tried to finalize alongside another change. Generate the proposal again.";
-"aiTaskPlan.error.toolRoundLimit" = "The model did not finish within the safe tool-round limit. Refine the request and try again.";
-"aiTaskPlan.error.toolCallLimit" = "The model exceeded the safe tool-call limit. Split the request into smaller reviewed batches.";
 "aiTaskPlan.error.workspaceRequestRejected" = "The endpoint rejected the complete workspace request (HTTP %d): %d categories, %d tasks, %d checklist items, %d request bytes. The request was not retried and no changes were applied. Check that the model supports the required tools and context size.";
 "aiTaskPlan.error.workspaceChanged" = "The task workspace changed after this preview was generated. Nothing was applied; generate a fresh proposal.";
 "aiTaskPlan.error.invalidOperation" = "The proposal no longer matches its reviewed changes. Nothing was applied.";

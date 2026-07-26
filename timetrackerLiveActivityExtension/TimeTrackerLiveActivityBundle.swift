@@ -29,8 +29,10 @@ struct TimeTrackerLiveActivityWidget: Widget {
                         Text(context.state.taskTitle)
                             .font(.caption2.weight(.semibold))
                             .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                             .privacySensitive()
                     }
+                    .frame(maxWidth: 62, alignment: .leading)
                 }
                 .accessibilityLabel(context.state.taskTitle)
                 .accessibilityIdentifier("liveActivity.compact.leading")
@@ -41,9 +43,10 @@ struct TimeTrackerLiveActivityWidget: Widget {
                 Link(destination: LiveActivityDeepLinks.today) {
                     timer
                         .font(.caption2.monospacedDigit().weight(.semibold))
-                        .fontWidth(.condensed)
                         .foregroundStyle(.white)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(maxWidth: 50)
                         .accessibilityHidden(true)
                 }
                 .accessibilityLabel(
@@ -62,9 +65,10 @@ struct TimeTrackerLiveActivityWidget: Widget {
                 Link(destination: LiveActivityDeepLinks.today) {
                     timer
                         .font(.caption2.monospacedDigit().weight(.semibold))
-                        .fontWidth(.compressed)
                         .foregroundStyle(.white)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.55)
+                        .frame(maxWidth: 45)
                         .accessibilityHidden(true)
                 }
                 .accessibilityLabel(

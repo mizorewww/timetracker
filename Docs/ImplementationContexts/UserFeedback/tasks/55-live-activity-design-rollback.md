@@ -9,7 +9,7 @@
 - [x] 读取 Live Activity 相关架构、UI、测试、隐私规范与 Apple 官方资料。
 - [x] 对比反馈前后 Git 历史、当前实现和现有系统表面测试，定义“原设计”的可验证边界。
 - [x] 先建立 UI 验收清单，再做最小回滚。
-- [ ] 完成格式化、单元测试、脚本化模拟器截图验收和小 checkpoint 提交。
+- [x] 完成格式化、单元测试、脚本化模拟器截图验收和小 checkpoint 提交。
 - [ ] 执行 `make build-install-all`，关闭反馈并移除活动链接。
 
 ## 唯一反馈边界
@@ -29,8 +29,8 @@
 ## Checkpoint 编排
 
 - [x] Checkpoint A：领取、历史审计、原设计契约与验收清单。
-- [ ] Checkpoint B：最小回滚、定向测试、系统表面截图验收。
-- [ ] Checkpoint C：全量测试、Release 全设备安装、反馈收口。
+- [x] Checkpoint B：最小回滚、定向测试、系统表面截图验收。
+- [~] Checkpoint C：全量测试、Release 全设备安装、反馈收口。
 
 ## 子代理编排
 
@@ -39,8 +39,10 @@
 
 ## 资源所有权
 
-- 当前没有主代理或子代理拥有 simulator、XCTest、Instruments、物理设备或构建进程。
-- 后续每个模拟器批次必须在此记录设备名、UDID、结果与清理状态。
+- 主代理拥有模拟器 `TimeTracker-Task55-LiveActivity-iPhone17Pro`，UDID
+  `A082EBA7-F003-4E4A-9927-8D2EC7C7E6C9`，用于 iOS-only ActivityKit 单测与
+  `LiveActivitySystemSurfaceUITests` 截图；批次结束后必须终止 App/Runner、关机并删除。
+- 子代理没有 simulator、XCTest、Instruments、物理设备或构建进程。
 
 ## 决策与证据
 
@@ -59,12 +61,12 @@
 
 ## UI 验收清单
 
-- [ ] Lock Screen 普通字号：图标、任务摘要和完整长时计时互不覆盖；空间不足时可以回到原设计的纵向排布。
-- [ ] Expanded Dynamic Island 普通字号：优先保持原设计的单行；长标题或受限宽度时允许 `ViewThatFits` 安全纵排，不裁掉完整计时。
-- [ ] Compact leading：图标和标题保持原来的 62pt 弹性边界；标题可缩放且不会挤占 trailing 计时。
-- [ ] Compact trailing 与 minimal：恢复 50pt/45pt 边界和原缩放比例，仍可见超过八小时的 `HH:MM:SS`。
-- [ ] 所有表面继续打开 Today，不出现 Stop；标题/路径仍标记隐私，计时继续每秒推进。
-- [ ] XCUITest 保留注册、唯一 AX 标识、长时 OCR、计时推进、无 Stop 和截图证据，只放宽任务 29 独有的“expanded 必须强制同一行”几何断言。
+- [x] Lock Screen 普通字号：图标、任务摘要和完整长时计时互不覆盖；16 小时计时完整显示。
+- [x] Expanded Dynamic Island 普通字号：恢复原设计单行，长标题与完整计时均未裁切或重叠。
+- [x] Compact leading：图标和标题保持原来的 62pt 弹性边界；标题按必要范围截断且未挤占 trailing 计时。
+- [x] Compact trailing 与 minimal：恢复 50pt/45pt 边界和原缩放比例，仍可见超过八小时的 `HH:MM:SS`。
+- [x] 所有表面继续打开 Today，不出现 Stop；标题/路径仍标记隐私，计时继续每秒推进。
+- [x] XCUITest 保留注册、唯一 AX 标识、长时 OCR、计时推进、无 Stop 和截图证据，只放宽任务 29 独有的精确中线、间距和坐标断言。
 
 ## 基线验证
 
@@ -73,3 +75,10 @@
   - `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd`
   - `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`
 - 对上述两个 suite 的定向复跑再次得到相同失败，确认不是本任务造成，也不并入本 checkpoint。
+- `SystemSurfaceInteractionContractTests`、`CoreDeepLinkRoutingTests`、`LiveActivityCoordinatorTests`、`LiveActivityRecoveryTests` 的 macOS 定向批次：33 个测试全部通过。
+- iOS `LiveActivityCoordinatorTests`：25 个测试全部通过，包括 16 小时计时、无 stale deadline、恢复和结束生命周期。
+- `make format-check`、`make localization-check` 与 `make build-ios`：通过；iOS、Watch、Widget、Live Activity 均以自动签名构建成功。
+- 修改后的 `make test`：仍为 1433 个测试、同样两条既有失败，其余通过；失败集合与修改前基线完全相同。
+- 第一次系统表面运行在全新 iOS 27 模拟器上被系统 `ChronodWidgetExtensionWatchdog` 杀死；日志显示系统同时预缓存大量扩展，Activity 注册成功但扩展在 10 秒 provision 内未完成。这一轮不作为产品失败结论。
+- 同一已预热模拟器上的干净重跑：`LiveActivitySystemSurfaceUITests` 1/1 通过；紧凑、锁屏、展开三种系统表面均出现，几何、长时 OCR、计时推进、Today 深链和无 Stop 断言通过。
+- 人工截图复核：紧凑态、锁屏态和展开态在 iPhone 17 Pro 普通字号均无裁切计时、重叠或错误操作。

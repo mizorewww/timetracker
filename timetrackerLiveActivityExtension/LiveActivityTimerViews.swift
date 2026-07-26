@@ -41,24 +41,6 @@ enum LiveActivityTimerRowStyle {
             .expanded
         }
     }
-
-    var summaryLayoutPriority: Double {
-        switch self {
-        case .lockScreen:
-            1
-        case .dynamicIsland:
-            2
-        }
-    }
-
-    var timerLayoutPriority: Double {
-        switch self {
-        case .lockScreen:
-            2
-        case .dynamicIsland:
-            1
-        }
-    }
 }
 
 struct LiveActivityTimerRow: View {
@@ -68,22 +50,14 @@ struct LiveActivityTimerRow: View {
     let style: LiveActivityTimerRowStyle
 
     var body: some View {
-        Group {
-            if dynamicTypeSize.isAccessibilitySize {
+        if dynamicTypeSize.isAccessibilitySize {
+            stackedContent
+        } else {
+            ViewThatFits(in: .horizontal) {
+                horizontalContent
                 stackedContent
-            } else {
-                switch style {
-                case .lockScreen:
-                    ViewThatFits(in: .horizontal) {
-                        horizontalContent
-                        stackedContent
-                    }
-                case .dynamicIsland:
-                    horizontalContent
-                }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var horizontalContent: some View {
@@ -95,10 +69,11 @@ struct LiveActivityTimerRow: View {
                 showsPath: style.showsPath,
                 allowsWrapping: false
             )
-            .layoutPriority(style.summaryLayoutPriority)
+
+            Spacer(minLength: 6)
 
             timer
-                .layoutPriority(style.timerLayoutPriority)
+                .layoutPriority(2)
         }
     }
 
@@ -160,6 +135,8 @@ struct ActivityTaskSummary: View {
                 .privacySensitive()
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .layoutPriority(1)
     }
 }
 

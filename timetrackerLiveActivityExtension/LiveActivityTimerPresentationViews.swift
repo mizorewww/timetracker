@@ -21,6 +21,7 @@ struct TimerText: View {
                 )
                 .foregroundStyle(.white)
                 .lineLimit(1)
+                .minimumScaleFactor(0.72)
 
             if isStale {
                 Image(systemName: "exclamationmark.clock.fill")
@@ -28,7 +29,13 @@ struct TimerText: View {
                     .foregroundStyle(.white.opacity(0.72))
             }
         }
-        .frame(minHeight: 44, alignment: .trailing)
+        .frame(
+            minWidth: style == .lockScreen ? 78 : 64,
+            idealWidth: style == .lockScreen ? 88 : 72,
+            maxWidth: style == .lockScreen ? 104 : 84,
+            minHeight: 44,
+            alignment: .trailing
+        )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(String(localized: isStale ? "live.timer.stale" : "live.timer.elapsed"))
         .accessibilityValue(stopwatchText)

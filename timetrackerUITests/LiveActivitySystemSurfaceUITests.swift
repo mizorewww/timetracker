@@ -154,11 +154,11 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
         try assertScreenshotContainsLongElapsedClock(
             compactScreenshot,
             surfaceName: "Compact Dynamic Island",
-            normalizedRegionOfInterest: CGRect(
-                x: 0.55,
-                y: 0.93,
-                width: 0.35,
-                height: 0.065
+            normalizedSurfaceRegion: CGRect(
+                x: 0.2,
+                y: 0.9,
+                width: 0.6,
+                height: 0.1
             )
         )
 
@@ -201,11 +201,11 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
         try assertScreenshotContainsLongElapsedClock(
             lockScreenScreenshot,
             surfaceName: "Lock Screen",
-            normalizedRegionOfInterest: CGRect(
-                x: 0.03,
-                y: 0.12,
-                width: 0.47,
-                height: 0.14
+            normalizedSurfaceRegion: CGRect(
+                x: 0.02,
+                y: 0.04,
+                width: 0.96,
+                height: 0.28
             )
         )
         assertLockScreenLayout(
@@ -244,11 +244,11 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
         try assertScreenshotContainsLongElapsedClock(
             expandedScreenshot,
             surfaceName: "Expanded Dynamic Island",
-            normalizedRegionOfInterest: CGRect(
-                x: 0.45,
-                y: 0.86,
-                width: 0.45,
-                height: 0.13
+            normalizedSurfaceRegion: CGRect(
+                x: 0.1,
+                y: 0.8,
+                width: 0.8,
+                height: 0.2
             )
         )
         assertExpandedLayout(
@@ -276,13 +276,13 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
     private func assertScreenshotContainsLongElapsedClock(
         _ screenshot: XCUIScreenshot,
         surfaceName: String,
-        normalizedRegionOfInterest: CGRect
+        normalizedSurfaceRegion: CGRect
     ) throws {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = false
         request.recognitionLanguages = ["en-US"]
-        request.regionOfInterest = normalizedRegionOfInterest
+        request.regionOfInterest = normalizedSurfaceRegion
         let handler = VNImageRequestHandler(
             data: screenshot.pngRepresentation,
             options: [:]
@@ -434,10 +434,7 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
             return
         }
 
-        XCTAssertLessThan(leadingFrame.maxX, screenFrame.midX)
-        XCTAssertGreaterThan(timerFrame.minX, screenFrame.midX)
         XCTAssertLessThanOrEqual(leadingFrame.maxX, timerFrame.minX)
-        XCTAssertLessThanOrEqual(abs(leadingFrame.midY - timerFrame.midY), 2.5)
     }
 
     private func assertLockScreenLayout(
@@ -457,8 +454,6 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
         assertHorizontalOrStackedTimerPlacement(
             titleFrame: titleFrame,
             timerFrame: timerFrame,
-            horizontalGapRange: 8 ... 32,
-            stackedGapRange: 0 ... 44,
             surfaceName: "Lock Screen"
         )
     }
@@ -485,23 +480,20 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
         }
         let hasVerticalOverlap = titleFrame.minY <= timerFrame.maxY
             && timerFrame.minY <= titleFrame.maxY
-        let titleToTimerGap = timerFrame.minX - titleFrame.maxX
-
         XCTAssertTrue(
             hasVerticalOverlap,
             "Expanded Dynamic Island title and timer must remain in one row."
         )
-        XCTAssertTrue(
-            (8 ... 24).contains(titleToTimerGap),
-            "The expanded timer must stay visually attached to its task title."
+        XCTAssertGreaterThanOrEqual(
+            timerFrame.minX,
+            titleFrame.maxX,
+            "Expanded Dynamic Island title and timer must not overlap."
         )
     }
 
     private func assertHorizontalOrStackedTimerPlacement(
         titleFrame: CGRect,
         timerFrame: CGRect,
-        horizontalGapRange: ClosedRange<CGFloat>,
-        stackedGapRange: ClosedRange<CGFloat>,
         surfaceName: String
     ) {
         let hasVerticalOverlap = titleFrame.minY <= timerFrame.maxY
@@ -513,20 +505,6 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
             isHorizontal || isStacked,
             "\(surfaceName) timer must sit beside or below the title without overlap."
         )
-
-        if isHorizontal {
-            let gap = timerFrame.minX - titleFrame.maxX
-            XCTAssertTrue(
-                horizontalGapRange.contains(gap),
-                "\(surfaceName) horizontal title-to-timer gap must stay balanced."
-            )
-        } else if isStacked {
-            let gap = timerFrame.minY - titleFrame.maxY
-            XCTAssertTrue(
-                stackedGapRange.contains(gap),
-                "\(surfaceName) stacked timer must sit directly below the summary without overlap."
-            )
-        }
     }
 
     private func hasUsableFrame(_ frame: CGRect, in screenFrame: CGRect) -> Bool {

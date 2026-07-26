@@ -332,7 +332,7 @@ Intent durable mutation 提交后，`CommittedMutationSnapshotRecorder` 更新�
 
 Live Activity 是只读状态投影。Activity attributes 应保持小而稳定，不保存唯一业务事实；extension 不直接写 SwiftData 或 iCloud。锁屏与展开 Dynamic Island 必须复用同一个 `LiveActivityTimerRow`：锁屏采用与 Today/Now 相同的“34 pt 图标 / headline 标题与 caption 路径 / title3 等宽时间”层级，展开 Dynamic Island 在普通字号只保留“图标 / 标题 / 时间”单行，不显示路径、附加计时数量或停止控件。点按任意 Live Activity 表面只打开 Today，停止操作由 Today 的可见计时行完成。Widget 的显式停止入口仍携带当前可见 segment ID，不受本规则影响。更新失败应重试或降级显示，但不应阻断主应用写入。扩展对任务文本使用隐私处理，并明确表达 stale 状态。
 
-`LiveActivityTimingPolicy` 是 ActivityKit `staleDate` 与 UI elapsed presentation 的共同边界：活动从 canonical `startedAt` 起最多实时增长八小时，进入 stale 后必须切换为固定的 `LiveActivityElapsedPresentation.frozen`，可见文本和 accessibility value 都使用同一个冻结秒数。不得只改状态标签而继续渲染 `Text(startedAt, style: .timer)`；Dynamic Island compact trailing 与 minimal 也必须复用该 policy，不能成为继续增长的例外。任务身份由现有 `TaskIdentityPresentation` 生成，完整/缩写 breadcrumb 都按 Unicode 边界投影到受限字段，不能在 Live Activity 内另建一套 parent-path 算法。锁屏内容在辅助功能字号下直接采用纵向结构，其他字号用 `ViewThatFits(in: .horizontal)` 在宽行和堆叠结构之间选择；expanded 普通字号优先单行，空间确实不足或辅助功能字号才使用同一组件的纵向回退。compact 可截断任务名，minimal 只显示 frozen-aware elapsed，因为系统宽度无法容纳完整身份。
+Live Activity 直接保留 canonical `startedAt`，并用三字段 `SystemFormatStyle.Stopwatch` 在所有表面持续显示完整 `HH:MM:SS`；`ActivityContent.staleDate` 保持 `nil`，不在应用层八小时处截断或冻结仍在运行的计时。系统若报告 stale，界面只增加明确的状态语义，不得替换、缩短或停止可见计时与 accessibility value。任务身份由现有 `TaskIdentityPresentation` 生成，完整/缩写 breadcrumb 都按 Unicode 边界投影到受限字段，不能在 Live Activity 内另建一套 parent-path 算法。锁屏内容在辅助功能字号下直接采用纵向结构，其他字号用 `ViewThatFits(in: .horizontal)` 在宽行和堆叠结构之间选择；expanded 普通字号优先单行，空间确实不足或辅助功能字号才使用同一组件的纵向回退。原设计为计时保留按表面区分的弹性宽度和缩放边界，并让任务摘要占用剩余空间，禁止用精确像素间距或强制字宽再次挤压标题与计时。compact 可截断任务名，minimal 只显示完整 elapsed，因为系统宽度无法容纳完整身份。
 
 ### Watch
 

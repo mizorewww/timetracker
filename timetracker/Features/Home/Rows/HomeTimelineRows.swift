@@ -6,11 +6,15 @@ struct TimelineRow: View {
     var openTaskDetail: ((UUID) -> Void)?
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.layoutShell) private var layoutShell
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var pendingDeletionRequest: SegmentEditorDraftBaseline?
 
     private var isCompact: Bool {
-        SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass).isCompact
+        SizeClassLayoutPolicy(
+            horizontalSizeClass: horizontalSizeClass,
+            shell: layoutShell
+        ).isCompact
     }
 
     private var tag: String {

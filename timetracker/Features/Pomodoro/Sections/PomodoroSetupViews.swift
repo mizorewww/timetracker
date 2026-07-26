@@ -7,9 +7,8 @@ struct PomodoroSetupCard: View {
     @Binding var selectedPlanID: UUID?
     @Binding var focusTaskID: UUID?
     let selectFocusTask: () -> Void
-    #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    #endif
+    @Environment(\.layoutShell) private var layoutShell
 
     private var selectedTask: TaskNode? {
         guard let task = focusTaskID.flatMap({ store.task(for: $0) }),
@@ -25,7 +24,10 @@ struct PomodoroSetupCard: View {
     }
 
     var body: some View {
-        let layout = PomodoroLayoutPolicy(horizontalSizeClass: effectiveHorizontalSizeClass)
+        let layout = PomodoroLayoutPolicy(
+            horizontalSizeClass: horizontalSizeClass,
+            shell: layoutShell
+        )
         PomodoroPageLayout {
             VStack(alignment: .leading, spacing: layout.setupSectionSpacing) {
                 setupHeader
@@ -50,13 +52,6 @@ struct PomodoroSetupCard: View {
         }
     }
 
-    private var effectiveHorizontalSizeClass: UserInterfaceSizeClass? {
-        #if os(iOS)
-        horizontalSizeClass
-        #else
-        nil
-        #endif
-    }
 
     private var setupHeader: some View {
         VStack(alignment: .leading, spacing: 6) {

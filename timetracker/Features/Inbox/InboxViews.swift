@@ -9,9 +9,8 @@ struct InboxView: View {
     @State private var completionPresentationRevision = 0
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    #endif
+    @Environment(\.layoutShell) private var layoutShell
 
     private var openItems: [InboxItem] {
         store.openInboxItems
@@ -21,12 +20,11 @@ struct InboxView: View {
         store.completedInboxItems
     }
 
+    /// Drives whether suggestion accept/dismiss render as icon-only circular
+    /// buttons or as full labelled rows. Previously false on macOS at any
+    /// width, which left a narrow Mac window trying to fit both labels.
     private var isCompact: Bool {
-        #if os(iOS)
-        horizontalSizeClass == .compact
-        #else
-        false
-        #endif
+        horizontalSizeClass == .compact || layoutShell == .compact
     }
 
     var body: some View {

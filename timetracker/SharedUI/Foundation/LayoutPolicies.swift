@@ -127,13 +127,18 @@ struct HomeLayoutPolicy {
     }
 }
 
+/// Whether the current surface is narrow, from both available signals.
+///
+/// Named for the width it describes, not for a device: a narrow Mac window and
+/// an iPad in Slide Over are both compact.
 struct SizeClassLayoutPolicy {
     let horizontalSizeClass: UserInterfaceSizeClass?
+    /// The shell the root chose. macOS reports `.regular` for every size class,
+    /// so without this a narrow Mac window would read as roomy.
+    var shell: RootLayoutPolicy.Shell = .regular
 
-    /// Named for the width it describes, not for a device: a narrow Mac window
-    /// and an iPad in Slide Over are both compact.
     var isCompact: Bool {
-        horizontalSizeClass == .compact
+        horizontalSizeClass == .compact || shell == .compact
     }
 }
 
@@ -156,8 +161,14 @@ enum TaskTreeDisclosureSlot: Equatable {
 struct PomodoroLayoutPolicy {
     private let sizeClassPolicy: SizeClassLayoutPolicy
 
-    init(horizontalSizeClass: UserInterfaceSizeClass?) {
-        sizeClassPolicy = SizeClassLayoutPolicy(horizontalSizeClass: horizontalSizeClass)
+    init(
+        horizontalSizeClass: UserInterfaceSizeClass?,
+        shell: RootLayoutPolicy.Shell = .regular
+    ) {
+        sizeClassPolicy = SizeClassLayoutPolicy(
+            horizontalSizeClass: horizontalSizeClass,
+            shell: shell
+        )
     }
 
     var setupCardPadding: CGFloat {

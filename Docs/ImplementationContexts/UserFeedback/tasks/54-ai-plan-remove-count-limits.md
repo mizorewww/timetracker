@@ -1,6 +1,6 @@
 # 54:移除 AI 计划数量上限(超级大 JSON)实现记忆
 
-状态：因用户复测失败，于 2026-07-26 重新进行中
+状态：2026-07-26 复测修复完成
 
 > 本文件只用于主代理与子代理的实现、验证和编排记忆,不是任务来源。唯一范围与状态必须重新读取
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -21,7 +21,7 @@
   任意业务数量/字符串截断。
 - [x] 最小修复生产路径与当前文档，保留显式失败和原子写入，不允许静默截断。
 - [x] 普通字号 UI 验收大计划 preview/apply，执行默认门禁与小提交。
-- [~] 执行 Release 全设备安装并再次收口。
+- [x] 执行 Release 全设备安装并再次收口。
 
 重新打开后的范围以当前 `Docs/userfeedback.md` 的 `[~]` 原文为准；旧实现与验收
 记录保留为历史证据，不能把旧的 `[x]` 当作这次复测已经通过。
@@ -45,16 +45,18 @@
 - [x] Checkpoint B:审计上限执行点与契约文本。
 - [x] Checkpoint C:实现 + 补齐行为测试。
 - [x] Checkpoint D:模拟器验收与资源清理。
-- [~] Checkpoint E:Release 构建安装、核验与收口。
+- [x] Checkpoint E:Release 构建安装、核验与收口。
 
 ## 资源所有权
 
-- [~] 主代理:任务状态、编排、集成、Release 批次与最终收口。
+- [x] 主代理:任务状态、编排、集成、Release 批次与最终收口。
 
 ## 已提交 checkpoint
 
 - [x] 实现与测试:`4b8bcec6` feat: accept faithfully large AI plans without count limits(版本 1.1.163)。
 - [x] 已收口:userfeedback 勾选 [x],active link 已移除,任务关闭。Release build_install_all 完成,macOS 装入 /Applications;实体机状态不阻塞。
+- [x] 复测根因修复：`96033edc` fix: remove AI workspace component count caps。
+- [x] 普通字号 UI 验收记录：`9744ed94` docs: record large AI plan UI verification。
 
 ## 实现与验收记录
 
@@ -108,6 +110,20 @@
       1 test / 0 failures，完成与 iPhone 相同的断言和截图。
     - 四张截图已目检：系统 sheet/popover、滚动、按钮、普通字号和应用后的任务详情
       均无截断或布局破坏；iPad preview 截图明确显示 Chapter 150。
+  - `CONFIGURATION=Release make build-install-all` 成功：
+    - iOS/iPadOS Release 1.1.188 (243) 使用 Automatic signing / team
+      `LT98S43NKA` 构建，嵌入的 Watch companion 与主 App 均通过签名验证。
+    - 已用 `devicectl` 回读确认同一版本安装到实体 iPad Pro M4
+      (`748D0137-ADC3-58AF-855C-1E98B3125F93`) 与 iPhone Air
+      (`FBA36694-D841-56D4-8ED6-21942873B21B`)。
+    - macOS Release 1.1.188 (243) 已安装到 `/Applications/timetracker.app`，
+      `codesign --verify --deep --strict` 通过。
+    - 没有独立可见的物理 Apple Watch；已验证嵌入 companion 的 profile、签名和
+      designated requirement，实际 Watch 安装仍由配对 iPhone 的 Automatic App
+      Install 完成。
+  - 资源清理：两台专用模拟器均 terminate/shutdown/delete，UI 结果移入废纸篓；
+    未遗留本批次 `xcodebuild`、`xctest`、UI runner 或 Booted 设备；安装证据核验后
+    已执行 `make clean` 清理 `build/Install`。
 
 ### 设计(Checkpoint B 结论)
 

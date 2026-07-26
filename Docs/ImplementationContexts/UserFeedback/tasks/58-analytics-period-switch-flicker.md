@@ -10,7 +10,7 @@
 - [x] 先写普通字号 UI 验收清单、稳定行为测试和修复前失败/录屏证据。
 - [x] 做最小分层修复，保留图表计算、交互、缓存与跨平台语义。
 - [x] 运行格式、本地化、单元测试和受影响 iPhone/iPad/macOS 截图/录屏验收。
-- [ ] 提交小 checkpoint，执行 Release 全设备安装，标记反馈完成并移除活动链接。
+- [x] 提交小 checkpoint，执行 Release 全设备安装，标记反馈完成并移除活动链接。
 
 ## 唯一范围
 
@@ -31,7 +31,7 @@
 
 - [x] Checkpoint A：领取、现状/历史/测试审计、验收契约。
 - [x] Checkpoint B：测试先行、最小根因修正和文档更新。
-- [~] Checkpoint C：跨平台截图/录屏、完整门禁、Release 全设备安装和反馈收口。
+- [x] Checkpoint C：跨平台截图/录屏、完整门禁、Release 全设备安装和反馈收口。
 
 ## 子代理编排
 
@@ -163,6 +163,10 @@
   `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd()`
   与
   `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp()`。
+- `CONFIGURATION=Release make build-install-all` 成功：iOS/iPadOS 包内含 Watch companion，
+  实体 iPad Pro M4、iPhone Air 与 `/Applications/timetracker.app` 均安装
+  `1.1.178 (233)`；macOS 深度签名验证通过。当前无可见实体 Apple Watch；两台移动设备均因
+  锁屏拒绝远程启动，但 `devicectl` 已确认安装版本。
 
 ## 实现结论
 

@@ -180,6 +180,69 @@ struct LLMSettingsTests {
         #expect(Set(defaults).count == LLMPromptKind.allCases.count)
     }
 
+    @Test
+    func everyDefaultPromptIncludesATypedWorkedExample() {
+        for kind in LLMPromptKind.allCases {
+            let instructions = kind.defaultInstructions
+
+            #expect(instructions.contains("### Worked example"))
+            #expect(instructions.contains("Example input"))
+            #expect(instructions.contains("Example output"))
+        }
+    }
+
+    @Test
+    func exactPreviousZeroShotDefaultsUpgradeWithoutReplacingCustomText() throws {
+        for kind in LLMPromptKind.allCases {
+            let previous = kind.previousDefaultInstructions
+
+            #expect(
+                try AppPreferenceValueSanitizer.llmPromptInstructions(
+                    previous,
+                    for: kind
+                ) == kind.defaultInstructions
+            )
+
+            let customized = previous + "\n\nKeep my custom rule."
+            #expect(
+                try AppPreferenceValueSanitizer.llmPromptInstructions(
+                    customized,
+                    for: kind
+                ) == customized
+            )
+        }
+    }
+
+    @Test
+    func everyPromptDisclosesItsEffectiveRequestWithoutTheCredential() {
+        for kind in LLMPromptKind.allCases {
+            let disclosure = kind.effectiveRequestDisclosure
+
+            #expect(disclosure.contains("POST"))
+            #expect(disclosure.contains("messages"))
+            #expect(disclosure.contains("model"))
+            #expect(disclosure.contains("Authorization"))
+            #expect(disclosure.contains("API key"))
+            #expect(disclosure.contains("never enters the prompt"))
+            #expect(
+                disclosure.contains(
+                    String(SymbolCatalog.aiSuggestionSymbolNames.count)
+                )
+            )
+        }
+
+        let planDisclosure =
+            LLMPromptKind.taskPlan.effectiveRequestDisclosure
+        for tool in AITaskWorkspaceToolName.allCases {
+            #expect(planDisclosure.contains(tool.rawValue))
+        }
+        #expect(planDisclosure.contains("reasoning_effort"))
+        #expect(planDisclosure.contains("thinking"))
+        #expect(planDisclosure.contains("tool_choice"))
+        #expect(planDisclosure.contains("\"parameters\""))
+        #expect(planDisclosure.contains("\"additionalProperties\" : false"))
+    }
+
     @Test @MainActor
     func taskPlanInstructionsRoundTripAsANonSensitiveSyncedPreference() throws {
         let instructions = "Use one category per durable area.\n\tPrefer small tasks."

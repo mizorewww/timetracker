@@ -161,6 +161,21 @@ struct LLMPromptInstructionsEditor: View {
 
             Section {
                 DisclosureGroup {
+                    MarkdownView(kind.effectiveRequestDisclosure)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .textSelection(.enabled)
+                } label: {
+                    Text(
+                        AppStrings.localized(
+                            "settings.llm.prompt.effectiveRequest"
+                        )
+                    )
+                }
+                .accessibilityIdentifier(
+                    "\(accessibilityID).effectiveRequest"
+                )
+
+                DisclosureGroup {
                     Text(kind.fixedResponseContract)
                         .font(.caption)
                         .foregroundStyle(.secondary)

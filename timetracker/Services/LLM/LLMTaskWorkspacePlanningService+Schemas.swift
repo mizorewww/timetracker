@@ -125,6 +125,22 @@ extension LLMTaskWorkspacePlanningService {
             properties: [:]
         ),
     ]
+
+    static var toolSchemaDisclosure: String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [
+            .prettyPrinted,
+            .sortedKeys,
+            .withoutEscapingSlashes,
+        ]
+        guard let data = try? encoder.encode(toolDefinitions),
+              let json = String(data: data, encoding: .utf8)
+        else {
+            assertionFailure("Production LLM tool definitions must encode.")
+            return "[]"
+        }
+        return json
+    }
 }
 
 private extension LLMTaskWorkspacePlanningService {

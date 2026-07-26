@@ -143,3 +143,28 @@ Checkpoint E 与提示词透明度/完整上下文收口尚未完成，反馈条
   identifier 也移到系统 `ProgressView`，让 token 文本保持独立可读。
 - 本 checkpoint 没有新依赖；继续复用 SwiftUI 原生 Form/List/DisclosureGroup、
   Foundation URLSession/SwiftData/XCTest，以及项目现有 MarkdownView。
+
+## 提示词透明度 Checkpoint 进度
+
+- 三个默认可编辑提示词都加入了 typed worked example：Inbox routing 与 Checklist
+  visual 给出实际输入/严格 JSON 输出；Task plan 给出使用现有 UUID 连续创建三条
+  checklist tool call、再 `finalize_plan` 的完整顺序，不再只靠 zero-shot 规则。
+- 精确等于上一版默认值的已同步偏好会迁移到新 few-shot 默认；只要用户曾增加或修改
+  一个字符就保持原样，避免覆盖个人定制。
+- 三个提示词编辑器新增“实际发送给服务商的请求”Markdown 披露，内容直接复用生产
+  temperature/reasoning 常量、实际 SF Symbol/颜色计数与
+  `AITaskWorkspaceToolName.allCases`，列出 HTTP envelope、runtime user JSON、
+  response format、thinking/reasoning/tool_choice 分支、全部 15 个工具，并直接
+  pretty-print 生产 `toolDefinitions` 的完整 JSON Schema；披露没有另写一份易漂移
+  的 schema。
+- 披露明确 API key 只从 Keychain 写入 Authorization header，不进入 prompt、
+  workspace JSON、工具参数或工具结果；编辑器仍使用现有 MarkdownView，没有新依赖。
+- scoped SwiftFormat 与三语 localization parity 通过。`make test` 完成编译并运行
+  1,421 项：本 checkpoint 新增的三个提示词/迁移/披露行为测试全部通过；总计
+  1,418 项通过，仍有三个不在本改动路径的失败：
+  `CoreLLMResponseTransportTests.nonSuccessStatusTakesPriorityOverDeclaredBodySize`、
+  `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd`
+  与
+  `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`。
+  加入生产 tool schema 披露后第二次完整运行仍为相同三项失败，新增测试继续通过；
+  本任务不修改这些断言来制造全绿。

@@ -3853,6 +3853,14 @@ final class timetrackerUITests: XCTestCase {
                 "Every prompt editor must render a Markdown preview."
             )
 
+            let effectiveRequest = app.descendants(matching: .any)[
+                "settings.llm.prompt.\(kind).effectiveRequest"
+            ].firstMatch
+            scrollUntilHittable(effectiveRequest, direction: .up, in: app)
+            XCTAssertTrue(
+                effectiveRequest.waitForExistence(timeout: 5),
+                "Every prompt editor must disclose the effective provider request."
+            )
             let fixedRules = app.descendants(matching: .any)[
                 "settings.llm.prompt.\(kind).fixedRules"
             ].firstMatch

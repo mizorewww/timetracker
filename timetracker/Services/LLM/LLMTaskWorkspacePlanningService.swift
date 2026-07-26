@@ -427,14 +427,18 @@ private extension LLMTaskWorkspacePlanningService {
             OpenAIChatCompletionRequest(
                 model: modelID,
                 messages: messages,
-                temperature: usesDeepSeekV4Thinking ? nil : 0,
+                temperature: usesDeepSeekV4Thinking
+                    ? nil
+                    : LLMChatRequestPolicy.taskPlanningTemperature,
                 responseFormat: nil,
                 tools: toolDefinitions,
                 toolChoice: usesDeepSeekV4Thinking ? nil : "required",
                 thinking: usesDeepSeekV4Thinking
                     ? OpenAIChatThinkingConfiguration(type: "enabled")
                     : nil,
-                reasoningEffort: usesDeepSeekV4Thinking ? "high" : nil
+                reasoningEffort: usesDeepSeekV4Thinking
+                    ? LLMChatRequestPolicy.deepSeekV4ReasoningEffort
+                    : nil
             )
         )
         var request = URLRequest(url: endpointURL)

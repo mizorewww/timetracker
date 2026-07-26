@@ -184,7 +184,7 @@ struct LLMInboxSuggestionService {
                         )
                     ),
                 ],
-                temperature: 0.2,
+                temperature: LLMChatRequestPolicy.suggestionTemperature,
                 responseFormat: .init(type: "json_object")
             )
         )

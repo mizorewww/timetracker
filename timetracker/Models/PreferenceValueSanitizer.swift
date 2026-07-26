@@ -157,6 +157,9 @@ enum AppPreferenceValueSanitizer {
         {
             return LLMTaskPlanPrompt.defaultInstructions
         }
+        if instructions == kind.previousDefaultInstructions {
+            return kind.defaultInstructions
+        }
         return instructions
     }
 

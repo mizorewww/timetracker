@@ -10,3 +10,4 @@ DerivedData/
 *.py[cod]
 .venv/
 .env
+Docs/userfeedback.md

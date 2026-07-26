@@ -16,7 +16,7 @@
 | `make test-versioning` | 隔离临时仓库中跑版本钩子集成测试 |
 | `make build-ios` | 构建 iOS app(`generic/platform=iOS`) |
 | `make build-macos` | 构建 macOS app(`generic/platform=macOS`) |
-| `make build-install-all` | 构建 iOS+Watch 与 macOS,安装到设备并复制到 /Applications |
+| `make build-install-all` | 构建 iOS+Watch 与 macOS(默认 Release),安装到设备并复制到 /Applications |
 | `make test` | macOS 单元测试(`timetrackerTests`) |
 | `make test-llm-live` | 用真实 DeepSeek API 跑三条 AI 提示词与任务计划验收；从 `TIMETRACKER_LIVE_LLM_API_KEY` 或本地 `.env` 读取凭据 |
 | `make localization-check` | 静态校验所有 `.strings` 资源在三语种间 key 一致(无需 `xcodebuild`,也作为 pre-commit 闸门) |
@@ -34,6 +34,7 @@ Makefile 把命令行变量与 shell 环境变量透传给 wrapper/脚本,因此
 CONFIGURATION=Release make export-artifacts
 make CONFIGURATION=Release export-artifacts
 LAUNCH_AFTER_INSTALL=1 ALLOW_DEVICE_FAILURES=1 make build-install-all
+CONFIGURATION=Debug make build-install-all   # 显式装 Debug 包（会解锁演示数据/冒烟入口）
 BUILD_ROOT=/tmp/timetracker-artifacts make export-artifacts
 ```
 

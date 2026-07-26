@@ -122,7 +122,7 @@ make build-install-all
 | 变量 | 默认值 | 用途 |
 | --- | --- | --- |
 | `PROJECT`、`SCHEME` | 项目 / `timetracker` | iOS/macOS 构建目标 |
-| `CONFIGURATION` | `Debug` | 构建配置 |
+| `CONFIGURATION` | `Release` | 构建配置。默认 Release：本目标安装到真机与 `/Applications`，而 Debug 二进制会定义 `DEBUG`，解锁演示数据与云冒烟测试入口 |
 | `DEVELOPMENT_TEAM` | `LT98S43NKA` | 自动签名团队 |
 | `APPLICATIONS_DIR` | `/Applications` | macOS app 安装目录 |
 | `LAUNCH_AFTER_INSTALL=1` | `0` | iOS 安装后启动 app |

@@ -171,6 +171,9 @@ JSON 导出包含可同步业务数据的快照，并过滤敏感 preference。�
 - 普通 Local、iCloud、local-fallback 和 emergency 生产 store 永不物理 purge tombstone。CloudKit 没有每台离线设备的删除确认，过早清理可能让旧设备复活数据；生产 UI 因此不显示永久清理入口。
 - 只有隔离的 Demo/UI Test store 允许在测试中物理清理超过保留期的完整 tombstone graph。可见 orphan 可能只是分阶段 CloudKit import，不能仅因暂时缺少父记录就删除。
 - 清空、替换、重置演示数据和强制 iCloud 操作都可能造成不可逆变化。
+- 演示数据的写入（seed 与 rebuild）必须同时满足 DEBUG 构建**和**当前打开的是隔离 demo store（`AppDemoDataConfiguration.allowsDemoDataMutation`）。出厂模式为 `off` 时打开的是生产 CloudKit store，在那里 rebuild 会先给用户全部行打 tombstone 再写入演示行，并把删除和演示行一起同步到用户 iCloud。
+- 测试进程不得触碰正式 App 的状态。macOS target 未开启 sandbox，`xctest` 宿主与已安装的 `/Applications/timetracker.app` 共用 preferences domain、Application Support 目录和 App Group 容器；因此 App 与测试一律通过 `AppDefaults.shared` 访问偏好，`SyncConflictService` 状态目录与 widget 快照 suite 在测试宿主下另起命名空间。否则被中断的测试残留的恢复标志会在用户下次真实启动时触发破坏性的强制上传/下载重置，测试写出的快照也会被重放回生产 store、复活用户已删除的 Inbox 项。
+- `make build-install-all` 默认 Release：该目标直接安装到真机与 `/Applications`，Debug 二进制会定义 `DEBUG` 并解锁上述演示数据与云冒烟测试入口。
 - “清空全部数据”还会删除本机 Keychain API key 和设备本地的自动建议同意；若业务数据清理失败，应用会尽力恢复之前的外部存储值。该动作不会切换设备本地的 iCloud 启动开关。
 - 当前 JSON 无法恢复这些操作。
 

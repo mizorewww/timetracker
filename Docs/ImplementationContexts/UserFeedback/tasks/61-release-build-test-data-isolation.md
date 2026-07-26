@@ -1,6 +1,6 @@
 # 61：Release 构建与测试数据隔离实现记忆
 
-状态：2026-07-26 进行中
+状态：2026-07-26 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -97,17 +97,11 @@
 
 ## Checkpoint 编排
 
-- [~] A：认领反馈、建立本实现记忆、采集并固化现场证据。
-- [ ] B：测试宿主隔离（根因 1）。引入统一的 `AppDefaults` 与隔离的 sync 状态目录，
-  把 App 内 65 处 `UserDefaults.standard`（17 个文件）改为经隔离层访问；
-  加行为测试断言测试宿主写入不会落到生产 domain。
-- [ ] C：Release 硬化（根因 2、3）。`build-install-all` 默认 Release；
-  `replaceWithDemoData`/`CloudSyncSmokeTestRunner`/UI-audit 路由都必须拒绝在生产
-  CloudKit store 上执行。
-- [ ] D：现场清理与用户可见的维护入口。解除本机已武装的破坏性标志；
-  提供清除 demo/smoke 测试残留行的维护动作。
-- [ ] E：`make format-check` + `make test` 门禁、Release 全设备安装、反馈收口、
-  逐 checkpoint 提交。
+- [x] A：认领反馈、建立本实现记忆、采集并固化现场证据。（commit `6fd5ee20`）
+- [x] B：测试宿主隔离（根因 1）。（commit `f0a55401`）
+- [x] C：Release 硬化（根因 2、3）。（commit `f0a55401`）
+- [x] D：现场清理与用户可见的维护入口。（commit `b454d3b3` + 本机 defaults 清理）
+- [x] E：文档更新、Release 全设备安装、反馈收口。
 
 ## 约束与边界
 
@@ -127,4 +121,78 @@
 ## 进度记录
 
 - 2026-07-26 Checkpoint A：认领第 105/106 条，建立本文件与 active 链接；
-  按用户指示从反馈第 105 行开始，任务 60 的 `[~]` 条目暂停并撤下 active 链接。
+  按用户指示从反馈第 105 行开始。
+
+- 2026-07-26 Checkpoint B/C（commit `f0a55401`）：
+  - 新增 `timetracker/App/AppRuntimeEnvironment.swift`：`AppRuntimeEnvironment`
+    （`isTestHost` = XCTest 宿主 或 `--uitesting`，以及 `namespaced(_:)`）与
+    `AppDefaults`（测试宿主返回私有 suite，解析时清空；生产仍为 `.standard`）。
+  - App 侧 65 处 `UserDefaults.standard`（17 文件）与 6 处可注入的
+    `defaults: UserDefaults = .standard` 默认值全部改走 `AppDefaults.shared`；
+    驱动这些键的 129 处测试用法同步迁移到同一 suite。
+  - `SyncConflictService.defaultStateDirectoryURL()` 与
+    `SharedWidgetSnapshotStore` 的 App Group suite 在测试宿主下另起命名空间。
+    后者因为同时编译进 widget extension target，所以就地内联判定，不依赖
+    `AppRuntimeEnvironment`。
+  - `build_install_all.py` 默认 `CONFIGURATION=Release`。
+  - 新增 `allowsDemoDataMutation = allowsDemoDataCreation && usesLocalDemoStore`，
+    `ensureSeeded`/`replaceWithDemoData` 与设置里的入口都改用它。
+  - `applyUIAuditRouteIfRequested` 增加 `isTestHost` 前置条件。
+  - `TestHostIsolationTests` 从 2 条扩到 9 条；`DemoDataLifecycleTests` 里两条
+    违反 AGENTS.md 的 source-string scan 测试换成真实行为测试。
+
+- 2026-07-26 Checkpoint D（commit `b454d3b3`）：
+  - 新增 `timetracker/App/SyntheticDataOrigin.swift` 作为"这一行不是用户数据"的
+    唯一登记处（`demo` / `cloud-smoke` / `ui-test`）。
+  - `SeedData+Cleanup` 的 13 处 `deviceID == "demo"` 与设置里的 `hasDemoData`
+    改为 `SyntheticDataOrigin.marks(_:)`，所以"清除演示数据"现在也能清掉云冒烟
+    探针和 UI 测试 fixture 残留。该入口刻意不受 DEBUG 限制——Release 构建正是
+    用户需要清理旧 Debug 安装残留的地方。
+  - 已征得用户同意后清除本机两个已武装的破坏性标志：
+    `TimeTrackerPendingCloudUploadReset`、`TimeTrackerQueuedCloudReconciliation`；
+    复查确认该 domain 里没有其他 Pending/Active/Recovery/Reconcil/PersistenceMode 键。
+
+## 验证记录
+
+- `make format-check`：0/828 文件需要格式化。
+- `make test`：1,418 条测试，3 条失败，全部为既有失败且不在本次改动半径内：
+  - `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`
+  - `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd`
+  - `CoreLLMResponseTransportTests.nonSuccessStatusTakesPriorityOverDeclaredBodySize`
+
+    前两条在任务 60 记忆中已记录为既有失败；第三条属于 AI transport，最后一次改动
+    在 `c2a2b3e5`（本次会话之前），本任务的提交没有触碰 transport 源码或该测试。
+    不修改它们来伪造绿色。
+- Release configuration macOS 构建通过。
+
+- Release 全设备安装通过（`make build-install-all`，现在默认 Release）：
+  iPad Pro M4、iPhone Air 与 `/Applications/timetracker.app` 均安装成功，
+  版本 1.1.199 (254)，codesign 校验通过。
+- 复查已安装的 Release 二进制：`Design System`、`Read Apple HIG`、
+  `SwiftData Docs`、`Cloud Smoke`、`Timeline Burst` 等演示/冒烟字面量全部不存在，
+  证明演示数据确实没有编进出厂包；`cloud-smoke`/`ui-test` 登记项存在，
+  说明 Release 里仍然可以清理历史残留。
+
+## 关于 `first` 这一行的诚实说明
+
+代码库里没有任何地方创建标题为 `first` 的 Inbox 项，所以这一行是用户或某个
+Shortcut 录入的真实用户数据，不是本项目产生的测试数据。本任务修的是它
+**删不掉、反复回来**：测试写出的 `SyncConflictService` 快照会被重放回生产 store
+并重新插入 Inbox 行，该路径已随 checkpoint B 关闭。这一行本身没有被自动删除
+（按 deviceID 它属于用户数据，静默删用户数据不可接受）；用户现在删除它就会
+保持删除。
+
+若删除后仍然复发，剩下的可疑来源是 `AddInboxItemIntent`
+（`timetracker/AppIntents/TimeTrackerAppIntents.swift:5-28`）：它调用
+`addInboxItem(title:container:)` 时不传 `externalCommandKey`，因此
+`StoreScopedInboxCommandCoordinator+CaptureReceipts.swift` 的去重回执整段跳过，
+一个重复触发的 Shortcuts 自动化会每次都新插一条。本任务没有改这个语义，
+因为"同一标题连续添加两次"对手动使用是合法行为，是否去重需要用户拍板。
+
+## 并发情况
+
+本次工作期间有另一个 agent 会话在同一 working tree 上推进任务 60（提交
+`12d3921a`，并持有 `AITaskWorkspacePlanGeneratorViews.swift` 与任务 60 文档的
+未提交改动）。按 AGENTS.md，本任务的提交全部按文件显式 `git add`，不包含对方
+的半成品；构建改用独立的 `build/AgentDD` DerivedData 以避开 build.db 锁竞争。
+用户已确认本会话继续推进并避开对方文件。

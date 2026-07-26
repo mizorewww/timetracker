@@ -1,9 +1,9 @@
 # 64：任务里的 Apple Health 显示消失 实现记忆
 
-状态：2026-07-27 重新打开
+状态：2026-07-27 完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
-> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
+> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[x]` 条目。
 
 ## 认领的反馈条目
 
@@ -32,7 +32,7 @@
 - [x] C：在受影响设备上完成正常字号 UI 截图验收与回归测试。
 - [x] D：执行 Release 全设备安装，关闭反馈并移除活动链接。
 - [x] E：用正式安装版的真实 store 重现并建立跨设备 tombstone 行为回归测试。
-- [~] F：修复跨设备 tombstone 恢复，执行真实 store、UI 和 Release 全设备验收。
+- [x] F：修复跨设备 tombstone 恢复，执行真实 store、UI 和 Release 全设备验收。
 
 ## 库策略
 
@@ -82,9 +82,18 @@
   `remoteClearTombstonesRestoreCatalogWithoutDeviceLocalReceipt` 先创建完整目录、
   模拟远端 Clear All，再以空 receipt 和关闭 Health timeline 的新 facade 刷新；修复前
   对 12/2/12 三组可见事实的断言全部失败。
-- 2026-07-27 Checkpoint F（进行中）：fresh transaction 现在把已观察到的固定
+- 2026-07-27 Checkpoint F：fresh transaction 现在把已观察到的固定
   tombstone 本身视为恢复依据，写入严格更新的 active replacement；只有 receipt、尚未
   到达 row 的情况仍保持 pending，避免迟到墓碑重新赢得 LWW。完整 `make test` 执行
   1,419 项，新增系统集成测试及更新后的 coordinator 行为测试通过；仅保留与修改前
   完全相同的 4 个既有基线失败。未引入第三方库，修复复用 SwiftData、CloudKit 的
   deterministic ID/LWW 边界。
+- 2026-07-27 真实验收：提交 `411a1eaa` 的 Release 1.1.227 (282) 已通过
+  `make build-install-all` 安装到 iPad Pro M4、iPhone Air 与
+  `/Applications/timetracker.app`。启动正式 macOS App 后，同一真实 App Group store
+  从 `0 Task / 0 Category / 0 Assignment` 收敛为严格 `12 / 2 / 12`，每个 canonical
+  ID 只有一条 active row；恢复写入者为当前 Mac，时间为 01:44:27。Computer Use 在
+  真实 Tasks 页面确认 Exercise 下 11 个固定项目和 Daily 下 Sleep 均可见；截图为
+  `/tmp/timetracker-line109-real-store.png` 与
+  `/tmp/timetracker-line109-real-store-bottom.png`。第 109 条关闭并移除活动链接；
+  关闭提交完成后再执行一次全设备安装，使最终提交与设备版本一致。

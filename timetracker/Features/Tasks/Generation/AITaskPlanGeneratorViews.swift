@@ -6,7 +6,7 @@ enum AITaskPlanCreationFeedback: Equatable {
     case failed(message: String)
 }
 
-struct AITaskPlanGeneratorSheet: View {
+private struct LegacyAITaskPlanGeneratorSheet: View {
     private enum PendingDiscardAction {
         case dismissSheet
         case returnToRequest

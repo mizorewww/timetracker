@@ -177,3 +177,22 @@
   - `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd`
   - `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`
 - 这两个失败不被记为绿色，也不在本任务中擅自改行为；UI wiring 后继续运行全套并诚实记录最终结果。
+
+## Checkpoint C 接线结果
+
+- 生产入口已从旧的“只新增 JSON 草稿”切换到完整 workspace tool plan；生成前在共享锁内捕获快照与本地 CAS baseline，模型只修改纯内存 overlay。
+- Request 页明确显示将发送的 Category / Task / Checklist 数量与文本范围，并明确排除 API key、时间历史与 Health 数据；Generate 保留活动状态、近似/供应商 token 进度与 Stop。
+- Preview 改为只读的变更审阅，逐项显示 create / update / archive / delete / reuse、完整 Task path、Checklist 所属 Task 和影响数量；主操作改为 `Apply N Changes`。
+- 含 Category/Checklist 删除、Task 归档或数量进度重置时使用原生 destructive confirmation；stale/失败保留 preview，不自动 dismiss。
+- 确认由 store facade 映射为单一 `AITaskAtomicMutationPlan`，成功后才发布 mutation event；完整 CAS 失败返回专门的 workspace changed 结果。
+- 补齐旧流程已有的数量目标与每日重复能力：两者进入完整 provider snapshot、严格 Task tool schema、overlay 与既有 `TaskDraftProgressMutationService` 原子落库路径。
+- 设置页显示的 task-plan 固定契约已切换为 tool-call 契约；旧 create-only 服务和草稿视图暂时仅保留给历史兼容测试，不再被生产入口调用。
+- 无新增第三方依赖；继续复用已有 MarkdownView 观察性展示、Foundation Codable/JSON、SwiftData 与仓库现有任务进度服务。
+
+## Checkpoint C 当前验证
+
+- `make format` / `make format-check`：0/832 需要格式化。
+- `make localization-check`：9/9 资源通过，三种语言均为 1253 个主资源键。
+- `make build-macos`：Debug 签名构建通过。
+- `make test`：编译并运行 1452 tests / 163 suites；本任务新增与修改测试通过，全套仍只有 Checkpoint B 已记录的同两条既有失败，没有新增失败。
+- 下一步：更新确定性 UI 测试到只读 diff/破坏性确认语义，在显式拥有的 iPhone/iPad/macOS 环境进行普通字号截图与交互验收。

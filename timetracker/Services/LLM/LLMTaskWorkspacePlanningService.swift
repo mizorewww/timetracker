@@ -6,6 +6,7 @@ nonisolated struct LLMTaskWorkspacePlan: Equatable, Sendable {
     let operations: [AITaskWorkspaceOperation]
     let modelID: String
     let reasoningContent: String?
+    let rawResponseContent: String?
     let toolRoundCount: Int
     let toolCallCount: Int
 }
@@ -76,7 +77,10 @@ struct LLMTaskWorkspacePlanningService {
         endpoint: String,
         apiKey: String,
         modelID: String,
-        makeID: @MainActor () -> UUID = UUID.init
+        makeID: @MainActor () -> UUID = UUID.init,
+        onProgress: @escaping @MainActor (LLMGenerationProgress) -> Void = {
+            _ in
+        }
     ) async throws -> LLMTaskWorkspacePlan {
         let prepared = try Self.prepareInputs(
             request: request,
@@ -103,6 +107,11 @@ struct LLMTaskWorkspacePlanningService {
         var overlay = AITaskWorkspaceOverlay(snapshot: workspace)
         var seenToolCallIDs = Set<String>()
         var reasoningParts: [String] = []
+        var rawResponseParts: [String] = []
+        var contentCharacterCount = 0
+        var reasoningCharacterCount = 0
+        var reportedCompletionTokens = 0
+        var hasReportedCompletionTokens = false
         var totalToolCallCount = 0
 
         for round in 1 ... Self.maximumToolRoundCount {
@@ -113,9 +122,9 @@ struct LLMTaskWorkspacePlanningService {
                 modelID: prepared.modelID,
                 messages: messages
             )
-            let (data, response) = try await transport(urlRequest)
+            let (data, urlResponse) = try await transport(urlRequest)
             try Task.checkCancellation()
-            guard let httpResponse = response as? HTTPURLResponse else {
+            guard let httpResponse = urlResponse as? HTTPURLResponse else {
                 throw LLMTaskWorkspacePlanningError.invalidResponse
             }
             guard (200 ..< 300).contains(httpResponse.statusCode) else {
@@ -124,8 +133,35 @@ struct LLMTaskWorkspacePlanningService {
                 )
             }
             try LLMSecureHTTPTransport.validateBufferedResponse(data)
-            let choice = try Self.decodeChoice(data)
+            let completionResponse = try Self.decodeResponse(data)
+            let choice = try Self.validatedChoice(completionResponse)
             let calls = try Self.validatedToolCalls(choice)
+            if let rawResponse = String(data: data, encoding: .utf8) {
+                rawResponseParts.append(rawResponse)
+            }
+            contentCharacterCount += calls.reduce(into: 0) {
+                $0 += $1.function.name.count
+                $0 += $1.function.arguments.count
+            }
+            contentCharacterCount += choice.message.content?.count ?? 0
+            reasoningCharacterCount +=
+                choice.message.reasoning_content?.count ?? 0
+            if let completionTokens =
+                completionResponse.usage?.completion_tokens
+            {
+                reportedCompletionTokens += completionTokens
+                hasReportedCompletionTokens = true
+            }
+            onProgress(
+                LLMGenerationProgress(
+                    contentCharacterCount: contentCharacterCount,
+                    reasoningCharacterCount: reasoningCharacterCount,
+                    reportedCompletionTokens:
+                    hasReportedCompletionTokens
+                        ? reportedCompletionTokens
+                        : nil
+                )
+            )
             totalToolCallCount += calls.count
             guard totalToolCallCount <= Self.maximumToolCallCount else {
                 throw LLMTaskWorkspacePlanningError.toolCallLimitExceeded
@@ -170,6 +206,11 @@ struct LLMTaskWorkspacePlanningService {
                     reasoningContent: reasoningParts.isEmpty
                         ? nil
                         : reasoningParts.joined(separator: "\n\n"),
+                    rawResponseContent: rawResponseParts.isEmpty
+                        ? nil
+                        : rawResponseParts.joined(
+                            separator: "\n\n--- tool round ---\n\n"
+                        ),
                     toolRoundCount: round,
                     toolCallCount: totalToolCallCount
                 )
@@ -193,6 +234,10 @@ struct LLMTaskWorkspacePlanningService {
         }
         throw LLMTaskWorkspacePlanningError.toolRoundLimitExceeded
     }
+}
+
+extension LLMTaskWorkspacePlanningService {
+    static let responseContract = systemContract
 }
 
 private extension LLMTaskWorkspacePlanningService {
@@ -351,9 +396,9 @@ private extension LLMTaskWorkspacePlanningService {
         return request
     }
 
-    static func decodeChoice(
+    static func decodeResponse(
         _ data: Data
-    ) throws -> OpenAIChatCompletionResponse.Choice {
+    ) throws -> OpenAIChatCompletionResponse {
         let response: OpenAIChatCompletionResponse
         do {
             response = try JSONDecoder().decode(
@@ -363,6 +408,12 @@ private extension LLMTaskWorkspacePlanningService {
         } catch {
             throw LLMTaskWorkspacePlanningError.invalidResponse
         }
+        return response
+    }
+
+    static func validatedChoice(
+        _ response: OpenAIChatCompletionResponse
+    ) throws -> OpenAIChatCompletionResponse.Choice {
         guard response.choices.count == 1,
               let choice = response.choices.first,
               choice.index == nil || choice.index == 0

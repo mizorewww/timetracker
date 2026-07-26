@@ -39,7 +39,16 @@ struct StoreScopedAITaskAtomicMutationCoordinatorTests {
             estimatedMinutes: 25,
             dueAt: nil,
             iconName: "target",
-            colorHex: "34C759"
+            colorHex: "34C759",
+            quantityGoal: TaskQuantityGoalDraft(
+                targetAmount: 50,
+                unitLabel: "pages"
+            ),
+            dailyRecurrence: TaskDailyRecurrenceDraft(
+                isEnabled: true,
+                startDayKey: "2026-07-26",
+                timeZoneIdentifier: "Asia/Singapore"
+            )
         )
         _ = try overlay.updateTask(
             id: fixture.rootTaskID,
@@ -104,6 +113,21 @@ struct StoreScopedAITaskAtomicMutationCoordinatorTests {
         let createdTask = try #require(tasks.first { $0.id == createdTaskID })
         #expect(createdTask.notes == "Created by the reviewed plan")
         #expect(createdTask.estimatedSeconds == 25 * 60)
+        let quantityGoal = try #require(
+            try fresh.fetch(FetchDescriptor<TaskQuantityGoal>())
+                .visibleDeduplicatedByID()
+                .first { $0.taskID == createdTaskID }
+        )
+        #expect(quantityGoal.targetAmount == 50)
+        #expect(quantityGoal.unitLabel == "pages")
+        let recurrenceRule = try #require(
+            try fresh.fetch(FetchDescriptor<TaskRecurrenceRule>())
+                .visibleDeduplicatedByID()
+                .first { $0.templateTaskID == createdTaskID }
+        )
+        #expect(recurrenceRule.isEnabled)
+        #expect(recurrenceRule.startDayKey == "2026-07-26")
+        #expect(recurrenceRule.timeZoneIdentifier == "Asia/Singapore")
         let updatedTask = try #require(tasks.first { $0.id == fixture.rootTaskID })
         #expect(updatedTask.title == "Renamed root")
         #expect(updatedTask.notes == "Updated notes")

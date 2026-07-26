@@ -215,6 +215,8 @@ struct AITaskWorkspaceOverlay: Equatable, Sendable {
         dueAt: Date?,
         iconName: String,
         colorHex: String,
+        quantityGoal: TaskQuantityGoalDraft? = nil,
+        dailyRecurrence: TaskDailyRecurrenceDraft? = nil,
         sortOrder: Double? = nil
     ) throws -> AITaskWorkspaceTask {
         try requireUnusedIdentity(id)
@@ -229,7 +231,9 @@ struct AITaskWorkspaceOverlay: Equatable, Sendable {
             estimatedMinutes: estimatedMinutes,
             dueAt: dueAt,
             iconName: iconName,
-            colorHex: colorHex
+            colorHex: colorHex,
+            quantityGoal: quantityGoal,
+            dailyRecurrence: dailyRecurrence
         )
         let resolvedSortOrder = try preparedSortOrder(
             sortOrder,
@@ -247,7 +251,9 @@ struct AITaskWorkspaceOverlay: Equatable, Sendable {
             iconName: prepared.iconName,
             colorHex: prepared.colorHex,
             sortOrder: resolvedSortOrder,
-            isArchived: false
+            isArchived: false,
+            quantityGoal: prepared.quantityGoal,
+            dailyRecurrence: prepared.dailyRecurrence
         )
         replaceSnapshot(tasks: snapshot.tasks + [task])
         let canonical = self.task(id: id)!
@@ -265,13 +271,19 @@ struct AITaskWorkspaceOverlay: Equatable, Sendable {
         estimatedMinutes: Int?,
         dueAt: Date?,
         iconName: String,
-        colorHex: String
+        colorHex: String,
+        quantityGoal: TaskQuantityGoalDraft? = nil,
+        dailyRecurrence: TaskDailyRecurrenceDraft? = nil
     ) throws -> AITaskWorkspaceTask {
         guard let before = task(id: id) else {
             throw AITaskWorkspaceOverlayError.taskUnavailable(id)
         }
         guard !before.isArchived, isTaskAvailable(id) else {
             throw AITaskWorkspaceOverlayError.taskArchived(id)
+        }
+        if before.dailyRecurrence != nil, dailyRecurrence == nil {
+            throw TaskProgressDraftMutationError
+                .existingRecurrenceMustBePreserved
         }
         try validateTaskPlacement(
             taskID: id,
@@ -284,7 +296,9 @@ struct AITaskWorkspaceOverlay: Equatable, Sendable {
             estimatedMinutes: estimatedMinutes,
             dueAt: dueAt,
             iconName: iconName,
-            colorHex: colorHex
+            colorHex: colorHex,
+            quantityGoal: quantityGoal,
+            dailyRecurrence: dailyRecurrence
         )
         var proposed = before
         proposed.title = prepared.title
@@ -295,6 +309,8 @@ struct AITaskWorkspaceOverlay: Equatable, Sendable {
         proposed.dueAt = dueAt
         proposed.iconName = prepared.iconName
         proposed.colorHex = prepared.colorHex
+        proposed.quantityGoal = prepared.quantityGoal
+        proposed.dailyRecurrence = prepared.dailyRecurrence
         guard proposed != before else { return before }
 
         replaceSnapshot(
@@ -429,6 +445,8 @@ private extension AITaskWorkspaceOverlay {
         let notes: String
         let iconName: String
         let colorHex: String
+        let quantityGoal: TaskQuantityGoalDraft?
+        let dailyRecurrence: TaskDailyRecurrenceDraft?
     }
 
     static let categoryNameLocale = Locale(identifier: "en_US_POSIX")
@@ -568,7 +586,9 @@ private extension AITaskWorkspaceOverlay {
         estimatedMinutes: Int?,
         dueAt: Date?,
         iconName: String,
-        colorHex: String
+        colorHex: String,
+        quantityGoal: TaskQuantityGoalDraft?,
+        dailyRecurrence: TaskDailyRecurrenceDraft?
     ) throws -> PreparedTaskValues {
         if let estimatedMinutes,
            !TaskEstimatePolicy.minuteRange.contains(estimatedMinutes)
@@ -584,6 +604,10 @@ private extension AITaskWorkspaceOverlay {
             iconName: iconName,
             notes: notes
         )
+        let preparedProgress = try TaskProgressDraftPersistencePolicy.prepare(
+            quantityGoal: quantityGoal,
+            dailyRecurrence: dailyRecurrence
+        )
         return PreparedTaskValues(
             title: prepared.title,
             notes: prepared.notes ?? "",
@@ -592,7 +616,14 @@ private extension AITaskWorkspaceOverlay {
             ),
             colorHex: ChecklistVisualSanitizer.sanitizedColor(
                 prepared.colorHex
-            )
+            ),
+            quantityGoal: preparedProgress.quantityGoal.map {
+                TaskQuantityGoalDraft(
+                    targetAmount: $0.targetAmount,
+                    unitLabel: $0.unitLabel
+                )
+            },
+            dailyRecurrence: preparedProgress.dailyRecurrence
         )
     }
 

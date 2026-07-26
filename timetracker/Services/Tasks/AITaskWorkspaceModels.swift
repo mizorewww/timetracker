@@ -32,6 +32,8 @@ nonisolated struct AITaskWorkspaceTask:
     var colorHex: String
     var sortOrder: Double
     var isArchived: Bool
+    var quantityGoal: TaskQuantityGoalDraft? = nil
+    var dailyRecurrence: TaskDailyRecurrenceDraft? = nil
 }
 
 nonisolated struct AITaskWorkspaceChecklistItem:
@@ -131,7 +133,9 @@ nonisolated struct AITaskWorkspaceCapture: Equatable, Sendable {
         tasks: [TaskNode],
         taskCategoryAssignments: [TaskCategoryAssignment],
         checklistItems: [ChecklistItem],
-        checklistVisuals: [ChecklistItemVisual]
+        checklistVisuals: [ChecklistItemVisual],
+        quantityGoals: [TaskQuantityGoal] = [],
+        recurrenceRules: [TaskRecurrenceRule] = []
     ) {
         let canonicalCategories = taskCategories.visibleDeduplicatedByID()
         let canonicalTasks = tasks.visibleDeduplicatedByID()
@@ -179,6 +183,31 @@ nonisolated struct AITaskWorkspaceCapture: Equatable, Sendable {
             }
             result[pair.key] = pair.value
         }
+        let quantityGoalByTaskID = quantityGoals
+            .visibleDeduplicatedByID()
+            .reduce(into: [UUID: TaskQuantityGoal]()) { result, goal in
+                guard taskIDs.contains(goal.taskID),
+                      goal.id == TaskProgressIdentity.quantityGoalID(
+                          taskID: goal.taskID
+                      )
+                else {
+                    return
+                }
+                result[goal.taskID] = goal
+            }
+        let recurrenceRuleByTaskID = recurrenceRules
+            .visibleDeduplicatedByID()
+            .reduce(into: [UUID: TaskRecurrenceRule]()) { result, rule in
+                guard taskIDs.contains(rule.templateTaskID),
+                      rule.id == TaskProgressIdentity.recurrenceRuleID(
+                          templateTaskID: rule.templateTaskID
+                      ),
+                      rule.cadenceRaw == TaskRecurrenceCadence.daily.rawValue
+                else {
+                    return
+                }
+                result[rule.templateTaskID] = rule
+            }
 
         snapshot = AITaskWorkspaceSnapshot(
             categories: canonicalCategories.map { category in
@@ -217,7 +246,13 @@ nonisolated struct AITaskWorkspaceCapture: Equatable, Sendable {
                         task.colorHex
                     ),
                     sortOrder: task.sortOrder,
-                    isArchived: task.isArchivedForLifecycle
+                    isArchived: task.isArchivedForLifecycle,
+                    quantityGoal: quantityGoalByTaskID[task.id].map(
+                        TaskQuantityGoalDraft.init
+                    ),
+                    dailyRecurrence: recurrenceRuleByTaskID[task.id].map(
+                        TaskDailyRecurrenceDraft.init
+                    )
                 )
             },
             checklistItems: canonicalChecklistItems.map { item in

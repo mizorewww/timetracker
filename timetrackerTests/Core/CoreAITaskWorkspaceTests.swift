@@ -163,6 +163,60 @@ struct CoreAITaskWorkspaceTests {
     }
 
     @Test
+    func captureIncludesQuantityGoalAndDailyRecurrenceWithoutLocalRevisions() throws {
+        let task = TaskNode(
+            title: "Daily reading",
+            parentID: nil,
+            deviceID: "private-device",
+            colorHex: "16A34A",
+            iconName: "book",
+            sortOrder: 10
+        )
+        task.id = Self.id(90)
+        let goal = TaskQuantityGoal(
+            taskID: task.id,
+            targetAmount: 50,
+            unitLabel: "pages",
+            deviceID: "private-device"
+        )
+        goal.clientMutationID = Self.id(9001)
+        let recurrence = TaskRecurrenceRule(
+            templateTaskID: task.id,
+            startDayKey: "2026-07-26",
+            timeZoneIdentifier: "Asia/Singapore",
+            deviceID: "private-device"
+        )
+        recurrence.clientMutationID = Self.id(9002)
+
+        let capture = AITaskWorkspaceCapture(
+            taskCategories: [],
+            tasks: [task],
+            taskCategoryAssignments: [],
+            checklistItems: [],
+            checklistVisuals: [],
+            quantityGoals: [goal],
+            recurrenceRules: [recurrence]
+        )
+
+        let capturedTask = try #require(capture.snapshot.tasks.first)
+        #expect(capturedTask.quantityGoal?.targetAmount == 50)
+        #expect(capturedTask.quantityGoal?.unitLabel == "pages")
+        #expect(capturedTask.dailyRecurrence?.isEnabled == true)
+        #expect(
+            capturedTask.dailyRecurrence?.timeZoneIdentifier ==
+                "Asia/Singapore"
+        )
+
+        let data = try JSONEncoder().encode(capture.snapshot)
+        let json = String(decoding: data, as: UTF8.self)
+        #expect(json.contains(#""quantityGoal""#))
+        #expect(json.contains(#""dailyRecurrence""#))
+        #expect(json.contains(goal.clientMutationID.uuidString) == false)
+        #expect(json.contains(recurrence.clientMutationID.uuidString) == false)
+        #expect(json.contains("private-device") == false)
+    }
+
+    @Test
     func overlayCRUDIsImmediatelyReadableAndTaskDeleteArchives() throws {
         let categoryID = Self.id(1)
         let rootID = Self.id(10)

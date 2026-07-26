@@ -134,16 +134,14 @@ private struct AppPresentationSheet: View {
                         with: .settings
                     )
                 },
-                onCreate: { draft in
-                    switch store.saveAITaskPlan(draft) {
-                    case let .saved(firstRootTaskID, _):
+                onApply: { draft in
+                    let result = store.applyAITaskWorkspaceReview(draft)
+                    if case let .applied(firstRootTaskID) = result {
                         if let firstRootTaskID {
                             store.openTaskDetail(firstRootTaskID)
                         }
-                        return .created
-                    case let .failed(message):
-                        return .failed(message: message)
                     }
+                    return result
                 }
             )
         }

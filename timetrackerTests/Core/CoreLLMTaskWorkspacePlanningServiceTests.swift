@@ -38,6 +38,8 @@ struct CoreLLMTaskWorkspacePlanningServiceTests {
                                 "dueAt": NSNull(),
                                 "iconName": "checkmark.circle",
                                 "colorHex": "1677FF",
+                                "quantityGoal": NSNull(),
+                                "dailyRecurrence": NSNull(),
                             ])
                         ),
                     ]

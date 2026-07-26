@@ -164,6 +164,42 @@ private extension LLMTaskWorkspacePlanningService {
         "format": .string("date-time"),
     ])
 
+    static let nullableQuantityGoalSchema = OpenAIJSONValue.object([
+        "type": .array([
+            .string("object"),
+            .string("null"),
+        ]),
+        "properties": .object([
+            "targetAmount": .object([
+                "type": .string("integer"),
+            ]),
+            "unitLabel": stringSchema,
+        ]),
+        "required": .array([
+            .string("targetAmount"),
+            .string("unitLabel"),
+        ]),
+        "additionalProperties": .bool(false),
+    ])
+
+    static let nullableDailyRecurrenceSchema = OpenAIJSONValue.object([
+        "type": .array([
+            .string("object"),
+            .string("null"),
+        ]),
+        "properties": .object([
+            "isEnabled": boolSchema,
+            "startDayKey": stringSchema,
+            "timeZoneIdentifier": stringSchema,
+        ]),
+        "required": .array([
+            .string("isEnabled"),
+            .string("startDayKey"),
+            .string("timeZoneIdentifier"),
+        ]),
+        "additionalProperties": .bool(false),
+    ])
+
     static let taskProperties: [String: OpenAIJSONValue] = [
         "title": stringSchema,
         "parentID": nullableUUIDSchema,
@@ -173,6 +209,8 @@ private extension LLMTaskWorkspacePlanningService {
         "dueAt": nullableDateSchema,
         "iconName": stringSchema,
         "colorHex": stringSchema,
+        "quantityGoal": nullableQuantityGoalSchema,
+        "dailyRecurrence": nullableDailyRecurrenceSchema,
     ]
 
     static func definition(

@@ -69,6 +69,8 @@ private nonisolated struct AITaskWorkspaceCreateTaskArguments: Decodable {
     let dueAt: String?
     let iconName: String
     let colorHex: String
+    let quantityGoal: TaskQuantityGoalDraft?
+    let dailyRecurrence: TaskDailyRecurrenceDraft?
 }
 
 private nonisolated struct AITaskWorkspaceUpdateTaskArguments: Decodable {
@@ -81,6 +83,8 @@ private nonisolated struct AITaskWorkspaceUpdateTaskArguments: Decodable {
     let dueAt: String?
     let iconName: String
     let colorHex: String
+    let quantityGoal: TaskQuantityGoalDraft?
+    let dailyRecurrence: TaskDailyRecurrenceDraft?
 }
 
 private nonisolated struct AITaskWorkspaceCreateChecklistArguments: Decodable {
@@ -257,6 +261,10 @@ extension LLMTaskWorkspacePlanningService {
                         toolName: tool.rawValue,
                         keys: Self.taskCreateKeys
                     )
+                try validateTaskProgressArguments(
+                    call.function.arguments,
+                    toolName: tool.rawValue
+                )
                 try validateVisual(
                     iconName: arguments.iconName,
                     colorHex: arguments.colorHex,
@@ -277,7 +285,9 @@ extension LLMTaskWorkspacePlanningService {
                                 toolName: tool.rawValue
                             ),
                             iconName: arguments.iconName,
-                            colorHex: arguments.colorHex
+                            colorHex: arguments.colorHex,
+                            quantityGoal: arguments.quantityGoal,
+                            dailyRecurrence: arguments.dailyRecurrence
                         )
                     )
                 )
@@ -289,6 +299,10 @@ extension LLMTaskWorkspacePlanningService {
                         toolName: tool.rawValue,
                         keys: Self.taskCreateKeys.union(["id"])
                     )
+                try validateTaskProgressArguments(
+                    call.function.arguments,
+                    toolName: tool.rawValue
+                )
                 try validateVisual(
                     iconName: arguments.iconName,
                     colorHex: arguments.colorHex,
@@ -309,7 +323,9 @@ extension LLMTaskWorkspacePlanningService {
                                 toolName: tool.rawValue
                             ),
                             iconName: arguments.iconName,
-                            colorHex: arguments.colorHex
+                            colorHex: arguments.colorHex,
+                            quantityGoal: arguments.quantityGoal,
+                            dailyRecurrence: arguments.dailyRecurrence
                         )
                     )
                 )
@@ -426,6 +442,8 @@ extension LLMTaskWorkspacePlanningService {
         "dueAt",
         "iconName",
         "colorHex",
+        "quantityGoal",
+        "dailyRecurrence",
     ]
 
     static func decodeArguments<Value: Decodable>(
@@ -474,6 +492,45 @@ extension LLMTaskWorkspacePlanningService {
                 toolName
             )
         }
+    }
+
+    static func validateTaskProgressArguments(
+        _ arguments: String,
+        toolName: String
+    ) throws {
+        guard let data = arguments.data(using: .utf8),
+              let object = try? JSONSerialization.jsonObject(with: data),
+              let dictionary = object as? [String: Any],
+              hasExactNestedKeys(
+                  dictionary["quantityGoal"],
+                  keys: ["targetAmount", "unitLabel"]
+              ),
+              hasExactNestedKeys(
+                  dictionary["dailyRecurrence"],
+                  keys: [
+                      "isEnabled",
+                      "startDayKey",
+                      "timeZoneIdentifier",
+                  ]
+              )
+        else {
+            throw LLMTaskWorkspacePlanningError.invalidToolArguments(
+                toolName
+            )
+        }
+    }
+
+    static func hasExactNestedKeys(
+        _ value: Any?,
+        keys: Set<String>
+    ) -> Bool {
+        if value is NSNull {
+            return true
+        }
+        guard let dictionary = value as? [String: Any] else {
+            return false
+        }
+        return Set(dictionary.keys) == keys
     }
 
     static func preparedDate(

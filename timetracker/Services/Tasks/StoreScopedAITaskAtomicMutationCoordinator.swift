@@ -90,6 +90,12 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
     static func captureBaseline(
         in context: ModelContext
     ) throws -> AITaskAtomicMutationBaseline {
+        let quantityGoals = try context.fetch(
+            FetchDescriptor<TaskQuantityGoal>()
+        ).visibleDeduplicatedByID()
+        let recurrenceRules = try context.fetch(
+            FetchDescriptor<TaskRecurrenceRule>()
+        ).visibleDeduplicatedByID()
         let capture = try AITaskWorkspaceCapture(
             taskCategories: context.fetch(
                 FetchDescriptor<TaskCategory>()
@@ -103,14 +109,10 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
             ),
             checklistVisuals: context.fetch(
                 FetchDescriptor<ChecklistItemVisual>()
-            )
+            ),
+            quantityGoals: quantityGoals,
+            recurrenceRules: recurrenceRules
         )
-        let quantityGoals = try context.fetch(
-            FetchDescriptor<TaskQuantityGoal>()
-        ).visibleDeduplicatedByID()
-        let recurrenceRules = try context.fetch(
-            FetchDescriptor<TaskRecurrenceRule>()
-        ).visibleDeduplicatedByID()
         return AITaskAtomicMutationBaseline(
             snapshot: capture.snapshot,
             workspace: capture.baselines,
@@ -201,6 +203,8 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
                 dueAt: task.dueAt,
                 iconName: task.iconName,
                 colorHex: task.colorHex,
+                quantityGoal: task.quantityGoal,
+                dailyRecurrence: task.dailyRecurrence,
                 sortOrder: task.sortOrder
             )
 
@@ -219,7 +223,9 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
                 estimatedMinutes: after.estimatedMinutes,
                 dueAt: after.dueAt,
                 iconName: after.iconName,
-                colorHex: after.colorHex
+                colorHex: after.colorHex,
+                quantityGoal: after.quantityGoal,
+                dailyRecurrence: after.dailyRecurrence
             )
 
         case let .archiveTask(before, after, _):
@@ -423,8 +429,15 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
             created.estimatedSeconds = task.estimatedMinutes.map { $0 * 60 }
             created.dueAt = task.dueAt
             created.sortOrder = task.sortOrder
+            try applyTaskProgress(
+                quantityGoal: task.quantityGoal,
+                dailyRecurrence: task.dailyRecurrence,
+                taskID: task.id,
+                now: now,
+                context: context
+            )
 
-        case let .updateTask(_, after):
+        case let .updateTask(before, after):
             try repository.updateTask(
                 taskID: after.id,
                 title: after.title,
@@ -436,6 +449,17 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
                 estimatedSeconds: after.estimatedMinutes.map { $0 * 60 },
                 dueAt: after.dueAt
             )
+            if before.quantityGoal != after.quantityGoal ||
+                before.dailyRecurrence != after.dailyRecurrence
+            {
+                try applyTaskProgress(
+                    quantityGoal: after.quantityGoal,
+                    dailyRecurrence: after.dailyRecurrence,
+                    taskID: after.id,
+                    now: now,
+                    context: context
+                )
+            }
 
         case let .archiveTask(before, _, _):
             try repository.archiveTask(taskID: before.id)
@@ -461,6 +485,31 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
                 context: context
             )
         }
+    }
+
+    func applyTaskProgress(
+        quantityGoal: TaskQuantityGoalDraft?,
+        dailyRecurrence: TaskDailyRecurrenceDraft?,
+        taskID: UUID,
+        now: Date,
+        context: ModelContext
+    ) throws {
+        let prepared = try TaskProgressDraftPersistencePolicy.prepare(
+            quantityGoal: quantityGoal,
+            dailyRecurrence: dailyRecurrence,
+            confirmsQuantityProgressReset: true
+        )
+        _ = try TaskDraftProgressMutationService(
+            context: context,
+            container: container,
+            writeAuthorization: writeAuthorization,
+            deviceID: deviceID,
+            didReachCheckpoint: { _ in }
+        ).apply(
+            prepared,
+            to: taskID,
+            now: now
+        )
     }
 
     func createChecklistItem(

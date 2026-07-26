@@ -101,4 +101,5 @@ nonisolated struct OpenAIChatCompletionResponse: Decodable, Sendable {
     }
 
     let choices: [Choice]
+    let usage: OpenAIChatCompletionStreamChunk.Usage?
 }

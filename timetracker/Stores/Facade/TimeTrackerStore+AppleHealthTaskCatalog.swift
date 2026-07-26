@@ -33,7 +33,15 @@ extension TimeTrackerStore {
                     .taskCatalogClearRecoveryTaskIDs =
                     pendingRecoveryTaskIDs
             }
-            finishStoreScopedMutation(events: outcome.events)
+            if outcome.didMutate {
+                finishStoreScopedMutation(events: outcome.events)
+            } else {
+                // CloudKit or another scene can have materialized the fixed
+                // catalog before this scene reconciles it. A canonical no-op
+                // still needs a read-model refresh so Tasks and search stop
+                // projecting the scene's older state.
+                try refreshStoreScopedTaskReadModels()
+            }
         } catch {
             appleHealthTaskCatalogErrorMessage = error.localizedDescription
         }

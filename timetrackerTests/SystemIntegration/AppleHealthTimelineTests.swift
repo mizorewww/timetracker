@@ -717,6 +717,72 @@ struct AppleHealthTimelineTests {
     }
 
     @Test @MainActor
+    func existingCatalogConvergesAStaleFacadeAfterNoOpReconciliation()
+        async throws
+    {
+        let context = try makeTestContext()
+        let reader = StubAppleHealthReader(
+            isHealthDataAvailable: false,
+            batch: .empty
+        )
+        let preferences = StubAppleHealthTimelinePreferences(
+            isTimelineEnabled: false
+        )
+        let store = TimeTrackerStore(
+            appleHealthDataReader: reader,
+            appleHealthTimelinePreferenceStore: preferences,
+            writeAuthorization: .isolatedTestHarness
+        )
+        store.configureRepositoriesIfNeeded(context: context)
+        store.hasCompletedStartupConfiguration = true
+
+        let plan = AppleHealthTaskCatalog.plan(
+            for: AppleHealthTaskCatalog.allRoles
+        )
+        _ = try StoreScopedAppleHealthTaskCatalogCommandCoordinator(
+            container: context.container,
+            writeAuthorization: .isolatedTestHarness,
+            deviceID: "remote-scene"
+        ).apply(roles: AppleHealthTaskCatalog.allRoles)
+
+        #expect(store.tasks.isEmpty)
+        #expect(store.taskCategories.isEmpty)
+        #expect(store.taskCategoryAssignments.isEmpty)
+
+        await store.refreshAppleHealthTimelineIfEnabled()
+
+        let expectedTaskIDs = Set(plan.tasks.map(\.id))
+        #expect(Set(store.tasks.map(\.id)) == expectedTaskIDs)
+        #expect(
+            Set(store.taskCategories.map(\.id)) ==
+                Set(plan.categories.map(\.id))
+        )
+        #expect(
+            Set(store.taskCategoryAssignments.map(\.id)) ==
+                Set(plan.tasks.map(\.categoryAssignmentID))
+        )
+        #expect(
+            Set(
+                store.taskTreeSections(expandedTaskIDs: [])
+                    .flatMap(\.rows)
+                    .map(\.taskID)
+            ) == expectedTaskIDs
+        )
+        for definition in plan.tasks {
+            let title = AppStrings.localized(
+                definition.titleLocalizationKey
+            )
+            #expect(
+                store.taskSearchResults(matching: title)
+                    .contains { $0.id == definition.id }
+            )
+        }
+        #expect(reader.authorizationRequestStatusCount == 0)
+        #expect(reader.authorizationRequestCount == 0)
+        #expect(reader.sampleRequestIntervals.isEmpty)
+    }
+
+    @Test @MainActor
     func enabledRefreshMergesCrossMidnightSleepBeforeVisibleRangeClipping()
         async throws
     {

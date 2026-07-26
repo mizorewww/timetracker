@@ -132,6 +132,17 @@ extension TimeTrackerStore {
         }
     }
 
+    /// Converges a scene after a sibling context may already have committed
+    /// task metadata, without recording another mutation or starting
+    /// post-refresh system and suggestion work.
+    func refreshStoreScopedTaskReadModels() throws {
+        let plan = StoreRefreshPlan(scopes: [.tasks])
+        try refreshCoordinator.refreshReadModels(self, plan: plan)
+        if plan.validateSelection {
+            validateSelectedTask()
+        }
+    }
+
     private func executeAuthorizedMutation<Result>(
         _ action: () throws -> Result
     ) throws -> Result {

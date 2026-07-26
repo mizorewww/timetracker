@@ -27,8 +27,8 @@
 
 ## Checkpoint 编排
 
-- [~] A：审计 Apple Health 数据、任务持久化和任务 UI 投影；先添加可复现行为测试。
-- [ ] B：按测试结果修复根因，并更新当前架构/设计文档。
+- [x] A：审计 Apple Health 数据、任务持久化和任务 UI 投影；先添加可复现行为测试。
+- [~] B：按测试结果修复根因，并更新当前架构/设计文档。
 - [ ] C：在受影响设备上完成正常字号 UI 截图验收与回归测试。
 - [ ] D：执行 Release 全设备安装，关闭反馈并移除活动链接。
 
@@ -42,3 +42,14 @@
 
 - 2026-07-27：认领第 109 条，建立实现记忆，开始从 HealthKit reader、store 投影和
   任务 UI 三层定位。
+- 2026-07-27 Checkpoint A：现有
+  `testAppleHealthTasksStayOutOfQuickStartAndExplainSyncOnlyDetail` 在 owned
+  iPhone 17 模拟器通过，证明 fixture 首次创建目录时 UI 可见。子代理审计与新增
+  `existingCatalogConvergesAStaleFacadeAfterNoOpReconciliation` 共同定位到生产竞态：
+  CloudKit/其他 scene 已写入完整目录时，fresh coordinator 返回 no-op，而 facade
+  因空 events 未刷新，Tasks、搜索和 timeline→task 映射继续使用旧投影。新增测试在
+  修复前按预期失败；完整 `make test` 其余仅保留 4 个既有基线失败。
+- 2026-07-27 Checkpoint B：catalog no-op 现在调用
+  `refreshStoreScopedTaskReadModels()`，只经 `refreshReadModels` 收敛
+  Task/Category/Assignment、任务树和搜索，不记录第二次 mutation、不触发自动建议/
+  系统表面，也不请求或持久化 Health 样本。同步更新 Architecture 与 CodeGuide。

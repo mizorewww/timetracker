@@ -27,6 +27,8 @@ nonisolated struct TimelinePresentationSeed: Identifiable, Equatable, Sendable {
     let path: String
     let iconName: String
     let colorHex: String
+    /// Whether the presentation should label the bounded end as "Now".
+    let usesCurrentEndLabel: Bool
     /// Visual placement envelope.
     let interval: DateInterval
     /// Counted intervals, kept separate so clipping does not inflate duration.
@@ -39,6 +41,7 @@ nonisolated struct TimelinePresentationSeed: Identifiable, Equatable, Sendable {
         path: String,
         iconName: String,
         colorHex: String,
+        usesCurrentEndLabel: Bool = false,
         interval: DateInterval,
         durationIntervals: [DateInterval]? = nil
     ) {
@@ -48,6 +51,7 @@ nonisolated struct TimelinePresentationSeed: Identifiable, Equatable, Sendable {
         self.path = path
         self.iconName = iconName
         self.colorHex = colorHex
+        self.usesCurrentEndLabel = usesCurrentEndLabel
         self.interval = interval
         self.durationIntervals = durationIntervals ?? [interval]
     }
@@ -76,6 +80,7 @@ nonisolated struct AnalyticsTimelineEntry: Identifiable, Equatable, Sendable {
     let path: String
     let iconName: String
     let colorHex: String
+    let usesCurrentEndLabel: Bool
     let startedAt: Date
     let endedAt: Date
     let lane: Int
@@ -86,5 +91,35 @@ nonisolated struct AnalyticsTimelineEntry: Identifiable, Equatable, Sendable {
 
     var taskID: UUID? {
         subject.taskID
+    }
+
+    init(
+        id: TimelineEntryID,
+        subject: TimelineEntrySubject,
+        title: String,
+        path: String,
+        iconName: String,
+        colorHex: String,
+        usesCurrentEndLabel: Bool = false,
+        startedAt: Date,
+        endedAt: Date,
+        lane: Int,
+        labelIndex: Int,
+        interval: DateInterval,
+        durationSeconds: Int
+    ) {
+        self.id = id
+        self.subject = subject
+        self.title = title
+        self.path = path
+        self.iconName = iconName
+        self.colorHex = colorHex
+        self.usesCurrentEndLabel = usesCurrentEndLabel
+        self.startedAt = startedAt
+        self.endedAt = endedAt
+        self.lane = lane
+        self.labelIndex = labelIndex
+        self.interval = interval
+        self.durationSeconds = durationSeconds
     }
 }

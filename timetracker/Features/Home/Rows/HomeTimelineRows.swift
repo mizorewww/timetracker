@@ -2,6 +2,7 @@ import SwiftUI
 
 struct TimelineRow: View {
     let store: TimeTrackerStore
+    let entry: AnalyticsTimelineEntry?
     let segment: TimeSegment
     var openTaskDetail: ((UUID) -> Void)?
     @Environment(AppPresentationRouter.self) private var presentationRouter
@@ -9,6 +10,18 @@ struct TimelineRow: View {
     @Environment(\.layoutShell) private var layoutShell
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var pendingDeletionRequest: SegmentEditorDraftBaseline?
+
+    init(
+        store: TimeTrackerStore,
+        entry: AnalyticsTimelineEntry? = nil,
+        segment: TimeSegment,
+        openTaskDetail: ((UUID) -> Void)? = nil
+    ) {
+        self.store = store
+        self.entry = entry
+        self.segment = segment
+        self.openTaskDetail = openTaskDetail
+    }
 
     private var isCompact: Bool {
         SizeClassLayoutPolicy(
@@ -28,8 +41,8 @@ struct TimelineRow: View {
     private var taskVisual: TaskVisualPresentation {
         let task = store.task(for: segment.taskID)
         return TaskVisualPresentation(
-            iconName: task?.iconName,
-            colorHex: task?.colorHex
+            iconName: entry?.iconName ?? task?.iconName,
+            colorHex: entry?.colorHex ?? task?.colorHex
         )
     }
 
@@ -75,10 +88,19 @@ struct TimelineRow: View {
     }
 
     private func taskButton(at now: Date) -> some View {
+        let startedAt = entry?.startedAt ?? segment.startedAt
+        let endedAt = entry.map {
+            $0.usesCurrentEndLabel ? nil : $0.endedAt
+        } ?? segment.endedAt
+        let displayNow = if let entry, entry.usesCurrentEndLabel == false {
+            entry.endedAt
+        } else {
+            now
+        }
         let display = TrackedTimeDisplaySnapshot(
-            startedAt: segment.startedAt,
-            endedAt: segment.endedAt,
-            now: now
+            startedAt: startedAt,
+            endedAt: endedAt,
+            now: displayNow
         )
 
         return Button(action: openTask) {
@@ -100,6 +122,7 @@ struct TimelineRow: View {
         .accessibilityIdentifier(
             "timeline.record.\(taskVisual.symbolName).\(segment.id.uuidString)"
         )
+        .accessibilityValue(timeRangeText(display: display))
         .accessibilityHint(AppStrings.localized("tasks.openDetail"))
     }
 
@@ -108,7 +131,7 @@ struct TimelineRow: View {
             TaskIcon(visual: taskVisual, size: 24)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(store.displayTitle(for: segment))
+                Text(displayTitle)
                     .font(.headline)
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -187,7 +210,7 @@ struct TimelineRow: View {
                 .foregroundStyle(.secondary)
                 .frame(width: isCompact ? 82 : 120, alignment: .leading)
 
-            Text(store.displayTitle(for: segment))
+            Text(displayTitle)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -214,7 +237,7 @@ struct TimelineRow: View {
                 }
 
                 HStack(alignment: .center, spacing: 10) {
-                    Text(store.displayTitle(for: segment))
+                    Text(displayTitle)
                         .font(.subheadline.weight(.medium))
                         .lineLimit(1)
                     Spacer(minLength: 8)
@@ -235,11 +258,24 @@ struct TimelineRow: View {
     }
 
     private var durationText: some View {
-        DurationLabel(startedAt: segment.startedAt, endedAt: segment.endedAt)
-            .font(.subheadline.monospacedDigit())
-            .foregroundStyle(segment.endedAt == nil ? Color.blue : Color.secondary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.82)
+        DurationLabel(
+            startedAt: entry?.startedAt ?? segment.startedAt,
+            endedAt: entry.map {
+                $0.usesCurrentEndLabel ? nil : $0.endedAt
+            } ?? segment.endedAt
+        )
+        .font(.subheadline.monospacedDigit())
+        .foregroundStyle(usesCurrentEndLabel ? Color.blue : Color.secondary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.82)
+    }
+
+    private var displayTitle: String {
+        entry?.title ?? store.displayTitle(for: segment)
+    }
+
+    private var usesCurrentEndLabel: Bool {
+        entry?.usesCurrentEndLabel ?? (segment.endedAt == nil)
     }
 
     private var tagColor: Color {

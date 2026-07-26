@@ -9,20 +9,16 @@
 
 - 反馈第 108 条：停止一个任务时确实停止了，但主页 timeline 显示没有正确停止。
 
-## 关键背景：timeline 里没有"进行中"这个标志
+## 关键背景：timeline 需要同时携带区间和“Now”展示语义
 
-`AnalyticsTimelineEntry`（`Models/AnalyticsTimelineReadModels.swift:72-90`）只有
-非可选的 `startedAt`/`endedAt`。"仍在进行"完全由**条形的结束时间等于 now** 表达：
+修复前 `AnalyticsTimelineEntry` 只有非可选 `startedAt`/`endedAt`，活动区间被
+`TrackedTimePolicy.boundedEnd` 裁到 `now` 后，图表能画出终点，但 legend 行无法再
+区分“原记录仍开放”和“原记录已在这一刻闭合”。现在展示快照额外携带
+`usesCurrentEndLabel`，图表和 legend 共用同一份值语义 snapshot。
 
-- `AnalyticsTimelineSnapshotService.presentationSeeds`
-  （`Services/Analytics/AnalyticsTimelineSnapshotService.swift:43-48`）
-  调用 `TrackedTimePolicy.interval(startedAt:endedAt:now:clippedTo:)`。
-- `TrackedTimePolicy.boundedEnd`（`Models/LedgerModels.swift:36-38`）：
-  `min(endedAt ?? now, now)`。**这一行就是"未结束 ⇒ 画到 now"的唯一判据。**
-
-所以只要 `TimeSegment.endedAt` 在读取方看来仍是 `nil`，条形就会一直长到 now，
-并被 `TodayTimelineChart` 的 `TimelineView(.periodic(by: 60))`
-（`Features/Home/Sections/HomeTimelineViews.swift:111`）每 60 秒重新确认一次。
+`TrackedTimePolicy` 仍会把时钟偏差导致的未来结束时间裁到 `now`。因此视图重算时的
+参考时间不得早于刚写入的停止时间；分钟时钟只负责定时触发，账本变更触发的任意
+重算都使用 `max(clockDate, liveDate)`。
 
 ## 为什么 Now 区好了、timeline 没好
 
@@ -43,21 +39,20 @@
   （`AnalyticsTimelineSnapshotService.swift:45`）。若该值仍为 `nil`，
   `boundedEnd` 返回 now ⇒ 条形继续生长。
 
-`LedgerStore+FlatSegmentIndex.swift:17-24` 还显式假设了同一引用语义：
-注释写着 "SwiftData returns the same reference after an in-context edit"，
-并在 `allSegments[existingIndex] === model` 时**整段跳过写回**。对跨 context
-的编辑，这条快速路径会把陈旧引用固化下来。
+SwiftData 会把 sibling context 的字段更新合并到同一个持久模型引用，因此
+`segments` 数组的引用身份可以完全不变。`timelineSnapshot` 现在显式读取 store
+持有的 `analyticsRevision`，确保 Observation 在可见账本刷新后重算值快照。
 
 ## 待验证的假设
 
-- H1（首选）：main context 里的 `TimeSegment` 对象在 stop 之后仍持有
-  `endedAt == nil`，`refreshVisible`（`Stores/Domains/LedgerStore.swift:36-73`）
-  重新 fetch 也没有把它刷新。**先用 store 边界测试证伪或证实。**
-- H2：`TodayTimelineChart`（`HomeTimelineViews.swift:105-123`）只持有
+- H1（已证伪）：main context 里的 `TimeSegment` 对象在 stop 之后仍持有
+  `endedAt == nil`。
+- H2（已证实并修复）：`TodayTimelineChart` 只持有
   `store`、`segments: [TimeSegment]`、`compactHeight`，全是引用/值相同，
-  SwiftUI 可以判定"未变化"而跳过重建，于是 legend 行更新、图表不更新。
-- H3：图表和 legend 各自独立算一份 snapshot（`:46` 与 `:114-118`，`now` 还不同），
-  即使数据新鲜也可能在 60 秒内互相不一致。属于既有重复缺陷。
+  Observation 缺少值语义失效信号。
+- H3（已证实并修复）：图表和 legend 各自独立算一份 snapshot，`now` 也不同。
+- H4（UI 测试发现并修复）：停止动作可能落在分钟时钟两次 tick 之间；若重算仍沿用
+  旧 tick，刚写入的 `endedAt` 会被时钟偏差保护逻辑误判为未来值并显示 `Now`。
 
 区分方法：H1 在 store 层就会失败；H2/H3 在 store 层通过、只在视图层失败。
 
@@ -65,8 +60,8 @@
 
 - [x] A：认领反馈、建立实现记忆、写出能区分 H1/H2/H3 的测试。
 - [x] B：按测试结果修根因。
-- [~] C：消除图表与 legend 各算一份 snapshot 的重复（H3），无论它是不是根因。
-- [ ] D：`make test` 门禁 + 模拟器验收、Release 全设备安装、反馈收口。
+- [x] C：消除图表与 legend 各算一份 snapshot 的重复，并修复分钟时钟竞争。
+- [~] D：macOS UI 验收、Release 全设备安装、反馈收口。
 
 ## 约束与边界
 
@@ -76,16 +71,19 @@
   `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd`、
   `CoreLLMResponseTransportTests.nonSuccessStatusTakesPriorityOverDeclaredBodySize`。
 
-## 现有覆盖
+## 新增覆盖
 
-**没有任何测试覆盖"停止计时后的主页 timeline"。** 最接近的是
-`CoreSystemActionCommandTests.swift:605 systemActionStopTimerClosesActiveSegment`，
-但它只断言持久化，而且是用**持有该对象的同一个 context** 重新读取的，
-正好绕开了本 bug。
+- `TodayTimelineStopTests`：持久化结果、store 可见读模型、Observation 投影失效，
+  并断言活动/停止快照的 `usesCurrentEndLabel`。
+- `testStoppingTodayTimerImmediatelyClosesMatchingTimelineRow`：隔离 demo 数据，
+  按真实 UI 停止一条计时，按 segment identity 找到同一 Timeline 行并断言其
+  accessibility value 不再包含 `Now`，同时保存正常字号截图。
 
 ## 使用的库
 
-- 待定。
+- 未新增第三方库。该问题属于 SwiftUI Observation、SwiftData sibling context
+  合并和本地展示时钟协作；采用系统框架比引入外部状态库更小、更符合现有架构。
+- 参考 Apple 官方 ModelContext 与 SwiftData history 文档核对跨 context 语义。
 
 ## 进度记录
 
@@ -104,3 +102,11 @@
   `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd`
   和 `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`。
   本 checkpoint 未引入第三方库。
+- 2026-07-27 Checkpoint C：图表和 legend 改为消费同一份
+  `AnalyticsTimelineSnapshot`，值快照保存 `usesCurrentEndLabel`。初版用隐藏的
+  `TimelineView` 驱动本地时钟，在 macOS 首帧约束更新时触发 AppKit 崩溃，已撤回并
+  改为可取消的 Swift Concurrency 分钟任务。iPhone 端到端测试随后复现第二层竞争：
+  Stop 写入发生在上一次 minute tick 之后，旧参考时间把新结束时间当成未来值。
+  `homeTimelineSnapshotReferenceDate` 现在保证普通运行时取
+  `max(clockDate, liveDate)`。定向 iPhone UI 测试通过，截图确认
+  `00:17 - 00:50`；完整 `make test` 仍为 1417 项、仅同一组 4 个基线失败。

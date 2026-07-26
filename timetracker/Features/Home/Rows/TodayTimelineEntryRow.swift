@@ -32,6 +32,7 @@ struct TodayTimelineEntryRow: View {
             if let segment = segmentByID[segmentID] {
                 TimelineRow(
                     store: store,
+                    entry: entry,
                     segment: segment,
                     openTaskDetail: openTaskDetail
                 )

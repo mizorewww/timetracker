@@ -113,13 +113,17 @@ struct CompactTimelineSection: View {
     let store: TimeTrackerStore
     let segments: [TimeSegment]
     let openTask: (UUID) -> Void
+    @State private var referenceDate = homeTimelineReferenceDate(liveDate: Date())
 
     var body: some View {
-        let now = homeTimelineReferenceDate(liveDate: Date())
+        let snapshotReferenceDate = homeTimelineSnapshotReferenceDate(
+            clockDate: referenceDate,
+            liveDate: Date()
+        )
         let timeline = store.timelineSnapshot(
             segments: segments,
-            date: now,
-            now: now
+            date: snapshotReferenceDate,
+            now: snapshotReferenceDate
         )
         let entries = Array(timeline.entries.reversed())
         let segmentByID = segments.latestByID()
@@ -137,8 +141,7 @@ struct CompactTimelineSection: View {
                 .accessibilityElement(children: .combine)
             } else {
                 TodayTimelineChart(
-                    store: store,
-                    segments: segments,
+                    timeline: timeline,
                     compactHeight: 340
                 )
 
@@ -163,6 +166,11 @@ struct CompactTimelineSection: View {
         } header: {
             Text(AppStrings.todayTimeline)
                 .accessibilityIdentifier("home.timeline")
+        }
+        .task {
+            await runHomeTimelineReferenceClock(
+                referenceDate: $referenceDate
+            )
         }
     }
 }

@@ -5210,6 +5210,68 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testStoppingTodayTimerImmediatelyClosesMatchingTimelineRow() throws {
+        let app = launchApp(replacesDemoDataOnLaunch: true)
+
+        openSection(
+            "Today",
+            tabIdentifier: "phone.tab.today",
+            sidebarIdentifier: "sidebar.Today",
+            in: app
+        )
+        XCTAssertTrue(homeIsReady(in: app))
+        let stop = app.buttons.matching(NSPredicate(
+            format: "identifier BEGINSWITH %@ AND label BEGINSWITH %@",
+            "home.activeTimer.",
+            "Stop "
+        )).firstMatch
+        XCTAssertTrue(stop.waitForExistence(timeout: 5) && stop.isHittable)
+        XCTAssertTrue(
+            ["Stop Design macOS UI", "Stop Read Apple HIG"].contains(stop.label),
+            "The destructive assertion must only run against the isolated demo fixture."
+        )
+
+        let segmentID = String(
+            stop.identifier.dropFirst("home.activeTimer.".count)
+        )
+        XCTAssertFalse(segmentID.isEmpty)
+        activate(stop)
+        XCTAssertTrue(
+            stop.waitForNonExistence(timeout: 5),
+            "The selected timer must leave the Now section immediately."
+        )
+
+        let timeline = app.descendants(matching: .any)[
+            "home.timeline"
+        ].firstMatch
+        scrollTodayUntilHittable(timeline, in: app)
+        XCTAssertTrue(timeline.waitForExistence(timeout: 5) && timeline.isHittable)
+
+        let record = app.buttons.matching(NSPredicate(
+            format: "identifier ENDSWITH %@",
+            segmentID
+        )).firstMatch
+        scrollUntilHittable(record, direction: .up, in: app)
+        XCTAssertTrue(
+            record.waitForExistence(timeout: 5) && record.isHittable,
+            "The stopped segment must remain visible in Today's timeline."
+        )
+        let fixedTimeRange = String(describing: record.value ?? "")
+        XCTAssertFalse(
+            ["Now", "现在", "現在"].contains { fixedTimeRange.contains($0) },
+            """
+            The matching timeline row still exposes an open-ended range after \
+            Stop: \(fixedTimeRange)
+            """
+        )
+
+        try capture(
+            "\(platformScreenshotPrefix(in: app))-today-stopped-timeline-row",
+            app: app
+        )
+    }
+
+    @MainActor
     func testPhoneShortTimelineBarsUseProjectedLanes() throws {
         #if os(macOS)
         throw XCTSkip("Projected short-task lanes are verified on an iPhone simulator.")

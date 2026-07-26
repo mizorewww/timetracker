@@ -40,13 +40,17 @@ struct TimelineSection: View {
     let store: TimeTrackerStore
     let segments: [TimeSegment]
     let openTask: (UUID) -> Void
+    @State private var referenceDate = homeTimelineReferenceDate(liveDate: Date())
 
     var body: some View {
-        let now = homeTimelineReferenceDate(liveDate: Date())
+        let snapshotReferenceDate = homeTimelineSnapshotReferenceDate(
+            clockDate: referenceDate,
+            liveDate: Date()
+        )
         let timeline = store.timelineSnapshot(
             segments: segments,
-            date: now,
-            now: now
+            date: snapshotReferenceDate,
+            now: snapshotReferenceDate
         )
 
         VStack(alignment: .leading, spacing: 10) {
@@ -62,8 +66,7 @@ struct TimelineSection: View {
                     .padding(18)
                 } else {
                     TodayTimelineChart(
-                        store: store,
-                        segments: segments,
+                        timeline: timeline,
                         compactHeight: 320
                     )
                     .padding(16)
@@ -99,27 +102,24 @@ struct TimelineSection: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("home.timeline")
+        .task {
+            await runHomeTimelineReferenceClock(
+                referenceDate: $referenceDate
+            )
+        }
     }
 }
 
 struct TodayTimelineChart: View {
-    let store: TimeTrackerStore
-    let segments: [TimeSegment]
+    let timeline: AnalyticsTimelineSnapshot
     var compactHeight: CGFloat = 320
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 60)) { context in
-            let referenceDate = homeTimelineReferenceDate(liveDate: context.date)
-            TimelineChart(
-                timeline: store.timelineSnapshot(
-                    segments: segments,
-                    date: referenceDate,
-                    now: referenceDate
-                ),
-                compactHeight: compactHeight,
-                exposesUITestingMarks: exposesUITestingMarks
-            )
-        }
+        TimelineChart(
+            timeline: timeline,
+            compactHeight: compactHeight,
+            exposesUITestingMarks: exposesUITestingMarks
+        )
     }
 
     private var exposesUITestingMarks: Bool {
@@ -130,6 +130,22 @@ struct TodayTimelineChart: View {
         #else
         false
         #endif
+    }
+}
+
+@MainActor
+func runHomeTimelineReferenceClock(
+    referenceDate: Binding<Date>
+) async {
+    while Task.isCancelled == false {
+        do {
+            try await Task.sleep(for: .seconds(60))
+        } catch {
+            return
+        }
+        let nextReferenceDate = homeTimelineReferenceDate(liveDate: Date())
+        guard nextReferenceDate != referenceDate.wrappedValue else { continue }
+        referenceDate.wrappedValue = nextReferenceDate
     }
 }
 
@@ -152,4 +168,18 @@ func homeTimelineReferenceDate(liveDate: Date) -> Date {
     #else
     return liveDate
     #endif
+}
+
+func homeTimelineSnapshotReferenceDate(
+    clockDate: Date,
+    liveDate: Date
+) -> Date {
+    #if DEBUG
+    if homeTimelineUsesFixedUITestReferenceDate {
+        return clockDate
+    }
+    #endif
+    // Ledger mutations can invalidate the view between minute-clock ticks.
+    // Never interpret a just-written stop date as a future, still-open end.
+    return max(clockDate, liveDate)
 }

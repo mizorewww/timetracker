@@ -4,11 +4,9 @@ import SwiftData
 import Testing
 @testable import timetracker
 
-/// The Today timeline has no "is running" flag — `AnalyticsTimelineEntry` only
-/// carries non-optional `startedAt`/`endedAt`, and "still running" is expressed
-/// as the bar ending at `now` (`TrackedTimePolicy.boundedEnd`). So a stopped
-/// timer that still reads as open renders as a bar that keeps growing, which is
-/// exactly the reported bug.
+/// The timeline chart clips an active interval to `now`, while the matching row
+/// also needs to preserve the value-semantic fact that the end label is "Now".
+/// A stopped timer must update both facts in one shared snapshot.
 ///
 /// These read through the store's own read models rather than through a fresh
 /// `ModelContext`, because the fresh-context read is what the existing timer
@@ -37,6 +35,17 @@ struct TodayTimelineStopTests {
         defer { store.pomodoroReconciliationTask?.cancel() }
         store.configureIfNeeded(context: context)
 
+        let runningNow = Date()
+        let runningTimeline = store.timelineSnapshot(
+            segments: store.timelineSegments,
+            date: runningNow,
+            now: runningNow
+        )
+        let runningEntry = try #require(
+            runningTimeline.entries.first { $0.taskID == task.id }
+        )
+        #expect(runningEntry.usesCurrentEndLabel)
+
         store.stop(segment: segment)
 
         let stopObservedAt = Date()
@@ -62,6 +71,7 @@ struct TodayTimelineStopTests {
             """
         )
         #expect(entry.endedAt < laterNow)
+        #expect(entry.usesCurrentEndLabel == false)
     }
 
     /// The store's own visible read model must report the segment as closed.

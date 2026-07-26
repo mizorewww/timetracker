@@ -61,6 +61,7 @@ struct AnalyticsTimelineSnapshotService {
                 } ?? AppStrings.localized("task.unavailable.path"),
                 iconName: task?.iconName ?? "checkmark.circle",
                 colorHex: task?.colorHex ?? "0A84FF",
+                usesCurrentEndLabel: segment.endedAt.map { $0 > now } ?? true,
                 interval: interval
             )
         }
@@ -91,6 +92,7 @@ struct AnalyticsTimelineSnapshotService {
                 path: seed.path,
                 iconName: seed.iconName,
                 colorHex: seed.colorHex,
+                usesCurrentEndLabel: seed.usesCurrentEndLabel,
                 interval: interval,
                 durationIntervals: durationIntervals
             )
@@ -120,6 +122,7 @@ struct AnalyticsTimelineSnapshotService {
                 path: seed.path,
                 iconName: seed.iconName,
                 colorHex: seed.colorHex,
+                usesCurrentEndLabel: seed.usesCurrentEndLabel,
                 startedAt: layoutEntry.item.startedAt,
                 endedAt: layoutEntry.item.endedAt,
                 lane: layoutEntry.lane,

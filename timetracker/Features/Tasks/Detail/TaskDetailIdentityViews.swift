@@ -1,9 +1,5 @@
 import SwiftUI
 
-#if os(iOS)
-import UIKit
-#endif
-
 struct TaskDetailIdentityRow: View {
     let store: TimeTrackerStore
     let task: TaskNode
@@ -11,6 +7,7 @@ struct TaskDetailIdentityRow: View {
     let validation: TaskEditorValidation
     let focusedTextField: FocusState<TaskEditorTextField?>.Binding
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.layoutShell) private var layoutShell
 
     var body: some View {
         Group {
@@ -140,12 +137,13 @@ struct TaskDetailIdentityRow: View {
         activeSegment != nil || store.isTaskAvailableForTracking(task)
     }
 
+    /// Icon-only where the row is tight, title-and-icon where there is room.
+    ///
+    /// Same product rule as before — the predicate is the shell rather than the
+    /// device, so an iPad in Split View and a narrow Mac window now drop the
+    /// title too instead of overflowing the row.
     private var timerActionLabelStyle: TaskTimerActionLabelStyle {
-        #if os(iOS)
-        UIDevice.current.userInterfaceIdiom == .phone ? .iconOnly : .titleAndIcon
-        #else
-        .titleAndIcon
-        #endif
+        layoutShell == .compact ? .iconOnly : .titleAndIcon
     }
 
     private func performTimerAction(activeSegment: TimeSegment?) {

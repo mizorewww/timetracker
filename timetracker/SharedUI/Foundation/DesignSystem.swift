@@ -42,19 +42,14 @@ struct AppCardBackground: ViewModifier {
     }
 }
 
-extension View {
-    func appCard(padding: CGFloat = AppLayout.cardPadding, stroke: Bool = true) -> some View {
-        modifier(AppCardBackground(padding: padding, stroke: stroke))
-    }
+private struct AppNativeCardBackground: ViewModifier {
+    let padding: CGFloat
+    @Environment(\.layoutShell) private var layoutShell
 
-    /// Card matching the platform's native card language: iPhone uses the
-    /// inset-grouped look (large continuous corners, grouped background, no
-    /// stroke); iPad and macOS use the regular app card.
-    @ViewBuilder
-    func appNativeCard(padding: CGFloat = AppLayout.cardPadding) -> some View {
-        #if os(iOS)
-        if UIDevice.current.userInterfaceIdiom == .phone {
-            self
+    func body(content: Content) -> some View {
+        switch layoutShell {
+        case .compact:
+            content
                 .padding(padding)
                 .background(
                     AppColors.cardBackground,
@@ -63,12 +58,27 @@ extension View {
                         style: .continuous
                     )
                 )
-        } else {
-            appCard(padding: padding)
+        case .regular:
+            content
+                .modifier(AppCardBackground(padding: padding, stroke: true))
         }
-        #else
-        appCard(padding: padding)
-        #endif
+    }
+}
+
+extension View {
+    func appCard(padding: CGFloat = AppLayout.cardPadding, stroke: Bool = true) -> some View {
+        modifier(AppCardBackground(padding: padding, stroke: stroke))
+    }
+
+    /// Card matching the surrounding surface's native card language.
+    ///
+    /// The compact shell lays content out as an inset-grouped list, so cards
+    /// there take the grouped look (large continuous corners, grouped
+    /// background, no stroke). The regular shell draws a card canvas, so cards
+    /// there take the ordinary app card. Keyed off the shell rather than the
+    /// device, so an iPad in Split View and a narrow Mac window match iPhone.
+    func appNativeCard(padding: CGFloat = AppLayout.cardPadding) -> some View {
+        modifier(AppNativeCardBackground(padding: padding))
     }
 
     @ViewBuilder

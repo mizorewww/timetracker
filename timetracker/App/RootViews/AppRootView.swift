@@ -28,8 +28,10 @@ struct AppRootView<SyncConflictContent: View>: View {
     }
 
     var body: some View {
+        let shell = layoutPolicy.shell
+
         Group {
-            switch layoutPolicy.shell {
+            switch shell {
             case .compact:
                 CompactShellRootView(
                     store: store,
@@ -43,6 +45,9 @@ struct AppRootView<SyncConflictContent: View>: View {
                     }
             }
         }
+        // Nested views adapt from this instead of re-measuring or, worse,
+        // asking what device they are running on.
+        .environment(\.layoutShell, shell)
         .onGeometryChange(for: CGFloat.self) { proxy in
             proxy.size.width
         } action: { width in

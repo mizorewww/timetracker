@@ -38,13 +38,13 @@
 
 ## Checkpoint 编排
 
-- [~] A：认领反馈、建立本实现记忆、完成全量平台相关代码普查。
-- [ ] B：确立唯一的宽度判据（统一的 layout-width 环境值 + 断点），替换所有 idiom
-  判断。
-- [ ] C：合并按平台拆分的视图与条件化修饰符。
-- [ ] D：文字标签可见性等产品决策项按宽度重述（保留原意图，换判据）。
-- [ ] E：多宽度截图验收（iPhone / iPad 全屏 / iPad 分屏 / Mac 窄窗）、
-  `make test` 门禁、Release 全设备安装、反馈收口。
+- [x] A：认领反馈、建立本实现记忆、完成全量平台相关代码普查。
+- [x] B：根 shell 判据改为宽度驱动；合并 iPad/Mac 两份 split view；
+  `CompactHome*` 去平台化。（commit `46c5d45d`）
+- [~] C：剩余的 idiom / 平台条件化布局项（卡片圆角、时间线方向、图表轴、
+  Inbox 紧凑判据、任务详情按钮标签）改为宽度驱动。
+- [ ] D：多宽度 UI 截图验收（iPhone / iPad / Mac）。
+- [ ] E：`make test` 门禁、Release 全设备安装、反馈收口。
 
 ## 约束与边界
 
@@ -60,6 +60,70 @@
 
 - 待定，见各 checkpoint 记录。
 
+## 全量普查结果（子代理 Explore，`timetracker/` 主 target）
+
+总计 184 处 `#if os(...)`/`canImport(...)`，分布在 91 个文件；3 处直接读
+`UIDevice.current.userInterfaceIdiom`；5 处 `@Environment(\.horizontalSizeClass)`；
+0 处 `UIScreen`；0 处 `verticalSizeClass`；0 处 `macCatalyst`。
+
+| 类别 | 数量 | 处理 |
+| --- | --- | --- |
+| A идiom/设备/size-class | 34 | 改为宽度驱动 |
+| B 控制布局的编译期平台分支 | 31 | 逐条判断，多数改宽度 |
+| C 真正 API 绑定 | ~112 | **保留**（改了会编译失败） |
+| D 按平台拆分的视图 | 5 对 | 能合的合 |
+| E 平台条件化修饰符 | 28 | 与 B/C 重叠 |
+| F 文字标签可见性 | 11 | 保留产品意图，换判据 |
+
+关键发现：仓库**早就有**正确的宽度驱动范式——`HomeViews.swift` 用
+`.onGeometryChange` + `HomeLayoutPolicy(width:)` 完全不看 idiom，`LayoutPolicies.swift`
+是这些策略的既有归属地。本任务是把根 shell 和其余散落判断收敛到同一范式，
+而不是发明新机制。
+
+**明确不改的项（有理由的平台差异）**：
+
+- B.1 触控目标常量（iOS 44pt / macOS 24–28pt，12 处）：这编码的是**输入方式**
+  （手指 vs 指针），不是宽度。HIG 要求触控目标 44pt；Mac 用指针时 28pt 是对的。
+  改成按宽度会让接了鼠标的窄窗口出现 44pt 巨型控件，属于劣化。
+- C 类全部：`.navigationBarTitleDisplayMode`、`.insetGrouped`、`EditMode`、
+  `.presentationDetents`、UIKit/AppKit 类型桥接、ActivityKit/HealthKit/
+  WatchConnectivity 可用性。
+- F.8 Quick Start 编辑按钮：桌面是图标按钮、手机是整行 `Label`，与通用规则相反，
+  是刻意的 list-row 习惯，机械按宽度翻转会造成回归。
+- `SidebarViews.swift` mac 过滤掉 `.settings`：绑定 macOS Settings scene。
+
 ## 进度记录
 
-- 2026-07-26 Checkpoint A：认领第 107 条，建立本文件与 active 链接。
+- 2026-07-26 Checkpoint A：认领第 107 条，建立本文件与 active 链接，完成全量普查。
+
+- 2026-07-26 Checkpoint B（commit `46c5d45d`）：
+  - `RootLayoutPolicy` 改为 `(measuredWidth: CGFloat?, horizontalSizeClass:)`。
+    判据：compact size class 一律 compact（保住 iPhone 横屏走标签页 shell）；
+    否则按 720pt 断点比宽度；首帧未测量前退回 size class，避免闪一帧错误 shell。
+    macOS 任何宽度都报 `.regular`，所以那里宽度是唯一信号——这正是窄 Mac 窗口
+    能落到 compact shell 的原因。
+  - 新增 `AppRootView`（`.onGeometryChange` 测宽 + 选 shell），替换
+    `ContentView` 里的 `#if os(macOS)`；sync-conflict 横幅由选中的 shell 安装，
+    不再装两遍。
+  - `iPadRootView` 与 `DesktopRootView` ~80% 重复，合并为 `RegularShellRootView`；
+    剩下的 `#if os(macOS)` 是 Settings scene 与 `focusedSceneValue`，不是布局。
+  - `SplitColumnLayoutPolicy.iPad`/`.mac` 合并为 `.standard`，并加测试断言
+    其 min 之和 ≤ shell 断点（否则会出现 split view 满足不了、compact shell
+    又还没接管的宽度带）。
+  - `PhoneHomeView/Sections/Rows` 去掉 `#if os(iOS)` 并更名 `CompactHome*`；
+    只保留 `.insetGrouped`、键盘关闭、`navigationBarTitleDisplayMode` 与
+    HealthKit 行的门；设置按钮改用 `.primaryAction`（两端都正确解析），
+    又消掉一处平台分支。
+  - 删除无生产调用点的 `AnalyticsLayoutPolicy` 与
+    `PomodoroLayoutPolicy.showsInlineHeader`。
+  - accessibility identifier 全部保持原样（`phone.tabView` / `ipad.splitNavigation`），
+    它们是既有 XCUITest 契约；重命名推迟到用户的 UI test 改动落地之后。
+
+## 验证记录
+
+- macOS 与 iOS 两个平台 `xcodebuild build` 均通过。
+- 在隔离的 git worktree（`build/verify-wt`，检出 `46c5d45d`）中跑
+  `timetrackerTests`：1,418 条测试，3 条失败，全部为既有失败，且都不在本次
+  改动半径内。用 worktree 是因为用户当时有一份未提交的
+  `LLMSettingsTests.swift` 引用了尚不存在的 `LLMPromptKind.effectiveRequestDisclosure`，
+  会让整个测试 bundle 编译失败；worktree 既不碰用户的工作副本，也不影响验证。

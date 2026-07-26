@@ -7,8 +7,8 @@
 
 - [x] 按文档顺序领取“任务详情图标右侧有奇怪空间”反馈。
 - [x] 审计任务详情图标入口的布局 owner、导航行为、平台差异与历史边界。
-- [~] 先写普通字号 UI 验收清单和失败证据。
-- [ ] 做最小实现并补充稳定的自动化几何/交互断言。
+- [x] 先写普通字号 UI 验收清单和失败证据。
+- [x] 做最小实现并补充稳定的自动化几何/交互断言。
 - [ ] 运行格式、本地化、单元测试和 iPhone/iPad/macOS 截图验收。
 - [ ] 提交小 checkpoint，执行 Release 全设备安装，标记反馈完成并移除活动链接。
 
@@ -32,22 +32,29 @@
 ## Checkpoint 编排
 
 - [x] Checkpoint A：领取、现状/历史/测试审计、验收契约。
-- [ ] Checkpoint B：测试先行、最小布局修正和文档更新。
+- [x] Checkpoint B：测试先行、最小布局修正和文档更新。
 - [ ] Checkpoint C：跨平台截图、完整门禁、Release 全设备安装和反馈收口。
 
 ## 资源所有权
 
-- 尚未创建模拟器或测试进程。
+- Red 批次：主代理，`codex-task57-red-iPhone17Pro`
+  (`D72C1448-EAC7-4418-9721-912973075C9E`，本任务创建)，App
+  `com.mizore.TimeTracker`、UI runner，产物根目录
+  `/private/tmp/codex-task57-red.9wApfU`；完成失败证据后必须终止、关机、删除并审计。
 
 ## 审计结论
 
 - 布局 owner 是 `TaskDetailIdentityRow.identitySummary`：44pt `TaskIcon` 与标题区本应由
   外层 `HStack(spacing: 14)` 控制。
-- 回归由提交 `36d697b6` 引入：当时把固定尺寸图标包进 iOS `NavigationLink`，但详情行
-  没有像现有清单编辑行一样应用 `.buttonStyle(.plain)`。位于 `List`/`Form` 的默认
-  导航链接因此可以把自身扩展为带 disclosure 语义的行内容，在图标右侧保留额外宽度。
-- macOS 分支本来就是 plain `Button` + popover；修复应只补齐共享调用点的控件样式，
-  不改导航目的地、草稿绑定、自动保存或 macOS 呈现方式。
+- 回归由提交 `36d697b6` 引入：当时把固定尺寸图标包进 iOS `NavigationLink`。它位于
+  `List`/`Form` 中，因此系统自动显示 disclosure indicator 并为附件保留宽度。
+- Xcode 27 SwiftUI SDK 提供的原生
+  `.navigationLinkIndicatorVisibility(.hidden)`（iOS 17/macOS 14 起可用）可在保留
+  `NavigationLink` push 与命中语义的同时精确移除 indicator 及其占位；它比改变
+  `buttonStyle` 的装饰/高亮语义更直接、更稳定。
+- macOS 分支本来就是 plain `Button` + popover；修复只应在详情页 iOS 调用点隐藏
+  indicator，不全局影响仍需要标准 disclosure 的共享 Form 行，也不改导航目的地、
+  草稿绑定、自动保存或 macOS 呈现方式。
 - 现有 XCUITest 只验证进入选择器并截取进入后的页面，未保存详情行修复前截图，也未
   约束图标点击元素的宽度和图标到标题的可见间距。
 
@@ -63,9 +70,35 @@
 ## 测试先行契约
 
 - 扩充 `testTaskDetailIconOpensSymbolColorPicker`，先等待标题输入框并截取详情 identity
-  行，再断言图标入口宽度不超过 48pt、图标与标题间距在 10...18pt，最后继续验证进入
+  行，再断言图标入口宽度保持 42...48pt、图标与标题间距在 10...18pt，最后继续验证进入
   共享图标选择器。
 - 修复前 iOS 运行必须以几何断言失败并留下截图；修复后三平台复用同一交互测试。
+
+## Red 证据
+
+- iPhone 17 Pro 普通字号聚焦 XCUITest 按预期失败：44pt 可见图标外层的
+  `task.detail.icon.edit` 实际 frame 为
+  `(x: 32, y: 170, width: 125.67, height: 44)`，标题 field 从 `x: 174` 开始。
+- 修复前截图 `iphone-task-detail-icon-row` 清楚显示系统 chevron 位于图标与标题之间；
+  这证明 81.67pt 的额外宽度属于默认 `NavigationLink` indicator/附件槽，而不是外层
+  14pt `HStack` 间距。
+- 结果包：
+  `/private/tmp/codex-task57-red.9wApfU/task57-red.xcresult`。
+
+## iPhone Green 证据
+
+- 仅在详情页 iOS 调用点加入
+  `.navigationLinkIndicatorVisibility(.hidden)`；共享 Form 行保持系统 disclosure，
+  macOS plain Button + popover 不变。
+- 同一 iPhone 17 Pro 聚焦 XCUITest 通过：图标 frame 落入 42...48pt，图标到标题间距
+  落入 10...18pt，点击后仍出现 `symbol.picker.view` 与搜索框。
+- `iphone-task-detail-icon-row` 截图确认 chevron 与异常附件槽消失，标题从图标后的正常
+  间距开始；`iphone-task-detail-icon-editor` 确认 push 目的地不变。
+- 结果包：
+  `/private/tmp/codex-task57-red.9wApfU/task57-green-iphone.xcresult`。
+- 最终 checkpoint 源状态复跑
+  `/private/tmp/codex-task57-red.9wApfU/task57-checkpoint-iphone.xcresult` 仍为
+  1 test / 0 failures；`make format-check` 与 `make localization-check` 通过。
 
 ## 库策略
 

@@ -1906,6 +1906,53 @@ final class timetrackerUITests: XCTestCase {
             iconButton.waitForExistence(timeout: 5),
             "The task detail identity icon must be an interactive editor link."
         )
+        XCTAssertTrue(
+            iconButton.isHittable,
+            "The task detail identity icon must keep an interactive hit target."
+        )
+
+        let titleField = app.descendants(matching: .any)[
+            "task.editor.title.field"
+        ].firstMatch
+        XCTAssertTrue(
+            titleField.waitForExistence(timeout: 5),
+            "The task title field must exist beside the identity icon."
+        )
+
+        let prefix = platformScreenshotPrefix(in: app)
+        try capture("\(prefix)-task-detail-icon-row", app: app)
+
+        let iconFrame = iconButton.frame
+        let titleFrame = titleField.frame
+        let iconToTitleSpacing = titleFrame.minX - iconFrame.maxX
+        XCTAssertGreaterThanOrEqual(
+            iconFrame.width,
+            42,
+            "The identity icon must retain its 44pt control width."
+        )
+        XCTAssertGreaterThanOrEqual(
+            iconFrame.height,
+            42,
+            "The identity icon must retain its 44pt interactive height."
+        )
+        XCTAssertLessThanOrEqual(
+            iconFrame.width,
+            48,
+            "The identity icon must not reserve trailing navigation-indicator space. "
+                + "iconFrame=\(iconFrame), titleFrame=\(titleFrame)"
+        )
+        XCTAssertGreaterThanOrEqual(
+            iconToTitleSpacing,
+            10,
+            "The identity icon must retain the designed 14pt leading gap. "
+                + "iconFrame=\(iconFrame), titleFrame=\(titleFrame)"
+        )
+        XCTAssertLessThanOrEqual(
+            iconToTitleSpacing,
+            18,
+            "The identity icon must not leave unexplained space before the title. "
+                + "iconFrame=\(iconFrame), titleFrame=\(titleFrame)"
+        )
         activate(iconButton)
 
         let pickerView = app.descendants(matching: .any)[
@@ -1923,7 +1970,6 @@ final class timetrackerUITests: XCTestCase {
             "The presented symbol picker must include its search field."
         )
 
-        let prefix = platformScreenshotPrefix(in: app)
         try capture("\(prefix)-task-detail-icon-editor", app: app)
     }
 

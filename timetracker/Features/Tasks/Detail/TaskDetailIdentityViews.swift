@@ -61,6 +61,9 @@ struct TaskDetailIdentityRow: View {
                     size: 44
                 )
             }
+            #if os(iOS)
+            .navigationLinkIndicatorVisibility(.hidden)
+            #endif
             identityText
         }
         .frame(maxWidth: .infinity, alignment: .leading)

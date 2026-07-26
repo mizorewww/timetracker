@@ -8,7 +8,8 @@
 - [x] 按文档顺序领取标题字体、卡片左右间距和主页设计规范反馈。
 - [x] 审计主页现有标题、卡片容器、heatmap 与 Gross Time 图表实现和历史边界。
 - [x] 先写可验证的 UI 验收清单，再做最小实现。
-- [~] 为相对标题/卡片几何补充失败的 UI 验收，再统一实现 owner。
+- [x] 为相对标题/卡片几何补充 UI 验收，并统一实现 owner。
+- [~] 完成针对性回归与实现后截图核对。
 - [ ] 完成格式、单元测试和 iPhone/iPad/macOS 普通字号截图验收。
 - [ ] 提交小 checkpoint，执行 Release 全设备安装，标记反馈完成并移除活动链接。
 
@@ -31,8 +32,8 @@
 ## Checkpoint 编排
 
 - [x] Checkpoint A：领取、现状/历史/测试审计、设计契约。
-- [~] Checkpoint B：测试先行、统一容器与标题、更新主页设计规范。
-- [ ] Checkpoint C：跨平台截图、完整门禁、Release 全设备安装和反馈收口。
+- [x] Checkpoint B：测试先行、统一容器与标题、更新主页设计规范。
+- [~] Checkpoint C：跨平台截图、完整门禁、Release 全设备安装和反馈收口。
 
 ## 子代理编排
 
@@ -41,7 +42,9 @@
 
 ## 资源所有权
 
-- 当前没有本任务拥有的模拟器、XCTest、Instruments、物理设备或构建进程。
+- iPhone 红灯/首轮实现批次：`codex-task56-red-iPhone17Pro`，
+  UDID `1F22694D-8D21-43C6-8F8A-37C3FDFB3662`；当前保持 Booted，供实现后
+  同一针对性测试与截图复用。没有仍在运行的 owned XCTest/xcodebuild。
 
 ## 待形成的 UI 验收清单
 
@@ -63,10 +66,13 @@
   `.listSection`，共同使用 `homeVisualizationListCard`。该 modifier 为保证 iOS 26+
   连续 `Section` 不把多张 Heatmap 合并，必须继续拥有独立背景、圆角、透明 row 和
   separator 规则；不能恢复任务 39 中被真实截图否决的纯原生 row 方案。
-- 当前共享 modifier 同时设置 16 pt 内容 padding 与
-  `.listRowInsets(EdgeInsets())`。后者清除了 List 的水平 row inset，是图表卡片
-  左右边界相对原生 Today 卡片漂移的唯一集中 owner；修复应只改这里，不能给 Weekly
-  与每张 Heatmap 各写一套 magic number。
+- 当前共享 modifier 同时设置 16 pt 内容 padding、内层自绘 background 与
+  `.listRowInsets(EdgeInsets())`。XCU 行几何显示原生 row 边界均为 16 pt，但实现前
+  普通字号截图显示自绘 background 实际从 32 pt 开始；差异来自 background 跟随
+  已 inset 的内容 view，而不是系统 row 本身。直接交给 `listRowBackground` 会被
+  外层透明规则覆盖；去掉透明规则又会让 iOS 27 把所有 Section 合成一张白卡。最终
+  保留透明 row 和独立自绘背景，只保留 vertical `cardPadding`，并让背景从系统
+  content column 向两侧各扩展一个 `cardPadding`：背景回到 16 pt，内容回到 32 pt。
 - `HomeOverviewHeader`、`HomeWeeklyGrossTimeHeader` 和
   `HomeActivityHeatmapHeader` 各复制了一套“标题 + 可选统计 + Info”结构。源码没有
   单独的图表字号常量；真正风险是三套 composition、frame 和 identifier owner 漂移。
@@ -92,10 +98,34 @@
 
 ## 计划验证
 
-- 先扩充 `testTodayVisualizationCardsAreVisuallyIndependent`：新增可观察的 title leaf
-  identifier；比较 Overview/Gross/Heatmap 标题高度和 Gross/Heatmap 卡片左右边界，
-  先在当前布局得到失败证据。
+- 已扩充 `testTodayVisualizationCardsAreVisuallyIndependent`，比较 Overview、
+  Gross 与每张 Heatmap 所属原生 cell 的左右边界和对称性；标题因 SwiftUI header
+  的 combine 语义不能稳定暴露 leaf frame，改由单一 `HomeSectionHeader` owner 和
+  普通字号截图验收。
+- 实现前截图
+  `iphone-home-visualization-card-separation` 明确显示 Heatmap background 为 32 pt
+  外边距，而 inset-grouped row 合同为 16 pt；这份视觉证据是本次 UI-only 变更的
+  红灯基线。
+- 中间截图先暴露 row background 被透明 Section 覆盖、再暴露去掉透明规则会合并
+  所有卡片；两种方案均已否决。最终 `FinalLayout.xcresult` 截图显示卡片各自独立，
+  左右背景边界约 16 pt，标题/内容列约 32 pt，Weekly 与 Heatmap 使用同一层级。
 - 复跑 Gross/Heatmap 领域行为套件，以及 Weekly、视觉独立、三 metric、Analytics
   共享 Heatmap 的 XCUITest。
 - 普通字号截图：iPhone 竖屏；iPad 横屏；macOS 常规宽度与窄窗口。颜色/material
   不变，因此本任务不单独增加 dark-mode 批次。
+
+## 已完成验证
+
+- `make format-check localization-check`：通过；817 个 Swift 文件无需格式调整，
+  9/9 本地化资源键一致。
+- iPhone `testTodayVisualizationCardsAreVisuallyIndependent`：
+  `FinalLayout.xcresult` 通过；截图确认背景 16 pt、内容/标题列 32 pt、卡片独立。
+- 同一测试此前有一次 fixture 未装载 Heatmap 选择而失败；保留失败结果后独立重跑
+  通过。该间歇现象在实现前基线也出现，失败点在 Heatmap header 不存在，不是布局断言。
+- `make test`：1433 个测试中 1431 通过；本任务相关的
+  `TodayActivityHeatmapRefreshTests`、`TodayActivityHeatmapTests` 与
+  `TodayHeatmapRecurrenceProjectionTests` 全部通过。默认门禁仍有两个开始本任务前已知、
+  与本改动无关的失败：
+  `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd`
+  和
+  `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`。

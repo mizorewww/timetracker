@@ -7177,9 +7177,15 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(initialConfigurationIsReady(in: app))
         XCTAssertTrue(homeIsReady(in: app))
 
+        let overview = app.cells
+            .containing(.any, identifier: "home.overview")
+            .firstMatch
         let weeklyCard = app.descendants(matching: .any)[
             "home.weeklyGross.card"
         ].firstMatch
+        let weeklyRow = app.cells
+            .containing(.any, identifier: "home.weeklyGross.card")
+            .firstMatch
         let heatmapsHeader = app.descendants(matching: .any)[
             "home.heatmaps.header"
         ].firstMatch
@@ -7196,6 +7202,18 @@ final class timetrackerUITests: XCTestCase {
             )
         ).firstMatch
 
+        scrollUntilFullyVisibleAboveSystemChrome(weeklyCard, in: app)
+        XCTAssertTrue(overview.waitForExistence(timeout: 5))
+        XCTAssertTrue(weeklyCard.waitForExistence(timeout: 5))
+        XCTAssertTrue(weeklyRow.waitForExistence(timeout: 5))
+        assertHorizontalHomeCardAlignment(
+            weeklyRow,
+            nativeReference: overview,
+            in: app
+        )
+        let expectedCardMinX = weeklyRow.frame.minX
+        let expectedCardMaxX = weeklyRow.frame.maxX
+
         scrollUntilHittable(
             heatmapsHeader,
             direction: .up,
@@ -7207,11 +7225,35 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(checklistGrid.waitForExistence(timeout: 8))
         let checklistCard = heatmapCard(for: checklistGrid, in: app)
         assertHeatmapCard(checklistCard, contains: checklistGrid)
+        let checklistRow = app.cells
+            .containing(.any, identifier: checklistCard.identifier)
+            .firstMatch
+        XCTAssertTrue(checklistRow.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            checklistRow.frame.minX,
+            expectedCardMinX,
+            accuracy: 2,
+            "Heatmap and Gross Time cards must share their leading boundary."
+        )
+        XCTAssertEqual(
+            checklistRow.frame.maxX,
+            expectedCardMaxX,
+            accuracy: 2,
+            "Heatmap and Gross Time cards must share their trailing boundary."
+        )
+        assertSymmetricHorizontalInsets(for: checklistRow, in: app)
 
         scrollUntilHittable(durationGrid, direction: .up, in: app)
         XCTAssertTrue(durationGrid.waitForExistence(timeout: 8))
         let durationCard = heatmapCard(for: durationGrid, in: app)
         assertHeatmapCard(durationCard, contains: durationGrid)
+        let durationRow = app.cells
+            .containing(.any, identifier: durationCard.identifier)
+            .firstMatch
+        XCTAssertTrue(durationRow.waitForExistence(timeout: 5))
+        XCTAssertEqual(durationRow.frame.minX, expectedCardMinX, accuracy: 2)
+        XCTAssertEqual(durationRow.frame.maxX, expectedCardMaxX, accuracy: 2)
+        assertSymmetricHorizontalInsets(for: durationRow, in: app)
         XCTAssertNotEqual(checklistCard.identifier, durationCard.identifier)
         XCTAssertTrue(
             scrollUntilCardBoundaryIsVisible(checklistCard, durationCard, in: app),
@@ -10315,6 +10357,41 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(
             card.frame.insetBy(dx: -2, dy: -2).contains(grid.frame),
             "A Heatmap grid must belong only to its task card."
+        )
+    }
+
+    @MainActor
+    private func assertHorizontalHomeCardAlignment(
+        _ card: XCUIElement,
+        nativeReference: XCUIElement,
+        in app: XCUIApplication
+    ) {
+        XCTAssertEqual(
+            card.frame.minX,
+            nativeReference.frame.minX,
+            accuracy: 2,
+            "Visualization cards must align with native Today card leading edges."
+        )
+        XCTAssertEqual(
+            card.frame.maxX,
+            nativeReference.frame.maxX,
+            accuracy: 2,
+            "Visualization cards must align with native Today card trailing edges."
+        )
+        assertSymmetricHorizontalInsets(for: card, in: app)
+    }
+
+    @MainActor
+    private func assertSymmetricHorizontalInsets(
+        for card: XCUIElement,
+        in app: XCUIApplication
+    ) {
+        let viewport = app.windows.firstMatch.frame
+        XCTAssertEqual(
+            card.frame.minX - viewport.minX,
+            viewport.maxX - card.frame.maxX,
+            accuracy: 2,
+            "Home card horizontal margins must be visually balanced."
         )
     }
 

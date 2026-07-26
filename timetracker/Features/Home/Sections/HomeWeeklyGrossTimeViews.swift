@@ -131,34 +131,13 @@ private struct HomeWeeklyGrossTimeHeader: View {
     var total: String?
 
     var body: some View {
-        HStack(alignment: .center, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                title
-                Spacer(minLength: 8)
-                if let total {
-                    Text(total)
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.isHeader)
-
+        HomeSectionHeader(
+            container: container,
+            title: AppStrings.localized("home.weeklyGross.title"),
+            summary: total,
+            accessibilityIdentifier: "home.weeklyGross.header"
+        ) {
             HomeSectionInformationButton.weeklyGross
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("home.weeklyGross.header")
-    }
-
-    @ViewBuilder
-    private var title: some View {
-        switch container {
-        case .card:
-            Text(.app("home.weeklyGross.title"))
-                .font(.headline)
-        case .listSection:
-            Text(.app("home.weeklyGross.title"))
         }
     }
 }

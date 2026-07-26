@@ -219,36 +219,16 @@ private struct HomeActivityHeatmapHeader: View {
     @Environment(\.locale) private var locale
 
     var body: some View {
-        HStack(alignment: .center, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                title
-                Spacer(minLength: 8)
-                if let taskCount {
-                    Text(taskCount)
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityAddTraits(.isHeader)
-            .accessibilityIdentifier("home.heatmaps.header")
-
+        HomeSectionHeader(
+            container: container,
+            title: AppStrings.localized("home.heatmap.title"),
+            summary: taskCount,
+            accessibilityIdentifier: "home.heatmaps.header"
+        ) {
             HomeSectionInformationButton.heatmaps(
                 snapshots: snapshots,
                 locale: locale
             )
-        }
-    }
-
-    @ViewBuilder
-    private var title: some View {
-        switch container {
-        case .card:
-            Text(.app("home.heatmap.title"))
-                .font(.headline)
-        case .listSection:
-            Text(.app("home.heatmap.title"))
         }
     }
 }

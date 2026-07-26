@@ -68,7 +68,13 @@ One native `List` with native row behaviors (swipe, context menu, edit/reorder);
 
 ### Today
 
-iPhone Today is a native priority-ordered `List` (Now, Overview, Quick Start, Timeline, Forecast, Countdown). Use the native large title, keep the gross/wall summary compact without decorative progress or duplicate metrics, and use system buttons for Start Timer and New Task. Quick Start edits through a native sheet/list, not custom chips. Acceptance: Today does not jitter when scrolling; active timer controls stay at least 44 pt; metrics do not dominate the first screen; large text keeps titles, paths, durations, stop actions, Quick Start labels, countdown dates, and the final list rows visible without overlap or tab-bar obstruction.
+iPhone Today is a native priority-ordered `List` (Now, Overview, Weekly Gross Time, Activity Heatmaps, Quick Start, Timeline, Forecast, Countdown). Use the native large title, keep the gross/wall summary compact without decorative progress or duplicate metrics, and use system buttons for Start Timer and New Task. Quick Start edits through a native sheet/list, not custom chips.
+
+Today section hierarchy has one owner. Overview, Weekly Gross Time, and Activity Heatmaps use `HomeSectionHeader`: card layouts render the title with system `.headline`; iPhone list layouts inherit the native `Section` header typography. Optional aggregate values use secondary monospaced caption text, and the Info button remains a separate trailing control. Do not add a local title font in an individual chart.
+
+On iPhone, visualization backgrounds align to the same inset-grouped row boundaries as Overview and the other native sections. Their content keeps one 16 pt inset inside that boundary. Weekly Gross Time and every task heatmap remain independent rounded cards with at least 10 pt visual separation because iOS can merge consecutive native sections; they must not become one shared outer card or cards inside cards. Keep the system section row transparent, use the shared self-drawn card background, and expand that background from the native content column to the grouped-card edge. The section title stays on the native content column. iPad and macOS use the shared Home page width and 14 pt chart-card content inset.
+
+Acceptance: Today does not jitter when scrolling; active timer controls stay at least 44 pt; metrics do not dominate the first screen; normal-text screenshots show matching title hierarchy and symmetric card margins on iPhone, iPad, and macOS; large text keeps titles, paths, durations, stop actions, Quick Start labels, countdown dates, and the final list rows visible without overlap or tab-bar obstruction.
 
 ### Tasks
 

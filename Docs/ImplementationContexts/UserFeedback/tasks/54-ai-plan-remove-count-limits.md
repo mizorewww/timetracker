@@ -20,8 +20,8 @@
 - [x] 先增加能够复现当前失败的行为测试；区分安全字节边界、产品字段合法性与
   任意业务数量/字符串截断。
 - [x] 最小修复生产路径与当前文档，保留显式失败和原子写入，不允许静默截断。
-- [~] 普通字号 UI 验收大计划 preview/apply，执行默认门禁、小提交、Release
-  全设备安装并再次收口。
+- [x] 普通字号 UI 验收大计划 preview/apply，执行默认门禁与小提交。
+- [~] 执行 Release 全设备安装并再次收口。
 
 重新打开后的范围以当前 `Docs/userfeedback.md` 的 `[~]` 原文为准；旧实现与验收
 记录保留为历史证据，不能把旧的 `[x]` 当作这次复测已经通过。
@@ -44,12 +44,12 @@
 - [x] Checkpoint A:领取任务、创建实现记忆与 active link。
 - [x] Checkpoint B:审计上限执行点与契约文本。
 - [x] Checkpoint C:实现 + 补齐行为测试。
-- [~] Checkpoint D:模拟器验收与资源清理。
-- [ ] Checkpoint E:Release 构建安装、核验与收口。
+- [x] Checkpoint D:模拟器验收与资源清理。
+- [~] Checkpoint E:Release 构建安装、核验与收口。
 
 ## 资源所有权
 
-- [~] 主代理:任务状态、编排、集成、所有 build/simulator/测试/Release 批次与清理。
+- [~] 主代理:任务状态、编排、集成、Release 批次与最终收口。
 
 ## 已提交 checkpoint
 
@@ -96,6 +96,18 @@
     `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd`
     与
     `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`。
+  - 普通字号 XCUITest
+    `testAITaskPlanWithOneHundredFiftyChecklistItemsRendersAndApplies`：
+    - iPhone 17 Pro（iOS 27，UDID
+      `6F1247DD-EE1A-4AAE-BD12-09D06D88B16D`）：1 test / 0 failures；
+      断言 151 create、Chapter 150、Apply 后标题 `Read 150 Chapters` 与分类
+      `Study`，保存 preview/applied 截图。
+    - iPad Pro 13-inch (M5)（iOS 27，UDID
+      `15074E59-6BB2-4269-B6F5-F7C739194C65`）：首次 Runner 在断言前意外退出且
+      Xcode 卡在 test-session cleanup，未误记为成功；擦除专用设备后干净重跑为
+      1 test / 0 failures，完成与 iPhone 相同的断言和截图。
+    - 四张截图已目检：系统 sheet/popover、滚动、按钮、普通字号和应用后的任务详情
+      均无截断或布局破坏；iPad preview 截图明确显示 Chapter 150。
 
 ### 设计(Checkpoint B 结论)
 

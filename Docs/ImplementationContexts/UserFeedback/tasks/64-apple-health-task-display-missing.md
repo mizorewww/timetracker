@@ -1,6 +1,6 @@
 # 64：任务里的 Apple Health 显示消失 实现记忆
 
-状态：2026-07-27 已完成
+状态：2026-07-27 重新打开
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -67,3 +67,7 @@
   `/Applications/timetracker.app`。Watch companion 已签名并嵌入 iOS app，待配对
   Apple Watch 的“自动安装 App”接管安装。反馈标记完成，活动链接移除；关闭提交后
   再执行一次全设备安装，以保证最终 commit 与设备版本一致。
+- 2026-07-27 用户验收未通过：真实设备上的 Apple Health 任务仍然消失。此前只修复了
+  “持久化目录已存在、当前 facade 仍为空”的 no-op 投影竞态，并未覆盖实际路径。
+  第 109 条重新标为 `[~]`；任务 65 停止并撤销认领。接下来以已安装 Release 的真实
+  store、catalog 触发时机和 CloudKit 合并/删除路径重新建立复现，未修复前不再关闭。

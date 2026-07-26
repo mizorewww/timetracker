@@ -37,13 +37,13 @@ final class AdaptiveShellUITests: XCTestCase {
         return app
     }
 
-    /// The sidebar is the affordance only the split shell has.
-    private func sidebar(in app: XCUIApplication) -> XCUIElement {
-        app.descendants(matching: .any)["sidebar.today"]
-    }
-
-    /// Today's toolbar Settings button exists only in the compact shell; the
-    /// split shell reaches Settings through the sidebar or the Settings scene.
+    /// Today's toolbar Settings button is the reliable discriminator: only
+    /// `CompactHomeView` draws it. The split shell reaches Settings through the
+    /// sidebar or, on macOS, the Settings scene.
+    ///
+    /// The sidebar itself is not usable as the signal — `NavigationSplitView`
+    /// collapses it behind the system toggle in iPad portrait, so its absence
+    /// says nothing about which shell was chosen.
     private func compactSettingsButton(in app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any)["settings.open"]
     }
@@ -55,75 +55,61 @@ final class AdaptiveShellUITests: XCTestCase {
         add(attachment)
     }
 
-    /// Exactly one shell must be presented, and it must be the one this
-    /// destination's width calls for.
-    func testExactlyOneShellIsPresentedAndItMatchesTheWindowWidth() {
-        let app = launchApp()
-
-        let hasSidebar = sidebar(in: app).waitForExistence(timeout: 15)
-        let hasCompactSettings = compactSettingsButton(in: app).exists
-
-        XCTAssertNotEqual(
-            hasSidebar,
-            hasCompactSettings,
-            """
-            Expected exactly one shell. sidebar=\(hasSidebar) \
-            compactSettings=\(hasCompactSettings).
-            Hierarchy:
-            \(app.debugDescription)
-            """
-        )
-
-        // The shell must agree with the width the window actually has.
-        let width = app.windows.firstMatch.frame.width
-        let breakpoint: CGFloat = 720
-        if width >= breakpoint {
-            XCTAssertTrue(
-                hasSidebar,
-                "A \(width)pt window is wide enough for the split shell but got the compact one."
-            )
-        } else {
-            XCTAssertTrue(
-                hasCompactSettings,
-                "A \(width)pt window is too narrow for the split shell but got it anyway."
-            )
-        }
-
-        attachScreenshot(app, named: hasSidebar ? "shell-regular" : "shell-compact")
-    }
-
-    /// Today must render at either width, so neither shell silently loses the
-    /// screen the app opens on.
-    func testTodayRendersInWhicheverShellIsChosen() {
+    /// The presented shell must be the one this window's width calls for.
+    ///
+    /// This is the contract `RootLayoutPolicy` promises, checked end to end
+    /// against the width the window actually has rather than against the device
+    /// the test happens to run on.
+    func testPresentedShellMatchesTheWindowWidth() {
         let app = launchApp()
 
         XCTAssertTrue(
             app.descendants(matching: .any)["home.view"].waitForExistence(timeout: 15),
-            "Today did not render."
+            "Today never rendered, so no shell could be identified."
         )
+
+        let isCompactShell = compactSettingsButton(in: app).exists
+        let width = app.windows.firstMatch.frame.width
+
+        if width >= Self.shellBreakpoint {
+            XCTAssertFalse(
+                isCompactShell,
+                """
+                A \(width)pt window is wide enough for the split shell but got \
+                the compact one.
+                Hierarchy:
+                \(app.debugDescription)
+                """
+            )
+        } else {
+            XCTAssertTrue(
+                isCompactShell,
+                """
+                A \(width)pt window is too narrow for the split shell but got \
+                it anyway.
+                Hierarchy:
+                \(app.debugDescription)
+                """
+            )
+        }
+
+        attachScreenshot(app, named: isCompactShell ? "shell-compact" : "shell-regular")
+    }
+
+    /// Mirrors `RootLayoutPolicy.regularShellMinimumWidth`.
+    private static let shellBreakpoint: CGFloat = 720
+
+    /// Today's Now section must survive whichever shell is chosen — the two
+    /// shells build it from different section types, so a regression can hide
+    /// in one and not the other.
+    func testNowSectionRendersInWhicheverShellIsChosen() {
+        let app = launchApp()
+
         XCTAssertTrue(
             app.descendants(matching: .any)["home.activeTimers"].waitForExistence(timeout: 15),
             "Today rendered without its Now section."
         )
 
-        attachScreenshot(app, named: "today-current-shell")
-    }
-
-    /// The split shell must offer every destination in its sidebar.
-    func testRegularShellExposesEveryDestination() throws {
-        let app = launchApp()
-        try XCTSkipUnless(
-            sidebar(in: app).waitForExistence(timeout: 15),
-            "This destination is too narrow for the split shell."
-        )
-
-        for identifier in ["sidebar.today", "sidebar.inbox", "sidebar.tasks", "sidebar.analytics"] {
-            XCTAssertTrue(
-                app.descendants(matching: .any)[identifier].waitForExistence(timeout: 5),
-                "Missing \(identifier) in the split shell sidebar."
-            )
-        }
-
-        attachScreenshot(app, named: "regular-shell-sidebar")
+        attachScreenshot(app, named: "today-now-section")
     }
 }

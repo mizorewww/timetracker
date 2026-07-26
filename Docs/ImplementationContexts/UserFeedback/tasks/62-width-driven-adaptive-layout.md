@@ -41,9 +41,9 @@
 - [x] A：认领反馈、建立本实现记忆、完成全量平台相关代码普查。
 - [x] B：根 shell 判据改为宽度驱动；合并 iPad/Mac 两份 split view；
   `CompactHome*` 去平台化。（commit `46c5d45d`）
-- [~] C：剩余的 idiom / 平台条件化布局项（卡片圆角、时间线方向、图表轴、
-  Inbox 紧凑判据、任务详情按钮标签）改为宽度驱动。
-- [ ] D：多宽度 UI 截图验收（iPhone / iPad / Mac）。
+- [x] C：剩余的 idiom / 平台条件化布局项改为宽度驱动。
+  （commits `4946bc65`、`fd34377a`）
+- [~] D：多宽度 UI 截图验收（iPhone / iPad）。
 - [ ] E：`make test` 门禁、Release 全设备安装、反馈收口。
 
 ## 约束与边界
@@ -118,6 +118,22 @@
     `PomodoroLayoutPolicy.showsInlineHeader`。
   - accessibility identifier 全部保持原样（`phone.tabView` / `ipad.splitNavigation`），
     它们是既有 XCUITest 契约；重命名推迟到用户的 UI test 改动落地之后。
+
+- 2026-07-26 Checkpoint C（commits `4946bc65`、`fd34377a`）：
+  - 新增环境值 `\.layoutShell`，由 `AppRootView` 发布一次；嵌套视图从"我在多大的
+    空间里"取值，而不是"我在什么设备上"。默认 `.regular`，让脱离 shell 渲染的
+    预览/独立 sheet 拿到宽松版式。
+  - 三处直接 `UIDevice.current.userInterfaceIdiom` 全部消除：
+    `appNativeCard`（iPhone 分组卡 vs 桌面描边卡）、任务详情开始/暂停按钮标签
+    （`.iconOnly` vs `.titleAndIcon`）、根 shell（Checkpoint B 已做）。
+    产品意图不变，判据从设备换成 shell。
+  - `SizeClassLayoutPolicy` 增加 `shell` 参数。macOS 任何 size class 都报
+    `.regular`，单靠 size class 会告诉窄 Mac 窗口"你很宽"。
+  - `TimelineChart.usesVerticalLayout` 原本是 `#if os(iOS)` + size class，
+    所以 macOS 永远画横向轴；现在窄 Mac 窗口和 iPad 分屏与 iPhone 一样走竖向轴。
+  - Inbox 的 `isCompact` 原本在非 iOS 硬编码 false，窄 Mac 窗口会试图塞下完整的
+    接受/忽略文字标签；现在同样按 shell 判定。
+  - `PomodoroSetupViews` 因此可以整块删掉 `effectiveHorizontalSizeClass` 垫片。
 
 ## 验证记录
 

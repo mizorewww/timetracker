@@ -11,7 +11,7 @@
 - [x] 为相对标题/卡片几何补充 UI 验收，并统一实现 owner。
 - [x] 完成针对性回归与实现后截图核对。
 - [x] 完成格式、单元测试和 iPhone/iPad/macOS 普通字号截图验收。
-- [ ] 提交小 checkpoint，执行 Release 全设备安装，标记反馈完成并移除活动链接。
+- [x] 提交小 checkpoint，执行 Release 全设备安装，标记反馈完成并移除活动链接。
 
 ## 唯一范围
 
@@ -33,7 +33,7 @@
 
 - [x] Checkpoint A：领取、现状/历史/测试审计、设计契约。
 - [x] Checkpoint B：测试先行、统一容器与标题、更新主页设计规范。
-- [~] Checkpoint C：跨平台截图、完整门禁、Release 全设备安装和反馈收口。
+- [x] Checkpoint C：跨平台截图、完整门禁、Release 全设备安装和反馈收口。
 
 ## 子代理编排
 
@@ -43,13 +43,13 @@
 ## 资源所有权
 
 - iPhone 红灯/首轮实现批次：`codex-task56-red-iPhone17Pro`，
-  UDID `1F22694D-8D21-43C6-8F8A-37C3FDFB3662`；当前保持 Booted，供实现后
-  同一针对性测试与截图复用。没有仍在运行的 owned XCTest/xcodebuild。
+  UDID `1F22694D-8D21-43C6-8F8A-37C3FDFB3662`；已终止 App，关机并删除。
 - iPad 普通字号批次：`codex-task56-iPadPro13`，
-  UDID `46C294A9-6AA9-43E4-872E-C6128FC56813`；当前保持 Booted，供最终
-  Analytics 共享回归复用。没有仍在运行的 owned XCTest/xcodebuild。
+  UDID `46C294A9-6AA9-43E4-872E-C6128FC56813`；已终止 App，关机并删除。
 - macOS 批次使用当前 Mac destination；测试已终止 App，没有仍在运行的 owned
-  XCTest/xcodebuild。最终清理阶段会再次审计进程。
+  XCTest/xcodebuild。
+- 三个平台的临时 DerivedData、xcresult 和导出截图目录均已删除；进程与设备审计
+  没有发现 owned xcodebuild、XCTest Runner 或同名模拟器残留。
 
 ## 待形成的 UI 验收清单
 
@@ -139,6 +139,15 @@
   摘要、Info 和卡片边界一致。首次运行发现共享 header identifier 落在合并后的
   leaf 会改变旧 XCU descendant 查询，已把 identifier owner 移到保留 children
   的外层容器；macOS、iPhone 和 iPad 最新回归均验证兼容。
+- iPhone 共享页面/行为回归：
+  `testAnalyticsHomeShowsTrackedTaskHeatmaps` 与
+  `testTodayConfiguredHeatmapsStayIndependentByTaskAndMetric` 同批通过，确认 Analytics
+  复用 Heatmap、三种指标、三张独立卡片、Info 内容和旧 identifier 语义均未回归。
+- `CONFIGURATION=Release make build-install-all`：通过。iOS App 与依赖型 Watch
+  companion、macOS App 均签名构建成功；版本 `1.1.170 (225)` 已安装并由
+  `devicectl` 复核在物理 iPad Pro M4 与 iPhone Air 上，macOS 同版本已复制到
+  `/Applications/timetracker.app` 并通过签名校验。Watch companion 已嵌入 iOS App，
+  由配对 iPhone 的 Automatic App Install 管理。
 - `make test`：1433 个测试中 1431 通过；本任务相关的
   `TodayActivityHeatmapRefreshTests`、`TodayActivityHeatmapTests` 与
   `TodayHeatmapRecurrenceProjectionTests` 全部通过。默认门禁仍有两个开始本任务前已知、
@@ -146,3 +155,10 @@
   `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd`
   和
   `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`。
+
+## 采用的库与框架
+
+- 没有新增第三方依赖。
+- 实现继续复用 Apple SwiftUI、Swift Charts 和项目现有 DesignSystem/AppLayout。
+  这是布局 owner 与系统 List/card 语义修正，引入额外图表或布局库会增加跨平台
+  行为漂移，不能提升本任务质量。

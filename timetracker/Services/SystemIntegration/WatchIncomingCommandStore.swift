@@ -8,7 +8,7 @@ struct WatchIncomingCommandStore {
     private let key: String
 
     init(
-        defaults: UserDefaults = .standard,
+        defaults: UserDefaults = AppDefaults.shared,
         key: String = "watch.pendingIncomingCommands.v1"
     ) {
         self.defaults = defaults

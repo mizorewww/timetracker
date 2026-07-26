@@ -2,13 +2,13 @@ import Foundation
 
 extension AppCloudSync {
     static func activateCloudReconciliation() {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         defaults.set(true, forKey: activeCloudReconciliationKey)
         defaults.removeObject(forKey: queuedCloudReconciliationKey)
     }
 
     static func completeCloudReconciliation() {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let hadPendingRecovery = defaults.bool(forKey: queuedCloudReconciliationKey) ||
             defaults.bool(forKey: activeCloudReconciliationKey) ||
             defaults.bool(forKey: cloudRecoveryStoreResetKey)
@@ -21,7 +21,7 @@ extension AppCloudSync {
     }
 
     static func completeCloudDownloadRecovery() {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let wasActive = defaults.bool(forKey: activeCloudDownloadRecoveryKey)
         defaults.removeObject(forKey: activeCloudDownloadRecoveryKey)
         if wasActive {
@@ -30,7 +30,7 @@ extension AppCloudSync {
     }
 
     static func cancelCloudReconciliation() {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let hadReconciliation = defaults.bool(forKey: queuedCloudReconciliationKey) ||
             defaults.bool(forKey: activeCloudReconciliationKey) ||
             defaults.bool(forKey: cloudRecoveryStoreResetKey)

@@ -18,6 +18,17 @@ enum AppDemoDataConfiguration {
         #endif
     }
 
+    /// Whether demo rows may actually be written right now.
+    ///
+    /// `allowsDemoDataCreation` only says the *build* has the demo code. It is
+    /// not sufficient on its own: with the shipping mode `off`, a Debug build
+    /// opens the production CloudKit store, so seeding there tombstones the
+    /// user's real data and syncs both the deletions and the demo rows to their
+    /// iCloud. Demo writes are therefore confined to the isolated demo store.
+    static var allowsDemoDataMutation: Bool {
+        allowsDemoDataCreation && usesLocalDemoStore
+    }
+
     static var currentMode: AutomaticDemoDataMode {
         guard allowsDemoDataCreation else { return .off }
 
@@ -28,11 +39,11 @@ enum AppDemoDataConfiguration {
         }
         if CommandLine.arguments.contains("--cloud-smoke-test"),
            CommandLine.arguments.contains("queueDownloadFromDemo"),
-           UserDefaults.standard.string(forKey: overrideKey) == nil
+           AppDefaults.shared.string(forKey: overrideKey) == nil
         {
             return .seedIfEmpty
         }
-        if let override = UserDefaults.standard.string(forKey: overrideKey),
+        if let override = AppDefaults.shared.string(forKey: overrideKey),
            let mode = AutomaticDemoDataMode(rawValue: override)
         {
             return mode
@@ -79,7 +90,7 @@ enum AppDemoDataConfiguration {
     }
 
     static func disableLocalDemoStoreForCloudSync() {
-        UserDefaults.standard.set(AutomaticDemoDataMode.off.rawValue, forKey: overrideKey)
+        AppDefaults.shared.set(AutomaticDemoDataMode.off.rawValue, forKey: overrideKey)
         SeedData.setAutomaticDemoSeedingDisabled(true)
     }
 }

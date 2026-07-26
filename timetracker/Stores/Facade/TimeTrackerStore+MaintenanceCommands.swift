@@ -19,7 +19,7 @@ extension TimeTrackerStore {
             errorMessage = error.localizedDescription
             return
         }
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let previousAutomaticSuggestions = defaults.object(
             forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
         )

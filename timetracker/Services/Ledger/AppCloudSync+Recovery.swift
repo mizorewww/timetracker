@@ -26,7 +26,7 @@ extension AppCloudSync {
         removeSyncConflictState: (@MainActor () throws -> Void)? = nil,
         beginCloudImportSession: (@MainActor (CloudRecoveryImportKind) throws -> Void)? = nil
     ) -> CloudRecoveryGate {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let shouldResetForDownload = defaults.bool(forKey: pendingCloudDownloadResetKey)
         let shouldResetForUpload = defaults.bool(forKey: pendingCloudUploadResetKey)
         let shouldMarkRecoveryStoreReset = shouldResetForUpload
@@ -88,7 +88,7 @@ extension AppCloudSync {
         beginCloudImportSession: (@MainActor (CloudRecoveryImportKind) throws -> Void)?
     ) -> CloudRecoveryGate {
         if shouldMarkRecoveryStoreReset {
-            UserDefaults.standard.set(true, forKey: cloudRecoveryStoreResetKey)
+            AppDefaults.shared.set(true, forKey: cloudRecoveryStoreResetKey)
         }
         do {
             try storeFileRemover(storeURL)
@@ -129,7 +129,7 @@ extension AppCloudSync {
 
         let importKind: CloudRecoveryImportKind? = if reset == .download {
             .downloadCloud
-        } else if UserDefaults.standard.bool(forKey: queuedCloudReconciliationKey) {
+        } else if AppDefaults.shared.bool(forKey: queuedCloudReconciliationKey) {
             .reconcileWithCloud
         } else {
             nil

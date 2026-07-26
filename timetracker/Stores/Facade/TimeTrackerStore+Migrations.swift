@@ -4,7 +4,7 @@ import SwiftData
 extension TimeTrackerStore {
     func migrateLegacyCountdownEventsIfNeeded(
         context: ModelContext,
-        defaults: UserDefaults = .standard,
+        defaults: UserDefaults = AppDefaults.shared,
         deviceID: String = DeviceIdentity.current
     ) throws {
         guard !defaults.bool(forKey: LegacyCountdownMigrationPolicy.migrationKey) else {

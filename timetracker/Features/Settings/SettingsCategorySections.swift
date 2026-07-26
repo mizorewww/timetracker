@@ -123,7 +123,7 @@ extension SettingsView {
                 pomodoroCount: store.pomodoroRuns.count,
                 cloudAccount: store.syncStatus.accountStatus,
                 cloudContainer: store.syncStatus.containerIdentifier,
-                allowsDemoDataCreation: AppDemoDataConfiguration.allowsDemoDataCreation,
+                allowsDemoDataCreation: AppDemoDataConfiguration.allowsDemoDataMutation,
                 hasDemoData: hasDemoData,
                 onRebuildDemoData: { pendingDestructiveConfirmation = .rebuildDemo },
                 onClearDemoData: { pendingDestructiveConfirmation = .clearDemo },

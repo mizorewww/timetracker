@@ -4,12 +4,12 @@ import OSLog
 extension AppCloudSync {
     static func requestCloudRetryAfterRecovery() {
         AppDemoDataConfiguration.disableLocalDemoStoreForCloudSync()
-        UserDefaults.standard.set(true, forKey: enabledKey)
-        UserDefaults.standard.removeObject(forKey: errorKey)
+        AppDefaults.shared.set(true, forKey: enabledKey)
+        AppDefaults.shared.removeObject(forKey: errorKey)
     }
 
     static func requestCloudUploadReset() {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         defaults.set(true, forKey: pendingCloudUploadResetKey)
         defaults.removeObject(forKey: pendingCloudDownloadResetKey)
         defaults.removeObject(forKey: queuedCloudReconciliationKey)
@@ -20,7 +20,7 @@ extension AppCloudSync {
     }
 
     static func requestCloudDownloadReset() {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         defaults.set(true, forKey: pendingCloudDownloadResetKey)
         defaults.removeObject(forKey: pendingCloudUploadResetKey)
         defaults.removeObject(forKey: queuedCloudReconciliationKey)
@@ -32,7 +32,7 @@ extension AppCloudSync {
     }
 
     static func requestCloudReconciliationReset() {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         defaults.set(true, forKey: pendingCloudUploadResetKey)
         defaults.set(true, forKey: queuedCloudReconciliationKey)
         defaults.removeObject(forKey: pendingCloudDownloadResetKey)

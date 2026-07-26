@@ -9,7 +9,7 @@ final class TimeTrackerAppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_: Notification) {
         guard CommandLine.arguments.contains("--uitesting") else { return }
 
-        UserDefaults.standard.set(false, forKey: "NSQuitAlwaysKeepsWindows")
+        AppDefaults.shared.set(false, forKey: "NSQuitAlwaysKeepsWindows")
         NSApp.setActivationPolicy(.regular)
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {

@@ -65,7 +65,7 @@ build-macos: ## 构建 macOS app(generic/platform=macOS)
 	  DEVELOPMENT_TEAM=$(DEVELOPMENT_TEAM) -allowProvisioningUpdates
 
 .PHONY: build-install-all
-build-install-all: ## 构建 iOS+Watch 与 macOS,安装到设备并复制到 /Applications
+build-install-all: ## 构建 iOS+Watch 与 macOS(默认 Release),安装到设备并复制到 /Applications
 	@$(SCRIPTS)/build_install_all.sh
 
 .PHONY: test

@@ -100,7 +100,7 @@ extension SyncConflictService {
     /// before the destructive reset still distinguish explicit replacement
     /// from reconciliation when the authoritative state had to be quarantined.
     private func inferredPendingLocalIntentForRecoveryMirror() -> SyncPendingLocalIntent {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         if defaults.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) ||
             defaults.bool(forKey: AppCloudSync.activeCloudReconciliationKey)
         {

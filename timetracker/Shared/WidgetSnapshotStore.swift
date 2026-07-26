@@ -60,14 +60,33 @@ nonisolated struct WidgetSnapshotTimelinePolicy: Sendable {
 
 struct SharedWidgetSnapshotStore {
     static let suiteName = "group.me.mezorewww.timetracker"
+    static let testSuiteName = "me.mezorewww.timetracker.widgetsnapshot.tests"
     static let snapshotKey = "widget.activeTimerSnapshot.v1"
     static let widgetKind = "TimeTrackerActiveTimerWidget"
+
+    /// The App Group suite is shared with the installed app and its widget, so a
+    /// test host that used it would publish fixture snapshots straight into the
+    /// user's real widget. Test hosts get a private, non-group suite instead.
+    ///
+    /// The check is inlined rather than delegated to `AppRuntimeEnvironment`
+    /// because this file is also compiled into the widget extension target,
+    /// which does not link the app's runtime-environment sources.
+    static var effectiveSuiteName: String {
+        isTestHostProcess ? testSuiteName : suiteName
+    }
+
+    private static var isTestHostProcess: Bool {
+        let environment = ProcessInfo.processInfo.environment
+        return environment["XCTestConfigurationFilePath"] != nil
+            || environment["XCTestBundlePath"] != nil
+            || CommandLine.arguments.contains("--uitesting")
+    }
 
     var defaults: UserDefaults?
     var encoder: JSONEncoder = .init()
     var decoder: JSONDecoder = .init()
 
-    init(defaults: UserDefaults? = UserDefaults(suiteName: Self.suiteName)) {
+    init(defaults: UserDefaults? = UserDefaults(suiteName: Self.effectiveSuiteName)) {
         self.defaults = defaults
     }
 

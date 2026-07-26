@@ -32,14 +32,14 @@ struct LLMSuggestionCancellationTests {
         )
         store.preferences.llmAutomaticSuggestionsEnabled = true
         let automaticSuggestionsKey = AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
-        let previousAutomaticSuggestionsValue = UserDefaults.standard.object(
+        let previousAutomaticSuggestionsValue = AppDefaults.shared.object(
             forKey: automaticSuggestionsKey
         )
         defer {
             if let previousAutomaticSuggestionsValue {
-                UserDefaults.standard.set(previousAutomaticSuggestionsValue, forKey: automaticSuggestionsKey)
+                AppDefaults.shared.set(previousAutomaticSuggestionsValue, forKey: automaticSuggestionsKey)
             } else {
-                UserDefaults.standard.removeObject(forKey: automaticSuggestionsKey)
+                AppDefaults.shared.removeObject(forKey: automaticSuggestionsKey)
             }
         }
 
@@ -179,15 +179,15 @@ struct LLMSuggestionCancellationTests {
         )
         store.preferences.llmAutomaticSuggestionsEnabled = true
         let automaticSuggestionsKey = AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
-        let previousAutomaticSuggestionsValue = UserDefaults.standard.object(
+        let previousAutomaticSuggestionsValue = AppDefaults.shared.object(
             forKey: automaticSuggestionsKey
         )
-        UserDefaults.standard.set(true, forKey: automaticSuggestionsKey)
+        AppDefaults.shared.set(true, forKey: automaticSuggestionsKey)
         defer {
             if let previousAutomaticSuggestionsValue {
-                UserDefaults.standard.set(previousAutomaticSuggestionsValue, forKey: automaticSuggestionsKey)
+                AppDefaults.shared.set(previousAutomaticSuggestionsValue, forKey: automaticSuggestionsKey)
             } else {
-                UserDefaults.standard.removeObject(forKey: automaticSuggestionsKey)
+                AppDefaults.shared.removeObject(forKey: automaticSuggestionsKey)
             }
         }
 
@@ -263,18 +263,18 @@ struct LLMSuggestionCancellationTests {
         )
         store.preferences.llmAutomaticSuggestionsEnabled = true
         let automaticSuggestionsKey = AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
-        let previousAutomaticSuggestionsValue = UserDefaults.standard.object(
+        let previousAutomaticSuggestionsValue = AppDefaults.shared.object(
             forKey: automaticSuggestionsKey
         )
-        UserDefaults.standard.set(true, forKey: automaticSuggestionsKey)
+        AppDefaults.shared.set(true, forKey: automaticSuggestionsKey)
         defer {
             if let previousAutomaticSuggestionsValue {
-                UserDefaults.standard.set(
+                AppDefaults.shared.set(
                     previousAutomaticSuggestionsValue,
                     forKey: automaticSuggestionsKey
                 )
             } else {
-                UserDefaults.standard.removeObject(forKey: automaticSuggestionsKey)
+                AppDefaults.shared.removeObject(forKey: automaticSuggestionsKey)
             }
         }
 
@@ -342,18 +342,18 @@ struct LLMSuggestionCancellationTests {
         )
         store.preferences.llmAutomaticSuggestionsEnabled = true
         let automaticSuggestionsKey = AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
-        let previousAutomaticSuggestionsValue = UserDefaults.standard.object(
+        let previousAutomaticSuggestionsValue = AppDefaults.shared.object(
             forKey: automaticSuggestionsKey
         )
-        UserDefaults.standard.set(true, forKey: automaticSuggestionsKey)
+        AppDefaults.shared.set(true, forKey: automaticSuggestionsKey)
         defer {
             if let previousAutomaticSuggestionsValue {
-                UserDefaults.standard.set(
+                AppDefaults.shared.set(
                     previousAutomaticSuggestionsValue,
                     forKey: automaticSuggestionsKey
                 )
             } else {
-                UserDefaults.standard.removeObject(forKey: automaticSuggestionsKey)
+                AppDefaults.shared.removeObject(forKey: automaticSuggestionsKey)
             }
         }
 
@@ -421,18 +421,18 @@ struct LLMSuggestionCancellationTests {
         )
         store.preferences.llmAutomaticSuggestionsEnabled = true
         let automaticSuggestionsKey = AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
-        let previousAutomaticSuggestionsValue = UserDefaults.standard.object(
+        let previousAutomaticSuggestionsValue = AppDefaults.shared.object(
             forKey: automaticSuggestionsKey
         )
-        UserDefaults.standard.set(true, forKey: automaticSuggestionsKey)
+        AppDefaults.shared.set(true, forKey: automaticSuggestionsKey)
         defer {
             if let previousAutomaticSuggestionsValue {
-                UserDefaults.standard.set(
+                AppDefaults.shared.set(
                     previousAutomaticSuggestionsValue,
                     forKey: automaticSuggestionsKey
                 )
             } else {
-                UserDefaults.standard.removeObject(forKey: automaticSuggestionsKey)
+                AppDefaults.shared.removeObject(forKey: automaticSuggestionsKey)
             }
         }
 

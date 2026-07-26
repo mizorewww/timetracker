@@ -217,7 +217,7 @@ struct CoreSyncConflictResolutionIdentityTests {
     }
 
     private func withICloudSyncMode(_ body: () throws -> Void) throws {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let previousMode = defaults.string(forKey: AppCloudSync.modeKey)
         let previousEnabled = defaults.object(forKey: AppCloudSync.enabledKey)
         let recoveryKeys = [

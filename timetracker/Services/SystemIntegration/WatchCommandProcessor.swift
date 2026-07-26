@@ -12,7 +12,7 @@ final class UserDefaultsWatchCommandReceiptStore: WatchCommandReceiptStore {
     private let maxReceipts: Int
 
     init(
-        defaults: UserDefaults = .standard,
+        defaults: UserDefaults = AppDefaults.shared,
         key: String = "watch.processedCommandIDs.v1",
         maxReceipts: Int = 512
     ) {

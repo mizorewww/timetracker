@@ -249,7 +249,11 @@ def main() -> int:
     root = Path(__file__).resolve().parents[2]
     project = env("PROJECT", str(root / "timetracker.xcodeproj"))
     scheme = env("SCHEME", "timetracker")
-    configuration = env("CONFIGURATION", "Debug")
+    # Release by default: this target installs onto the user's real devices and
+    # /Applications. A Debug binary there defines DEBUG, which unlocks the demo
+    # data and cloud smoke-test entry points against the production CloudKit
+    # store. Pass CONFIGURATION=Debug explicitly to opt back in.
+    configuration = env("CONFIGURATION", "Release")
     team_id = os.environ.get("DEVELOPMENT_TEAM", "LT98S43NKA")
     product_name = env("PRODUCT_NAME", "timetracker")
     watch_product_name = env("WATCH_PRODUCT_NAME", "timetrackerWatchApp")
@@ -305,7 +309,7 @@ def main() -> int:
         "The paired Apple Watch installs the embedded companion when Automatic App Install "
         "is enabled in the iPhone Watch app.\n\n"
         "Tips:\n"
-        "  CONFIGURATION=Release make build-install-all\n"
+        "  CONFIGURATION=Debug make build-install-all   # unlocks demo/smoke-test entry points\n"
         "  LAUNCH_AFTER_INSTALL=1 make build-install-all\n"
         "  ALLOW_DEVICE_FAILURES=1 make build-install-all\n"
     )

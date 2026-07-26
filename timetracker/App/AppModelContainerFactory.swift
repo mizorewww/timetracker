@@ -119,7 +119,7 @@ extension timetrackerApp {
             )
         }
 
-        if UserDefaults.standard.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) ||
+        if AppDefaults.shared.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) ||
             AppCloudSync.isCloudImportRecoveryActive ||
             completedRecovery.reset == .download
         {

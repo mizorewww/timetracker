@@ -26,25 +26,25 @@ enum AppCloudSync {
     static let modeDemoData = "Demo data"
 
     static var isEnabled: Bool {
-        if UserDefaults.standard.object(forKey: enabledKey) == nil {
+        if AppDefaults.shared.object(forKey: enabledKey) == nil {
             return true
         }
-        return UserDefaults.standard.bool(forKey: enabledKey)
+        return AppDefaults.shared.bool(forKey: enabledKey)
     }
 
     static var persistenceMode: String {
-        UserDefaults.standard.string(forKey: modeKey) ?? modeLocal
+        AppDefaults.shared.string(forKey: modeKey) ?? modeLocal
     }
 
     static var lastError: String? {
-        UserDefaults.standard.string(forKey: errorKey)
+        AppDefaults.shared.string(forKey: errorKey)
     }
 
     static var persistenceWriteSafety: PersistenceWriteSafety {
         if persistenceMode == modeInMemoryFallback {
             return .ephemeral(lastError)
         }
-        if UserDefaults.standard.bool(forKey: pendingCloudDownloadResetKey) ||
+        if AppDefaults.shared.bool(forKey: pendingCloudDownloadResetKey) ||
             isCloudRecoveryPending
         {
             return .cloudRecoveryPending(lastError)
@@ -58,16 +58,16 @@ enum AppCloudSync {
 
     static var isCloudRecoveryPending: Bool {
         isCloudReconciliationActive ||
-            UserDefaults.standard.bool(forKey: cloudRecoveryStoreResetKey) ||
+            AppDefaults.shared.bool(forKey: cloudRecoveryStoreResetKey) ||
             isCloudDownloadRecoveryActive
     }
 
     static var isCloudReconciliationActive: Bool {
-        UserDefaults.standard.bool(forKey: activeCloudReconciliationKey)
+        AppDefaults.shared.bool(forKey: activeCloudReconciliationKey)
     }
 
     static var isCloudDownloadRecoveryActive: Bool {
-        UserDefaults.standard.bool(forKey: activeCloudDownloadRecoveryKey)
+        AppDefaults.shared.bool(forKey: activeCloudDownloadRecoveryKey)
     }
 
     static var isCloudImportRecoveryActive: Bool {
@@ -108,7 +108,7 @@ enum AppCloudSync {
     static var shouldRefreshLocalFallbackRecoverySnapshotBeforeReset: Bool {
         isEnabled &&
             persistenceMode == modeLocalFallback &&
-            UserDefaults.standard.bool(forKey: pendingCloudDownloadResetKey) == false
+            AppDefaults.shared.bool(forKey: pendingCloudDownloadResetKey) == false
     }
 
     static func requireUserWritesAllowed() throws {
@@ -128,7 +128,7 @@ enum AppCloudSync {
     }
 
     static func recordCloudKitEnabled(after recovery: CompletedCloudRecovery) {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         AppDemoDataConfiguration.disableLocalDemoStoreForCloudSync()
         defaults.set(modeICloud, forKey: modeKey)
         defaults.removeObject(forKey: errorKey)
@@ -153,7 +153,7 @@ enum AppCloudSync {
     static func recordCloudKitDisabledByUser() {
         cancelCloudReconciliation()
         completeCloudDownloadRecovery()
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         defaults.removeObject(forKey: pendingCloudDownloadResetKey)
         defaults.set(modeLocal, forKey: modeKey)
         defaults.removeObject(forKey: errorKey)
@@ -161,14 +161,14 @@ enum AppCloudSync {
     }
 
     static func recordLocalFallback(error: Error) {
-        UserDefaults.standard.set(modeLocalFallback, forKey: modeKey)
-        UserDefaults.standard.set(error.localizedDescription, forKey: errorKey)
+        AppDefaults.shared.set(modeLocalFallback, forKey: modeKey)
+        AppDefaults.shared.set(error.localizedDescription, forKey: errorKey)
         logger.error("CloudKit storage fell back to local store: \(error.localizedDescription, privacy: .public)")
     }
 
     static func recordEmergencyInMemoryFallback(error: Error) {
-        UserDefaults.standard.set(modeInMemoryFallback, forKey: modeKey)
-        UserDefaults.standard.set(
+        AppDefaults.shared.set(modeInMemoryFallback, forKey: modeKey)
+        AppDefaults.shared.set(
             String(format: AppStrings.localized("sync.temporaryStoreError"), error.localizedDescription),
             forKey: errorKey
         )
@@ -176,18 +176,18 @@ enum AppCloudSync {
     }
 
     static func recordUITesting() {
-        UserDefaults.standard.set(modeUITest, forKey: modeKey)
-        UserDefaults.standard.removeObject(forKey: errorKey)
-        UserDefaults.standard.removeObject(forKey: pendingCloudUploadResetKey)
-        UserDefaults.standard.removeObject(forKey: pendingCloudDownloadResetKey)
-        UserDefaults.standard.removeObject(forKey: queuedCloudReconciliationKey)
-        UserDefaults.standard.removeObject(forKey: activeCloudReconciliationKey)
-        UserDefaults.standard.removeObject(forKey: cloudRecoveryStoreResetKey)
-        UserDefaults.standard.removeObject(forKey: activeCloudDownloadRecoveryKey)
+        AppDefaults.shared.set(modeUITest, forKey: modeKey)
+        AppDefaults.shared.removeObject(forKey: errorKey)
+        AppDefaults.shared.removeObject(forKey: pendingCloudUploadResetKey)
+        AppDefaults.shared.removeObject(forKey: pendingCloudDownloadResetKey)
+        AppDefaults.shared.removeObject(forKey: queuedCloudReconciliationKey)
+        AppDefaults.shared.removeObject(forKey: activeCloudReconciliationKey)
+        AppDefaults.shared.removeObject(forKey: cloudRecoveryStoreResetKey)
+        AppDefaults.shared.removeObject(forKey: activeCloudDownloadRecoveryKey)
     }
 
     static func recordDemoDataMode() {
-        UserDefaults.standard.set(modeDemoData, forKey: modeKey)
-        UserDefaults.standard.removeObject(forKey: errorKey)
+        AppDefaults.shared.set(modeDemoData, forKey: modeKey)
+        AppDefaults.shared.removeObject(forKey: errorKey)
     }
 }

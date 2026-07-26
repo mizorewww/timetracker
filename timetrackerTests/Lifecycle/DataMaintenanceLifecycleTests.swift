@@ -7,7 +7,7 @@ import Testing
 struct DataMaintenanceLifecycleTests {
     @Test @MainActor
     func resetDataHidesAllUserFactsAndRetainsCloudDeletionTombstones() throws {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let automaticSuggestionsKey = AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
         let previousAutomaticSuggestions = defaults.object(forKey: automaticSuggestionsKey)
         defer {
@@ -220,7 +220,7 @@ struct DataMaintenanceLifecycleTests {
 
     @Test @MainActor
     func optimizeDatabaseRollsBackWhenThePersistentStoreRejectsSaving() throws {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let previousMode = defaults.object(forKey: AppCloudSync.modeKey)
         defaults.set(AppCloudSync.modeUITest, forKey: AppCloudSync.modeKey)
         defer {

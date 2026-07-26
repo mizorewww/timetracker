@@ -63,7 +63,7 @@ struct CoreCloudRecoveryGateTests {
     @Test @MainActor
     func localFallbackPreflightRecapturesACommitMissedByPostCommitRecording() throws {
         try withRecoveryDefaults {
-            let defaults = UserDefaults.standard
+            let defaults = AppDefaults.shared
             defaults.set(true, forKey: AppCloudSync.enabledKey)
             defaults.set(AppCloudSync.modeLocalFallback, forKey: AppCloudSync.modeKey)
 
@@ -154,7 +154,7 @@ struct CoreCloudRecoveryGateTests {
     @Test @MainActor
     func explicitDownloadRecoveryDoesNotRecaptureTheLocalFallbackBranch() {
         withRecoveryDefaults {
-            let defaults = UserDefaults.standard
+            let defaults = AppDefaults.shared
             defaults.set(true, forKey: AppCloudSync.enabledKey)
             defaults.set(AppCloudSync.modeLocalFallback, forKey: AppCloudSync.modeKey)
             defaults.set(true, forKey: AppCloudSync.pendingCloudDownloadResetKey)
@@ -166,7 +166,7 @@ struct CoreCloudRecoveryGateTests {
     @Test @MainActor
     func missingAndUnreadableUploadBackupsDeferRecovery() {
         withRecoveryDefaults {
-            let defaults = UserDefaults.standard
+            let defaults = AppDefaults.shared
             let missingBackup = SyncConflictService.hasDefaultPendingForcedUploadBackup(
                 loadAuthoritativeSnapshot: { nil },
                 loadRecoveryMirror: { nil }
@@ -221,7 +221,7 @@ struct CoreCloudRecoveryGateTests {
     @Test @MainActor
     func persistentStoreDeletionFailureKeepsUploadPending() throws {
         try withRecoveryDefaults {
-            let defaults = UserDefaults.standard
+            let defaults = AppDefaults.shared
             defaults.set(true, forKey: AppCloudSync.pendingCloudUploadResetKey)
             var stateRemovalCount = 0
             let storeURL = try makeTemporaryStoreURL()
@@ -247,7 +247,7 @@ struct CoreCloudRecoveryGateTests {
     @Test @MainActor
     func downloadStateDeletionFailureKeepsDownloadPending() throws {
         try withRecoveryDefaults {
-            let defaults = UserDefaults.standard
+            let defaults = AppDefaults.shared
             defaults.set(true, forKey: AppCloudSync.pendingCloudDownloadResetKey)
             var storeRemovalCount = 0
             let storeURL = try makeTemporaryStoreURL()
@@ -273,7 +273,7 @@ struct CoreCloudRecoveryGateTests {
     @Test @MainActor
     func importSessionWriteFailureKeepsRecoveryPendingAndReadOnly() {
         withRecoveryDefaults {
-            let defaults = UserDefaults.standard
+            let defaults = AppDefaults.shared
             AppCloudSync.requestCloudDownloadReset()
 
             let gate = AppCloudSync.performPendingCloudRecoveryResetIfNeeded(
@@ -297,7 +297,7 @@ struct CoreCloudRecoveryGateTests {
     @Test @MainActor
     func explicitUploadResetStaysReadOnlyUntilBootstrapRestoresProtectedData() throws {
         try withRecoveryDefaults {
-            let defaults = UserDefaults.standard
+            let defaults = AppDefaults.shared
             defaults.set(true, forKey: AppCloudSync.pendingCloudUploadResetKey)
             defaults.set("previous recovery error", forKey: AppCloudSync.errorKey)
             let storeURL = try makeTemporaryStoreURL()
@@ -334,7 +334,7 @@ struct CoreCloudRecoveryGateTests {
     @Test @MainActor
     func queuedReconciliationBecomesActiveOnlyAfterCloudContainerStarts() {
         withRecoveryDefaults {
-            let defaults = UserDefaults.standard
+            let defaults = AppDefaults.shared
             AppCloudSync.requestCloudReconciliationReset()
             #expect(defaults.bool(forKey: AppCloudSync.queuedCloudReconciliationKey))
             #expect(AppCloudSync.isCloudReconciliationActive == false)
@@ -381,7 +381,7 @@ struct CoreCloudRecoveryGateTests {
                 Issue.record("Failed destructive reset should remain pending")
                 return
             }
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.cloudRecoveryStoreResetKey))
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.cloudRecoveryStoreResetKey))
             #expect(AppCloudSync.allowsUserWrites == false)
         }
     }
@@ -400,7 +400,7 @@ struct CoreCloudRecoveryGateTests {
                 Issue.record("Failed explicit reset should remain pending")
                 return
             }
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.cloudRecoveryStoreResetKey))
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.cloudRecoveryStoreResetKey))
             #expect(AppCloudSync.allowsUserWrites == false)
         }
     }
@@ -408,7 +408,7 @@ struct CoreCloudRecoveryGateTests {
     @Test @MainActor
     func downloadResetKeepsRecoveryReadOnlyUntilServiceCompletesIt() {
         withRecoveryDefaults {
-            let defaults = UserDefaults.standard
+            let defaults = AppDefaults.shared
             AppCloudSync.requestCloudDownloadReset()
             var startedImportKind: CloudRecoveryImportKind?
             let gate = AppCloudSync.performPendingCloudRecoveryResetIfNeeded(
@@ -442,24 +442,24 @@ struct CoreCloudRecoveryGateTests {
                 hasProtectedSnapshot: { true },
                 loadIntent: { .reconcileWithCloud }
             ))
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.queuedCloudReconciliationKey))
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.queuedCloudReconciliationKey))
 
             AppCloudSync.completeCloudReconciliation()
-            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+            AppDefaults.shared.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
             #expect(AppCloudSync.preparePendingCloudRecoveryReset(
                 hasProtectedSnapshot: { true },
                 loadIntent: { .explicitlyReplaceCloud }
             ))
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) == false)
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) == false)
         }
     }
 
     @Test @MainActor
     func interruptedImportRecoveryReusesOnlyAJournaledFreshStore() {
         withRecoveryDefaults {
-            let defaults = UserDefaults.standard
+            let defaults = AppDefaults.shared
 
             defaults.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
             AppCloudSync.prepareInterruptedCloudDownloadRecovery(
@@ -488,7 +488,7 @@ struct CoreCloudRecoveryGateTests {
     @Test @MainActor
     func recoveryRequestsAreMutuallyExclusiveAndLastChoiceWins() {
         withRecoveryDefaults {
-            let defaults = UserDefaults.standard
+            let defaults = AppDefaults.shared
 
             defaults.set(true, forKey: AppCloudSync.activeCloudReconciliationKey)
             defaults.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
@@ -513,7 +513,7 @@ struct CoreCloudRecoveryGateTests {
     @Test @MainActor
     func conflictingLegacyRecoveryRequestsCannotDeleteTheStore() {
         withRecoveryDefaults {
-            let defaults = UserDefaults.standard
+            let defaults = AppDefaults.shared
             defaults.set(true, forKey: AppCloudSync.pendingCloudUploadResetKey)
             defaults.set(true, forKey: AppCloudSync.pendingCloudDownloadResetKey)
             var removalCount = 0
@@ -537,7 +537,7 @@ struct CoreCloudRecoveryGateTests {
     @Test @MainActor
     func cancellingReconciliationDoesNotCancelAnUnrelatedExplicitUpload() {
         withRecoveryDefaults {
-            let defaults = UserDefaults.standard
+            let defaults = AppDefaults.shared
             defaults.set(true, forKey: AppCloudSync.pendingCloudUploadResetKey)
             AppCloudSync.cancelCloudReconciliation()
             #expect(defaults.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
@@ -560,7 +560,7 @@ struct CoreCloudRecoveryGateTests {
         try withRecoveryDefaults {
             let storeURL = try makeTemporaryStoreURL()
             defer { removeTemporaryStoreDirectory(for: storeURL) }
-            let defaults = UserDefaults.standard
+            let defaults = AppDefaults.shared
             defaults.set(true, forKey: AppCloudSync.pendingCloudDownloadResetKey)
             let scope = TimerStoreScope(persistentStoreURL: storeURL)
             let lock = StoreScopedTimerMutationLock()
@@ -606,7 +606,7 @@ struct CoreCloudRecoveryGateTests {
         try withRecoveryDefaults {
             let storeURL = try makeTemporaryStoreURL()
             defer { removeTemporaryStoreDirectory(for: storeURL) }
-            let defaults = UserDefaults.standard
+            let defaults = AppDefaults.shared
             defaults.set(true, forKey: AppCloudSync.pendingCloudUploadResetKey)
             let suffixes = ["", "-wal", "-shm"]
             for suffix in suffixes {
@@ -646,7 +646,7 @@ struct CoreCloudRecoveryGateTests {
 
     @MainActor
     private func withRecoveryDefaults(_ operation: () throws -> Void) rethrows {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let keys = [
             AppCloudSync.enabledKey,
             AppCloudSync.modeKey,

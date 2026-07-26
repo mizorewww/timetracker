@@ -168,7 +168,7 @@ struct SyncConflictService {
     }
 
     func requireNoAttachedCloudRecovery() throws {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         guard AppCloudSync.isCloudImportRecoveryActive == false,
               defaults.bool(forKey: AppCloudSync.cloudRecoveryStoreResetKey) == false
         else {

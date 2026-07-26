@@ -30,7 +30,7 @@ struct CoreCloudAccountOutcomeTests {
 
     @Test @MainActor
     func accountCheckerPreservesThrownFailureWithoutPersistingDisplayText() async {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let previousValue = defaults.object(forKey: AppCloudSync.accountStatusKey)
         defaults.set("legacy localized status", forKey: AppCloudSync.accountStatusKey)
         defer {

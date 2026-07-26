@@ -175,29 +175,68 @@ struct DemoDataLifecycleTests {
         #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty)
     }
 
-    @Test
-    func nonDebugBuildsCannotEnableOrCreateDemoData() throws {
-        let configurationSource = try sourceText("timetracker/App/AppDemoDataConfiguration.swift")
-        let seedSource = try sourceText("timetracker/App/SeedData.swift")
-        let demoBuildSource = try sourceText("timetracker/App/SeedData+DemoBuild.swift")
-        let settingsSource = try sourceText("timetracker/Features/Settings/SettingsDataSectionsViews.swift")
+    @Test @MainActor
+    func demoDataCannotBeRebuiltWhileTheProductionStoreIsOpen() throws {
+        // Mode `off` is what ships, and it means the app opened the real
+        // CloudKit-backed store. Rebuilding demo data there would tombstone the
+        // user's rows and sync both the deletions and the demo rows to iCloud.
+        prepareAutomaticDemoSeeding(demoMode: .off)
+        defer { resetDemoSeedingDefaults() }
 
-        #expect(configurationSource.contains("guard allowsDemoDataCreation else { return .off }"))
-        #expect(seedSource.contains("guard AppDemoDataConfiguration.allowsDemoDataCreation else { return }"))
-        #expect(seedSource.contains("throw SeedDataError.demoDataCreationUnavailable"))
-        #expect(demoBuildSource.contains("#if DEBUG"))
-        #expect(demoBuildSource.contains("#else\nextension SeedData"))
-        #expect(settingsSource.contains("if allowsDemoDataCreation {"))
+        #expect(AppDemoDataConfiguration.usesLocalDemoStore == false)
+        #expect(AppDemoDataConfiguration.allowsDemoDataMutation == false)
+
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let userTask = try taskRepository.createTask(
+            title: "Real Work",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+
+        #expect(throws: SeedData.SeedDataError.self) {
+            try SeedData.replaceWithDemoData(context: context)
+        }
+
+        // The user's row survives untouched — no tombstone, no demo rows.
+        #expect(try taskRepository.allNodes().map(\.title) == ["Real Work"])
+        #expect(userTask.deletedAt == nil)
+    }
+
+    @Test @MainActor
+    func demoDataRebuildIsAllowedOnceTheIsolatedDemoStoreIsSelected() throws {
+        prepareAutomaticDemoSeeding(demoMode: .seedIfEmpty)
+        defer { resetDemoSeedingDefaults() }
+
+        #expect(AppDemoDataConfiguration.usesLocalDemoStore)
+        #expect(AppDemoDataConfiguration.allowsDemoDataMutation)
+
+        let context = try makeTestContext()
+        try SeedData.replaceWithDemoData(context: context)
+
+        #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty == false)
     }
 
     @Test
-    func demoModeIsExplicitAndUsesAnIsolatedPersistentStore() throws {
-        let configurationSource = try sourceText("timetracker/App/AppDemoDataConfiguration.swift")
+    func theDemoStoreIsAFileSeparateFromTheProductionStore() {
+        let demoURL = AppDemoDataConfiguration.persistentStoreURL
+        let productionURL = AppCloudSync.persistentStoreURL
+
+        #expect(demoURL != productionURL)
+        #expect(demoURL.lastPathComponent == "TimeTracker-Demo.store")
+        #expect(demoURL.deletingLastPathComponent() == productionURL.deletingLastPathComponent())
+    }
+
+    @Test
+    func theShippedBuildConfigurationNeverEnablesAutomaticSeeding() throws {
+        // A configuration gate, not a logic scan: the pbxproj is the only place
+        // the shipped Info.plist value is declared.
         let projectSource = try sourceText("timetracker.xcodeproj/project.pbxproj")
 
-        #expect(configurationSource.contains("return .off"))
-        #expect(configurationSource.contains("TimeTracker-Demo.store"))
         #expect(projectSource.contains("TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE = seedIfEmpty;") == false)
+        #expect(projectSource.contains("TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE = replaceOnLaunch;") == false)
+        #expect(projectSource.contains("TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE = off;"))
     }
 
     @Test
@@ -270,22 +309,22 @@ struct DemoDataLifecycleTests {
         disabled: Bool = false,
         lastError: String? = nil
     ) {
-        UserDefaults.standard.set(demoMode.rawValue, forKey: AppDemoDataConfiguration.overrideKey)
-        UserDefaults.standard.set(disabled, forKey: SeedData.automaticDemoSeedingDisabledKey)
-        UserDefaults.standard.set(mode, forKey: AppCloudSync.modeKey)
+        AppDefaults.shared.set(demoMode.rawValue, forKey: AppDemoDataConfiguration.overrideKey)
+        AppDefaults.shared.set(disabled, forKey: SeedData.automaticDemoSeedingDisabledKey)
+        AppDefaults.shared.set(mode, forKey: AppCloudSync.modeKey)
         if let lastError {
-            UserDefaults.standard.set(lastError, forKey: AppCloudSync.errorKey)
+            AppDefaults.shared.set(lastError, forKey: AppCloudSync.errorKey)
         } else {
-            UserDefaults.standard.removeObject(forKey: AppCloudSync.errorKey)
+            AppDefaults.shared.removeObject(forKey: AppCloudSync.errorKey)
         }
     }
 
     @MainActor
     private func resetDemoSeedingDefaults() {
-        UserDefaults.standard.removeObject(forKey: AppDemoDataConfiguration.overrideKey)
-        UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey)
-        UserDefaults.standard.removeObject(forKey: AppCloudSync.modeKey)
-        UserDefaults.standard.removeObject(forKey: AppCloudSync.errorKey)
-        UserDefaults.standard.removeObject(forKey: AppCloudSync.accountStatusKey)
+        AppDefaults.shared.removeObject(forKey: AppDemoDataConfiguration.overrideKey)
+        AppDefaults.shared.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey)
+        AppDefaults.shared.removeObject(forKey: AppCloudSync.modeKey)
+        AppDefaults.shared.removeObject(forKey: AppCloudSync.errorKey)
+        AppDefaults.shared.removeObject(forKey: AppCloudSync.accountStatusKey)
     }
 }

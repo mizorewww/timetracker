@@ -7,7 +7,7 @@ import Testing
 struct PersistenceWriteSafetyTests {
     @Test @MainActor
     func isolatedStoreDoesNotInheritOrObserveApplicationRecoveryState() throws {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let key = AppCloudSync.activeCloudReconciliationKey
         let previousValue = defaults.object(forKey: key)
         defer {

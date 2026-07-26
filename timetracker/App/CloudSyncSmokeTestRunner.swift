@@ -63,11 +63,11 @@ enum CloudSyncSmokeTestRunner {
 
         case .queueUpload:
             logVisibleState(context: context, prefix: "before-queue")
-            UserDefaults.standard.set(AppCloudSync.modeLocalFallback, forKey: AppCloudSync.modeKey)
+            AppDefaults.shared.set(AppCloudSync.modeLocalFallback, forKey: AppCloudSync.modeKey)
             let result = try SyncConflictService().forceUploadLocalData(context: context)
             try store.refresh()
             log("queueUploadResult=\(String(describing: result))")
-            log("pendingUploadReset=\(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))")
+            log("pendingUploadReset=\(AppDefaults.shared.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))")
             logVisibleState(context: context, prefix: "after-queue")
 
         case .verifyUploadRestart:
@@ -86,8 +86,8 @@ enum CloudSyncSmokeTestRunner {
             try store.refresh()
             log("queueDownloadResult=\(String(describing: result))")
             log("demoMode(afterQueue)=\(AppDemoDataConfiguration.currentMode.rawValue)")
-            log("demoOverride(afterQueue)=\(UserDefaults.standard.string(forKey: AppDemoDataConfiguration.overrideKey) ?? "nil")")
-            log("pendingDownloadReset=\(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudDownloadResetKey))")
+            log("demoOverride(afterQueue)=\(AppDefaults.shared.string(forKey: AppDemoDataConfiguration.overrideKey) ?? "nil")")
+            log("pendingDownloadReset=\(AppDefaults.shared.bool(forKey: AppCloudSync.pendingCloudDownloadResetKey))")
             logVisibleState(context: context, prefix: "after-download-queue")
 
         case .verifyDownloadRestart:
@@ -107,8 +107,8 @@ enum CloudSyncSmokeTestRunner {
         requireStoredTask: Bool
     ) async throws {
         let expectedID = storedTaskID()
-        log("pendingUploadReset=\(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))")
-        log("pendingDownloadReset=\(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudDownloadResetKey))")
+        log("pendingUploadReset=\(AppDefaults.shared.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))")
+        log("pendingDownloadReset=\(AppDefaults.shared.bool(forKey: AppCloudSync.pendingCloudDownloadResetKey))")
         log("persistenceMode(after)=\(AppCloudSync.persistenceMode)")
         log("demoMode(after)=\(AppDemoDataConfiguration.currentMode.rawValue)")
 
@@ -136,8 +136,8 @@ enum CloudSyncSmokeTestRunner {
     }
 
     private static func seedVisibleTask(context: ModelContext) throws {
-        let token = UserDefaults.standard.string(forKey: tokenKey) ?? UUID().uuidString
-        UserDefaults.standard.set(token, forKey: tokenKey)
+        let token = AppDefaults.shared.string(forKey: tokenKey) ?? UUID().uuidString
+        AppDefaults.shared.set(token, forKey: tokenKey)
         if let existingID = storedTaskID(),
            try visibleTasks(context: context).contains(where: { $0.id == existingID })
         {
@@ -153,12 +153,12 @@ enum CloudSyncSmokeTestRunner {
             colorHex: "0EA5E9",
             iconName: "icloud"
         )
-        UserDefaults.standard.set(task.id.uuidString, forKey: taskIDKey)
+        AppDefaults.shared.set(task.id.uuidString, forKey: taskIDKey)
         log("seedTaskID=\(task.id.uuidString)")
     }
 
     private static func storedTaskID() -> UUID? {
-        UserDefaults.standard.string(forKey: taskIDKey).flatMap(UUID.init(uuidString:))
+        AppDefaults.shared.string(forKey: taskIDKey).flatMap(UUID.init(uuidString:))
     }
 
     private static func visibleTasks(context: ModelContext) throws -> [TaskNode] {

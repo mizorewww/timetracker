@@ -222,7 +222,7 @@ extension TimeTrackerStore {
         preferenceDomainStore.refresh(
             syncedPreferences: currentPreferences,
             localLLMAPIKey: "",
-            localLLMAutomaticSuggestionsEnabled: UserDefaults.standard.bool(
+            localLLMAutomaticSuggestionsEnabled: AppDefaults.shared.bool(
                 forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
             )
         )

@@ -1996,7 +1996,7 @@ struct CoreWatchCommandTests {
 
 @MainActor
 private func withWatchCloudSyncMode(_ body: () throws -> Void) throws {
-    let defaults = UserDefaults.standard
+    let defaults = AppDefaults.shared
     let previousMode = defaults.object(forKey: AppCloudSync.modeKey)
     let previousUploadReset = defaults.object(forKey: AppCloudSync.pendingCloudUploadResetKey)
     let previousDownloadReset = defaults.object(forKey: AppCloudSync.pendingCloudDownloadResetKey)

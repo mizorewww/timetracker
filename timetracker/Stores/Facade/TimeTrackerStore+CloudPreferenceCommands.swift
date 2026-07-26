@@ -6,7 +6,7 @@ extension TimeTrackerStore {
         guard value != preferences.cloudSyncEnabled else { return true }
         if !value {
             AppCloudSync.cancelCloudReconciliation()
-            UserDefaults.standard.set(false, forKey: AppCloudSync.enabledKey)
+            AppDefaults.shared.set(false, forKey: AppCloudSync.enabledKey)
             preferences.cloudSyncEnabled = false
             return true
         }
@@ -19,11 +19,11 @@ extension TimeTrackerStore {
                     context: modelContext
                 )
             }
-            UserDefaults.standard.set(true, forKey: AppCloudSync.enabledKey)
+            AppDefaults.shared.set(true, forKey: AppCloudSync.enabledKey)
             preferences.cloudSyncEnabled = true
             return true
         } catch {
-            UserDefaults.standard.set(false, forKey: AppCloudSync.enabledKey)
+            AppDefaults.shared.set(false, forKey: AppCloudSync.enabledKey)
             preferences.cloudSyncEnabled = false
             errorMessage = error.localizedDescription
             return false

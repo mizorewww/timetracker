@@ -49,7 +49,7 @@ extension TimeTrackerStore {
         try preferenceDomainStore.refresh(
             syncedPreferences: fetchSyncedPreferences(),
             localLLMAPIKey: llmCredentialStore.readAPIKey() ?? "",
-            localLLMAutomaticSuggestionsEnabled: UserDefaults.standard.bool(
+            localLLMAutomaticSuggestionsEnabled: AppDefaults.shared.bool(
                 forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
             )
         )

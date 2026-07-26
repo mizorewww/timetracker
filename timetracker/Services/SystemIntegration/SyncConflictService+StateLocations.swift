@@ -53,6 +53,11 @@ extension SyncConflictService {
         )
     }
 
+    /// Application Support is shared with the installed app on unsandboxed
+    /// macOS, so a test host writing the default directory would leave a
+    /// snapshot that the real app later replays into the production store —
+    /// re-inserting Inbox items the user had already deleted. Test hosts get
+    /// their own directory via `AppRuntimeEnvironment.namespaced(_:)`.
     nonisolated static func defaultStateDirectoryURL() throws -> URL {
         let baseURL = try FileManager.default.url(
             for: .applicationSupportDirectory,
@@ -60,6 +65,9 @@ extension SyncConflictService {
             appropriateFor: nil,
             create: true
         )
-        return baseURL.appendingPathComponent(Self.stateDirectoryName, isDirectory: true)
+        return baseURL.appendingPathComponent(
+            AppRuntimeEnvironment.namespaced(Self.stateDirectoryName),
+            isDirectory: true
+        )
     }
 }

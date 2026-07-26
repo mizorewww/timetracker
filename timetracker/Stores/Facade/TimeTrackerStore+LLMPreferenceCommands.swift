@@ -54,7 +54,7 @@ extension TimeTrackerStore {
     }
 
     func setLLMAutomaticSuggestionsEnabled(_ value: Bool) {
-        UserDefaults.standard.set(value, forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
+        AppDefaults.shared.set(value, forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
         preferences.llmAutomaticSuggestionsEnabled = value
         if value {
             autoSuggestInboxItemsIfNeeded()

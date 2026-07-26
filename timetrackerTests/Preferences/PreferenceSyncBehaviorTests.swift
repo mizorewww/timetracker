@@ -226,7 +226,7 @@ struct PreferenceSyncBehaviorTests {
 
     @Test @MainActor
     func preferenceStoreFetchIncludesTombstonesBeforeResolvingLogicalKeys() throws {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let previousMigration = defaults.object(forKey: SyncedPreferenceService.migrationKey)
         defer {
             if let previousMigration {
@@ -307,7 +307,7 @@ struct PreferenceSyncBehaviorTests {
 
     @Test @MainActor
     func syncedPreferenceMigrationImportsLegacyUserDefaults() throws {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let keys = AppPreferenceKey.allCases.map(\.rawValue) + [
             AppCloudSync.enabledKey,
             SyncedPreferenceService.migrationKey,
@@ -398,7 +398,7 @@ struct PreferenceSyncBehaviorTests {
 
     @Test @MainActor
     func freshDeviceMigrationDoesNotPersistDefaultsAheadOfCloudImport() throws {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let keys = AppPreferenceKey.allCases.map(\.rawValue) + [SyncedPreferenceService.migrationKey]
         let previousValues = Dictionary(uniqueKeysWithValues: keys.map { ($0, defaults.object(forKey: $0)) })
         defer {
@@ -435,7 +435,7 @@ struct PreferenceSyncBehaviorTests {
 
     @Test @MainActor
     func legacyPreferenceMigrationDoesNotResurrectAKeyBehindATombstone() throws {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let preferenceKey = AppPreferenceKey.defaultFocusMinutes.rawValue
         let previousPreference = defaults.object(forKey: preferenceKey)
         let previousMigration = defaults.object(forKey: SyncedPreferenceService.migrationKey)
@@ -480,7 +480,7 @@ struct PreferenceSyncBehaviorTests {
 
     @Test @MainActor
     func settingsWriteSyncedPreferencesAndDeviceLocalCloudSetting() throws {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let previousMigration = defaults.object(forKey: SyncedPreferenceService.migrationKey)
         let previousCloud = defaults.object(forKey: AppCloudSync.enabledKey)
         let cloudRecoveryKeys = [
@@ -600,7 +600,7 @@ struct PreferenceSyncBehaviorTests {
 
     @Test @MainActor
     func legacySyncedCloudSettingCannotOverrideThisDevice() throws {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let previousMigration = defaults.object(forKey: SyncedPreferenceService.migrationKey)
         let previousCloud = defaults.object(forKey: AppCloudSync.enabledKey)
         defer {

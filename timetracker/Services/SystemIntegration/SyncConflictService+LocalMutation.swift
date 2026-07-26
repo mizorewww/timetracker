@@ -32,7 +32,7 @@ extension SyncConflictService {
     ) throws -> SyncConflictPrompt? {
         let isCloudActive = AppCloudSync.persistenceMode == AppCloudSync.modeICloud
         let shouldStageForCloudRecovery = AppCloudSync.shouldStageLocalMutationsForCloudRecovery
-        let hasPendingUploadRecovery = UserDefaults.standard.bool(
+        let hasPendingUploadRecovery = AppDefaults.shared.bool(
             forKey: AppCloudSync.pendingCloudUploadResetKey
         )
         var state = try loadState()
@@ -99,7 +99,7 @@ extension SyncConflictService {
     private var shouldRecordLocalMutationSnapshot: Bool {
         AppCloudSync.persistenceMode == AppCloudSync.modeICloud ||
             AppCloudSync.shouldStageLocalMutationsForCloudRecovery ||
-            UserDefaults.standard.bool(
+            AppDefaults.shared.bool(
                 forKey: AppCloudSync.pendingCloudUploadResetKey
             )
     }

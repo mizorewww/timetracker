@@ -17,15 +17,15 @@ enum SeedData {
     }
 
     static var isAutomaticDemoSeedingDisabled: Bool {
-        UserDefaults.standard.bool(forKey: automaticDemoSeedingDisabledKey)
+        AppDefaults.shared.bool(forKey: automaticDemoSeedingDisabledKey)
     }
 
     static func setAutomaticDemoSeedingDisabled(_ disabled: Bool) {
-        UserDefaults.standard.set(disabled, forKey: automaticDemoSeedingDisabledKey)
+        AppDefaults.shared.set(disabled, forKey: automaticDemoSeedingDisabledKey)
     }
 
     static func ensureSeeded(context: ModelContext) throws {
-        guard AppDemoDataConfiguration.allowsDemoDataCreation else { return }
+        guard AppDemoDataConfiguration.allowsDemoDataMutation else { return }
 
         switch AppDemoDataConfiguration.currentMode {
         case .off:
@@ -47,7 +47,9 @@ enum SeedData {
     }
 
     static func replaceWithDemoData(context: ModelContext) throws {
-        guard AppDemoDataConfiguration.allowsDemoDataCreation else {
+        // Not `allowsDemoDataCreation`: this call wipes every existing row
+        // before seeding, so it must never run against the production store.
+        guard AppDemoDataConfiguration.allowsDemoDataMutation else {
             throw SeedDataError.demoDataCreationUnavailable
         }
 

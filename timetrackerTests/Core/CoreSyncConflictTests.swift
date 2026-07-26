@@ -1047,11 +1047,11 @@ struct CoreSyncConflictTests {
 
             #expect(result == .queuedForNextLaunch)
             #expect(try service.prompt() == nil)
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.enabledKey))
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.enabledKey))
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
             #expect(try service.loadState().pendingLocalIntent == .explicitlyReplaceCloud)
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) == false)
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.activeCloudReconciliationKey) == false)
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) == false)
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.activeCloudReconciliationKey) == false)
         }
     }
 
@@ -1121,9 +1121,9 @@ struct CoreSyncConflictTests {
             let service = SyncConflictService(stateURL: temporaryStateURL())
 
             #expect(try service.acceptCurrentCloudData(context: context) == .queuedForNextLaunch)
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudDownloadResetKey))
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.pendingCloudDownloadResetKey))
 
-            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+            AppDefaults.shared.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
         }
     }
 
@@ -1136,7 +1136,7 @@ struct CoreSyncConflictTests {
             let service = SyncConflictService(stateURL: temporaryStateURL())
 
             #expect(try service.acceptCurrentCloudData(context: context) == .queuedForNextLaunch)
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudDownloadResetKey))
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.pendingCloudDownloadResetKey))
             #expect(try context.fetch(FetchDescriptor<TaskNode>()).contains { $0.deletedAt == nil })
             #expect(try service.prompt() == nil)
         }
@@ -1145,20 +1145,20 @@ struct CoreSyncConflictTests {
     @Test @MainActor
     func forceDownloadFromDemoModeDisablesDemoStoreForRestart() throws {
         try withSyncMode(AppCloudSync.modeDemoData) {
-            let previousDemoOverride = UserDefaults.standard.object(forKey: AppDemoDataConfiguration.overrideKey)
-            let previousDemoDisabled = UserDefaults.standard.object(forKey: SeedData.automaticDemoSeedingDisabledKey)
-            UserDefaults.standard.set(AutomaticDemoDataMode.seedIfEmpty.rawValue, forKey: AppDemoDataConfiguration.overrideKey)
-            UserDefaults.standard.set(false, forKey: SeedData.automaticDemoSeedingDisabledKey)
+            let previousDemoOverride = AppDefaults.shared.object(forKey: AppDemoDataConfiguration.overrideKey)
+            let previousDemoDisabled = AppDefaults.shared.object(forKey: SeedData.automaticDemoSeedingDisabledKey)
+            AppDefaults.shared.set(AutomaticDemoDataMode.seedIfEmpty.rawValue, forKey: AppDemoDataConfiguration.overrideKey)
+            AppDefaults.shared.set(false, forKey: SeedData.automaticDemoSeedingDisabledKey)
             defer {
                 if let previousDemoOverride {
-                    UserDefaults.standard.set(previousDemoOverride, forKey: AppDemoDataConfiguration.overrideKey)
+                    AppDefaults.shared.set(previousDemoOverride, forKey: AppDemoDataConfiguration.overrideKey)
                 } else {
-                    UserDefaults.standard.removeObject(forKey: AppDemoDataConfiguration.overrideKey)
+                    AppDefaults.shared.removeObject(forKey: AppDemoDataConfiguration.overrideKey)
                 }
                 if let previousDemoDisabled {
-                    UserDefaults.standard.set(previousDemoDisabled, forKey: SeedData.automaticDemoSeedingDisabledKey)
+                    AppDefaults.shared.set(previousDemoDisabled, forKey: SeedData.automaticDemoSeedingDisabledKey)
                 } else {
-                    UserDefaults.standard.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey)
+                    AppDefaults.shared.removeObject(forKey: SeedData.automaticDemoSeedingDisabledKey)
                 }
             }
 
@@ -1166,7 +1166,7 @@ struct CoreSyncConflictTests {
             let service = SyncConflictService(stateURL: temporaryStateURL())
 
             #expect(try service.acceptCurrentCloudData(context: context) == .queuedForNextLaunch)
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudDownloadResetKey))
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.pendingCloudDownloadResetKey))
             #expect(AppDemoDataConfiguration.currentMode == .off)
             #expect(AppDemoDataConfiguration.usesLocalDemoStore == false)
             #expect(SeedData.isAutomaticDemoSeedingDisabled)
@@ -1176,7 +1176,7 @@ struct CoreSyncConflictTests {
     @Test @MainActor
     func recoveryPendingAndEphemeralModesBlockUserWrites() throws {
         try withSyncMode(AppCloudSync.modeLocalFallback) {
-            UserDefaults.standard.set(true, forKey: AppCloudSync.pendingCloudDownloadResetKey)
+            AppDefaults.shared.set(true, forKey: AppCloudSync.pendingCloudDownloadResetKey)
             #expect(AppCloudSync.allowsUserWrites == false)
             #expect(throws: PersistenceWriteError.self) {
                 try AppCloudSync.requireUserWritesAllowed()
@@ -1193,7 +1193,7 @@ struct CoreSyncConflictTests {
         }
 
         try withSyncMode(AppCloudSync.modeInMemoryFallback) {
-            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+            AppDefaults.shared.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
             #expect(AppCloudSync.allowsUserWrites == false)
             #expect(throws: PersistenceWriteError.self) {
                 try AppCloudSync.requireUserWritesAllowed()
@@ -1204,13 +1204,13 @@ struct CoreSyncConflictTests {
     @Test @MainActor
     func queuedUploadRecoveryStillAcceptsProtectedLocalWrites() throws {
         try withSyncMode(AppCloudSync.modeLocalFallback) {
-            UserDefaults.standard.set(true, forKey: AppCloudSync.pendingCloudUploadResetKey)
-            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
+            AppDefaults.shared.set(true, forKey: AppCloudSync.pendingCloudUploadResetKey)
+            AppDefaults.shared.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
 
             #expect(AppCloudSync.allowsUserWrites)
             try AppCloudSync.requireUserWritesAllowed()
 
-            UserDefaults.standard.set(true, forKey: AppCloudSync.activeCloudReconciliationKey)
+            AppDefaults.shared.set(true, forKey: AppCloudSync.activeCloudReconciliationKey)
             #expect(AppCloudSync.allowsUserWrites == false)
             #expect(throws: PersistenceWriteError.self) {
                 try AppCloudSync.requireUserWritesAllowed()
@@ -1221,8 +1221,8 @@ struct CoreSyncConflictTests {
     @Test @MainActor
     func fallbackMutationAutomaticallyQueuesProtectedCloudRecovery() throws {
         try withSyncMode(AppCloudSync.modeLocalFallback) {
-            UserDefaults.standard.set(true, forKey: AppCloudSync.enabledKey)
-            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+            AppDefaults.shared.set(true, forKey: AppCloudSync.enabledKey)
+            AppDefaults.shared.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
 
             let context = try makeTestContext()
             let task = TaskNode(title: "Shared base", parentID: nil, deviceID: "device-a")
@@ -1239,9 +1239,9 @@ struct CoreSyncConflictTests {
                 events: [.taskChanged(taskID: task.id, affectedAncestorIDs: [])]
             )
 
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.queuedCloudReconciliationKey))
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.activeCloudReconciliationKey) == false)
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.queuedCloudReconciliationKey))
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.activeCloudReconciliationKey) == false)
             let queuedSnapshot = try #require(try service.loadPendingForcedUploadSnapshot())
             #expect(queuedSnapshot.tasks.map(\.title) == ["Edited while CloudKit was unavailable"])
             #expect(try service.loadState().pendingLocalIntent == .reconcileWithCloud)
@@ -1251,8 +1251,8 @@ struct CoreSyncConflictTests {
     @Test @MainActor
     func enablingCloudImmediatelyProtectsCurrentLocalSnapshot() throws {
         try withSyncMode(AppCloudSync.modeLocal) {
-            UserDefaults.standard.set(true, forKey: AppCloudSync.enabledKey)
-            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+            AppDefaults.shared.set(true, forKey: AppCloudSync.enabledKey)
+            AppDefaults.shared.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
 
             let context = try makeTestContext()
             context.insert(TaskNode(title: "Local work before enabling Cloud", parentID: nil, deviceID: "device-a"))
@@ -1260,9 +1260,9 @@ struct CoreSyncConflictTests {
 
             let service = SyncConflictService(stateURL: temporaryStateURL())
             #expect(try service.stageCurrentLocalSnapshotForCloudEnablement(context: context) == .queuedForNextLaunch)
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.queuedCloudReconciliationKey))
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.activeCloudReconciliationKey) == false)
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.queuedCloudReconciliationKey))
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.activeCloudReconciliationKey) == false)
             let protectedSnapshot = try #require(try service.loadPendingForcedUploadSnapshot())
             #expect(protectedSnapshot.tasks.map(\.title) == ["Local work before enabling Cloud"])
             #expect(try service.loadState().pendingLocalIntent == .reconcileWithCloud)
@@ -1281,9 +1281,9 @@ struct CoreSyncConflictTests {
                     .queuedForNextLaunch
             )
 
-            UserDefaults.standard.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+            AppDefaults.shared.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
             AppCloudSync.activateCloudReconciliation()
-            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+            AppDefaults.shared.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
             try recordCompletedInitialCloudImport(
                 service: service,
                 kind: .reconcileWithCloud
@@ -1330,9 +1330,9 @@ struct CoreSyncConflictTests {
             try localContext.save()
             _ = try service.stageCurrentLocalSnapshotForCloudEnablement(context: localContext)
 
-            UserDefaults.standard.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+            AppDefaults.shared.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
             AppCloudSync.activateCloudReconciliation()
-            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+            AppDefaults.shared.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
             try recordCompletedInitialCloudImport(
                 service: service,
                 kind: .reconcileWithCloud
@@ -1358,9 +1358,9 @@ struct CoreSyncConflictTests {
             try localContext.save()
             _ = try service.stageCurrentLocalSnapshotForCloudEnablement(context: localContext)
 
-            UserDefaults.standard.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+            AppDefaults.shared.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
             AppCloudSync.activateCloudReconciliation()
-            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+            AppDefaults.shared.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
             try recordCompletedInitialCloudImport(
                 service: service,
                 kind: .reconcileWithCloud
@@ -1399,9 +1399,9 @@ struct CoreSyncConflictTests {
             let cloudContext = try makeTestContext()
             cloudContext.insert(TaskNode(title: "Current remote branch", parentID: nil, deviceID: "remote"))
             try cloudContext.save()
-            UserDefaults.standard.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+            AppDefaults.shared.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
             AppCloudSync.activateCloudReconciliation()
-            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+            AppDefaults.shared.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
             try recordCompletedInitialCloudImport(
                 service: service,
                 kind: .reconcileWithCloud
@@ -1433,15 +1433,15 @@ struct CoreSyncConflictTests {
             let service = SyncConflictService(stateURL: temporaryStateURL())
 
             _ = try service.stageCurrentLocalSnapshotForCloudEnablement(context: context)
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.queuedCloudReconciliationKey))
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.queuedCloudReconciliationKey))
             #expect(try service.forceUploadLocalData(context: context) == .queuedForNextLaunch)
 
             let state = try service.loadState()
             #expect(state.pendingLocalIntent == .explicitlyReplaceCloud)
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) == false)
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.activeCloudReconciliationKey) == false)
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.cloudRecoveryStoreResetKey) == false)
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.pendingCloudUploadResetKey))
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) == false)
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.activeCloudReconciliationKey) == false)
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.cloudRecoveryStoreResetKey) == false)
         }
     }
 
@@ -1453,7 +1453,7 @@ struct CoreSyncConflictTests {
             try context.save()
             let service = SyncConflictService(stateURL: temporaryStateURL())
             _ = try service.stageCurrentLocalSnapshotForCloudEnablement(context: context)
-            UserDefaults.standard.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+            AppDefaults.shared.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
             AppCloudSync.activateCloudReconciliation()
 
             let eventID = UUID()
@@ -1490,7 +1490,7 @@ struct CoreSyncConflictTests {
             context.insert(TaskNode(title: "Downloaded cloud branch", parentID: nil, deviceID: "remote"))
             try context.save()
             let service = SyncConflictService(stateURL: temporaryStateURL())
-            UserDefaults.standard.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+            AppDefaults.shared.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
             try recordCompletedInitialCloudImport(
                 service: service,
                 kind: .downloadCloud
@@ -1512,7 +1512,7 @@ struct CoreSyncConflictTests {
         try withCloudSyncMode {
             let context = try makeTestContext()
             let service = SyncConflictService(stateURL: temporaryStateURL())
-            UserDefaults.standard.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+            AppDefaults.shared.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
             try recordCompletedInitialCloudImport(
                 service: service,
                 kind: .downloadCloud
@@ -1536,7 +1536,7 @@ struct CoreSyncConflictTests {
             context.insert(TaskNode(title: "Unverified cloud cache", parentID: nil, deviceID: "remote"))
             try context.save()
             let service = SyncConflictService(stateURL: temporaryStateURL())
-            UserDefaults.standard.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+            AppDefaults.shared.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
 
             #expect(try service.bootstrap(context: context) == nil)
             #expect(try service.handleCloudImport(context: context) == nil)
@@ -1554,7 +1554,7 @@ struct CoreSyncConflictTests {
             context.insert(TaskNode(title: "Hydrating cloud cache", parentID: nil, deviceID: "remote"))
             try context.save()
             let service = SyncConflictService(stateURL: temporaryStateURL())
-            UserDefaults.standard.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+            AppDefaults.shared.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
 
             #expect(throws: SyncConflictError.self) {
                 try service.forceUploadLocalData(context: context)
@@ -1569,8 +1569,8 @@ struct CoreSyncConflictTests {
                     context: context
                 )
             }
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudUploadResetKey) == false)
-            #expect(UserDefaults.standard.bool(forKey: AppCloudSync.pendingCloudDownloadResetKey) == false)
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.pendingCloudUploadResetKey) == false)
+            #expect(AppDefaults.shared.bool(forKey: AppCloudSync.pendingCloudDownloadResetKey) == false)
             #expect(AppCloudSync.isCloudDownloadRecoveryActive)
         }
     }
@@ -1580,7 +1580,7 @@ struct CoreSyncConflictTests {
         try withCloudSyncMode {
             let context = try makeTestContext()
             let service = SyncConflictService(stateURL: temporaryStateURL())
-            UserDefaults.standard.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+            AppDefaults.shared.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
             try recordCompletedInitialCloudImport(
                 service: service,
                 kind: .reconcileWithCloud
@@ -1618,7 +1618,7 @@ struct CoreSyncConflictTests {
             var state = SyncConflictState()
             state.cloudDownloadRecoveryCompleted = true
             try service.saveState(state)
-            UserDefaults.standard.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+            AppDefaults.shared.set(true, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
 
             #expect(try service.bootstrap(context: context) == nil)
             #expect(AppCloudSync.isCloudDownloadRecoveryActive == false)
@@ -1660,7 +1660,7 @@ struct CoreSyncConflictTests {
     @Test @MainActor
     func recoveryOnlyStoreConfigurationDefersStartupMigrations() throws {
         try withSyncMode(AppCloudSync.modeLocal) {
-            let defaults = UserDefaults.standard
+            let defaults = AppDefaults.shared
             let previousPayload = defaults.object(forKey: LegacyCountdownMigrationPolicy.payloadKey)
             let previousMigration = defaults.object(forKey: LegacyCountdownMigrationPolicy.migrationKey)
             defer {
@@ -1729,9 +1729,9 @@ struct CoreSyncConflictTests {
 
             let before = try service.loadState()
             try Data("corrupt primary state".utf8).write(to: stateURL, options: [.atomic])
-            UserDefaults.standard.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
-            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
-            UserDefaults.standard.set(true, forKey: AppCloudSync.cloudRecoveryStoreResetKey)
+            AppDefaults.shared.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+            AppDefaults.shared.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+            AppDefaults.shared.set(true, forKey: AppCloudSync.cloudRecoveryStoreResetKey)
 
             let cloudContext = try makeTestContext()
             let store = TimeTrackerStore(syncConflictService: service)
@@ -1784,8 +1784,8 @@ struct CoreSyncConflictTests {
             try context.save()
             _ = try service.stageCurrentLocalSnapshotForCloudEnablement(context: context)
 
-            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
-            UserDefaults.standard.removeObject(forKey: AppCloudSync.queuedCloudReconciliationKey)
+            AppDefaults.shared.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+            AppDefaults.shared.removeObject(forKey: AppCloudSync.queuedCloudReconciliationKey)
             try Data("corrupt primary state".utf8).write(to: stateURL, options: [.atomic])
             #expect(throws: SyncConflictStateFileError.self) {
                 try service.loadState()
@@ -1810,7 +1810,7 @@ struct CoreSyncConflictTests {
             task.updatedAt = Date().addingTimeInterval(60)
             task.clientMutationID = UUID()
             try context.save()
-            UserDefaults.standard.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
+            AppDefaults.shared.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
             AppCloudSync.activateCloudReconciliation()
             try recordCompletedInitialCloudImport(
                 service: service,
@@ -1840,8 +1840,8 @@ struct CoreSyncConflictTests {
     @Test @MainActor
     func ordinaryLocalMutationSkipsConflictStateAndSnapshotWork() throws {
         try withSyncMode(AppCloudSync.modeLocal) {
-            UserDefaults.standard.set(false, forKey: AppCloudSync.enabledKey)
-            UserDefaults.standard.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
+            AppDefaults.shared.set(false, forKey: AppCloudSync.enabledKey)
+            AppDefaults.shared.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
             let stateURL = temporaryStateURL()
             try FileManager.default.createDirectory(
                 at: stateURL.deletingLastPathComponent(),
@@ -2246,7 +2246,7 @@ struct CoreSyncConflictTests {
     }
 
     private func withSyncMode(_ mode: String, _ body: () throws -> Void) throws {
-        let defaults = UserDefaults.standard
+        let defaults = AppDefaults.shared
         let previousMode = defaults.string(forKey: AppCloudSync.modeKey)
         let previousEnabled = defaults.object(forKey: AppCloudSync.enabledKey)
         let previousUploadReset = defaults.object(forKey: AppCloudSync.pendingCloudUploadResetKey)

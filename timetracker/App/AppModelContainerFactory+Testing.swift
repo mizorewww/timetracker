@@ -83,7 +83,6 @@ extension timetrackerApp {
     static func isUnitTestHost(
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> Bool {
-        environment["XCTestConfigurationFilePath"] != nil
-            || environment["XCTestBundlePath"] != nil
+        AppRuntimeEnvironment.isUnitTestHost(environment: environment)
     }
 }

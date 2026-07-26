@@ -12,7 +12,7 @@ final class UserDefaultsAppleHealthTimelinePreferenceStore:
 {
     private let defaults: UserDefaults
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = AppDefaults.shared) {
         self.defaults = defaults
     }
 

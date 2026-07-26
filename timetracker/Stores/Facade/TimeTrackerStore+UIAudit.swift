@@ -31,7 +31,14 @@ extension TimeTrackerStore {
         #endif
     }
 
+    /// Drives the app to a screen for screenshot audits.
+    ///
+    /// Test-host only. An environment variable is far easier to leak into an
+    /// ordinary launch than a launch argument, and the `sync-conflict` route
+    /// fabricates a prompt whose confirmation starts a real destructive cloud
+    /// recovery. Both call sites are XCUITests, which always pass `--uitesting`.
     func applyUIAuditRouteIfRequested(environment: [String: String] = ProcessInfo.processInfo.environment) {
+        guard AppRuntimeEnvironment.isTestHost else { return }
         guard let rawRoute = environment["TIMETRACKER_UI_AUDIT_ROUTE"]?
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased(),

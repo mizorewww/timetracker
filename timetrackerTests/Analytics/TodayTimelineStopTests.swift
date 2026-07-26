@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import SwiftData
 import Testing
 @testable import timetracker
@@ -95,6 +96,53 @@ struct TodayTimelineStopTests {
         #expect(
             visible.endedAt != nil,
             "The store's visible segment still reports endedAt == nil after a stop."
+        )
+    }
+
+    /// SwiftData may merge a sibling-context edit into the same `@Model`
+    /// instance. The segment array then remains identity-equal even though its
+    /// persisted fields changed, so the Today projection needs a value-semantic
+    /// invalidation dependency of its own.
+    @Test @MainActor
+    func stoppingATimerInvalidatesTheObservedTimelineProjection() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(
+            title: "Observed task",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let segment = try timeRepository.startTask(taskID: task.id, source: .timer)
+        segment.startedAt = Date().addingTimeInterval(-30 * 60)
+        try context.save()
+
+        let store = makeTestStore()
+        defer { store.pomodoroReconciliationTask?.cancel() }
+        store.configureIfNeeded(context: context)
+
+        var didInvalidate = false
+        withObservationTracking {
+            let now = Date()
+            _ = store.timelineSnapshot(
+                segments: store.timelineSegments,
+                date: now,
+                now: now
+            )
+        } onChange: {
+            didInvalidate = true
+        }
+
+        store.stop(segment: segment)
+
+        #expect(
+            didInvalidate,
+            """
+            Stopping the timer changed the timeline projection but did not \
+            invalidate its Observation dependency, so SwiftUI can keep the \
+            pre-stop chart mounted.
+            """
         )
     }
 }

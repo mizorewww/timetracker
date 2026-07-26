@@ -7,6 +7,12 @@ extension TimeTrackerStore {
         now: Date,
         calendar: Calendar = .current
     ) -> AnalyticsTimelineSnapshot {
+        // A sibling ModelContext can merge updated fields into the same
+        // TimeSegment instances, leaving the segment array identity-equal.
+        // Reading the value-semantic analytics revision gives Observation a
+        // dependency that always advances after a visible ledger refresh.
+        _ = analyticsRevision
+
         let dayInterval = calendar.dateInterval(of: .day, for: date)
             ?? DateInterval(
                 start: calendar.startOfDay(for: date),

@@ -63,9 +63,9 @@
 
 ## Checkpoint 编排
 
-- [~] A：认领反馈、建立实现记忆、写出能区分 H1/H2/H3 的失败测试。
-- [ ] B：按测试结果修根因。
-- [ ] C：消除图表与 legend 各算一份 snapshot 的重复（H3），无论它是不是根因。
+- [x] A：认领反馈、建立实现记忆、写出能区分 H1/H2/H3 的测试。
+- [x] B：按测试结果修根因。
+- [~] C：消除图表与 legend 各算一份 snapshot 的重复（H3），无论它是不是根因。
 - [ ] D：`make test` 门禁 + 模拟器验收、Release 全设备安装、反馈收口。
 
 ## 约束与边界
@@ -90,3 +90,17 @@
 ## 进度记录
 
 - 2026-07-26 Checkpoint A：认领第 108 条，完成数据通路溯源，建立本文件。
+- 2026-07-27 Checkpoint A 复验：`make test` 中两个账本值测试均通过，
+  H1 被证伪；全套只有 4 个已知无关基线失败。根因收敛到 H2：
+  sibling context 合并后的 `TimeSegment` 字段已更新，但数组保持持久模型身份相等，
+  Today timeline 没有值语义 revision 可供 Observation 发布。追加投影失效测试，
+  要求 Stop 必须触发 SwiftUI 所依赖的观察失效。
+- 2026-07-27 Checkpoint B：确认投影失效测试在修复前失败；让
+  `timelineSnapshot` 显式读取现有 `analyticsRevision`，沿用 AD-013/AD-054
+  的事件驱动、store-owned semantic revision 模式。修复后 Today timeline
+  三项回归测试全部通过；完整 `make test` 共 1417 项，只剩 4 个无关基线失败：
+  `CoreLLMResponseTransportTests.nonSuccessStatusTakesPriorityOverDeclaredBodySize`、
+  `DemoDataLifecycleTests.demoDataContainsMultiDayAnalyticsAndActiveTimers`、
+  `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd`
+  和 `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`。
+  本 checkpoint 未引入第三方库。

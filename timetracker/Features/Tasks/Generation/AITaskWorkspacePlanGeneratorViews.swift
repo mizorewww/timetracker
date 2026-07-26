@@ -26,35 +26,15 @@ struct AITaskPlanGeneratorSheet: View {
     @State private var isDiscardConfirmationPresented = false
     @State private var isDestructiveConfirmationPresented = false
 
-    private var usesUITestFixture: Bool {
-        #if DEBUG
-        CommandLine.arguments.contains("--uitesting-ai-task-plan") ||
-            CommandLine.arguments.contains("--uitesting-ai-task-plan-large")
-        #else
-        false
-        #endif
-    }
-
-    private var usesLargeUITestFixture: Bool {
-        #if DEBUG
-        CommandLine.arguments.contains("--uitesting-ai-task-plan-large")
-        #else
-        false
-        #endif
-    }
-
     private var isConfigured: Bool {
-        usesUITestFixture ||
-            (
-                LLMModelService.modelsURL(
-                    endpoint: store.preferences.llmEndpoint
-                ) != nil &&
-                    store.preferences.llmAPIKey
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                    .isEmpty == false &&
-                    store.preferences.llmAvailableModelIDs
-                    .contains(store.preferences.llmSelectedModel)
-            )
+        LLMModelService.modelsURL(
+            endpoint: store.preferences.llmEndpoint
+        ) != nil &&
+            store.preferences.llmAPIKey
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .isEmpty == false &&
+            store.preferences.llmAvailableModelIDs
+            .contains(store.preferences.llmSelectedModel)
     }
 
     private var hasUnsavedChanges: Bool {
@@ -357,34 +337,25 @@ struct AITaskPlanGeneratorSheet: View {
                 disclosedCounts = AITaskWorkspaceCounts(
                     snapshot: baseline.snapshot
                 )
-                let plan: LLMTaskWorkspacePlan
-                if usesUITestFixture {
-                    try await Task.sleep(for: .milliseconds(180))
-                    plan = try AITaskWorkspaceUITestPlan.make(
-                        snapshot: baseline.snapshot,
-                        large: usesLargeUITestFixture
-                    )
-                } else {
-                    plan = try await LLMTaskWorkspacePlanningService()
-                        .generate(
-                            request: request,
-                            instructions:
-                            store.preferences.llmTaskPlanInstructions,
-                            workspace: baseline.snapshot,
-                            endpoint: store.preferences.llmEndpoint,
-                            apiKey: store.preferences.llmAPIKey,
-                            modelID:
-                            store.preferences.llmSelectedModel,
-                            onProgress: { progress in
-                                guard generationRequestID == requestID,
-                                      Task.isCancelled == false
-                                else {
-                                    return
-                                }
-                                generationProgress = progress
+                let plan = try await LLMTaskWorkspacePlanningService()
+                    .generate(
+                        request: request,
+                        instructions:
+                        store.preferences.llmTaskPlanInstructions,
+                        workspace: baseline.snapshot,
+                        endpoint: store.preferences.llmEndpoint,
+                        apiKey: store.preferences.llmAPIKey,
+                        modelID:
+                        store.preferences.llmSelectedModel,
+                        onProgress: { progress in
+                            guard generationRequestID == requestID,
+                                  Task.isCancelled == false
+                            else {
+                                return
                             }
-                        )
-                }
+                            generationProgress = progress
+                        }
+                    )
                 guard Task.isCancelled == false,
                       generationRequestID == requestID
                 else {
@@ -1394,133 +1365,5 @@ private extension [AITaskWorkspaceFieldChange] {
                 after: after
             )
         )
-    }
-}
-
-@MainActor
-private enum AITaskWorkspaceUITestPlan {
-    static func make(
-        snapshot: AITaskWorkspaceSnapshot,
-        large: Bool
-    ) throws -> LLMTaskWorkspacePlan {
-        var overlay = AITaskWorkspaceOverlay(snapshot: snapshot)
-        let studyCategory = snapshot.categories.first {
-            $0.title == "Study"
-        }
-        if studyCategory != nil {
-            _ = try overlay.useExistingCategory(named: "Study")
-        }
-
-        let readingTaskID = fixedID(
-            large
-                ? "20000000-0000-4000-8000-000000000150"
-                : "20000000-0000-4000-8000-000000000110"
-        )
-        _ = try overlay.createTask(
-            id: readingTaskID,
-            title: large ? "Read 150 Chapters" : "Read 10 Chapters",
-            parentID: nil,
-            categoryID: studyCategory?.id,
-            notes: "A complete AI-reviewed reading plan.",
-            estimatedMinutes: large ? 600 : 300,
-            dueAt: nil,
-            iconName: "book",
-            colorHex: "16A34A"
-        )
-        let checklistCount = large ? 150 : 10
-        for index in 1 ... checklistCount {
-            _ = try overlay.createChecklistItem(
-                id: fixedID(
-                    String(
-                        format:
-                        "30000000-0000-4000-8000-%012d",
-                        index
-                    )
-                ),
-                taskID: readingTaskID,
-                title: "Chapter \(index)",
-                isCompleted: false,
-                iconName: "book.pages",
-                colorHex: "16A34A"
-            )
-        }
-
-        if large == false {
-            let fitnessCategory = try overlay.createCategory(
-                id: fixedID(
-                    "10000000-0000-4000-8000-000000000101"
-                ),
-                title: "Fitness Plan",
-                iconName: "figure.strengthtraining.traditional",
-                colorHex: "F97316"
-            )
-            _ = try overlay.createTask(
-                id: fixedID(
-                    "20000000-0000-4000-8000-000000000101"
-                ),
-                title: "Daily Push-ups",
-                parentID: nil,
-                categoryID: fitnessCategory.id,
-                notes: "",
-                estimatedMinutes: 10,
-                dueAt: nil,
-                iconName: "figure.strengthtraining.traditional",
-                colorHex: "F97316",
-                quantityGoal: TaskQuantityGoalDraft(
-                    targetAmount: 50,
-                    unitLabel: "push-ups"
-                ),
-                dailyRecurrence: TaskDailyRecurrenceDraft(
-                    startingAt: Date(),
-                    timeZone: .current
-                )
-            )
-
-            if let task = snapshot.tasks.first(where: {
-                $0.title == "Read Apple HIG"
-            }) {
-                _ = try overlay.updateTask(
-                    id: task.id,
-                    title: "Read Apple HIG Carefully",
-                    parentID: task.parentID,
-                    categoryID: task.categoryID,
-                    notes: task.notes,
-                    estimatedMinutes: task.estimatedMinutes,
-                    dueAt: task.dueAt,
-                    iconName: task.iconName,
-                    colorHex: task.colorHex,
-                    quantityGoal: task.quantityGoal,
-                    dailyRecurrence: task.dailyRecurrence
-                )
-            }
-            if let task = snapshot.tasks.first(where: {
-                $0.title == "SwiftData Docs"
-            }) {
-                _ = try overlay.deleteTask(id: task.id)
-            }
-            if let item = snapshot.checklistItems.first {
-                _ = try overlay.deleteChecklistItem(id: item.id)
-            }
-        }
-
-        return LLMTaskWorkspacePlan(
-            originalSnapshot: snapshot,
-            resultingSnapshot: overlay.snapshot,
-            operations: overlay.operations,
-            modelID: "ui-test-model",
-            reasoningContent:
-            "The plan reuses the existing Study category and previews every change before applying it.",
-            rawResponseContent:
-            #"{"tool_calls":[{"name":"create_task","title":"Read 10 Chapters"}]}"#,
-            toolRoundCount: 3,
-            toolCallCount: overlay.operations.count + 1
-        )
-    }
-
-    static func fixedID(_ value: String) -> UUID {
-        guard let id = UUID(uuidString: value) else {
-            preconditionFailure("Invalid UI test UUID")
-        }
-        return id
     }
 }

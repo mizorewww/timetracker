@@ -45,8 +45,8 @@
 
 ## Checkpoint 编排
 
-- [~] A：重新领取反馈、建立活动记忆、停止错误的完成/安装流程。
-- [ ] B：删除伪造 provider/plan 的 AI 测试与 fixture；加入 live API harness，
+- [x] A：重新领取反馈、建立活动记忆、停止错误的完成/安装流程。
+- [~] B：删除伪造 provider/plan 的 AI 测试与 fixture；加入 live API harness，
   运行指定 1...28 提示词并记录真实失败。
 - [ ] C：修复真实协议/提示词/模型兼容问题，以 live 1...28 + 150 计划为准。
 - [ ] D：真实 API 的隔离 UI Preview/Apply、截图与安全清理。
@@ -58,3 +58,20 @@
 - 真实响应可以保存在临时测试结果中，但不得包含用户真实 workspace；只用隔离的
   合成 Category/Task/Checklist 上下文。
 - 供应商费用与延迟是本任务验收的正常成本；不得再用伪造 provider 响应来替代。
+
+## Checkpoint B 进度
+
+- 已删除基于伪造 provider/tool-call 返回的计划服务测试、流式测试与 workspace
+  planning 测试。
+- 已删除四条直接注入预制 plan 的 XCUITest、对应 App 启动参数、预制 plan
+  生成器和旧版未接线的 flat-JSON 计划 UI。
+- 已删除旧版 `AITaskPlanDraft` Apply 流水线的预制 plan 测试；仍保留 workspace
+  command 的原子事务/回滚测试和 transport 安全边界测试，因为它们不伪造模型
+  结果，也不作为真实 API 验收。
+- `make format-check` 通过；`make test` 连续两次均完成 1,407 条测试并仅有两个与
+  本次 AI 删除无关的既有失败：
+  `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd`
+  与
+  `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`。
+  本 checkpoint 不修改它们来伪造绿色。
+- 下一步：提交 mock 删除，随后加入只接受真实凭据的 live harness。

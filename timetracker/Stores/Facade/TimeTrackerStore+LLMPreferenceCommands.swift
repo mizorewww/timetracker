@@ -125,7 +125,8 @@ extension TimeTrackerStore {
         endpoint: String,
         apiKey: String,
         selectedModel: String,
-        availableModelIDs: [String]
+        availableModelIDs: [String],
+        reasoningEffort: LLMReasoningEffort
     ) -> Bool {
         let normalizedEndpoint = AppPreferenceValueSanitizer.llmEndpoint(endpoint)
         let normalizedAPIKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -141,7 +142,8 @@ extension TimeTrackerStore {
         let configurationChanged = !matchesCurrentLLMConfiguration(
             endpoint: normalizedEndpoint,
             apiKey: normalizedAPIKey,
-            modelID: normalizedSelectedModel
+            modelID: normalizedSelectedModel,
+            reasoningEffort: reasoningEffort
         )
         let taskSnapshot = llmSuggestionTaskSnapshot()
 
@@ -158,6 +160,10 @@ extension TimeTrackerStore {
                     (.llmEndpoint, PreferenceJSON.encode(normalizedEndpoint)),
                     (.llmAvailableModelIDs, PreferenceJSON.encode(normalizedModels)),
                     (.llmSelectedModel, PreferenceJSON.encode(normalizedSelectedModel)),
+                    (
+                        .llmReasoningEffort,
+                        PreferenceJSON.encode(reasoningEffort.rawValue)
+                    ),
                 ],
                 applyingLocalMutation: {
                     previousAPIKey = try llmCredentialStore.readAPIKey()
@@ -187,7 +193,8 @@ extension TimeTrackerStore {
             if matchesCurrentLLMConfiguration(
                 endpoint: normalizedEndpoint,
                 apiKey: normalizedAPIKey,
-                modelID: normalizedSelectedModel
+                modelID: normalizedSelectedModel,
+                reasoningEffort: reasoningEffort
             ) {
                 autoSuggestInboxItemsIfNeeded()
                 autoSuggestChecklistVisualsIfNeeded()

@@ -3,6 +3,7 @@ import SwiftUI
 
 struct LLMPromptInstructionsEditor: View {
     let kind: LLMPromptKind
+    let reasoningEffort: LLMReasoningEffort
     let onSave: (String) -> Bool
     private let isEmbeddedInNavigationStack: Bool
     private let onDismiss: (() -> Void)?
@@ -19,6 +20,7 @@ struct LLMPromptInstructionsEditor: View {
     init(
         kind: LLMPromptKind,
         instructions: String,
+        reasoningEffort: LLMReasoningEffort = .high,
         isEmbeddedInNavigationStack: Bool = false,
         onDismiss: (() -> Void)? = nil,
         onSave: @escaping (String) -> Bool
@@ -30,6 +32,7 @@ struct LLMPromptInstructionsEditor: View {
             )
         ) ?? kind.defaultInstructions
         self.kind = kind
+        self.reasoningEffort = reasoningEffort
         self.initialInstructions = initialInstructions
         self.isEmbeddedInNavigationStack = isEmbeddedInNavigationStack
         self.onDismiss = onDismiss
@@ -162,9 +165,13 @@ struct LLMPromptInstructionsEditor: View {
 
             Section {
                 DisclosureGroup {
-                    MarkdownView(kind.effectiveRequestDisclosure)
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                        .textSelection(.enabled)
+                    MarkdownView(
+                        kind.effectiveRequestDisclosure(
+                            reasoningEffort: reasoningEffort
+                        )
+                    )
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .textSelection(.enabled)
                 } label: {
                     Text(
                         AppStrings.localized(

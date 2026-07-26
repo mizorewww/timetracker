@@ -360,7 +360,7 @@ struct PreferenceSyncBehaviorTests {
         var preferences = AppPreferences(syncedPreferences: stored)
         preferences.llmAPIKey = try credentialStore.readAPIKey() ?? ""
 
-        #expect(stored.count == AppPreferenceKey.allCases.count - 5)
+        #expect(stored.count == AppPreferenceKey.allCases.count - 6)
         #expect(stored.allSatisfy { SyncedPreferenceService.shouldSyncKey($0.key) })
         #expect(preferences.preferredColorScheme == "dark")
         #expect(preferences.pomodoroDefaultMode == PomodoroPreset.deep.rawValue)
@@ -377,6 +377,7 @@ struct PreferenceSyncBehaviorTests {
         #expect(preferences.llmAPIKey == "test-key")
         #expect(preferences.llmSelectedModel == "gpt-test")
         #expect(preferences.llmAvailableModelIDs == ["gpt-other", "gpt-test"])
+        #expect(preferences.llmReasoningEffort == .high)
         #expect(
             preferences.llmInboxSuggestionInstructions ==
                 LLMPromptKind.inboxRouting.defaultInstructions
@@ -558,7 +559,8 @@ struct PreferenceSyncBehaviorTests {
             endpoint: " https://example.test/v1 ",
             apiKey: " test-key ",
             selectedModel: " gpt-a ",
-            availableModelIDs: ["gpt-z", " gpt-a ", "gpt-a", " "]
+            availableModelIDs: ["gpt-z", " gpt-a ", "gpt-a", " "],
+            reasoningEffort: .max
         ))
         store.setLLMAutomaticSuggestionsEnabled(true)
 
@@ -580,6 +582,7 @@ struct PreferenceSyncBehaviorTests {
         #expect(preferences.pomodoroPlans.first?.rounds == 5)
         #expect(preferences.llmEndpoint == "https://example.test/v1")
         #expect(preferences.llmAPIKey == "test-key")
+        #expect(preferences.llmReasoningEffort == .max)
         #expect(try credentialStore.readAPIKey() == "test-key")
         #expect(try context.fetch(FetchDescriptor<SyncedPreference>()).allSatisfy {
             SyncedPreferenceService.shouldSyncKey($0.key)

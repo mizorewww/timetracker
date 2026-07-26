@@ -10,6 +10,7 @@ extension TimeTrackerStore {
         endpoint: String,
         apiKey: String,
         modelID: String,
+        reasoningEffort: LLMReasoningEffort,
         instructions: String,
         showsErrors: Bool
     ) {
@@ -19,7 +20,8 @@ extension TimeTrackerStore {
         guard matchesCurrentLLMConfiguration(
             endpoint: endpoint,
             apiKey: apiKey,
-            modelID: modelID
+            modelID: modelID,
+            reasoningEffort: reasoningEffort
         ), matchesCurrentLLMPrompt(instructions, kind: .inboxRouting),
         showsErrors || preferences.llmAutomaticSuggestionsEnabled else {
             return
@@ -54,6 +56,7 @@ extension TimeTrackerStore {
         endpoint: String,
         apiKey: String,
         modelID: String,
+        reasoningEffort: LLMReasoningEffort,
         instructions: String,
         showsErrors: Bool,
         wasCancelled: Bool
@@ -73,7 +76,8 @@ extension TimeTrackerStore {
         guard matchesCurrentLLMConfiguration(
             endpoint: endpoint,
             apiKey: apiKey,
-            modelID: modelID
+            modelID: modelID,
+            reasoningEffort: reasoningEffort
         ), matchesCurrentLLMPrompt(instructions, kind: .inboxRouting),
         showsErrors || preferences.llmAutomaticSuggestionsEnabled,
         let item = inboxItems.first(where: { $0.id == itemID }),

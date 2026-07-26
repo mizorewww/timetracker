@@ -32,7 +32,8 @@ extension TimeTrackerStore {
                     instructions: request.instructions,
                     endpoint: request.endpoint,
                     apiKey: request.apiKey,
-                    modelID: request.modelID
+                    modelID: request.modelID,
+                    reasoningEffort: request.reasoningEffort
                 )
                 try Task.checkCancellation()
                 self?.completeChecklistVisualSuggestion(
@@ -81,7 +82,8 @@ extension TimeTrackerStore {
             instructions: preferences.llmChecklistVisualInstructions,
             endpoint: preferences.llmEndpoint,
             apiKey: preferences.llmAPIKey,
-            modelID: preferences.llmSelectedModel
+            modelID: preferences.llmSelectedModel,
+            reasoningEffort: preferences.llmReasoningEffort
         )
     }
 

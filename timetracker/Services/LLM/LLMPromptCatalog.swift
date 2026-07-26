@@ -189,7 +189,9 @@ extension LLMPromptKind {
     /// Read-only, credential-free description of the production request.
     /// Keep its constants shared with request construction so Settings cannot
     /// describe a different protocol than the App actually sends.
-    var effectiveRequestDisclosure: String {
+    func effectiveRequestDisclosure(
+        reasoningEffort: LLMReasoningEffort = .high
+    ) -> String {
         let sharedEnvelope = """
         ## HTTP envelope
 
@@ -223,9 +225,13 @@ extension LLMPromptKind {
 
             ## Model controls
 
-            - `temperature`: \(LLMChatRequestPolicy.suggestionTemperature)
+            - DeepSeek V4: `temperature` is omitted; `thinking.type` is \
+            `enabled`; `reasoning_effort` is `\(reasoningEffort.rawValue)`.
+            - Other models: `temperature` is \
+            \(LLMChatRequestPolicy.suggestionTemperature), and thinking fields \
+            are omitted.
             - `response_format.type`: `json_object`
-            - `thinking`, `reasoning_effort`, `tools`, and `tool_choice`: omitted
+            - `tools` and `tool_choice`: omitted
             """
         case .checklistVisual:
             return """
@@ -241,9 +247,13 @@ extension LLMPromptKind {
 
             ## Model controls
 
-            - `temperature`: \(LLMChatRequestPolicy.suggestionTemperature)
+            - DeepSeek V4: `temperature` is omitted; `thinking.type` is \
+            `enabled`; `reasoning_effort` is `\(reasoningEffort.rawValue)`.
+            - Other models: `temperature` is \
+            \(LLMChatRequestPolicy.suggestionTemperature), and thinking fields \
+            are omitted.
             - `response_format.type`: `json_object`
-            - `thinking`, `reasoning_effort`, `tools`, and `tool_choice`: omitted
+            - `tools` and `tool_choice`: omitted
             """
         case .taskPlan:
             let toolNames = AITaskWorkspaceToolName.allCases
@@ -264,7 +274,7 @@ extension LLMPromptKind {
 
             - DeepSeek V4: `temperature` and `tool_choice` are omitted; \
             `thinking.type` is `enabled`; `reasoning_effort` is \
-            `\(LLMChatRequestPolicy.deepSeekV4ReasoningEffort)`.
+            `\(reasoningEffort.rawValue)`.
             - Other models: `temperature` is \
             \(LLMChatRequestPolicy.taskPlanningTemperature), `tool_choice` is \
             `required`, and thinking fields are omitted.
@@ -289,7 +299,38 @@ extension LLMPromptKind {
 nonisolated enum LLMChatRequestPolicy {
     static let suggestionTemperature = 0.2
     static let taskPlanningTemperature = 0.0
-    static let deepSeekV4ReasoningEffort = "high"
+
+    static func usesDeepSeekV4Thinking(modelID: String) -> Bool {
+        let normalizedModelID = modelID
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return normalizedModelID == "deepseek-v4-flash" ||
+            normalizedModelID == "deepseek-v4-pro"
+    }
+
+    static func temperature(
+        modelID: String,
+        fallback: Double
+    ) -> Double? {
+        usesDeepSeekV4Thinking(modelID: modelID) ? nil : fallback
+    }
+
+    static func thinkingConfiguration(
+        modelID: String
+    ) -> OpenAIChatThinkingConfiguration? {
+        usesDeepSeekV4Thinking(modelID: modelID)
+            ? OpenAIChatThinkingConfiguration(type: "enabled")
+            : nil
+    }
+
+    static func reasoningEffort(
+        modelID: String,
+        selected: LLMReasoningEffort
+    ) -> String? {
+        usesDeepSeekV4Thinking(modelID: modelID)
+            ? selected.rawValue
+            : nil
+    }
 }
 
 /// Compatibility name retained for the task-plan service and existing synced

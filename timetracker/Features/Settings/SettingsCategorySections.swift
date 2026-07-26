@@ -112,6 +112,7 @@ extension SettingsView {
                 hasAPIKey: !store.preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                 selectedModel: store.preferences.llmSelectedModel,
                 availableModels: store.preferences.llmAvailableModelIDs,
+                reasoningEffort: store.preferences.llmReasoningEffort,
                 onConfigure: presentLLMConfiguration,
                 onEditPrompt: presentLLMPrompt
             )

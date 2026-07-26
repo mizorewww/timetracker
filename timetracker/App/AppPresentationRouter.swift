@@ -18,7 +18,11 @@ struct AppPresentation: Identifiable {
         case quickStartEditor(selectedIDs: [UUID])
         case settings
         case llmConfiguration(LLMConfigurationDraft)
-        case llmPrompt(kind: LLMPromptKind, instructions: String)
+        case llmPrompt(
+            kind: LLMPromptKind,
+            instructions: String,
+            reasoningEffort: LLMReasoningEffort
+        )
         case aiTaskPlanGenerator
     }
 
@@ -222,7 +226,8 @@ extension AppPresentationRouter {
             endpoint: store.preferences.llmEndpoint,
             apiKey: store.preferences.llmAPIKey,
             selectedModel: store.preferences.llmSelectedModel,
-            availableModels: store.preferences.llmAvailableModelIDs
+            availableModels: store.preferences.llmAvailableModelIDs,
+            reasoningEffort: store.preferences.llmReasoningEffort
         )))
     }
 
@@ -233,7 +238,8 @@ extension AppPresentationRouter {
     ) -> Bool {
         present(.llmPrompt(
             kind: kind,
-            instructions: store.preferences.llmInstructions(for: kind)
+            instructions: store.preferences.llmInstructions(for: kind),
+            reasoningEffort: store.preferences.llmReasoningEffort
         ))
     }
 

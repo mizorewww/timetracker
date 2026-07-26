@@ -199,6 +199,11 @@
 "settings.llm.apiKey" = "API Key";
 "settings.llm.automaticSuggestions" = "自動 AI 建議";
 "settings.llm.model" = "模型";
+"settings.llm.modelFooter" = "傳送到 endpoint 的是完整且精確的模型 ID。";
+"settings.llm.reasoningEffort" = "思考強度";
+"settings.llm.reasoningEffort.high" = "高";
+"settings.llm.reasoningEffort.max" = "最大";
+"settings.llm.reasoningEffort.footer" = "DeepSeek V4 會使用思考模式和這裡選擇的官方 high/max 強度；其他模型系列繼續使用各自相容的控制參數。";
 "settings.llm.noModels" = "尚未擷取模型";
 "settings.llm.fetching" = "正在擷取模型...";
 "settings.llm.fetchSuccess" = "已載入 %d 個模型。";

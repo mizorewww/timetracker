@@ -100,6 +100,8 @@ Checklist 请求发送完整标题、所属任务标题和完整任务显示路�
 
 任务计划、Inbox 和 checklist 都不使用人工 prompt/request-body 预算截断相关上下文，因为那会静默漏掉模型需要引用的实体或图标。编码失败不会发出 partial context；endpoint 以 HTTP 400/413/422 拒绝完整任务计划请求时，以 typed error 报告 Category/Task/Checklist counts 与实际 encoded request bytes。客户端不发送截断版本，也不回退到旧 create-only JSON。工具会话不按固定回合或调用次数截断；只有 `finalize_plan` 结束生成。用户取消、加固传输的 timeout/单响应 2 MiB 边界、provider context 拒绝、工具结构与字段校验继续作为显式资源和安全边界。
 
+思考强度是可同步、可导出的普通偏好，只允许 DeepSeek 官方 `high`/`max`，默认 `high`，不包含秘密。三个生产 AI 功能在 DeepSeek V4 下都会发送 `thinking.type=enabled` 和当前 `reasoning_effort`，并省略 temperature；任务计划还省略 thinking mode 不支持的 `tool_choice`。工具调用后的 `reasoning_content` 会在同一次生成会话后续请求中完整回传，但只用于该次临时预览，不持久化、不同步、导出或记录日志。切换 effort 会取消旧建议请求，旧设置的迟到结果不能保存。
+
 模型只能通过严格的结构化工具读取和修改一个本机内存 overlay；它不能直接访问 SwiftData。已有 Task/Checklist 必须按稳定 UUID 引用，Category 名称只有唯一规范化匹配时才可复用，多个同名会显式失败。新 ID 由 App 生成。Finalize 后只产生 create/update/archive/delete/reuse 的只读 diff；破坏性影响需要用户再次确认。Apply 时会在共享 store lock 下用 fresh context 对完整 provider-visible snapshot 和本地 revision baseline 做 CAS，再原子应用全部操作。Task removal 只会 Archive。任何 stale、校验或保存失败均为零写入并保留预览。
 
 所有 AI 流程的 model ID 为 256 bytes，endpoint/API key 分别最多 4/8 KiB。256-byte model ID 同时符合同步快照的 compact-field restore 上限，避免本机可写入的 AI provenance 无法恢复；opaque model ID 必须完整通过校验，不会截断成另一个 ID。模型返回的 reason 按 512-byte 持久化字段归一化，icon 必须属于本次已公告的完整目录，任务/分类 UUID 必须属于实际发送候选。provider 响应继续受 2 MiB transport 边界约束。

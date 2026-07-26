@@ -358,6 +358,8 @@ struct AITaskPlanGeneratorSheet: View {
                         apiKey: store.preferences.llmAPIKey,
                         modelID:
                         store.preferences.llmSelectedModel,
+                        reasoningEffort:
+                        store.preferences.llmReasoningEffort,
                         onProgress: { progress in
                             guard generationRequestID == requestID,
                                   Task.isCancelled == false

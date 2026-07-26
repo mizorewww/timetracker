@@ -60,7 +60,8 @@ struct LLMInboxSuggestionService {
         instructions: String = LLMPromptKind.inboxRouting.defaultInstructions,
         endpoint: String,
         apiKey: String,
-        modelID: String
+        modelID: String,
+        reasoningEffort: LLMReasoningEffort = .high
     ) async throws -> LLMInboxSuggestionResult {
         let input = LLMSuggestionInputPolicy.prepare(
             inboxTitle: inboxTitle,
@@ -79,7 +80,8 @@ struct LLMInboxSuggestionService {
             input: input,
             instructions: instructions,
             endpoint: endpoint,
-            apiKey: apiKey
+            apiKey: apiKey,
+            reasoningEffort: reasoningEffort
         )
         let (data, response) = try await transport(request)
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -119,7 +121,8 @@ struct LLMInboxSuggestionService {
         instructions: String = LLMPromptKind.inboxRouting.defaultInstructions,
         endpoint: String,
         apiKey: String,
-        modelID: String
+        modelID: String,
+        reasoningEffort: LLMReasoningEffort = .high
     ) throws -> URLRequest {
         let input = LLMSuggestionInputPolicy.prepare(
             inboxTitle: inboxTitle,
@@ -137,7 +140,8 @@ struct LLMInboxSuggestionService {
             input: input,
             instructions: instructions,
             endpoint: endpoint,
-            apiKey: apiKey
+            apiKey: apiKey,
+            reasoningEffort: reasoningEffort
         )
     }
 
@@ -145,7 +149,8 @@ struct LLMInboxSuggestionService {
         input: LLMInboxSuggestionPreparedInput,
         instructions: String,
         endpoint: String,
-        apiKey: String
+        apiKey: String,
+        reasoningEffort: LLMReasoningEffort
     ) throws -> URLRequest {
         let trimmedEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedAPIKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -184,8 +189,18 @@ struct LLMInboxSuggestionService {
                         )
                     ),
                 ],
-                temperature: LLMChatRequestPolicy.suggestionTemperature,
-                responseFormat: .init(type: "json_object")
+                temperature: LLMChatRequestPolicy.temperature(
+                    modelID: input.modelID,
+                    fallback: LLMChatRequestPolicy.suggestionTemperature
+                ),
+                responseFormat: .init(type: "json_object"),
+                thinking: LLMChatRequestPolicy.thinkingConfiguration(
+                    modelID: input.modelID
+                ),
+                reasoningEffort: LLMChatRequestPolicy.reasoningEffort(
+                    modelID: input.modelID,
+                    selected: reasoningEffort
+                )
             )
         )
         request.httpBody = body

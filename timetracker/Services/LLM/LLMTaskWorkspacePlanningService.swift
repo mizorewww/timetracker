@@ -103,6 +103,7 @@ struct LLMTaskWorkspacePlanningService {
         endpoint: String,
         apiKey: String,
         modelID: String,
+        reasoningEffort: LLMReasoningEffort = .high,
         makeID: @MainActor () -> UUID = UUID.init,
         onProgress: @escaping @MainActor (LLMGenerationProgress) -> Void = {
             _ in
@@ -148,7 +149,8 @@ struct LLMTaskWorkspacePlanningService {
                 endpointURL: prepared.endpointURL,
                 apiKey: prepared.apiKey,
                 modelID: prepared.modelID,
-                messages: messages
+                messages: messages,
+                reasoningEffort: reasoningEffort
             )
             let data: Data
             let urlResponse: URLResponse
@@ -407,13 +409,15 @@ private extension LLMTaskWorkspacePlanningService {
         endpointURL: URL,
         apiKey: String,
         modelID: String,
-        messages: [OpenAIChatMessage]
+        messages: [OpenAIChatMessage],
+        reasoningEffort: LLMReasoningEffort = .high
     ) throws -> URLRequest {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        let usesDeepSeekV4Thinking = Self.usesDeepSeekV4Thinking(
-            modelID: modelID
-        )
+        let usesDeepSeekV4Thinking =
+            LLMChatRequestPolicy.usesDeepSeekV4Thinking(
+                modelID: modelID
+            )
         let body = try encoder.encode(
             OpenAIChatCompletionRequest(
                 model: modelID,
@@ -424,12 +428,13 @@ private extension LLMTaskWorkspacePlanningService {
                 responseFormat: nil,
                 tools: toolDefinitions,
                 toolChoice: usesDeepSeekV4Thinking ? nil : "required",
-                thinking: usesDeepSeekV4Thinking
-                    ? OpenAIChatThinkingConfiguration(type: "enabled")
-                    : nil,
-                reasoningEffort: usesDeepSeekV4Thinking
-                    ? LLMChatRequestPolicy.deepSeekV4ReasoningEffort
-                    : nil
+                thinking: LLMChatRequestPolicy.thinkingConfiguration(
+                    modelID: modelID
+                ),
+                reasoningEffort: LLMChatRequestPolicy.reasoningEffort(
+                    modelID: modelID,
+                    selected: reasoningEffort
+                )
             )
         )
         var request = URLRequest(url: endpointURL)
@@ -449,14 +454,6 @@ private extension LLMTaskWorkspacePlanningService {
         )
         request.httpBody = body
         return request
-    }
-
-    static func usesDeepSeekV4Thinking(modelID: String) -> Bool {
-        let normalizedModelID = modelID
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-        return normalizedModelID == "deepseek-v4-flash" ||
-            normalizedModelID == "deepseek-v4-pro"
     }
 
     static func decodeResponse(

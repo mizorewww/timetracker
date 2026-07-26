@@ -26,7 +26,8 @@ extension TimeTrackerStore {
             endpoint: endpoint,
             apiKey: apiKey,
             selectedModel: modelID,
-            availableModelIDs: [modelID]
+            availableModelIDs: [modelID],
+            reasoningEffort: .max
         )
         #endif
     }

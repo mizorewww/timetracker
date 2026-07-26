@@ -199,7 +199,8 @@ struct LLMSuggestionCancellationTests {
                 endpoint: "https://new.example.test/v1",
                 apiKey: "new-key",
                 selectedModel: "new-model",
-                availableModelIDs: ["new-model"]
+                availableModelIDs: ["new-model"],
+                reasoningEffort: .max
             )
         )
         #expect(await Self.eventually { await gate.requestCount == 2 })

@@ -146,8 +146,9 @@ extension SyncedPreferenceService {
                 .map(String.init) ?? []
             encodedValue = try? PreferenceJSON.encodeChecked(models)
         case .llmInboxSuggestionInstructions,
-             .llmChecklistVisualInstructions:
-            // These prompts were introduced directly in synced storage and
+             .llmChecklistVisualInstructions,
+             .llmReasoningEffort:
+            // These preferences were introduced directly in synced storage and
             // have no legacy UserDefaults representation to migrate.
             return nil
         case .llmTaskPlanInstructions:

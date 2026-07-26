@@ -21,7 +21,8 @@ extension TimeTrackerStore {
         guard matchesCurrentLLMConfiguration(
             endpoint: request.endpoint,
             apiKey: request.apiKey,
-            modelID: request.modelID
+            modelID: request.modelID,
+            reasoningEffort: request.reasoningEffort
         ),
             matchesCurrentLLMPrompt(
                 request.instructions,
@@ -80,7 +81,8 @@ extension TimeTrackerStore {
         guard matchesCurrentLLMConfiguration(
             endpoint: request.endpoint,
             apiKey: request.apiKey,
-            modelID: request.modelID
+            modelID: request.modelID,
+            reasoningEffort: request.reasoningEffort
         ), matchesCurrentLLMPrompt(request.instructions, kind: .checklistVisual),
         showsErrors || preferences.llmAutomaticSuggestionsEnabled else {
             return
@@ -127,6 +129,7 @@ struct ChecklistVisualSuggestionRequest {
     let endpoint: String
     let apiKey: String
     let modelID: String
+    let reasoningEffort: LLMReasoningEffort
 
     var fingerprint: String {
         [
@@ -134,6 +137,7 @@ struct ChecklistVisualSuggestionRequest {
             instructions,
             endpoint.trimmingCharacters(in: .whitespacesAndNewlines),
             modelID.trimmingCharacters(in: .whitespacesAndNewlines),
+            reasoningEffort.rawValue,
             String(apiKey.hashValue),
         ].joined(separator: "|")
     }

@@ -376,7 +376,7 @@
 
 ## AD-027：AI 配置采用 Test→Save 草稿，自动发送需单独同意
 
-状态：Accepted
+状态：Accepted（请求投影条款由 AD-133 取代）
 
 背景：endpoint/API key 在每次键入时持久化会产生半配置状态、Keychain 噪声和意外请求；“已配置”不等于同意自动发送工作内容。
 
@@ -1748,7 +1748,7 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 ## AD-132：AI 任务计划使用完整工作区工具提案与全量 CAS
 
-状态：Accepted
+状态：Accepted（请求预算与模型生成验收条款由 AD-133 取代）
 
 背景：旧任务计划只把当次需求、规划指令和视觉白名单发给模型，再解析一棵只能新建的 flat JSON 草稿。模型看不到已有 Category、Task 或 Checklist，因而无法稳定复用已有实体，也不能表达更新、归档或删除；同名 `a` Category 会被无条件再次创建。若直接把 tool call 映射为单项持久化命令，模型又会绕过用户审阅，并在多 scene/CloudKit 并发变化后把陈旧操作部分写入。
 
@@ -1764,6 +1764,24 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：模型可以在完整现状上复用已有 `a`，并以稳定身份提出混合 CRUD，而人仍拥有可读的最终 diff 和唯一提交权。任何同时发生的本机、其它窗口或同步修改都会让旧预览安全失效，不能产生 partial write。完整上下文扩大了向自定义 endpoint 发送的用户文本范围，因此发送前 counts、字段披露、typed size failure 与第三方处理政策成为发行安全边界。
 
 验证要求：确定性 fake transport/overlay 测试覆盖完整无截断 workspace、context fingerprint、严格 tool roundtrip/reasoning passback、同名 Category 复用/歧义、read-after-write、prompt-injection-shaped data、非法 tool/error 和大于 legacy 64 KiB 的请求；store-scoped 测试覆盖混合 CRUD、每个 checkpoint rollback、完整 stale matrix、受保护身份/active work、Checklist revision isolation、零事件失败和 Task Archive-only。普通字号 iPhone/iPad/macOS UI 回归覆盖发送 counts、混合只读 diff、完整路径、破坏性确认、Apply 和 stale preview 保留；真实付费 endpoint 只能作为附加 smoke test。
+
+## AD-133：AI 生成发送完整上下文，并以真实 DeepSeek 验收思考协议
+
+状态：Accepted
+
+背景：用 48 个候选、12/24/64 KiB 投影和 78 个精选图标替模型预先删除上下文，会让真实任务、分类、长文本或合法 SF Symbol 在请求前消失。把预制 provider JSON/tool call 当作模型生成验收，又会把对实际 DeepSeek 协议的猜测固化成“通过”；`tool_choice` 与 thinking mode 的真实 HTTP 400 就曾被这类测试漏掉。DeepSeek V4 官方只接受 `high`/`max` 思考强度，thinking 工具轮还要求完整回传 `reasoning_content`。
+
+决策：
+
+- Inbox 发送全部可工作 Task 和全部可见 Category；Checklist 发送完整标题与完整所属路径；任务计划发送完整需求、同步指令和完整 workspace。三条生产请求共用 picker 的完整规范 SF Symbols 目录。客户端只做规范化、去重和确定性排序，不按人工候选数、字段、JSON、prompt 或 request-body 预算静默删除相关上下文。
+- 真实边界继续生效：opaque model ID 必须整体通过 256-byte 同步 compact-field 上限，endpoint/API key 保持配置上限，API key 只进入 Authorization header，模型 reason 按 512-byte 持久化字段归一化，provider 单响应保持 2 MiB 上限，严格工具 schema、overlay 校验、用户取消和原子 Apply 不放宽。
+- `LLMReasoningEffort` 是同步普通偏好，只允许 DeepSeek 官方 `high` 和 `max`，默认 `high`。配置 Test→Save 草稿把 effort 与 endpoint、模型列表和模型 ID 同批提交。切换 effort 必须取消正在运行的 Inbox/Checklist 请求；完成回调与 Checklist fingerprint 必须包含 effort，旧请求不得在新设置下落库。
+- 三条生产 service 遇到 `deepseek-v4-flash`/`deepseek-v4-pro` 时显式发送 `thinking.type=enabled` 和所选 `reasoning_effort`，省略无效 `temperature`；任务规划同时省略 thinking mode 不支持的 `tool_choice`，并在所有后续工具轮完整回传 assistant `reasoning_content`。其它模型继续使用既有兼容 temperature/tool controls，不发送 DeepSeek 专属字段。
+- 纯请求序列化、schema、overlay、持久化、CAS 和 transport 安全边界可以使用确定性本地行为测试，但预制 provider response、预造 plan 或 fake tool-call 序列不得充当模型生成验收。`make test-llm-live` 必须从本地 `.env`/环境变量读取短期 key，以三条生产 prompt、prompt28、prompt150 和真实 Apply 验收实际 DeepSeek；key 不进入仓库、文档输出或测试日志。普通字号真实 UI 预览/Apply、截图与全设备 Release 安装仍是完成门禁。
+
+后果：请求可能明显大于旧 64 KiB，完整 SF Symbols 目录本身也会增加 token/网络成本；若 endpoint 无法接收完整上下文，应用返回真实 provider 错误，不发送删减版。用户可以在配置中用官方 high/max 权衡速度与思考强度，三个 AI 功能使用同一选择。AD-027 的 Test→Save、Keychain 和自动发送单独同意仍有效，但其 48/12/24/64/78 投影被本决定取代；AD-132 的完整 workspace、严格 overlay 和原子 CAS 仍有效，但其 4 KiB/固定回合调用预算和 fake provider 作为生成验收的表述被本决定取代。
+
+验证：本地测试读取实际编码的 `URLRequest`，证明 Inbox/Checklist 在 DeepSeek V4 下发送所选 `max`、thinking enabled、无 temperature，并覆盖 effort 同步/规范化、配置原子保存、切换取消与迟到结果拒绝。真实 gate 必须使用生产 service 让 DeepSeek V4 在 `max` 下完成 Inbox、Checklist、prompt28 和 prompt150；prompt150 还要通过生产 coordinator Apply 后重新读取 150 条持久事实。UI gate 截图真实 token progress、完整 Preview、reasoning/raw response 与 Apply 结果，不接受 fixture。
 
 ## 2. Agent 工作清单
 

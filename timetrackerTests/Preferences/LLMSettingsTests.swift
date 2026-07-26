@@ -45,19 +45,22 @@ struct LLMSettingsTests {
             endpoint: " https://example.test/v1 ",
             apiKey: " test-key ",
             selectedModel: "stale-model",
-            availableModels: ["gpt-z", "gpt-a", "gpt-a"]
+            availableModels: ["gpt-z", "gpt-a", "gpt-a"],
+            reasoningEffort: .max
         ).normalized
 
         #expect(draft.endpoint == "https://example.test/v1")
         #expect(draft.apiKey == "test-key")
         #expect(draft.availableModels == ["gpt-a", "gpt-z"])
         #expect(draft.selectedModel.isEmpty)
+        #expect(draft.reasoningEffort == .max)
 
         let validDraft = LLMConfigurationDraft(
             endpoint: " https://example.test/v1 ",
             apiKey: " test-key ",
             selectedModel: " gpt-a ",
-            availableModels: [" gpt-a ", "", "   "]
+            availableModels: [" gpt-a ", "", "   "],
+            reasoningEffort: .high
         ).normalized
         #expect(validDraft.availableModels == ["gpt-a"])
         #expect(validDraft.selectedModel == "gpt-a")
@@ -250,7 +253,9 @@ struct LLMSettingsTests {
     @Test
     func everyPromptDisclosesItsEffectiveRequestWithoutTheCredential() {
         for kind in LLMPromptKind.allCases {
-            let disclosure = kind.effectiveRequestDisclosure
+            let disclosure = kind.effectiveRequestDisclosure(
+                reasoningEffort: .max
+            )
 
             #expect(disclosure.contains("POST"))
             #expect(disclosure.contains("messages"))
@@ -266,15 +271,46 @@ struct LLMSettingsTests {
         }
 
         let planDisclosure =
-            LLMPromptKind.taskPlan.effectiveRequestDisclosure
+            LLMPromptKind.taskPlan.effectiveRequestDisclosure(
+                reasoningEffort: .max
+            )
         for tool in AITaskWorkspaceToolName.allCases {
             #expect(planDisclosure.contains(tool.rawValue))
         }
         #expect(planDisclosure.contains("reasoning_effort"))
+        #expect(planDisclosure.contains("`max`"))
         #expect(planDisclosure.contains("thinking"))
         #expect(planDisclosure.contains("tool_choice"))
         #expect(planDisclosure.contains("\"parameters\""))
         #expect(planDisclosure.contains("\"additionalProperties\" : false"))
+    }
+
+    @Test @MainActor
+    func reasoningEffortRoundTripsAsAValidatedSyncedPreference() throws {
+        let preference = try SyncedPreference(
+            key: AppPreferenceKey.llmReasoningEffort.rawValue,
+            valueJSON: PreferenceJSON.canonicalValueJSON(
+                for: .llmReasoningEffort,
+                from: PreferenceJSON.encode("MAX")
+            ),
+            deviceID: "test"
+        )
+        let preferences = AppPreferences(
+            syncedPreferences: [preference]
+        )
+
+        #expect(preferences.llmReasoningEffort == .max)
+        #expect(
+            preferences.valueJSON(for: .llmReasoningEffort) ==
+                PreferenceJSON.encode("max")
+        )
+        #expect(
+            try PreferenceJSON.canonicalValueJSON(
+                for: .llmReasoningEffort,
+                from: PreferenceJSON.encode("unsupported")
+            ) == PreferenceJSON.encode("high")
+        )
+        #expect(SyncedPreferenceService.shouldSyncKey(preference.key))
     }
 
     @Test @MainActor

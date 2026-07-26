@@ -198,6 +198,44 @@ struct CoreLLMCompleteRequestTests {
         }
     }
 
+    @Test
+    func bothDeepSeekV4SuggestionRequestsUseTheSelectedOfficialThinkingEffort()
+        throws
+    {
+        let inboxRequest = try LLMInboxSuggestionService()
+            .suggestionRequest(
+                inboxTitle: "Read the paper",
+                taskCandidates: [Self.candidate(index: 1)],
+                categoryCandidates: [],
+                endpoint: "https://example.com/v1",
+                apiKey: "secret",
+                modelID: "deepseek-v4-flash",
+                reasoningEffort: .max
+            )
+        let checklistRequest =
+            try LLMChecklistVisualSuggestionService()
+                .suggestionRequest(
+                    checklistTitle: "Read chapter 1",
+                    taskTitle: "Book",
+                    taskPath: "Reading / Book",
+                    endpoint: "https://example.com/v1",
+                    apiKey: "secret",
+                    modelID: "deepseek-v4-pro",
+                    reasoningEffort: .max
+                )
+        for request in [
+            inboxRequest,
+            checklistRequest,
+        ] {
+            let envelope = try Self.decodeRequestEnvelope(
+                from: request
+            )
+            #expect(envelope.thinking?.type == "enabled")
+            #expect(envelope.reasoningEffort == "max")
+            #expect(envelope.temperature == nil)
+        }
+    }
+
     private static func candidate(
         index: Int,
         title: String = "Task",
@@ -270,10 +308,24 @@ struct CoreLLMCompleteRequestTests {
 
 private struct RequestEnvelope: Decodable {
     let messages: [Message]
+    let temperature: Double?
+    let thinking: Thinking?
+    let reasoningEffort: String?
 
     struct Message: Decodable {
         let role: String
         let content: String
+    }
+
+    struct Thinking: Decodable {
+        let type: String
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case messages
+        case temperature
+        case thinking
+        case reasoningEffort = "reasoning_effort"
     }
 }
 

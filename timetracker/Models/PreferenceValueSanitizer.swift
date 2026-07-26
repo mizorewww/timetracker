@@ -115,6 +115,16 @@ enum AppPreferenceValueSanitizer {
         return accumulator.values
     }
 
+    nonisolated static func llmReasoningEffort(
+        _ value: String
+    ) -> LLMReasoningEffort {
+        LLMReasoningEffort(
+            rawValue: value.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ).lowercased()
+        ) ?? .high
+    }
+
     static func llmPromptInstructions(
         _ value: String,
         defaultInstructions: String

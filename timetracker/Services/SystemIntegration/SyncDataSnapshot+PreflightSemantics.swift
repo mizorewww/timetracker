@@ -130,7 +130,8 @@ extension SyncDataSnapshot {
                      .pomodoroDefaultMode,
                      .todayHeatmapPeriod,
                      .llmEndpoint,
-                     .llmSelectedModel:
+                     .llmSelectedModel,
+                     .llmReasoningEffort:
                     decodes(String.self, from: data)
                 case .llmInboxSuggestionInstructions,
                      .llmChecklistVisualInstructions,

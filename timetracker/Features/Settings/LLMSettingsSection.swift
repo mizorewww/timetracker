@@ -1,10 +1,17 @@
 import SwiftUI
 
+extension LLMReasoningEffort {
+    var localizationKey: String {
+        "settings.llm.reasoningEffort.\(rawValue)"
+    }
+}
+
 struct LLMConfigurationDraft: Equatable {
     var endpoint: String
     var apiKey: String
     var selectedModel: String
     var availableModels: [String]
+    var reasoningEffort: LLMReasoningEffort
 
     var normalized: Self {
         let normalizedEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -17,7 +24,8 @@ struct LLMConfigurationDraft: Equatable {
             endpoint: normalizedEndpoint,
             apiKey: normalizedKey,
             selectedModel: normalizedModels.contains(normalizedSelection) ? normalizedSelection : "",
-            availableModels: normalizedModels
+            availableModels: normalizedModels,
+            reasoningEffort: reasoningEffort
         )
     }
 
@@ -39,6 +47,7 @@ struct LLMSettingsSection: View {
     let hasAPIKey: Bool
     let selectedModel: String
     let availableModels: [String]
+    let reasoningEffort: LLMReasoningEffort
     let onConfigure: () -> Void
     let onEditPrompt: (LLMPromptKind) -> Void
 
@@ -87,6 +96,17 @@ struct LLMSettingsSection: View {
                     value: selectedModel,
                     systemImage: "cpu",
                     tint: .indigo
+                )
+
+                SettingsValueRow(
+                    title: AppStrings.localized(
+                        "settings.llm.reasoningEffort"
+                    ),
+                    value: AppStrings.localized(
+                        reasoningEffort.localizationKey
+                    ),
+                    systemImage: "brain.head.profile",
+                    tint: .purple
                 )
             }
 

@@ -382,10 +382,11 @@ LLMService 面向用户配置的 OpenAI-compatible endpoint。边界要求：
 - 模型发现不得先把服务端 `data` 全量物化为数组或无界 Set。`LLMModelListResponse` 逐项解码到 `LLMModelIDAccumulator`，只保留与偏好 sanitizer 相同的升序前 256 个唯一有效完整 ID；总响应仍同时受 transport 的 2 MiB 上限约束。
 - Inbox 发送全部可工作的 Task 和全部可见 Category；规范化去重后按稳定身份/路径排序，不能用本地启发式优先级或字节预算替模型静默删除候选。
 - `SymbolCatalog.symbolNames` 是 picker 与所有 AI 请求共用的唯一完整 SF Symbols 目录，`symbolNameSet` 提供 O(1) 校验。AI 返回 icon 只接受这份已公告目录，Inbox task/category UUID 只接受实际发送候选。
+- `LLMReasoningEffort` 是同步普通偏好，只允许 DeepSeek 官方 `high`/`max`。`LLMChatRequestPolicy` 对三个生产 service 统一判断 DeepSeek V4：显式开启 thinking、发送所选 effort、移除 temperature；workspace 工具会话还必须省略 `tool_choice` 并把每轮完整 `reasoning_content` 原样带回。其它模型不发送这些 DeepSeek 专属字段。effort 是 request identity 的一部分，切换时取消旧 Inbox/checklist 请求，迟到完成不得跨 effort 落库。
 - 日志和错误信息不得打印密钥或完整敏感请求。
 - 解码错误、限流、超时和无效模型必须转换为可操作错误。
 
-Settings 采用 `LLMConfigurationDraft`：endpoint/API key/模型/提示词指令编辑先留在 sheet；“测试连接”只读取模型并验证当时的 credential fingerprint，不持久化；只有模型有效时才能“保存”。修改凭证会取消旧请求并清空旧模型结果，取消有改动的 sheet 会二次确认。保存时 endpoint、模型列表、已选模型和各 `LLMPromptKind` 的任务规划/建议提示词指令由 `PreferenceCommandHandler.set(values:)` 在一个 SwiftData transaction 中一次提交（提示词指令是可同步、可导出的普通偏好，不是秘密）；API key 的 Keychain side effect 不属于同一 ACID transaction，提交失败时只可用旧值补偿恢复，且补偿失败必须单独报告。
+Settings 采用 `LLMConfigurationDraft`：endpoint/API key/模型/思考强度编辑先留在 sheet；“测试连接”只读取模型并验证当时的 credential fingerprint，不持久化；只有模型有效时才能“保存”。修改凭证会取消旧请求并清空旧模型结果，取消有改动的 sheet 会二次确认。保存时 endpoint、模型列表、已选模型和思考强度由 `PreferenceCommandHandler.set(values:)` 在一个 SwiftData transaction 中一次提交；各 `LLMPromptKind` 指令通过各自 editor/command 单独提交（都是可同步、可导出的普通偏好，不是秘密）。API key 的 Keychain side effect 不属于同一 ACID transaction，提交失败时只可用旧值补偿恢复，且补偿失败必须单独报告。
 
 自动建议是另一个明确的本机同意开关，默认 false，不进入 CloudKit 或 JSON。只完成配置不会开启后台发送；开启后才会为 Inbox/checklist 触发受并发和退避控制的请求。发行时必须锁定默认 endpoint/第三方 endpoint 的运营方、用途、保留期、删除渠道和隐私披露；“OpenAI-compatible”不是数据不保留的保证。
 

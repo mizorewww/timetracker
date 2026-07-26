@@ -108,7 +108,8 @@ final class LiveDeepSeekTaskWorkspaceTests: XCTestCase {
             instructions: LLMPromptKind.inboxRouting.defaultInstructions,
             endpoint: configuration.endpoint,
             apiKey: configuration.apiKey,
-            modelID: configuration.modelID
+            modelID: configuration.modelID,
+            reasoningEffort: .max
         )
 
         XCTAssertEqual(
@@ -133,7 +134,8 @@ final class LiveDeepSeekTaskWorkspaceTests: XCTestCase {
             instructions: LLMPromptKind.checklistVisual.defaultInstructions,
             endpoint: configuration.endpoint,
             apiKey: configuration.apiKey,
-            modelID: configuration.modelID
+            modelID: configuration.modelID,
+            reasoningEffort: .max
         )
 
         XCTAssertTrue(
@@ -213,7 +215,8 @@ private extension LiveDeepSeekTaskWorkspaceTests {
             workspace: workspace,
             endpoint: configuration.endpoint,
             apiKey: configuration.apiKey,
-            modelID: configuration.modelID
+            modelID: configuration.modelID,
+            reasoningEffort: .max
         )
     }
 

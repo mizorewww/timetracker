@@ -199,6 +199,11 @@
 "settings.llm.apiKey" = "API Key";
 "settings.llm.automaticSuggestions" = "Automatic AI Suggestions";
 "settings.llm.model" = "Model";
+"settings.llm.modelFooter" = "The exact selected model ID is sent to the endpoint.";
+"settings.llm.reasoningEffort" = "Thinking Effort";
+"settings.llm.reasoningEffort.high" = "High";
+"settings.llm.reasoningEffort.max" = "Maximum";
+"settings.llm.reasoningEffort.footer" = "DeepSeek V4 uses thinking mode with this official high/max reasoning effort. Other model families keep their own compatible controls.";
 "settings.llm.noModels" = "No models loaded";
 "settings.llm.fetching" = "Fetching Models...";
 "settings.llm.fetchSuccess" = "Loaded %d models.";

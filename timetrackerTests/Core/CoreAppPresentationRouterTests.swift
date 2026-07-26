@@ -57,7 +57,8 @@ struct CoreAppPresentationRouterTests {
                 endpoint: "https://example.com",
                 apiKey: "key",
                 selectedModel: "model",
-                availableModels: ["model"]
+                availableModels: ["model"],
+                reasoningEffort: .high
             ))
         ) == false)
         router.dismiss(presentationID: pickerID)

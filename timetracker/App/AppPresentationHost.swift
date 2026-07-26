@@ -109,19 +109,22 @@ private struct AppPresentationSheet: View {
                 endpoint: draft.endpoint,
                 apiKey: draft.apiKey,
                 selectedModel: draft.selectedModel,
-                availableModels: draft.availableModels
+                availableModels: draft.availableModels,
+                reasoningEffort: draft.reasoningEffort
             ) { configuration in
                 store.setLLMConfiguration(
                     endpoint: configuration.endpoint,
                     apiKey: configuration.apiKey,
                     selectedModel: configuration.selectedModel,
-                    availableModelIDs: configuration.availableModels
+                    availableModelIDs: configuration.availableModels,
+                    reasoningEffort: configuration.reasoningEffort
                 )
             }
-        case let .llmPrompt(kind, instructions):
+        case let .llmPrompt(kind, instructions, reasoningEffort):
             LLMPromptInstructionsEditor(
                 kind: kind,
-                instructions: instructions
+                instructions: instructions,
+                reasoningEffort: reasoningEffort
             ) {
                 store.setLLMPromptInstructions($0, for: kind)
             }

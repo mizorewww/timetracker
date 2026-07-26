@@ -65,6 +65,7 @@ extension TimeTrackerStore {
         let endpoint = preferences.llmEndpoint
         let apiKey = preferences.llmAPIKey
         let modelID = preferences.llmSelectedModel
+        let reasoningEffort = preferences.llmReasoningEffort
         let instructions = preferences.llmInboxSuggestionInstructions
         let itemID = item.id
         let requestedTitle = item.title
@@ -83,7 +84,8 @@ extension TimeTrackerStore {
                     instructions: instructions,
                     endpoint: endpoint,
                     apiKey: apiKey,
-                    modelID: modelID
+                    modelID: modelID,
+                    reasoningEffort: reasoningEffort
                 )
                 try Task.checkCancellation()
                 self?.completeInboxSuggestion(
@@ -95,6 +97,7 @@ extension TimeTrackerStore {
                     endpoint: endpoint,
                     apiKey: apiKey,
                     modelID: modelID,
+                    reasoningEffort: reasoningEffort,
                     instructions: instructions,
                     showsErrors: showsErrors
                 )
@@ -108,6 +111,7 @@ extension TimeTrackerStore {
                     endpoint: endpoint,
                     apiKey: apiKey,
                     modelID: modelID,
+                    reasoningEffort: reasoningEffort,
                     instructions: instructions,
                     showsErrors: showsErrors,
                     wasCancelled: Task.isCancelled || error is CancellationError
@@ -206,14 +210,16 @@ extension TimeTrackerStore {
     func matchesCurrentLLMConfiguration(
         endpoint: String,
         apiKey: String,
-        modelID: String
+        modelID: String,
+        reasoningEffort: LLMReasoningEffort
     ) -> Bool {
         preferences.llmEndpoint.trimmingCharacters(in: .whitespacesAndNewlines) ==
             endpoint.trimmingCharacters(in: .whitespacesAndNewlines) &&
             preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines) ==
             apiKey.trimmingCharacters(in: .whitespacesAndNewlines) &&
             preferences.llmSelectedModel.trimmingCharacters(in: .whitespacesAndNewlines) ==
-            modelID.trimmingCharacters(in: .whitespacesAndNewlines)
+            modelID.trimmingCharacters(in: .whitespacesAndNewlines) &&
+            preferences.llmReasoningEffort == reasoningEffort
     }
 
     func matchesCurrentLLMPrompt(

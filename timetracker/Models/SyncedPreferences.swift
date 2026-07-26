@@ -1,5 +1,20 @@
 import Foundation
 
+nonisolated enum LLMReasoningEffort:
+    String,
+    CaseIterable,
+    Codable,
+    Identifiable,
+    Sendable
+{
+    case high
+    case max
+
+    var id: Self {
+        self
+    }
+}
+
 enum AppPreferenceKey: String, CaseIterable {
     case preferredColorScheme = "PreferredColorScheme"
     case pomodoroDefaultMode = "PomodoroDefaultMode"
@@ -15,6 +30,7 @@ enum AppPreferenceKey: String, CaseIterable {
     case llmEndpoint = "LLMEndpoint"
     case llmSelectedModel = "LLMSelectedModel"
     case llmAvailableModelIDs = "LLMAvailableModelIDs"
+    case llmReasoningEffort = "LLMReasoningEffort"
     case llmInboxSuggestionInstructions = "LLMInboxSuggestionInstructions"
     case llmChecklistVisualInstructions = "LLMChecklistVisualInstructions"
     case llmTaskPlanInstructions = "LLMTaskPlanInstructions"
@@ -44,6 +60,7 @@ struct AppPreferences: Equatable {
     var llmAPIKey = ""
     var llmSelectedModel = ""
     var llmAvailableModelIDs: [String] = []
+    var llmReasoningEffort = LLMReasoningEffort.high
     var llmInboxSuggestionInstructions = LLMPromptKind.inboxRouting.defaultInstructions
     var llmChecklistVisualInstructions = LLMPromptKind.checklistVisual.defaultInstructions
     var llmTaskPlanInstructions = LLMTaskPlanPrompt.defaultInstructions
@@ -118,6 +135,15 @@ struct AppPreferences: Equatable {
             llmAvailableModelIDs = AppPreferenceValueSanitizer.llmModelIDs(
                 PreferenceJSON.decode([String].self, from: preference.valueJSON, default: [])
             )
+        case .llmReasoningEffort:
+            llmReasoningEffort =
+                AppPreferenceValueSanitizer.llmReasoningEffort(
+                    PreferenceJSON.decode(
+                        String.self,
+                        from: preference.valueJSON,
+                        default: llmReasoningEffort.rawValue
+                    )
+                )
         case .llmInboxSuggestionInstructions:
             let storedValue = PreferenceJSON.decode(
                 String.self,
@@ -190,6 +216,8 @@ struct AppPreferences: Equatable {
             return PreferenceJSON.encode(AppPreferenceValueSanitizer.llmModelID(llmSelectedModel))
         case .llmAvailableModelIDs:
             return PreferenceJSON.encode(AppPreferenceValueSanitizer.llmModelIDs(llmAvailableModelIDs))
+        case .llmReasoningEffort:
+            return PreferenceJSON.encode(llmReasoningEffort.rawValue)
         case .llmInboxSuggestionInstructions:
             let instructions = (
                 try? AppPreferenceValueSanitizer.llmInboxSuggestionInstructions(

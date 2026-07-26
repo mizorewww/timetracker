@@ -197,3 +197,34 @@ Checkpoint E 与提示词透明度/完整上下文收口尚未完成，反馈条
   与
   `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`。
   本任务不修改这些断言来制造全绿。
+
+## 可配置 DeepSeek V4 思考强度 Checkpoint 进度
+
+- 按 DeepSeek 官方 Thinking Mode / Chat Completion 契约加入同步
+  `LLMReasoningEffort`，只接受真实的 `high` 与 `max`，缺失或未知旧值回退
+  `high`；不伪造 token-budget 参数。
+- AI 配置 Test→Save 草稿新增原生 SwiftUI segmented `Picker`；endpoint、模型列表、
+  精确模型 ID 与 effort 在一个 preference transaction 中保存，API key 仍只在
+  device-only Keychain。
+- Inbox、Checklist、Task Plan 三条生产 service 共用
+  `LLMChatRequestPolicy`。DeepSeek V4 显式发送 `thinking.type=enabled` 与当前
+  `reasoning_effort`，省略 temperature；任务规划同时省略 thinking mode 拒绝的
+  `tool_choice`，并继续把工具轮的完整 `reasoning_content` 原样带入后续请求。
+- effort 进入 Inbox/Checklist request identity、完成回调检查和 Checklist failure
+  fingerprint。切换 high/max 会取消旧请求；旧 effort 的迟到成功或失败都不能落库。
+- 三个提示词的 production-request Markdown 披露显示当前选择，不再硬编码 high。
+  UI Test live 配置和四条真实 DeepSeek test 已显式选择 `.max`，等待下一 checkpoint
+  对真实 endpoint 重新验收。
+- 新的本地行为测试不伪造 provider 输出：直接解码生产 service 实际编码的
+  `URLRequest`，确认 Inbox/Checklist 在 V4 下发送 `max`、thinking enabled 且没有
+  temperature；另覆盖 effort 同步偏好规范化/round trip 和配置原子保存。
+- 三语 localization parity 通过（每种语言 1,280 keys），SwiftFormat 全仓
+  829 个文件通过。`make test` 编译并运行 1,414 项；本 checkpoint 新增测试全部
+  通过，总结果仍只有三个与 Task 60 无关的既有失败：
+  `CoreLLMResponseTransportTests.nonSuccessStatusTakesPriorityOverDeclaredBodySize`、
+  `PreferenceSyncBehaviorTests.checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd`
+  与
+  `TaskPersistencePolicyTests.archiveCommandPreservesTheOriginalArchiveTimestamp`。
+- 没有新依赖；UI 使用 SwiftUI 原生 `Picker`，请求继续使用 Foundation 编码和项目
+  现有生产 LLM services。AD-133 明确取代 AD-027/AD-132 中旧的人工请求投影与
+  fake-provider 生成验收条款。

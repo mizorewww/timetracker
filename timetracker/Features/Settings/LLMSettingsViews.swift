@@ -18,13 +18,15 @@ struct LLMConfigurationEditor: View {
         apiKey: String,
         selectedModel: String,
         availableModels: [String],
+        reasoningEffort: LLMReasoningEffort,
         onSave: @escaping (LLMConfigurationDraft) -> Bool
     ) {
         let initialDraft = LLMConfigurationDraft(
             endpoint: endpoint,
             apiKey: apiKey,
             selectedModel: selectedModel,
-            availableModels: availableModels
+            availableModels: availableModels,
+            reasoningEffort: reasoningEffort
         ).normalized
         self.initialDraft = initialDraft
         self.onSave = onSave
@@ -100,6 +102,34 @@ struct LLMConfigurationEditor: View {
                     }
                 } header: {
                     Text(.app("settings.llm.model"))
+                } footer: {
+                    Text(.app("settings.llm.modelFooter"))
+                }
+
+                Section {
+                    Picker(
+                        AppStrings.localized(
+                            "settings.llm.reasoningEffort"
+                        ),
+                        selection: $draft.reasoningEffort
+                    ) {
+                        ForEach(LLMReasoningEffort.allCases) { effort in
+                            Text(
+                                AppStrings.localized(
+                                    effort.localizationKey
+                                )
+                            )
+                            .tag(effort)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier(
+                        "settings.llm.reasoningEffort"
+                    )
+                } header: {
+                    Text(.app("settings.llm.reasoningEffort"))
+                } footer: {
+                    Text(.app("settings.llm.reasoningEffort.footer"))
                 }
             }
             .formStyle(.grouped)

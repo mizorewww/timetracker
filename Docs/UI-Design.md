@@ -8,6 +8,8 @@ Current user behavior is documented in [User Guide](UserGuide.md); verification 
 
 The app should feel like a first-party Apple productivity tool: calm hierarchy, native navigation, predictable controls, system gestures, readable compact layouts, minimal custom animation, and no layout surprises when text, device width, or localization changes.
 
+Layout adapts to **width, never to device model**. `AppRootView` measures the window and picks one of two shells — compact (tab bar) below 720 pt, regular (sidebar + detail) at or above it — and publishes the choice as `\.layoutShell` for nested views. An iPad in Split View and a Mac window dragged narrow therefore get the same layout an iPhone gets. Do not reintroduce `UIDevice.current.userInterfaceIdiom` or a `#if os(...)` branch to make a layout decision; `#if os(...)` is for APIs that only exist on one platform, and touch-target sizing stays platform-keyed because it encodes input modality (finger vs pointer), not width.
+
 Custom drawing is allowed only when the product concept requires it, such as analytics timelines or activity distribution charts. Editors, lists, settings, menus, sheets, and navigation are native-first.
 
 ## Principles
@@ -94,7 +96,7 @@ Keep Plan and Task as labeled, discoverable controls; do not restore title/timer
 
 ### Settings
 
-macOS settings open as a settings window; iOS settings are a sheet or pushed page. Use native `Form`, grouped sections, `Toggle`, `Picker`, `TextField`, and `Button`. Reflow value and input rows vertically at accessibility Dynamic Type sizes and expose one clear VoiceOver label/value instead of reading decorative icons. Pair destructive button roles with explicit text, red title/icon treatment, and confirmation copy; color alone is never the warning contract. Keep debug/status-only information under About or Advanced, and write settings copy that explains the outcome, not implementation details. Acceptance: iCloud settings are understandable to non-developers; API key/model settings are clearly marked and secure; destructive maintenance actions have confirmation text; sync feedback announces both state and explanation.
+macOS settings open as a settings window; iOS settings are a sheet or pushed page. Use native `Form`, grouped sections, `Toggle`, `Picker`, `TextField`, and `Button`. Reflow value and input rows vertically at accessibility Dynamic Type sizes and expose one clear VoiceOver label/value instead of reading decorative icons. Pair destructive button roles with explicit text, red title/icon treatment, and confirmation copy; color alone is never the warning contract. Keep debug/status-only information under About or Advanced, and write settings copy that explains the outcome, not implementation details. AI configuration keeps endpoint/API key/model and the finite DeepSeek `high`/`max` thinking-effort choice in one Test→Save draft; a native segmented `Picker` communicates that there are exactly two provider-supported values, and its footer explains that other model families ignore the DeepSeek-specific setting. Acceptance: iCloud settings are understandable to non-developers; API key/model/thinking settings are clearly marked and secure; destructive maintenance actions have confirmation text; sync feedback announces both state and explanation.
 
 ### Sidebar And Detail
 
@@ -115,7 +117,7 @@ Preferred terms:
 
 The Today analytics timeline clips cross-day segments to today's bounds, then displays the visible range from the first visible segment start to the last visible segment end. Empty days fall back to the full day. This keeps dense work periods readable while still respecting midnight boundaries.
 
-Bars should show only time position, duration, color, and the task symbol. Task title, parent path, and exact time range belong in rows below the chart. On iPhone, the timeline is vertical; on iPad and macOS, it is horizontal.
+Bars should show only time position, duration, color, and the task symbol. Task title, parent path, and exact time range belong in rows below the chart. The timeline runs vertically in the compact shell and horizontally in the regular shell — a width decision, not a platform one, so an iPad in Split View and a narrow Mac window get the vertical axis for the same reason iPhone does.
 
 Adjacent tasks with no visible gap should use different lanes so their bars remain distinguishable. The layout should still minimize lane count: if task A overlaps B and B overlaps C, but A does not overlap C, A and C can reuse the same lane.
 

@@ -43,6 +43,7 @@ extension TimeTrackerStore {
         let previousEndpoint = preferences.llmEndpoint
         let previousAPIKey = preferences.llmAPIKey
         let previousModelID = preferences.llmSelectedModel
+        let previousReasoningEffort = preferences.llmReasoningEffort
         let previousInboxInstructions = preferences.llmInboxSuggestionInstructions
         let previousChecklistInstructions = preferences.llmChecklistVisualInstructions
         let automaticSuggestionsWereEnabled = preferences.llmAutomaticSuggestionsEnabled
@@ -58,7 +59,8 @@ extension TimeTrackerStore {
         let configurationChanged = !matchesCurrentLLMConfiguration(
             endpoint: previousEndpoint,
             apiKey: previousAPIKey,
-            modelID: previousModelID
+            modelID: previousModelID,
+            reasoningEffort: previousReasoningEffort
         )
         if configurationChanged {
             cancelAllInboxSuggestionRequests()

@@ -1,6 +1,6 @@
 # 64：任务里的 Apple Health 显示消失 实现记忆
 
-状态：2026-07-27 进行中
+状态：2026-07-27 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -30,7 +30,7 @@
 - [x] A：审计 Apple Health 数据、任务持久化和任务 UI 投影；先添加可复现行为测试。
 - [x] B：按测试结果修复根因，并更新当前架构/设计文档。
 - [x] C：在受影响设备上完成正常字号 UI 截图验收与回归测试。
-- [~] D：执行 Release 全设备安装，关闭反馈并移除活动链接。
+- [x] D：执行 Release 全设备安装，关闭反馈并移除活动链接。
 
 ## 库策略
 
@@ -61,3 +61,9 @@
   `/tmp/timetracker-64-postfix.xcresult`。
 - 本任务未引入第三方库：可见性收敛应由系统 HealthKit、SwiftData 与 SwiftUI
   Observation 的既有边界负责，引入额外依赖不会解决 store facade 的竞态。
+- 2026-07-27 Checkpoint D：`make build-install-all` 的 Release 构建、自动签名和
+  安装全部成功；安装到 iPad Pro M4（`748D0137-ADC3-58AF-855C-1E98B3125F93`）、
+  iPhone Air（`FBA36694-D841-56D4-8ED6-21942873B21B`）及
+  `/Applications/timetracker.app`。Watch companion 已签名并嵌入 iOS app，待配对
+  Apple Watch 的“自动安装 App”接管安装。反馈标记完成，活动链接移除；关闭提交后
+  再执行一次全设备安装，以保证最终 commit 与设备版本一致。

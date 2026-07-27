@@ -54,10 +54,18 @@ struct ActivePomodoroCard: View {
                 .foregroundStyle(taskColor)
 
             Text(roundDescription)
-                .font(.subheadline)
+                .font(roundDescriptionFont)
                 .foregroundStyle(.secondary)
         }
         .accessibilityElement(children: .combine)
+    }
+
+    private var roundDescriptionFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
     }
 
     private var stopButton: some View {

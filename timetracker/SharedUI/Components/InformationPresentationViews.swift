@@ -54,14 +54,30 @@ struct InformationGuideRow: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(titleFont)
                 Text(bodyText)
-                    .font(.caption)
+                    .font(bodyFont)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(.vertical, 3)
         .accessibilityElement(children: .combine)
+    }
+
+    private var titleFont: Font {
+        #if os(macOS)
+        .body.weight(.semibold)
+        #else
+        .subheadline.weight(.semibold)
+        #endif
+    }
+
+    private var bodyFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .caption
+        #endif
     }
 }

@@ -145,7 +145,7 @@ private struct TodayHeatmapTaskSelectionView: View {
                     ),
                     systemImage: "eye.slash"
                 )
-                .font(.footnote)
+                .font(hiddenSelectionFont)
                 .foregroundStyle(.secondary)
 
                 Spacer(minLength: 8)
@@ -165,6 +165,14 @@ private struct TodayHeatmapTaskSelectionView: View {
             .padding(.vertical, 10)
             .background(.bar)
         }
+    }
+
+    private var hiddenSelectionFont: Font {
+        #if os(macOS)
+        .callout
+        #else
+        .footnote
+        #endif
     }
 
     private func toggleSelection(_ taskID: UUID) {

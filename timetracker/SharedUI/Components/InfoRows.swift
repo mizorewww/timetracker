@@ -19,8 +19,16 @@ struct InfoRow: View {
                 valueText
             }
         }
-        .font(.subheadline)
+        .font(rowFont)
         .accessibilityElement(children: .combine)
+    }
+
+    private var rowFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
     }
 
     private var titleText: some View {

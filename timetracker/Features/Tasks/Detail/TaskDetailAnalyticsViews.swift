@@ -103,13 +103,13 @@ struct TaskDetailAnalysisSection: View {
                         ),
                         systemImage: "heart.text.square"
                     )
-                    .font(.subheadline.weight(.medium))
+                    .font(emptyTitleFont)
                     .accessibilityIdentifier(
                         "task.detail.appleHealth.empty"
                     )
 
                     Text(.app("task.detail.appleHealth.empty.message"))
-                        .font(.caption)
+                        .font(emptyMessageFont)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier(
@@ -235,6 +235,22 @@ struct TaskDetailAnalysisSection: View {
             liveNow: appleHealthPeriod.liveNow
         )
     }
+
+    private var emptyTitleFont: Font {
+        #if os(macOS)
+        .body.weight(.medium)
+        #else
+        .subheadline.weight(.medium)
+        #endif
+    }
+
+    private var emptyMessageFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .caption
+        #endif
+    }
 }
 
 private struct TaskDetailAppleHealthInlineStatusView: View {
@@ -244,10 +260,10 @@ private struct TaskDetailAppleHealthInlineStatusView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Label(title, systemImage: systemImage)
-                .font(.subheadline.weight(.medium))
+                .font(titleFont)
                 .accessibilityIdentifier(accessibilityIdentifier)
             Text(message)
-                .font(.caption)
+                .font(messageFont)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -256,6 +272,22 @@ private struct TaskDetailAppleHealthInlineStatusView: View {
         if status == .failed {
             TaskDetailAppleHealthRetryButton(action: retry)
         }
+    }
+
+    private var titleFont: Font {
+        #if os(macOS)
+        .body.weight(.medium)
+        #else
+        .subheadline.weight(.medium)
+        #endif
+    }
+
+    private var messageFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .caption
+        #endif
     }
 
     private var title: String {
@@ -396,7 +428,7 @@ private struct AnalyticsGroupBreakdownRowForTask: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.title)
-                    .font(.subheadline.weight(.medium))
+                    .font(primaryFont.weight(.medium))
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(item.subtitle)
@@ -412,10 +444,18 @@ private struct AnalyticsGroupBreakdownRowForTask: View {
     private var breakdownTotals: some View {
         VStack(alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing, spacing: 2) {
             Text(DurationFormatter.compact(item.grossSeconds))
-                .font(.subheadline.monospacedDigit())
+                .font(primaryFont.monospacedDigit())
             Text("\(Int((Double(item.grossSeconds) / Double(max(totalSeconds, 1))) * 100))%")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    private var primaryFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
     }
 }

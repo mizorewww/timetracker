@@ -11,9 +11,9 @@ struct ForecastExplanationCallout: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(.app("forecast.explainer.title"))
-                    .font(.caption.weight(.semibold))
+                    .font(titleFont)
                 Text(.app("forecast.explainer.body"))
-                    .font(.caption)
+                    .font(bodyFont)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -27,6 +27,22 @@ struct ForecastExplanationCallout: View {
                 .stroke(Color.blue.opacity(0.12), lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
+    }
+
+    private var titleFont: Font {
+        #if os(macOS)
+        .body.weight(.semibold)
+        #else
+        .caption.weight(.semibold)
+        #endif
+    }
+
+    private var bodyFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .caption
+        #endif
     }
 }
 
@@ -78,13 +94,13 @@ struct ForecastInfoView: View {
                 Section(AppStrings.localized("forecast.info.example.title")) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(AppStrings.localized("forecast.info.example.body"))
-                            .font(.subheadline)
+                            .font(exampleFont)
                         ProgressView(value: 0.25)
                         HStack {
                             Label("1/4", systemImage: "checkmark.circle.fill")
                             Spacer()
                             Text(AppStrings.localized("forecast.info.example.remaining"))
-                                .font(.subheadline.weight(.semibold).monospacedDigit())
+                                .font(exampleFont.weight(.semibold).monospacedDigit())
                         }
                         .foregroundStyle(.secondary)
                     }
@@ -108,6 +124,14 @@ struct ForecastInfoView: View {
         #if os(iOS)
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+        #endif
+    }
+
+    private var exampleFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
         #endif
     }
 }

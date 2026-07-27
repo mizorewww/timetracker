@@ -58,7 +58,7 @@ private struct PomodoroRunRow: View {
                 .foregroundStyle(color(for: run.state))
             VStack(alignment: .leading, spacing: 3) {
                 Text(taskIdentity)
-                    .font(.subheadline.weight(.medium))
+                    .font(taskIdentityFont)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(detail)
                     .font(.caption)
@@ -70,6 +70,14 @@ private struct PomodoroRunRow: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(taskIdentity)
         .accessibilityValue(detail)
+    }
+
+    private var taskIdentityFont: Font {
+        #if os(macOS)
+        .body.weight(.medium)
+        #else
+        .subheadline.weight(.medium)
+        #endif
     }
 
     private var taskIdentity: String {

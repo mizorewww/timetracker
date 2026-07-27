@@ -42,9 +42,9 @@ struct HomeWeeklyGrossTimeChart: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(.app("home.weeklyGross.empty"))
-                        .font(.subheadline.weight(.medium))
+                        .font(emptyTitleFont)
                     Text(.app("home.weeklyGross.emptyDescription"))
-                        .font(.caption)
+                        .font(emptyMessageFont)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -54,6 +54,22 @@ struct HomeWeeklyGrossTimeChart: View {
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("home.weeklyGross.empty")
         }
+    }
+
+    private var emptyTitleFont: Font {
+        #if os(macOS)
+        .body.weight(.medium)
+        #else
+        .subheadline.weight(.medium)
+        #endif
+    }
+
+    private var emptyMessageFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .caption
+        #endif
     }
 
     private var chartDomain: ClosedRange<Date>? {

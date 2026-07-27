@@ -50,7 +50,7 @@ struct PomodoroActiveCountdownView: View {
                         AppStrings.localized("pomodoro.resume.unavailable"),
                         systemImage: "exclamationmark.triangle.fill"
                     )
-                    .font(.footnote)
+                    .font(unavailableMessageFont)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("pomodoro.resumeUnavailable")
@@ -58,6 +58,14 @@ struct PomodoroActiveCountdownView: View {
                 resumeButton(remaining: remaining)
             }
         }
+    }
+
+    private var unavailableMessageFont: Font {
+        #if os(macOS)
+        .callout
+        #else
+        .footnote
+        #endif
     }
 
     private func resumeButton(remaining: Int) -> some View {

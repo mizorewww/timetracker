@@ -58,11 +58,19 @@ struct PomodoroSetupCard: View {
                 .font(.title2.bold())
 
             Text(.app("pomodoro.setup.subtitle"))
-                .font(.subheadline)
+                .font(subtitleFont)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("pomodoro.setup")
+    }
+
+    private var subtitleFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
     }
 }

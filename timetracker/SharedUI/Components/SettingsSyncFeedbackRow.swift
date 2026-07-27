@@ -35,7 +35,7 @@ struct SettingsStatusRow: View {
                     .font(.body.weight(.medium))
                     .foregroundStyle(.primary)
                 Text(presentation.message)
-                    .font(.caption)
+                    .font(messageFont)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -47,6 +47,14 @@ struct SettingsStatusRow: View {
         .accessibilityLabel(presentation.title)
         .accessibilityValue(presentation.message)
         .settingsRowSeparatorAligned()
+    }
+
+    private var messageFont: Font {
+        #if os(macOS)
+        .callout
+        #else
+        .caption
+        #endif
     }
 
     @ViewBuilder

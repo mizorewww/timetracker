@@ -78,7 +78,7 @@ private struct TaskDetailRecentRecordRow: View {
             AppRowIcon(systemImage: "clock", tint: .secondary)
             VStack(alignment: .leading, spacing: 2) {
                 Text(record.title)
-                    .font(.subheadline.weight(.medium))
+                    .font(primaryFont.weight(.medium))
                     .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(record.path)
@@ -102,13 +102,21 @@ private struct TaskDetailRecentRecordRow: View {
                     )
                 )
             )
-            .font(.subheadline.monospacedDigit())
+            .font(primaryFont.monospacedDigit())
             Text(timeRangeText(display: display))
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    private var primaryFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
     }
 
     private func timeRangeText(display: TrackedTimeDisplaySnapshot) -> String {

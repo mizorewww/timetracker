@@ -127,7 +127,7 @@ struct TaskTimerActionButton: View {
                     .labelStyle(.titleAndIcon)
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
-                    .font(.callout.weight(.semibold))
+                    .font(labeledActionFont)
                     .foregroundStyle(actionColor)
                     .frame(minHeight: minimumLabelDimension)
             }
@@ -185,7 +185,15 @@ struct TaskTimerActionButton: View {
         #if os(iOS)
         26
         #else
-        16
+        20
+        #endif
+    }
+
+    private var labeledActionFont: Font {
+        #if os(macOS)
+        .body.weight(.semibold)
+        #else
+        .callout.weight(.semibold)
         #endif
     }
 

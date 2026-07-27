@@ -15,7 +15,7 @@ struct InboxGeneratingSuggestionBar: View {
             ProgressView()
                 .controlSize(.small)
         }
-        .font(.subheadline)
+        .font(InboxSuggestionTypography.primary)
         .foregroundStyle(.secondary)
         .padding(.leading, AppLayout.minimumInteractiveTarget + 10)
         .frame(minHeight: AppLayout.minimumInteractiveTarget)
@@ -59,7 +59,7 @@ struct InboxSuggestionBar: View {
                 )
 
                 Text(destination.summary)
-                    .font(.subheadline.weight(.medium))
+                    .font(InboxSuggestionTypography.primary.weight(.medium))
                     .foregroundStyle(.primary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -87,7 +87,7 @@ struct InboxSuggestionBar: View {
             Spacer(minLength: 8)
             applyButton
         }
-        .font(.subheadline)
+        .font(InboxSuggestionTypography.primary)
     }
 
     @ViewBuilder
@@ -240,7 +240,7 @@ struct InboxSuggestionFailureBar: View {
             Image(systemName: "exclamationmark.triangle")
                 .foregroundStyle(.orange)
         }
-        .font(.subheadline)
+        .font(InboxSuggestionTypography.primary)
         .foregroundStyle(.secondary)
         .accessibilityIdentifier("inbox.suggestion.failure.\(itemID.uuidString)")
     }
@@ -274,6 +274,16 @@ struct InboxSuggestionFailureBar: View {
                 "inbox.suggestion.retry.\(itemID.uuidString)"
             )
         }
-        .font(.subheadline)
+        .font(InboxSuggestionTypography.primary)
+    }
+}
+
+private enum InboxSuggestionTypography {
+    static var primary: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
     }
 }

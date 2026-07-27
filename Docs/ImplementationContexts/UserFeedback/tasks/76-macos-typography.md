@@ -117,3 +117,22 @@
   `build/UITestResults/task76-analytics-detail-final/macOS-20260727-193446.xcresult`。
   macOS 27 的 SwiftUI glossary 组合 row 会暴露空 AX label，因此 macOS 验证稳定
   identifier、可见性与截图；iOS 继续逐句验证可见文本。
+- 2026-07-27：完成第二层实现：Inbox 建议主信息、Focus 设置/进行中/历史主信息、
+  Today forecast 原因与空状态、Tasks 标准 category header、Task Detail 状态/
+  记录/拆分说明、Settings 反馈与警告，以及共享信息说明在 macOS 恢复
+  `body/callout` 语义；路径、时间、badge、图表轴和其他 metadata 保留原紧凑层级。
+  `TaskTimerActionButton` 的 macOS 有标签操作同步使用 body semibold，并将实际最小
+  标签尺寸恢复到 20pt，修复实现前已存在的 24pt AX frame 低于 28pt 验收下限问题。
+- 2026-07-27：第二层 macOS 验证通过：
+  `build/UITestResults/task76-all-pages/macOS-20260727-193835.xcresult`
+  （1 test / 7 screenshots）与
+  `build/UITestResults/task76-task-action/macOS-20260727-193950.xcresult`；
+  主代理已逐张检查 Today、Inbox、Tasks、Task Detail、Focus、Analytics、Settings
+  正常字号截图。Inbox 建议专项在 macOS 按设计跳过，因为操作路径归 iOS/iPadOS
+  所有。
+- 2026-07-27：跨平台回归通过。iPhone 与 13 英寸 iPad 的七页矩阵分别为
+  `build/UITestResults/task76-iphone-matrix/iOS-20260727-194232.xcresult` 和
+  `build/UITestResults/task76-ipad-matrix/iOS-20260727-194622.xcresult`；
+  iPhone 的真实 Inbox child-task suggestion 应用流程为
+  `build/UITestResults/task76-iphone-inbox-suggestion/iOS-20260727-194849.xcresult`。
+  三次 iOS 运行均由 Makefile 创建、记录、关闭并删除专属模拟器。

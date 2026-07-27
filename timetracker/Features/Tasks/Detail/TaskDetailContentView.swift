@@ -257,7 +257,7 @@ private struct TaskDetailAppleHealthEmptySection: View {
             .accessibilityIdentifier("task.detail.appleHealth.empty")
 
             Text(.app("task.detail.appleHealth.empty.message"))
-                .font(.subheadline)
+                .font(TaskDetailAppleHealthTypography.message)
                 .foregroundStyle(.secondary)
                 .accessibilityIdentifier(
                     "task.detail.appleHealth.empty.message"
@@ -280,7 +280,7 @@ private struct TaskDetailAppleHealthUnavailableSection: View {
             .accessibilityIdentifier("task.detail.appleHealth.unavailable")
 
             Text(.app("task.detail.appleHealth.unavailable.message"))
-                .font(.subheadline)
+                .font(TaskDetailAppleHealthTypography.message)
                 .foregroundStyle(.secondary)
         }
     }
@@ -298,11 +298,21 @@ private struct TaskDetailAppleHealthFailureSection: View {
             .accessibilityIdentifier("task.detail.appleHealth.failed")
 
             Text(.app("task.detail.appleHealth.failed.message"))
-                .font(.subheadline)
+                .font(TaskDetailAppleHealthTypography.message)
                 .foregroundStyle(.secondary)
 
             TaskDetailAppleHealthRetryButton(action: retry)
         }
+    }
+}
+
+private enum TaskDetailAppleHealthTypography {
+    static var message: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
     }
 }
 

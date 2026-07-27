@@ -181,7 +181,11 @@ struct TaskCategorySectionHeader: View {
     private var categorySymbolFont: Font {
         switch style {
         case .standard:
+            #if os(macOS)
+            .body.weight(.semibold)
+            #else
             .subheadline.weight(.semibold)
+            #endif
         case .compact:
             .caption.weight(.semibold)
         case .sidebar:
@@ -192,7 +196,11 @@ struct TaskCategorySectionHeader: View {
     private var categoryTitleFont: Font {
         switch style {
         case .standard:
+            #if os(macOS)
+            .body.weight(.semibold)
+            #else
             .subheadline.weight(.semibold)
+            #endif
         case .compact:
             .caption
         case .sidebar:

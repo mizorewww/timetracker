@@ -93,7 +93,7 @@ struct ForecastSummaryRow: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
                     Text(task.title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(primaryFont.weight(.semibold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                     checklistProgressLabel
@@ -161,7 +161,7 @@ struct ForecastSummaryRow: View {
 
     private var remainingLabel: some View {
         Text(remainingText)
-            .font(.subheadline.weight(.semibold).monospacedDigit())
+            .font(primaryFont.weight(.semibold).monospacedDigit())
             .foregroundStyle(.primary)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -183,7 +183,7 @@ struct ForecastSummaryRow: View {
                 .fixedSize(horizontal: false, vertical: allowsWrapping)
         }
         Text(rollup.reason)
-            .font(.caption2.weight(.medium))
+            .font(reasonFont)
             .foregroundStyle(.secondary)
             .lineLimit(allowsWrapping ? nil : 2)
             .fixedSize(horizontal: false, vertical: allowsWrapping)
@@ -198,6 +198,22 @@ struct ForecastSummaryRow: View {
 
     private var remainingText: String {
         rollup.remainingDisplayText
+    }
+
+    private var primaryFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
+    }
+
+    private var reasonFont: Font {
+        #if os(macOS)
+        .callout
+        #else
+        .caption2.weight(.medium)
+        #endif
     }
 
     private var daysText: String {

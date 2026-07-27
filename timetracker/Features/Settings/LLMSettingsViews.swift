@@ -76,7 +76,7 @@ struct LLMConfigurationEditor: View {
 
                     if let feedback {
                         Label(feedback.message, systemImage: feedback.isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .font(.footnote)
+                            .font(connectionFeedbackFont)
                             .foregroundStyle(feedback.isSuccess ? Color.green : Color.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -158,6 +158,14 @@ struct LLMConfigurationEditor: View {
             hasUnsavedChanges: hasUnsavedChanges,
             discard: { dismiss() }
         )
+    }
+
+    private var connectionFeedbackFont: Font {
+        #if os(macOS)
+        .callout
+        #else
+        .footnote
+        #endif
     }
 
     private var credentialsAreValid: Bool {

@@ -36,7 +36,7 @@ struct ArchivedTasksSettingsSection: View {
                 Text(.app("settings.archivedTasks.empty.title"))
                     .foregroundStyle(.primary)
                 Text(.app("settings.archivedTasks.empty.description"))
-                    .font(.caption)
+                    .font(emptyDescriptionFont)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -44,6 +44,14 @@ struct ArchivedTasksSettingsSection: View {
         .padding(.vertical, 4)
         .settingsRowSeparatorAligned()
         .accessibilityIdentifier("settings.archivedTasks.empty")
+    }
+
+    private var emptyDescriptionFont: Font {
+        #if os(macOS)
+        .callout
+        #else
+        .caption
+        #endif
     }
 }
 

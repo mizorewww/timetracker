@@ -115,7 +115,7 @@ struct TaskDetailForecastSection: View {
             Section {
                 if let displayedTask, displayedTask.id != task.id {
                     Text(String(format: AppStrings.localized("forecast.showingChildFormat"), displayedTask.title))
-                        .font(.subheadline)
+                        .font(childExplanationFont)
                         .foregroundStyle(.secondary)
                 }
 
@@ -138,7 +138,7 @@ struct TaskDetailForecastSection: View {
                     )
                 }
                 Text(rollup.reason)
-                    .font(.caption)
+                    .font(reasonFont)
                     .foregroundStyle(.secondary)
             } header: {
                 HStack {
@@ -149,6 +149,22 @@ struct TaskDetailForecastSection: View {
             }
             .accessibilityIdentifier("task.detail.forecast")
         }
+    }
+
+    private var childExplanationFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
+    }
+
+    private var reasonFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .caption
+        #endif
     }
 }
 

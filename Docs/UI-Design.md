@@ -34,6 +34,24 @@ Custom drawing is allowed only when the product concept requires it, such as ana
 - User-facing copy explains outcomes, not internal model names.
 - Repeated cards, metric cells, chart containers, checklist controls, and layout breakpoints belong in `SharedUI` or layout policy types before a second feature copies them.
 
+## Typography
+
+Use the system semantic text styles as the typography scale. On macOS, user-facing
+identity, answers, explanations, status, warnings, and action labels use `body` (13 pt)
+or `callout` (12 pt) according to their information role. Reserve
+`subheadline` (11 pt) and `caption`/`footnote` (10 pt) for genuinely secondary metadata
+such as paths, timestamps, badges, counts, chart axes, ranges, provider IDs, and build
+details. A forecast reason, insight explanation, sync/error message, or empty-state
+instruction can affect the next user decision and therefore is not metadata.
+
+Cross-platform components may map the same product role to a platform-local semantic
+style so a macOS correction does not enlarge the established iPhone/iPad hierarchy.
+Keep that mapping beside the component or feature that owns the text. Do not apply a
+root font environment, fixed point-size override, global scale, `minimumScaleFactor`
+compression, or third-party typography framework to compensate for a local semantic
+mistake. SF Symbols that identify the same row or header inherit its semantic font;
+charts and dense transient pickers retain their deliberately compact metadata styles.
+
 ## Native-First Rules
 
 Use these before building a custom view:

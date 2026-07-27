@@ -37,7 +37,7 @@
 
 - [x] A：领取反馈、建立活动实现记忆并生成 macOS 主要页面字体清单。
 - [x] B：保存修改前截图，按 HIG 将问题收敛到明确的共享 owner。
-- [ ] C：分小 checkpoint 实现、验证并更新工程文档。
+- [x] C：分小 checkpoint 实现、验证并更新工程文档。
 - [ ] D：完成跨页面/跨平台 UI、全量测试、Release 全设备安装与收口。
 
 ## 库策略
@@ -136,3 +136,6 @@
   iPhone 的真实 Inbox child-task suggestion 应用流程为
   `build/UITestResults/task76-iphone-inbox-suggestion/iOS-20260727-194849.xcresult`。
   三次 iOS 运行均由 Makefile 创建、记录、关闭并删除专属模拟器。
+- 2026-07-27：更新 `Docs/UI-Design.md`、`Docs/CodeGuide.md` 与
+  `Docs/Testing.md`，固化 macOS 13pt body/12pt callout 的正文语义基线、合法
+  metadata 边界、跨平台局部映射和七页普通字号验收矩阵；checkpoint C 完成。

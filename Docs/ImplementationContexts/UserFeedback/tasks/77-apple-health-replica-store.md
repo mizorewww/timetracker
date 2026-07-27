@@ -45,14 +45,14 @@
 
 ## 测试优先清单
 
-- [ ] 新独立 store 与主 store/CloudKit configuration 物理隔离；unit/UI test
+- [x] 新独立 store 与主 store/CloudKit configuration 物理隔离；unit/UI test
   永远使用内存或显式隔离 URL。
 - [ ] 第一次同步、幂等重放、HealthKit 修改、撤销授权/查询失败、取消、记录删除与
   anchor 原子推进/回滚。
 - [ ] 任意 UI/command 不能修改 Health replica；只读投影与现有时间线/分析语义一致。
 - [ ] JSON 导出包含确定性 Health records，空/损坏/不可用 replica 有明确结果，
   且敏感字段与主快照边界符合文档。
-- [ ] 新 Health schema V1 的磁盘重开与 current compatibility fixture；首版不虚构
+- [x] 新 Health schema V1 的磁盘重开与 current compatibility fixture；首版不虚构
   V0 migration。
 - [ ] 正常字号 iPhone/iPad/macOS Settings/Health timeline 定向截图；真机 HealthKit
   同步与 Release 安装是最终 gate。
@@ -87,3 +87,7 @@
   `HKAnchoredObjectQueryDescriptor` 和可安全归档的 `HKQueryAnchor` 提供增量、
   修改与删除事件。确定独立 schema/repository/sync fixture 和 user-export v2
   行为测试顺序，禁止把 Health 并入主 V14 或 `SyncDataSnapshot`。
+- 2026-07-27：完成 schema/repository 第一层：V1 workout/sleep/checkpoint 模型、
+  CloudKit-disabled 独立容器、备份排除与 iOS Data Protection、唯一 SwiftData
+  repository、只读值快照、幂等 upsert/修改/明确删除/双 anchor 同事务提交和
+  clear。磁盘重开可继续读写；`make test` 1428 tests / 160 suites 通过。

@@ -1,6 +1,6 @@
 # 74：Overview 指标卡异常留白 实现记忆
 
-状态：2026-07-27 实现中
+状态：2026-07-27 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -34,7 +34,7 @@
 - [x] A：领取反馈、建立活动实现记忆并定位 Overview 布局 owner。
 - [x] B：补充先失败的布局契约或 UI 行为测试。
 - [x] C：实现最小布局修复并更新相关文档。
-- [ ] D：完成格式、跨平台截图、全量测试、Release 全设备安装与收口。
+- [x] D：完成格式、跨平台截图、全量测试、Release 全设备安装与收口。
 
 ## 库策略
 
@@ -70,3 +70,22 @@
 - 2026-07-27：`make format-check`（831 个 Swift 文件）、`git diff --check`、
   `make localization-check`（9/9 resources）、`make check-hooks` 通过；
   `make test` 通过 1422 tests / 158 suites。
+- 2026-07-27：实现 checkpoint `96de29fa`（`Align Today current state card
+  bottoms`）提交后，`CONFIGURATION=Release make build-install-all` 通过。
+  版本 1.1.255 (310) 已安装到可用的 iPad Pro M4；内嵌 Watch App 的 bundle、
+  companion ID 与版本核验一致，系统将在配对 Watch 开启自动安装时接续安装；
+  同版本、提交 `96de29fa` 的签名 macOS App 已复制到
+  `/Applications/timetracker.app`。iPhone Air 在 CoreDevice 中为
+  `unavailable`，本批次无法向离线设备安装，未把它误报为成功。
+- 2026-07-27：执行 `make clean`，删除本任务五个临时 xcresult；owned iPad /
+  iPhone simulator 均已删除，无 Booted simulator，且无 owned `xcodebuild`、
+  `xctest`、UI runner 或测试 App 进程残留。反馈标为 `[x]`，活动 link 移除。
+
+## 最终实现
+
+- 宽屏 Now / Overview 用 SwiftUI 原生 ideal-height row 共享上下边界，消除
+  Gross / Wall 下方 24 pt 无语义 gutter，同时保留指标在卡片内的均衡位置。
+- macOS 与横屏 iPad 以 2 pt 容差自动验证标题、首卡顶部和卡片底部；iPhone
+  保持原生单栏内容高度与滚动行为。
+- 未引入第三方库；此处系统 `HStack`、`frame(maxHeight:)` 与既有卡片组件比
+  布局依赖更直接，也避免设备尺寸分支和 magic spacing。

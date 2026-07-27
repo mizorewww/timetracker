@@ -1,0 +1,1 @@
+../tasks/66-today-wide-chart-adaptation.md

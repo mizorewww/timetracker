@@ -1,9 +1,9 @@
 # 85：macOS 快捷键设置实现记忆
 
-状态：2026-07-28 进行中
+状态：2026-07-28 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
-> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
+> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[x]` 条目。
 
 ## 认领的反馈条目
 
@@ -30,15 +30,15 @@
 - [x] 先为快捷键默认值、持久化、冲突规则和命令触发边界补失败测试。
 - [x] 实现后跑定向测试、完整 `make test`、格式与本地化门禁。
 - [x] macOS UI 自动化和截图验收。
-- [ ] 清理自有资源。
-- [ ] `make build-install-all` 安装最终任务版本。
+- [x] 清理自有资源。
+- [x] `make build-install-all` 安装最终任务版本。
 
 ## Checkpoint 编排
 
 - [x] A：完成现有架构、HIG、库与测试边界审计。
 - [x] B：新增先失败的快捷键策略和命令边界测试。
 - [x] C：实现设置、持久化与动态菜单绑定。
-- [ ] D：完成 UI、全量、截图、Release 全设备安装与关闭。
+- [x] D：完成 UI、全量、截图、Release 全设备安装与关闭。
 
 ## 库策略
 
@@ -101,5 +101,10 @@
   进入其本地 `NSEvent` monitor，因此自动化不伪造录制测试后门：自定义/清空/重置和冲突由
   9 个真实命令边界测试覆盖，UI 冒烟负责 recorder、菜单可发现性和真实 focused-scene 触发。
 - 2026-07-28：最终格式门禁 0/849、本地化 9/9、完整 `make test` 1456 tests /
-  163 suites、`make build-ios` 与 `make build-macos` 全部通过；等待实现 checkpoint 提交后
-  执行最终版本的 `make build-install-all` 和任务关闭。
+  163 suites、`make build-ios` 与 `make build-macos` 全部通过；实现 checkpoint
+  `d87f10be` 已提交并自动提升到 `1.1.301 (356)`。
+- 2026-07-28：Release `make build-install-all` 通过。iOS 主 App 与嵌入 Watch companion
+  签名有效，已安装到实体 iPhone Air 和 iPad Pro M4；当前没有独立可见的实体 Apple Watch，
+  companion 由 iPhone 的 Automatic App Install 管理。通用架构 macOS App 已签名、复制到
+  `/Applications/timetracker.app` 并通过 designated requirement 校验。测试 App 已终止，
+  未创建模拟器；任务关闭时移除 `~85` 活动链接。

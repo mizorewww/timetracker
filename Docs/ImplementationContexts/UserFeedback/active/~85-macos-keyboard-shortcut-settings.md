@@ -1,1 +1,0 @@
-../tasks/85-macos-keyboard-shortcut-settings.md

@@ -1783,6 +1783,24 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：本地测试读取实际编码的 `URLRequest`，证明 Inbox/Checklist 在 DeepSeek V4 下发送所选 `max`、thinking enabled、无 temperature，并覆盖 effort 同步/规范化、配置原子保存、切换取消与迟到结果拒绝。真实 gate 必须使用生产 service 让 DeepSeek V4 在 `max` 下完成 Inbox、Checklist、prompt28 和 prompt150；prompt150 还要通过生产 coordinator Apply 后重新读取 150 条持久事实。UI gate 截图真实 token progress、完整 Preview、reasoning/raw response 与 Apply 结果，不接受 fixture。
 
+## AD-134：Apple Health 任务详情使用三段只读分析组合
+
+状态：Accepted
+
+背景：canonical Apple Health Task/Category 是同步维护且不可编辑的导航元数据，但旧 Task Detail 仍把它们放进普通任务组合：identity、sync-only 说明、任务量、Heatmap、编辑器、预测、More/Archive 和草稿恢复都会出现；Health 分析自己的周期控件又占据第四个 Section。这既暴露无效操作，也让“同步维护的只读目录”与屏幕行为相互矛盾。AD-124 对普通任务 identity 的要求不能因此被整体删除。
+
+决策：
+
+- 只按 `AppleHealthTaskCatalog.taskRole(for:)` 的 canonical task ID 进入 Health 详情特例；不可计时、sync-only 或 Health 祖先的普通后代不构成该判定。
+- 有 Health snapshot 时，顶层内容固定为 Summary、Task Analysis、Recent Records。Day/Week/Month、前后周期和 Today 控件是 Task Analysis 的首项，不再创建独立 Section；周期标题仍显示在分析标题区域。
+- 有旧 snapshot 的 refresh failure/unavailable 状态内联到 Task Analysis。空 snapshot 继续用同一三段组合表达；完全没有 snapshot 的 loading/failure/unavailable 可以显示单一原生状态 Section。
+- Health 分支不显示普通 identity/editor、tracking availability 说明、quantity、heatmap tracking、forecast、Add Time、More/Archive、autosave failure 或 draft-recovery UI。系统 navigation title 与返回行为保留。
+- 普通任务组合不变，继续满足 AD-095 的非分析内容独立加载和 AD-124 的 identity row；三个 Apple 平台共享同一语义分支，不新增按设备型号的布局。
+
+后果：Apple Health 详情只承载可读分析与必要状态，不再暗示目录可编辑或可归档；周期分析能力和既有 HealthKit 内存投影不受影响。普通任务仍拥有完整编辑、执行、预测和记录能力。该裁剪只复用原生 SwiftUI `List`/`Section`/`Picker` 和现有投影，不引入新的第三方依赖。
+
+验证：正常字号 Health 历史 fixture 验证三段顺序、周期控件位于 Task Analysis 之后、跨日/周/月与历史导航不变；逐 viewport 扫描 lazy `List`，证明所有普通任务 identifier 缺席。保留 failure/retry、empty/reactivation、iPhone/iPad 方向截图和 macOS unavailable 截图。既有普通 Task Detail identity、heatmap、icon、timer/Add Time/More 测试保护未改分支。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

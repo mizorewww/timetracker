@@ -5633,7 +5633,7 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testAppleHealthTasksStayOutOfQuickStartAndExplainSyncOnlyDetail()
+    func testAppleHealthTasksStayOutOfQuickStartAndUseAnalyticsOnlyDetail()
         throws
     {
         #if os(macOS)
@@ -5690,30 +5690,9 @@ final class timetrackerUITests: XCTestCase {
         activate(running)
 
         XCTAssertTrue(taskDetailIsReady(in: app))
-        let syncOnlyNotice = app.descendants(matching: .any)[
-            "task.detail.trackingUnavailable"
-        ].firstMatch
-        scrollUntilHittable(syncOnlyNotice, direction: .up, in: app)
-        XCTAssertTrue(
-            syncOnlyNotice.waitForExistence(timeout: 5) &&
-                syncOnlyNotice.isHittable
-        )
-        XCTAssertEqual(syncOnlyNotice.label, "Apple Health Sync")
-        let syncOnlyExplanation = app.staticTexts.matching(
-            NSPredicate(
-                format: "label == %@",
-                "This task belongs to an Apple Health sync branch. Other task details stay editable and visible, but timers, Pomodoro, Quick Start, and manual time are unavailable."
-            )
-        ).firstMatch
-        XCTAssertTrue(syncOnlyExplanation.waitForExistence(timeout: 5))
-        XCTAssertFalse(
-            app.descendants(matching: .any)["task.detail.timer"].exists
-        )
-        XCTAssertFalse(
-            app.descendants(matching: .any)["task.detail.addTime"].exists
-        )
+        assertAppleHealthDetailOmitsOrdinaryTaskContent(in: app)
         try capture(
-            "\(screenshotPrefix)-apple-health-sync-only-detail",
+            "\(screenshotPrefix)-apple-health-analytics-only-detail",
             app: app
         )
 
@@ -5812,12 +5791,13 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testAppleHealthTaskShowsReadOnlyCanonicalCategory() throws {
+    func testAppleHealthTaskDetailShowsOnlyAnalyticsSections() throws {
         #if os(macOS)
         throw XCTSkip("Apple Health sync-only UI requires an iOS simulator.")
         #else
         let app = launchApp(
             route: "task-detail",
+            contentSizeCategory: "UICTContentSizeCategoryL",
             seedsDemoData: true,
             replacesDemoDataOnLaunch: true,
             taskTitle: "Running",
@@ -5829,37 +5809,28 @@ final class timetrackerUITests: XCTestCase {
         )
         ensureTaskDetailIsReady(named: "Running", in: app)
 
-        let readOnlyCategory = app.descendants(matching: .any)[
-            "task.editor.category.readOnly"
+        assertAppleHealthDetailOmitsOrdinaryTaskContent(in: app)
+        let chart = assertAppleHealthHistoryContent(in: app)
+        assertAppleHealthDetailSectionHeaders(in: app)
+        let periodFilter = app.descendants(matching: .any)[
+            "task.detail.appleHealth.periodFilter"
         ].firstMatch
-        XCTAssertTrue(readOnlyCategory.waitForExistence(timeout: 5))
-        scrollUntilFullyVisibleAboveSystemChrome(readOnlyCategory, in: app)
+        scrollUntilHittable(
+            periodFilter,
+            direction: .down,
+            maximumScrolls: 20,
+            in: app
+        )
         XCTAssertTrue(
-            isFrameFullyVisibleAboveSystemChrome(readOnlyCategory, in: app)
-        )
-        XCTAssertEqual(readOnlyCategory.label, "Category")
-        XCTAssertEqual(readOnlyCategory.value as? String, "Exercise")
-
-        let reason = app.descendants(matching: .any)[
-            "task.editor.category.readOnly.reason"
-        ].firstMatch
-        XCTAssertTrue(reason.waitForExistence(timeout: 5))
-        XCTAssertEqual(reason.label, "Category is managed by Apple Health sync.")
-        XCTAssertLessThan(
-            reason.frame.minY - readOnlyCategory.frame.maxY,
-            32,
-            "The managed-category explanation must stay attached to its compact value row."
-        )
-        XCTAssertFalse(
-            app.descendants(matching: .any)["task.editor.category"].exists
-        )
-        XCTAssertFalse(
-            app.descendants(matching: .any)["task.editor.parent"].exists
+            periodFilter.waitForExistence(timeout: 5) &&
+                periodFilter.isHittable,
+            "Period controls must remain inside the Task Analysis section."
         )
         assertNoAppleHealthAuthorizationSheet(in: app)
 
+        scrollUntilFullyVisibleAboveSystemChrome(chart, in: app)
         try capture(
-            "\(platformScreenshotPrefix(in: app))-task-detail-apple-health-read-only-category",
+            "\(platformScreenshotPrefix(in: app))-task-detail-apple-health-analytics-only",
             app: app
         )
         #endif
@@ -5876,6 +5847,7 @@ final class timetrackerUITests: XCTestCase {
 
         let app = launchApp(
             route: "task-detail",
+            contentSizeCategory: "UICTContentSizeCategoryL",
             seedsDemoData: true,
             replacesDemoDataOnLaunch: true,
             taskTitle: "Running",
@@ -5889,6 +5861,7 @@ final class timetrackerUITests: XCTestCase {
         #if os(macOS)
         try placeMainWindowOnPrimaryScreen(in: app)
         ensureTaskDetailIsReady(named: "Running", in: app)
+        assertAppleHealthDetailOmitsOrdinaryTaskContent(in: app)
         let unavailable = app.descendants(matching: .any)[
             "task.detail.appleHealth.unavailable"
         ].firstMatch
@@ -5908,23 +5881,14 @@ final class timetrackerUITests: XCTestCase {
             ].exists,
             "Historical controls must stay hidden when Apple Health is unavailable."
         )
+        try capture(
+            "mac-task-detail-apple-health-unavailable",
+            app: app
+        )
         #else
         ensureTaskDetailIsReady(named: "Running", in: app)
         assertNoAppleHealthAuthorizationSheet(in: app)
-
-        let syncOnlyNotice = app.descendants(matching: .any)[
-            "task.detail.trackingUnavailable"
-        ].firstMatch
-        XCTAssertTrue(
-            syncOnlyNotice.waitForExistence(timeout: 5),
-            "The Apple Health task must explain that it is sync-only."
-        )
-        XCTAssertFalse(
-            app.descendants(matching: .any)["task.detail.timer"].exists
-        )
-        XCTAssertFalse(
-            app.descendants(matching: .any)["task.detail.addTime"].exists
-        )
+        assertAppleHealthDetailOmitsOrdinaryTaskContent(in: app)
 
         let loading = app.descendants(matching: .any)[
             "task.detail.appleHealth.loading"
@@ -5933,6 +5897,7 @@ final class timetrackerUITests: XCTestCase {
             "task.detail.appleHealth.failed"
         ].firstMatch
         let weekChart = assertAppleHealthHistoryContent(in: app)
+        assertAppleHealthDetailSectionHeaders(in: app)
         XCTAssertTrue(waitUntil(timeout: 3) {
             loading.exists == false && failed.exists == false
         })
@@ -8697,6 +8662,129 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    private func assertAppleHealthDetailOmitsOrdinaryTaskContent(
+        in app: XCUIApplication
+    ) {
+        let ordinaryIdentifiers = [
+            "task.detail.identity",
+            "task.editor",
+            "task.editor.title.field",
+            "task.editor.parent",
+            "task.detail.icon.edit",
+            "task.detail.trackingUnavailable",
+            "task.detail.quantity.record",
+            "task.detail.quantity.progress",
+            "task.detail.quantity.template",
+            "task.detail.quantity.occurrence",
+            "task.detail.heatmapTracking",
+            "task.detail.heatmapPalette",
+            "task.editor.category.readOnly",
+            "task.editor.category",
+            "symbol.picker.open.task",
+            "task.editor.due.toggle",
+            "task.editor.quantity.toggle",
+            "task.editor.recurrence.daily",
+            "task.editor.notes.edit",
+            "task.detail.notes.markdown",
+            "task.detail.autosave.failure",
+            "task.detail.recovery",
+            "task.editor.recovery",
+            "task.detail.forecast",
+            "task.detail.timer",
+            "task.detail.addTime",
+            "task.detail.more",
+            "task.editor.cancel",
+            "task.editor.save",
+        ]
+        let ordinaryContentPredicate = NSPredicate(
+            format: "identifier IN %@",
+            ordinaryIdentifiers
+        )
+        let bottomProbe = app.descendants(matching: .any)["task.detail.forecast"]
+            .firstMatch
+        #if os(macOS)
+        let maximumViewport = 8
+        #else
+        let maximumViewport = 20
+        #endif
+        for viewport in 0 ... maximumViewport {
+            let leakedContent = app.descendants(matching: .any)
+                .matching(ordinaryContentPredicate)
+                .firstMatch
+            XCTAssertFalse(
+                leakedContent.exists,
+                "Apple Health detail exposed \(leakedContent.identifier) in viewport \(viewport)."
+            )
+            if viewport < maximumViewport {
+                scroll(direction: .up, toward: bottomProbe, in: app)
+            }
+        }
+
+        #if os(macOS)
+        let topProbe = app.descendants(matching: .any)[
+            "task.detail.appleHealth.unavailable"
+        ].firstMatch
+        #else
+        let topProbe = app.staticTexts["task.detail.summary"].firstMatch
+        #endif
+        scrollUntilHittable(
+            topProbe,
+            direction: .down,
+            maximumScrolls: maximumViewport + 1,
+            in: app
+        )
+    }
+
+    @MainActor
+    private func assertAppleHealthDetailSectionHeaders(
+        in app: XCUIApplication
+    ) {
+        let expectedHeaders: [(identifier: String, title: String)] = [
+            ("task.detail.summary", "Summary"),
+            ("task.detail.analysis", "Task Analysis"),
+            ("task.detail.history.header", "Recent Records"),
+        ]
+
+        for (index, expected) in expectedHeaders.enumerated() {
+            let header = app.staticTexts[expected.identifier].firstMatch
+            scrollUntilHittable(
+                header,
+                direction: index == 0 ? .down : .up,
+                maximumScrolls: 20,
+                in: app
+            )
+            XCTAssertTrue(
+                header.waitForExistence(timeout: 5) && header.isHittable,
+                "Apple Health detail must retain the \(expected.title) section."
+            )
+        }
+
+        let summary = app.staticTexts["task.detail.summary"].firstMatch
+        scrollUntilHittable(
+            summary,
+            direction: .down,
+            maximumScrolls: 20,
+            in: app
+        )
+        let analysis = app.staticTexts["task.detail.analysis"].firstMatch
+        let periodFilter = app.descendants(matching: .any)[
+            "task.detail.appleHealth.periodFilter"
+        ].firstMatch
+        XCTAssertTrue(analysis.waitForExistence(timeout: 5))
+        XCTAssertTrue(periodFilter.waitForExistence(timeout: 5))
+        XCTAssertLessThan(
+            summary.frame.minY,
+            analysis.frame.minY,
+            "Summary must precede Task Analysis."
+        )
+        XCTAssertLessThan(
+            analysis.frame.minY,
+            periodFilter.frame.minY,
+            "Period controls must live inside Task Analysis, after its header."
+        )
+    }
+
+    @MainActor
     private func taskDetailRangePicker(
         in app: XCUIApplication
     ) -> XCUIElement {
@@ -9017,6 +9105,7 @@ final class timetrackerUITests: XCTestCase {
     private func assertNoAppleHealthAuthorizationSheet(
         in app: XCUIApplication
     ) {
+        #if os(iOS)
         let healthPrivacyService = XCUIApplication(
             bundleIdentifier: "com.apple.HealthPrivacyService"
         )
@@ -9060,6 +9149,7 @@ final class timetrackerUITests: XCTestCase {
             RunLoop.current.run(until: Date().addingTimeInterval(0.05))
         }
         XCTAssertFalse(authorizationPromptExists())
+        #endif
     }
 
     @MainActor

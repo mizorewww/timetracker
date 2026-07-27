@@ -23,63 +23,66 @@ struct TaskDetailList: View {
         @Bindable var session = session
 
         List {
-            Section {
-                TaskDetailIdentityRow(
-                    store: store,
-                    task: task,
-                    draft: $session.draft,
-                    validation: session.validation,
-                    focusedTextField: focusedTextField
-                )
-            }
-
-            TaskDetailTrackingAvailabilitySection(store: store, task: task)
             if isAppleHealthTask {
                 analyticsContent
-            }
-            TaskDetailQuantitySections(
-                readModel: store.taskQuantityDetail(for: task.id),
-                addEntry: { _ in presentQuantityEntryEditor() },
-                editEntry: { _, entry in
-                    presentQuantityEntryEditor(entryID: entry.id)
+            } else {
+                Section {
+                    TaskDetailIdentityRow(
+                        store: store,
+                        task: task,
+                        draft: $session.draft,
+                        validation: session.validation,
+                        focusedTextField: focusedTextField
+                    )
                 }
-            )
-            TaskDetailHeatmapTrackingSection(
-                store: store,
-                task: task,
-                colorHex: session.draft.colorHex
-            )
-            TaskDetailAutosaveFailureSection(
-                controller: autosaveController
-            )
 
-            TaskEditorSections(
-                store: store,
-                draft: $session.draft,
-                validation: session.validation,
-                parentCandidates: session.parentCandidates,
-                focusedTextField: focusedTextField,
-                focusedChecklistDraftID: focusedChecklistDraftID,
-                orderedChecklistIndices: session.orderedChecklistIndices,
-                toggleChecklistItem: { id in
-                    session.toggleChecklistItem(id: id)
-                },
-                moveChecklistItems: { sourceOffsets, destination in
-                    session.moveChecklistItems(
-                        fromOffsets: sourceOffsets,
-                        toOffset: destination
-                    )
-                },
-                addChecklistItem: { visualIndex in
-                    focusedChecklistDraftID.wrappedValue = session.addChecklistItem(
-                        afterVisualIndex: visualIndex
-                    )
-                },
-                showsTitleField: false,
-                notesInteractionStyle: .expandablePreview
-            )
-            TaskDetailForecastSection(store: store, task: task)
-            if isAppleHealthTask == false {
+                TaskDetailTrackingAvailabilitySection(
+                    store: store,
+                    task: task
+                )
+                TaskDetailQuantitySections(
+                    readModel: store.taskQuantityDetail(for: task.id),
+                    addEntry: { _ in presentQuantityEntryEditor() },
+                    editEntry: { _, entry in
+                        presentQuantityEntryEditor(entryID: entry.id)
+                    }
+                )
+                TaskDetailHeatmapTrackingSection(
+                    store: store,
+                    task: task,
+                    colorHex: session.draft.colorHex
+                )
+                TaskDetailAutosaveFailureSection(
+                    controller: autosaveController
+                )
+
+                TaskEditorSections(
+                    store: store,
+                    draft: $session.draft,
+                    validation: session.validation,
+                    parentCandidates: session.parentCandidates,
+                    focusedTextField: focusedTextField,
+                    focusedChecklistDraftID: focusedChecklistDraftID,
+                    orderedChecklistIndices: session.orderedChecklistIndices,
+                    toggleChecklistItem: { id in
+                        session.toggleChecklistItem(id: id)
+                    },
+                    moveChecklistItems: { sourceOffsets, destination in
+                        session.moveChecklistItems(
+                            fromOffsets: sourceOffsets,
+                            toOffset: destination
+                        )
+                    },
+                    addChecklistItem: { visualIndex in
+                        focusedChecklistDraftID.wrappedValue = session
+                            .addChecklistItem(
+                                afterVisualIndex: visualIndex
+                            )
+                    },
+                    showsTitleField: false,
+                    notesInteractionStyle: .expandablePreview
+                )
+                TaskDetailForecastSection(store: store, task: task)
                 analyticsContent
             }
         }
@@ -154,22 +157,7 @@ struct TaskDetailList: View {
 
     @ViewBuilder
     private var analyticsContent: some View {
-        if isAppleHealthTask, analyticsState != .unavailable {
-            TaskDetailAppleHealthPeriodSection(
-                range: $range,
-                referenceDate: $referenceDate,
-                liveNow: liveNow,
-                monthNavigationAnchor: $monthNavigationAnchor
-            )
-        }
-
         if let snapshot {
-            if isAppleHealthTask, analyticsState == .failed {
-                TaskDetailAppleHealthFailureSection(retry: retryAnalytics)
-            } else if isAppleHealthTask, analyticsState == .unavailable {
-                TaskDetailAppleHealthUnavailableSection()
-            }
-
             TaskDetailOverviewSection(
                 snapshot: snapshot,
                 periodTitle: isAppleHealthTask ? selectedPeriodTitle : nil
@@ -178,7 +166,15 @@ struct TaskDetailList: View {
                 range: $range,
                 snapshot: snapshot,
                 isRefreshing: isRefreshing,
-                retryAppleHealth: retryAnalytics
+                retryAppleHealth: retryAnalytics,
+                appleHealthPeriod: isAppleHealthTask
+                    ? TaskDetailAppleHealthPeriodConfiguration(
+                        referenceDate: $referenceDate,
+                        liveNow: liveNow,
+                        monthNavigationAnchor: $monthNavigationAnchor
+                    )
+                    : nil,
+                appleHealthInlineStatus: appleHealthInlineStatus
             )
             TaskDetailRecordsSection(
                 records: snapshot.recentRecords,
@@ -206,6 +202,20 @@ struct TaskDetailList: View {
             date: referenceDate,
             liveNow: liveNow
         )
+    }
+
+    private var appleHealthInlineStatus:
+        TaskDetailAppleHealthInlineStatus?
+    {
+        guard isAppleHealthTask else { return nil }
+        switch analyticsState {
+        case .failed:
+            return .failed
+        case .unavailable:
+            return .unavailable
+        case .loading, .content, .empty:
+            return nil
+        }
     }
 }
 

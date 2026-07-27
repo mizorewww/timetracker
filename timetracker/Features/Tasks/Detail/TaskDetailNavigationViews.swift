@@ -18,36 +18,44 @@ private struct TaskDetailNavigationModifier: ViewModifier {
             .navigationBarTitleDisplayMode(.inline)
         #endif
             .navigationBarBackButtonHidden(
-                isSourceUnavailable && session.hasUnsavedChanges
+                isAppleHealthTask == false &&
+                    isSourceUnavailable &&
+                    session.hasUnsavedChanges
             )
             .toolbar {
-                if isSourceUnavailable, session.hasUnsavedChanges {
-                    if isAwaitingRecoveryCleanup == false {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button(AppStrings.cancel, action: requestDiscard)
-                                .keyboardShortcut(.cancelAction)
-                                .accessibilityIdentifier("task.editor.cancel")
+                if isAppleHealthTask == false {
+                    if isSourceUnavailable, session.hasUnsavedChanges {
+                        if isAwaitingRecoveryCleanup == false {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button(AppStrings.cancel, action: requestDiscard)
+                                    .keyboardShortcut(.cancelAction)
+                                    .accessibilityIdentifier("task.editor.cancel")
+                            }
                         }
-                    }
 
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(saveTitle, action: save)
-                            .keyboardShortcut(.defaultAction)
-                            .disabled(
-                                isAwaitingRecoveryCleanup == false &&
-                                    session.validation.isValid == false
-                            )
-                            .accessibilityIdentifier("task.editor.save")
-                    }
-                } else if let task = store.task(for: taskID) {
-                    ToolbarItemGroup(placement: .primaryAction) {
-                        if store.isTaskAvailableForTracking(task) {
-                            addTimeButton(task)
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button(saveTitle, action: save)
+                                .keyboardShortcut(.defaultAction)
+                                .disabled(
+                                    isAwaitingRecoveryCleanup == false &&
+                                        session.validation.isValid == false
+                                )
+                                .accessibilityIdentifier("task.editor.save")
                         }
-                        moreMenu(task)
+                    } else if let task = store.task(for: taskID) {
+                        ToolbarItemGroup(placement: .primaryAction) {
+                            if store.isTaskAvailableForTracking(task) {
+                                addTimeButton(task)
+                            }
+                            moreMenu(task)
+                        }
                     }
                 }
             }
+    }
+
+    private var isAppleHealthTask: Bool {
+        AppleHealthTaskCatalog.taskRole(for: taskID) != nil
     }
 
     private var saveTitle: String {

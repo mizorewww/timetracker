@@ -2,7 +2,7 @@
 
 Status: current UI guardrails
 
-Reviewed: 2026-07-25
+Reviewed: 2026-07-27
 
 Current user behavior is documented in [User Guide](UserGuide.md); verification rules are maintained in [Testing](Testing.md). This document defines how UI work should move toward native Apple components and away from fragile custom drawing. Check it before redesigning or adding any screen.
 
@@ -23,7 +23,8 @@ Custom drawing is allowed only when the product concept requires it, such as ana
 - Checklist rows should behave like native to-do rows: a large circular check button, at least 44 pt row height, unfinished items first, completed items after them with strikethrough text. Adding a checklist item should create a focused empty row immediately. Checklist completion is the task's only product-level completion/progress signal and never disables later work.
 - Do not show a task workflow-status picker, status badge, Complete action, Reopen action, or ordinary task Delete action. Legacy planned/active/completed raw values are invisible compatibility data and behave like ordinary tasks. Archived branches remain hidden and recover through Restore; historical tombstones remain a sync compatibility boundary, not a second UI lifecycle.
 - iPhone layouts must split dense rows into two lines when icon, title, path, timer, and actions cannot fit.
-- Task Detail is the one canonical deep surface on iPhone, iPad, and macOS. Do not add a second inspector that can drift from it unless a separately reviewed product need justifies the extra selection and synchronization state. Its identity icon is an icon-only navigation affordance beside an editable title, not a full navigation row: keep the 44 pt icon target and 14 pt title gap, and hide the automatic navigation-link disclosure indicator so it does not create an accessory slot between icon and title.
+- Task Detail is the one canonical deep surface on iPhone, iPad, and macOS. Do not add a second inspector that can drift from it unless a separately reviewed product need justifies the extra selection and synchronization state. For an ordinary task, its identity icon is an icon-only navigation affordance beside an editable title, not a full navigation row: keep the 44 pt icon target and 14 pt title gap, and hide the automatic navigation-link disclosure indicator so it does not create an accessory slot between icon and title.
+- A canonical Apple Health task is the explicit read-only exception: its detail content contains only Summary, Task Analysis, and Recent Records, in that order. Day/Week/Month and historical-period controls belong at the top of Task Analysis instead of creating a fourth section. Do not show identity/editor, sync-only explanation, quantity, heatmap tracking, forecast, Add Time, More, Archive, autosave, or draft-recovery UI. Loading, empty, failure, unavailable, refresh, and retry feedback stays inside the analytics experience and must never fall back to ordinary-task content.
 - Sheets should use system `NavigationStack` + `Form` + toolbar cancel/save actions. Avoid custom modal title bars unless the content is not an editor.
 - Fixed sheet sizes are macOS-only. iPhone and iPad sheets must follow the platform presentation width so they do not overflow compact devices.
 - The analytics timeline should separate graphic bars from task text. Bars show time, color, and icon; rows below carry labels.

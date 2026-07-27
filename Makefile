@@ -10,9 +10,14 @@ PROJECT          := timetracker.xcodeproj
 SCHEME           := timetracker
 DEVELOPMENT_TEAM ?= LT98S43NKA
 CONFIGURATION    ?= Debug
+TEST_ONLY        ?= timetrackerTests
 SCRIPTS          := scripts
 LIVE_LLM_UI_DEVICE_TYPE ?= com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro
 LIVE_LLM_UI_RUNTIME ?= com.apple.CoreSimulator.SimRuntime.iOS-27-0
+UI_TEST_DEVICE_TYPE ?= com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro
+UI_TEST_RUNTIME ?= com.apple.CoreSimulator.SimRuntime.iOS-27-0
+UI_TEST_ONLY ?= timetrackerUITests/timetrackerUITests
+UI_TEST_RESULT_ROOT ?= build/UITestResults
 
 -include .env
 export TIMETRACKER_LIVE_LLM_API_KEY
@@ -71,8 +76,47 @@ build-install-all: ## 构建 iOS+Watch 与 macOS(默认 Release),安装到设备
 .PHONY: test
 test: ## macOS 单元测试(timetrackerTests)
 	xcodebuild test -project $(PROJECT) -scheme $(SCHEME) \
-	  -destination 'platform=macOS' -only-testing:timetrackerTests \
+	  -destination 'platform=macOS' -only-testing:$(TEST_ONLY) \
 	  -parallel-testing-enabled NO
+
+.PHONY: test-ui-ios
+test-ui-ios: ## 在自清理的临时 iOS 模拟器中运行所选 XCUITest
+	@set -eu; \
+	  run_id="$$(date +%Y%m%d-%H%M%S)"; \
+	  result_root="$(CURDIR)/$(UI_TEST_RESULT_ROOT)"; \
+	  result_bundle="$$result_root/iOS-$$run_id.xcresult"; \
+	  mkdir -p "$$result_root"; \
+	  simulator_udid="$$(xcrun simctl create \
+	    "TimeTracker UI $$run_id" \
+	    "$(UI_TEST_DEVICE_TYPE)" \
+	    "$(UI_TEST_RUNTIME)")"; \
+	  cleanup_ui_test() { \
+	    xcrun simctl terminate "$$simulator_udid" me.mezorewww.timetracker >/dev/null 2>&1 || true; \
+	    xcrun simctl shutdown "$$simulator_udid" >/dev/null 2>&1 || true; \
+	    xcrun simctl delete "$$simulator_udid" >/dev/null 2>&1 || true; \
+	  }; \
+	  trap cleanup_ui_test EXIT INT TERM; \
+	  xcrun simctl boot "$$simulator_udid"; \
+	  xcrun simctl bootstatus "$$simulator_udid" -b; \
+	  xcodebuild test -project $(PROJECT) -scheme $(SCHEME) \
+	    -destination "platform=iOS Simulator,id=$$simulator_udid" \
+	    -resultBundlePath "$$result_bundle" \
+	    -only-testing:$(UI_TEST_ONLY) \
+	    -parallel-testing-enabled NO \
+	    -maximum-parallel-testing-workers 1
+
+.PHONY: test-ui-macos
+test-ui-macos: ## 在 macOS 上运行所选 XCUITest
+	@set -eu; \
+	  run_id="$$(date +%Y%m%d-%H%M%S)"; \
+	  result_root="$(CURDIR)/$(UI_TEST_RESULT_ROOT)"; \
+	  result_bundle="$$result_root/macOS-$$run_id.xcresult"; \
+	  mkdir -p "$$result_root"; \
+	  xcodebuild test -project $(PROJECT) -scheme $(SCHEME) \
+	    -destination 'platform=macOS' \
+	    -resultBundlePath "$$result_bundle" \
+	    -only-testing:$(UI_TEST_ONLY) \
+	    -parallel-testing-enabled NO
 
 .PHONY: test-llm-live
 test-llm-live: ## 用真实 DeepSeek API 验证三条提示词与任务计划(prompts/prompt28/prompt150/all)

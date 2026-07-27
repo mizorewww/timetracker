@@ -27,31 +27,39 @@
   `ModelConfiguration`，不修改主业务 schema V14，不把 Health sample model
   注册进主 CloudKit container。
 - `HealthReplicaRepository` 是唯一 SwiftData owner；`HealthReplicaSyncService`
-  接收 HealthKit 查询投影并在一次 store transaction 内按稳定 sample identity
-  upsert、删除不再存在的本机 HealthKit 记录。
+  接收独立 anchored-change reader 的结果并在一次 store transaction 内按稳定
+  sample identity upsert、应用 HealthKit 明确给出的删除对象，并且只在记录提交成功
+  后推进 workout/sleep 两个 opaque anchor。
 - 持久字段按最小化原则只包含稳定 sample UUID、kind/workout activity、
   start/end、source bundle、sleep stage 与 replica metadata；不保存用户可编辑
   标题、备注、任务关系、设备名或 HealthKit 原对象。
 - UI/Analytics 只消费只读 value snapshot，不持有 replica `PersistentModel`；
   现有 Health timeline projection 迁移到 repository/service 边界，macOS 无
   HealthKit 时读取本机 replica 但不伪造可刷新能力。
-- JSON snapshot 增加明确版本化的 `healthRecords` 数组；导出捕获主 store 与
-  Health replica 的一致只读快照，不为 importer 暗示恢复能力。
+- 不修改 `SyncDataSnapshot`、Cloud conflict fingerprint/merge/restore 或
+  `TimeTrackerModelRegistry`；新增版本化的 user-export envelope，组合已有过滤后的
+  business snapshot 与独立 Health payload。合法空库明确导出空数组，任一 store
+  读取或编码失败时整体 fail closed，不打开文件导出器。
+- 两个 SwiftData store 不能宣称一个跨库 ACID transaction；导出按固定顺序捕获两个
+  独立只读快照，并在文档中称为用户主动导出，不称为可恢复备份。
 
 ## 测试优先清单
 
-- [ ] 新独立 store 与主 store/CloudKit configuration 物理隔离。
-- [ ] 第一次同步、幂等重放、HealthKit 修改、撤销授权/查询失败和记录删除收敛。
+- [ ] 新独立 store 与主 store/CloudKit configuration 物理隔离；unit/UI test
+  永远使用内存或显式隔离 URL。
+- [ ] 第一次同步、幂等重放、HealthKit 修改、撤销授权/查询失败、取消、记录删除与
+  anchor 原子推进/回滚。
 - [ ] 任意 UI/command 不能修改 Health replica；只读投影与现有时间线/分析语义一致。
 - [ ] JSON 导出包含确定性 Health records，空/损坏/不可用 replica 有明确结果，
   且敏感字段与主快照边界符合文档。
-- [ ] 新 Health schema 的磁盘重开与版本兼容 fixture。
+- [ ] 新 Health schema V1 的磁盘重开与 current compatibility fixture；首版不虚构
+  V0 migration。
 - [ ] 正常字号 iPhone/iPad/macOS Settings/Health timeline 定向截图；真机 HealthKit
   同步与 Release 安装是最终 gate。
 
 ## Checkpoint 编排
 
-- [ ] A：完成现状、Apple 合规、schema/container、导出和测试边界审计。
+- [x] A：完成现状、Apple 合规、schema/container、导出和测试边界审计。
 - [ ] B：先写独立 store/schema/repository/sync/export 的失败行为测试。
 - [ ] C：分层实现本地 replica、只读投影和 JSON 导出，更新当前工程文档。
 - [ ] D：完成全量/真机验证、Release 全设备安装与收口。
@@ -74,3 +82,8 @@
 - 2026-07-27：认领任务并建立 `~77` 活动实现记忆。
 - 2026-07-27：复核 Apple 官方文档；排除 Health 数据进入 CloudKit，采用独立
   device-local replica + HealthKit 增量同步 + 用户主动 JSON 导出。
+- 2026-07-27：完成代码、Settings/隐私与测试审计。确定新增窄
+  `AppleHealthReplicaChangeReading`，保留既有范围读取协议；HealthKit 通过
+  `HKAnchoredObjectQueryDescriptor` 和可安全归档的 `HKQueryAnchor` 提供增量、
+  修改与删除事件。确定独立 schema/repository/sync fixture 和 user-export v2
+  行为测试顺序，禁止把 Health 并入主 V14 或 `SyncDataSnapshot`。

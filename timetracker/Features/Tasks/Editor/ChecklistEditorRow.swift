@@ -55,22 +55,89 @@ struct ChecklistEditorRow: View {
             .focused(focus, equals: item.id)
 
             macOSOrderingControls
-            Button(role: .destructive) {
-                delete()
-            } label: {
-                Image(systemName: "trash")
-                    .foregroundStyle(.red)
-                    .frame(
-                        width: AppLayout.minimumInteractiveTarget,
-                        height: AppLayout.minimumInteractiveTarget
-                    )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(AppStrings.delete)
+            actionsMenu
         }
         .frame(minHeight: 44)
         .contentShape(Rectangle())
-        .accessibilityElement(children: .contain)
+        #if os(iOS)
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                deleteAction(source: "swipe")
+            }
+        #else
+            .contextMenu {
+                contextMenuActions
+            }
+        #endif
+            .accessibilityElement(children: .contain)
+    }
+
+    private var actionsMenu: some View {
+        Menu {
+            orderingActions
+            Divider()
+            deleteAction(source: "menu")
+        } label: {
+            TrailingMenuLabel(systemImage: "ellipsis")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.secondary)
+        }
+        .menuIndicator(.hidden)
+        .accessibilityLabel(AppStrings.localized("common.more"))
+        .accessibilityIdentifier(
+            "task.editor.checklist.more.\(item.id.uuidString)"
+        )
+    }
+
+    @ViewBuilder
+    private var orderingActions: some View {
+        Button(action: moveUp) {
+            Label(
+                AppStrings.localized("common.moveUp"),
+                systemImage: "chevron.up"
+            )
+        }
+        .disabled(!canMoveUp)
+
+        Button(action: moveDown) {
+            Label(
+                AppStrings.localized("common.moveDown"),
+                systemImage: "chevron.down"
+            )
+        }
+        .disabled(!canMoveDown)
+    }
+
+    @ViewBuilder
+    private var contextMenuActions: some View {
+        if canMoveUp {
+            Button(action: moveUp) {
+                Label(
+                    AppStrings.localized("common.moveUp"),
+                    systemImage: "chevron.up"
+                )
+            }
+        }
+        if canMoveDown {
+            Button(action: moveDown) {
+                Label(
+                    AppStrings.localized("common.moveDown"),
+                    systemImage: "chevron.down"
+                )
+            }
+        }
+        if canMoveUp || canMoveDown {
+            Divider()
+        }
+        deleteAction(source: "context")
+    }
+
+    private func deleteAction(source: String) -> some View {
+        Button(role: .destructive, action: delete) {
+            Label(AppStrings.delete, systemImage: "trash")
+        }
+        .accessibilityIdentifier(
+            "task.editor.checklist.delete.\(source).\(item.id.uuidString)"
+        )
     }
 
     @ViewBuilder

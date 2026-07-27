@@ -2864,6 +2864,122 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testChecklistDeleteUsesSecondaryActions() throws {
+        let app = launchApp(
+            route: "task-detail",
+            contentSizeCategory: "UICTContentSizeCategoryL",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Design macOS UI"
+        )
+        ensureTaskDetailIsReady(named: "Design macOS UI", in: app)
+        #if os(macOS)
+        let systemAlerts = XCUIApplication(
+            bundleIdentifier: "com.apple.UserNotificationCenter"
+        )
+        let ignoreWidgetRendererAlert = systemAlerts.buttons["Ignore"].firstMatch
+        if ignoreWidgetRendererAlert.waitForExistence(timeout: 1) {
+            activate(ignoreWidgetRendererAlert)
+        }
+        #endif
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+        let firstCompletion = app.buttons["Polish timeline"].firstMatch
+        scrollUntilHittable(firstCompletion, direction: .up, in: app)
+        XCTAssertTrue(
+            firstCompletion.waitForExistence(timeout: 5) &&
+                firstCompletion.isHittable
+        )
+        XCTAssertTrue(
+            app.buttons["Delete"].firstMatch.waitForNonExistence(timeout: 2),
+            "Checklist rows must not expose a permanent first-level Delete button."
+        )
+
+        let completionPrefix = "task.editor.checklist.completion."
+        let firstID = String(
+            firstCompletion.identifier.dropFirst(completionPrefix.count)
+        )
+        let firstMore = app.descendants(matching: .any)[
+            "task.editor.checklist.more.\(firstID)"
+        ].firstMatch
+        XCTAssertTrue(
+            firstMore.waitForExistence(timeout: 5) && firstMore.isHittable,
+            "Every checklist row must expose its secondary action menu."
+        )
+
+        #if os(macOS)
+        activate(firstMore)
+        let menuDelete = app.menuItems[
+            "task.editor.checklist.delete.menu.\(firstID)"
+        ].firstMatch
+        XCTAssertTrue(
+            menuDelete.waitForExistence(timeout: 3) && menuDelete.isHittable
+        )
+        try capture("\(screenshotPrefix)-checklist-delete-more-menu", app: app)
+        app.typeKey(.escape, modifierFlags: [])
+
+        let contextCompletion = app.buttons["Align task detail"].firstMatch
+        XCTAssertTrue(contextCompletion.waitForExistence(timeout: 3))
+        let contextID = String(
+            contextCompletion.identifier.dropFirst(completionPrefix.count)
+        )
+        let contextRow = app.cells
+            .containing(.any, identifier: contextCompletion.identifier)
+            .firstMatch
+        XCTAssertTrue(
+            contextRow.waitForExistence(timeout: 3) && contextRow.isHittable
+        )
+        contextRow.rightClick()
+        let contextDelete = app.menuItems[
+            "task.editor.checklist.delete.context.\(contextID)"
+        ].firstMatch
+        XCTAssertTrue(
+            contextDelete.waitForExistence(timeout: 3) &&
+                contextDelete.isHittable
+        )
+        try capture(
+            "\(screenshotPrefix)-checklist-delete-context-menu",
+            app: app
+        )
+        #else
+        activate(firstMore)
+        let menuDelete = app.buttons[
+            "task.editor.checklist.delete.menu.\(firstID)"
+        ].firstMatch
+        XCTAssertTrue(
+            menuDelete.waitForExistence(timeout: 3) && menuDelete.isHittable
+        )
+        try capture("\(screenshotPrefix)-checklist-delete-more-menu", app: app)
+        activate(menuDelete)
+        XCTAssertTrue(firstCompletion.waitForNonExistence(timeout: 5))
+
+        let secondCompletion = app.buttons["Align task detail"].firstMatch
+        scrollUntilHittable(secondCompletion, direction: .up, in: app)
+        XCTAssertTrue(
+            secondCompletion.waitForExistence(timeout: 5) &&
+                secondCompletion.isHittable
+        )
+        let secondID = String(
+            secondCompletion.identifier.dropFirst(completionPrefix.count)
+        )
+        let secondCell = app.cells
+            .containing(.any, identifier: secondCompletion.identifier)
+            .firstMatch
+        XCTAssertTrue(
+            secondCell.waitForExistence(timeout: 3) && secondCell.isHittable
+        )
+        secondCell.swipeLeft()
+        let swipeDelete = app.buttons[
+            "task.editor.checklist.delete.swipe.\(secondID)"
+        ].firstMatch
+        XCTAssertTrue(
+            swipeDelete.waitForExistence(timeout: 3) && swipeDelete.isHittable
+        )
+        try capture("\(screenshotPrefix)-checklist-delete-swipe", app: app)
+        activate(swipeDelete)
+        XCTAssertTrue(secondCompletion.waitForNonExistence(timeout: 5))
+        #endif
+    }
+
+    @MainActor
     func testCompletingChecklistItemMovesItBelowIncompleteWork() throws {
         #if os(macOS)
         throw XCTSkip("Checklist movement is visually verified in the compact iPhone layout.")

@@ -145,6 +145,54 @@ struct TaskEditorSessionTests {
     }
 
     @Test
+    func checklistDeleteByStableIdentityPersistsAcrossFreshReload() throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "checklist-delete"
+        ).createTask(
+            title: "Persistent checklist delete",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let removed = ChecklistEditorDraft(title: "Remove me")
+        let retained = ChecklistEditorDraft(title: "Keep me")
+        try ChecklistDraftService().save(
+            drafts: [removed, retained],
+            taskID: task.id,
+            context: context,
+            deviceID: "checklist-delete"
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let storedTask = try #require(store.task(for: task.id))
+        let session = TaskEditorSession(
+            store: store,
+            initialDraft: store.editorDraft(for: storedTask)
+        )
+        let removedID = try #require(
+            session.draft.checklistItems.first {
+                $0.title == removed.title
+            }?.id
+        )
+
+        session.deleteChecklistItem(id: removedID)
+
+        #expect(session.draft.checklistItems.map(\.title) == [retained.title])
+        #expect(store.saveTaskDraft(session.draft))
+
+        let relaunchedStore = makeTestStore()
+        relaunchedStore.configureIfNeeded(
+            context: ModelContext(context.container)
+        )
+        #expect(
+            relaunchedStore.checklistItems(for: task.id).map(\.title) ==
+                [retained.title]
+        )
+    }
+
+    @Test
     func newlyCompletedChecklistItemMovesAfterEveryCompletedItem() {
         var initialDraft = TaskEditorDraft(parentID: nil)
         let newlyCompleted = ChecklistEditorDraft(title: "Finish me")

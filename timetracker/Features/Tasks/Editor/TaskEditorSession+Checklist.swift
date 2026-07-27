@@ -60,6 +60,16 @@ extension TaskEditorSession {
         draft.checklistItems = reorderedIDs.compactMap { draftByID[$0] }
     }
 
+    func deleteChecklistItem(id: UUID) {
+        guard let index = draft.checklistItems.firstIndex(where: {
+            $0.id == id
+        }) else {
+            return
+        }
+        draft.checklistItems.remove(at: index)
+        preCompletionChecklistIndices.removeValue(forKey: id)
+    }
+
     func addChecklistItem(afterVisualIndex visualIndex: Int? = nil) -> UUID {
         let newItem = ChecklistEditorDraft()
         var orderedDrafts = orderedChecklistIndices.map {

@@ -5,6 +5,7 @@ struct TaskChecklistEditorSection: View {
     let focusedChecklistDraftID: FocusState<UUID?>.Binding
     let orderedChecklistIndices: [Int]
     let toggleChecklistItem: (UUID) -> Void
+    let deleteChecklistItem: (UUID) -> Void
     let moveChecklistItems: (IndexSet, Int) -> Void
     let addChecklistItem: (Int?) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -38,7 +39,10 @@ struct TaskChecklistEditorSection: View {
                 canMoveDown: canMove(placement: placement, direction: 1),
                 moveUp: { moveChecklistItem(visualIndex: placement.visualIndex, direction: -1) },
                 moveDown: { moveChecklistItem(visualIndex: placement.visualIndex, direction: 1) },
-                delete: { deleteChecklistItem(at: placement.sourceIndex) },
+                delete: {
+                    focusedChecklistDraftID.wrappedValue = nil
+                    deleteChecklistItem(placement.id)
+                },
                 toggleCompletion: {
                     withAnimation(reduceMotion ? nil : .snappy(duration: 0.28)) {
                         toggleChecklistItem(placement.id)
@@ -87,11 +91,6 @@ struct TaskChecklistEditorSection: View {
         }
         let neighborSourceIndex = orderedChecklistIndices[neighborVisualIndex]
         return checklistItems[placement.sourceIndex].isCompleted == checklistItems[neighborSourceIndex].isCompleted
-    }
-
-    private func deleteChecklistItem(at index: Int) {
-        guard checklistItems.indices.contains(index) else { return }
-        _ = checklistItems.remove(at: index)
     }
 }
 

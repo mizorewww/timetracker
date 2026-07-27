@@ -16,6 +16,7 @@ struct TaskEditorForm: View {
     let focusedChecklistDraftID: FocusState<UUID?>.Binding
     let orderedChecklistIndices: [Int]
     let toggleChecklistItem: (UUID) -> Void
+    let deleteChecklistItem: (UUID) -> Void
     let moveChecklistItems: (IndexSet, Int) -> Void
     let addChecklistItem: (Int?) -> Void
     var showsTitleField = true
@@ -32,6 +33,7 @@ struct TaskEditorForm: View {
                 focusedChecklistDraftID: focusedChecklistDraftID,
                 orderedChecklistIndices: orderedChecklistIndices,
                 toggleChecklistItem: toggleChecklistItem,
+                deleteChecklistItem: deleteChecklistItem,
                 moveChecklistItems: moveChecklistItems,
                 addChecklistItem: addChecklistItem,
                 showsTitleField: showsTitleField,
@@ -55,6 +57,7 @@ struct TaskEditorSections: View {
     let focusedChecklistDraftID: FocusState<UUID?>.Binding
     let orderedChecklistIndices: [Int]
     let toggleChecklistItem: (UUID) -> Void
+    let deleteChecklistItem: (UUID) -> Void
     let moveChecklistItems: (IndexSet, Int) -> Void
     let addChecklistItem: (Int?) -> Void
     var showsTitleField = true
@@ -90,6 +93,7 @@ struct TaskEditorSections: View {
             focusedChecklistDraftID: focusedChecklistDraftID,
             orderedChecklistIndices: orderedChecklistIndices,
             toggleChecklistItem: toggleChecklistItem,
+            deleteChecklistItem: deleteChecklistItem,
             moveChecklistItems: moveChecklistItems,
             addChecklistItem: addChecklistItem
         )

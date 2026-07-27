@@ -67,6 +67,9 @@ struct TaskDetailList: View {
                     toggleChecklistItem: { id in
                         session.toggleChecklistItem(id: id)
                     },
+                    deleteChecklistItem: { id in
+                        session.deleteChecklistItem(id: id)
+                    },
                     moveChecklistItems: { sourceOffsets, destination in
                         session.moveChecklistItems(
                             fromOffsets: sourceOffsets,

@@ -128,6 +128,9 @@ struct TaskDetailRecoveryList: View {
                     toggleChecklistItem: { id in
                         session.toggleChecklistItem(id: id)
                     },
+                    deleteChecklistItem: { id in
+                        session.deleteChecklistItem(id: id)
+                    },
                     moveChecklistItems: session.moveChecklistItems,
                     addChecklistItem: addChecklistItem,
                     showsTitleField: true,

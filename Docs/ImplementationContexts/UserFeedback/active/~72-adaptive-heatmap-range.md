@@ -1,1 +1,0 @@
-../tasks/72-adaptive-heatmap-range.md

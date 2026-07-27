@@ -1,6 +1,6 @@
 # 72：热力图范围自适应尺寸 实现记忆
 
-状态：2026-07-27 进行中
+状态：2026-07-27 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -29,7 +29,7 @@
 - [x] A：领取反馈、建立活动实现记忆并审计热力图 owner 与现有尺寸策略。
 - [x] B：补充先失败的自适应尺寸/布局行为测试。
 - [x] C：实现最小跨平台修复并更新设计文档。
-- [~] D：完成格式、跨平台截图、全量测试、Release 全设备安装与收口。
+- [x] D：完成格式、跨平台截图、全量测试、Release 全设备安装与收口。
 
 ## 库策略
 
@@ -71,3 +71,10 @@
 - 2026-07-27：默认 `make test` 通过（1422 tests / 158 suites /
   0 failures）；hook 状态与 `git diff --check` 通过，准备提交实现
   checkpoint。
+- 2026-07-27：实现 checkpoint `c6f9f100`（`Adapt heatmaps to
+  available width`）已提交，hook 将版本推进为 1.1.249 (304)。
+- 2026-07-27：`make build-install-all` Release 构建、签名与安装通过：
+  iPad Pro M4 `748D0137-ADC3-58AF-855C-1E98B3125F93`、iPhone Air
+  `FBA36694-D841-56D4-8ED6-21942873B21B`、有效嵌入式 Watch
+  companion，以及 `/Applications/timetracker.app`；安装版本确认是
+  1.1.249 (304)。

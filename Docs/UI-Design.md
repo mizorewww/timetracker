@@ -153,6 +153,12 @@ Bars should show only time position, duration, color, and the task symbol. Task 
 
 Today Timeline 的普通记录与 Apple Health 记录必须复用同一个响应式 record renderer：紧凑宽度都按时间、身份、来源/时长纵向重排，常规宽度都使用相同的时间列、标题列、来源 badge 和时长列。Apple Health 只在来源、已计数时长、只读动作包装上保留差异；不得按数据类型或“第一行”增加专属 padding、offset 或另一套 row。
 
+Analytics Timeline 与普通 Task Detail 的 tracked-segment 历史行都是完整可点击的原生
+button，并用尾部 pencil 说明可编辑；两处必须打开与 Today 相同的独立
+`SegmentEditorSheet`，不得复制表单、把 SwiftData 写入塞进 row，或另造局部编辑器。入口
+只接受带命名空间的 `.trackedSegment` identity；Apple Health workout/sleep 行保持静态，
+不显示 disabled edit。保存/删除后由共享 command 刷新页面，失败时保留 sheet 与草稿。
+
 Adjacent tasks with no visible gap should use different lanes so their bars remain distinguishable. The layout should still minimize lane count: if task A overlaps B and B overlaps C, but A does not overlap C, A and C can reuse the same lane.
 
 ## Task Lists

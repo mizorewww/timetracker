@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct OverlappingTimelineContent: View {
+    let store: TimeTrackerStore
     let timeline: AnalyticsTimelineSnapshot
+    @Environment(AppPresentationRouter.self) var presentationRouter
 
     var laneEntries: [AnalyticsTimelineEntry] {
         timeline.entries

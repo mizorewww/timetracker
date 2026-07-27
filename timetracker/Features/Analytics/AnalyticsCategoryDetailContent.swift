@@ -39,11 +39,14 @@ extension AnalyticsCategoryDetailView {
                 AnalyticsDetailSection(
                     title: AppStrings.localized("analytics.timeline.title"),
                     subtitle: AppStrings.localized("analytics.timeline.subtitle"),
+                    headerIdentifier: "analytics.timeline.section",
                     isPlaceholder: isPlaceholder
                 ) {
-                    OverlappingTimelineContent(timeline: snapshot.timeline)
+                    OverlappingTimelineContent(
+                        store: store,
+                        timeline: snapshot.timeline
+                    )
                 }
-                .accessibilityIdentifier("analytics.timeline.section")
             } else {
                 AnalyticsDetailSection(
                     title: AppStrings.localized("analytics.dailyTrend.title"),

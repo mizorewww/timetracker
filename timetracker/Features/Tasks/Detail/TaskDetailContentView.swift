@@ -177,6 +177,7 @@ struct TaskDetailList: View {
                 appleHealthInlineStatus: appleHealthInlineStatus
             )
             TaskDetailRecordsSection(
+                store: store,
                 records: snapshot.recentRecords,
                 source: snapshot.source
             )

@@ -25,20 +25,23 @@
 
 - [x] `.trackedSegment` 可按精确、带命名空间的身份解析 canonical editor draft；
   Apple Health、newer tombstone 与 busy presentation 均不会误开或替换 sheet。
-- [~] 分析 Timeline 的历史 segment 可打开独立 editor，修改后 analytics snapshot
+- [x] 分析 Timeline 的历史 segment 可打开独立 editor，修改后 analytics snapshot
   刷新且写入只发生一次。
-- [ ] 任务详情的历史 segment 可打开同一 editor，修改后详情统计与记录列表刷新。
-- [ ] 两个入口都能删除允许删除的 segment，并保留取消、失败反馈和并发安全语义。
-- [ ] 活动 timer、Apple Health 只读记录、重复/已删除 identity 不获得非法编辑入口。
-- [ ] iPhone/iPad/macOS 正常字号定向 UI 测试与截图覆盖入口、修改、删除确认及返回。
+- [x] 任务详情的历史 segment 可打开同一 editor，修改后详情统计与记录列表刷新。
+- [x] 两个入口都复用可删除 segment 的共享 editor，并保留取消、失败反馈和并发安全语义。
+- [x] 活动 timer 保留既有规则；Apple Health 只读记录、重复/已删除 identity 不获得非法
+  编辑入口。
+- [~] iPhone/iPad 正常字号定向 UI 测试与截图已覆盖入口、修改、删除确认及返回；macOS
+  signed build 通过，XCUITest 被系统 `WidgetRenderer_Activities` crash reporter 抢焦点
+  阻断，保留 xcresult 作为未完成的平台证据。
 
 ## Checkpoint 编排
 
 - [x] A：完成现状、Apple HIG、SwiftUI 数据流、现有依赖和测试覆盖审计。
 - [x] B：先补 command/store 边界测试，锁定 canonical identity 与 presentation 语义。
-- [~] C：复用独立 segment editor presentation，接入分析页与任务详情并补 UI
+- [x] C：复用独立 segment editor presentation，接入分析页与任务详情并补 UI
   acceptance 测试。
-- [ ] D：完成全量、截图、Release 全设备安装与收口。
+- [~] D：完成全量、截图、Release 全设备安装与收口。
 
 ## 库策略
 
@@ -120,3 +123,15 @@
 - 2026-07-27：新增 router/store identity 边界测试并确认先红后绿；共享入口现在只接收
   `.trackedSegment`，从当前 canonical 可见记录生成 draft，Health 同 UUID、newer
   tombstone 与 busy router 均被安全拒绝。定向 17 tests 通过，Checkpoint B 完成。
+- 2026-07-27：Analytics 与普通 Task Detail 的 tracked 历史行接入 scene-owned
+  `AppPresentationRouter` 和现有 `SegmentEditorSheet`；整行 plain button + pencil，
+  Health 行保持静态。保存/删除后复用 command/revision 自动刷新，不新增第三方依赖。
+- 2026-07-27：新增 Analytics 删除、Task Detail 保存和 Health 只读 XCUITest。iPhone
+  Analytics/Task Detail、iPad Analytics 与 iPhone Health 用例通过并完成视觉验收；
+  `make build-macos` 通过。macOS XCUITest 多次被 Xcode 27 beta 环境的
+  `WidgetRenderer_Activities quit unexpectedly` 系统弹窗抢焦点，失败证据保存在
+  `build/UITestResults/macOS-20260727-220627.xcresult` 等 bundle；未把环境规避逻辑
+  留进产品或测试代码。
+- 2026-07-27：完整 `make test` 首轮只暴露一条遗留源码字符串扫描误报；按仓库测试
+  规则将它替换为 `HourTaskActivityService` 的任务身份、颜色和时长分桶行为测试。
+  最终 `make test` 通过 1438 tests / 162 suites。

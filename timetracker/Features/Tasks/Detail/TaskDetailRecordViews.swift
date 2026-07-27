@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TaskDetailRecordsSection: View {
+    let store: TimeTrackerStore
     let records: [TaskRecentRecordPoint]
     let source: TaskAnalyticsSnapshot.Source
 
@@ -19,6 +20,7 @@ struct TaskDetailRecordsSection: View {
             } else {
                 ForEach(records) { record in
                     TaskDetailRecentRecordRow(
+                        store: store,
                         record: record,
                         source: source
                     )
@@ -46,11 +48,44 @@ struct TaskDetailRecordsSection: View {
 }
 
 private struct TaskDetailRecentRecordRow: View {
+    let store: TimeTrackerStore
     let record: TaskRecentRecordPoint
     let source: TaskAnalyticsSnapshot.Source
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(AppPresentationRouter.self) private var presentationRouter
 
     var body: some View {
+        if isEditable {
+            Button {
+                presentationRouter.presentEditSegment(
+                    record.id,
+                    using: store
+                )
+            } label: {
+                HStack(spacing: 8) {
+                    recordContent
+                    Image(systemName: "pencil")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28)
+                        .accessibilityHidden(true)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier(recordIdentifier)
+            .accessibilityHint(
+                AppStrings.localized("timeline.editSegment")
+            )
+        } else {
+            recordContent
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier(recordIdentifier)
+        }
+    }
+
+    private var recordContent: some View {
         Group {
             if dynamicTypeSize.isAccessibilitySize {
                 VStack(alignment: .leading, spacing: 8) {
@@ -67,10 +102,20 @@ private struct TaskDetailRecentRecordRow: View {
             }
         }
         .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier(
-            "task.detail.history.\(record.id.namespacedKey)"
-        )
+    }
+
+    private var isEditable: Bool {
+        guard source == .tracked else {
+            return false
+        }
+        if case .trackedSegment = record.id {
+            return true
+        }
+        return false
+    }
+
+    private var recordIdentifier: String {
+        "task.detail.history.\(record.id.namespacedKey)"
     }
 
     private var recordIdentity: some View {

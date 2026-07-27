@@ -1375,61 +1375,59 @@ struct AnalyticsTimelineTests {
         #expect(englishStrings.contains("\"analytics.taskUsage.title\" = \"Task Distribution\";"))
     }
 
-    @Test
+    @Test @MainActor
     func todayActivityDistributionUsesTaskColorBuckets() throws {
-        let entrySource = try [
-            "timetracker/Features/Analytics/AnalyticsViews.swift",
-            "timetracker/Features/Analytics/AnalyticsCategoryDetailView.swift",
-            "timetracker/Features/Analytics/AnalyticsCategoryDetailContent.swift",
-        ]
-        .map(sourceText)
-        .joined(separator: "\n")
-        let viewSource = try [
-            "timetracker/Features/Analytics/Sections/AnalyticsActivityViews.swift",
-            "timetracker/Features/Analytics/Sections/AnalyticsActivityBarViews.swift",
-            "timetracker/Features/Analytics/Timeline/AnalyticsTimelineViews.swift",
-            "timetracker/Features/Analytics/Timeline/AnalyticsTimelineRows.swift",
-            "timetracker/SharedUI/Components/TimelineLegendRow.swift",
-            "timetracker/SharedUI/Components/TimelineChart.swift",
-            "timetracker/SharedUI/Components/TimelineChartLayout.swift",
-            "timetracker/SharedUI/Components/TimelineChartGrid.swift",
-            "timetracker/SharedUI/Components/TimelineChartBars.swift",
-        ]
-        .map(sourceText)
-        .joined(separator: "\n")
-        let sharedLegendSource = try sourceText(
-            "timetracker/SharedUI/Components/TimelineLegendRow.swift"
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let day = try #require(
+            calendar.date(from: DateComponents(year: 2026, month: 7, day: 27))
         )
-        let analyticsSource = try [
-            "timetracker/Models/AnalyticsSummaryReadModels.swift",
-            "timetracker/Models/AnalyticsTimelineReadModels.swift",
-            "timetracker/Services/Analytics/HourTaskActivityService.swift",
-            "timetracker/Services/Analytics/AnalyticsTimelineSnapshotService.swift",
-            "timetracker/Services/Analytics/HourStackLayoutEngine.swift",
+        let design = TaskNode(
+            title: "Design",
+            parentID: nil,
+            deviceID: "test",
+            colorHex: "0A84FF",
+            iconName: "paintbrush"
+        )
+        let review = TaskNode(
+            title: "Review",
+            parentID: nil,
+            deviceID: "test",
+            colorHex: "FF9F0A",
+            iconName: "doc.text"
+        )
+        let segments = [
+            TimeSegment(
+                sessionID: UUID(),
+                taskID: design.id,
+                source: .manual,
+                deviceID: "test",
+                startedAt: day.addingTimeInterval(9 * 3600),
+                endedAt: day.addingTimeInterval(9 * 3600 + 45 * 60)
+            ),
+            TimeSegment(
+                sessionID: UUID(),
+                taskID: review.id,
+                source: .manual,
+                deviceID: "test",
+                startedAt: day.addingTimeInterval(9 * 3600 + 15 * 60),
+                endedAt: day.addingTimeInterval(10 * 3600)
+            ),
         ]
-        .map(sourceText)
-        .joined(separator: "\n")
-        let combinedSource = viewSource + "\n" + analyticsSource
-        let englishStrings = try sourceText("timetracker/en.lproj/Localizable.strings")
 
-        #expect(entrySource.contains("TodayActivityContent(activity: snapshot.todayActivity)"))
-        #expect(entrySource.contains("OverlappingTimelineContent(timeline: snapshot.timeline)"))
-        #expect(viewSource.contains("private var hourly") == false)
-        #expect(viewSource.contains("@ObservedObject var store") == false)
-        #expect(viewSource.contains("TimelineLayoutEngine.layout(") == false)
-        #expect(viewSource.contains("struct TimelineLegendRow"))
-        #expect(sharedLegendSource.contains("TimeTrackerStore") == false)
-        #expect(sharedLegendSource.contains("@ObservedObject") == false)
-        #expect(sharedLegendSource.contains("TimelineLayoutEngine.layout(") == false)
-        #expect(combinedSource.contains("struct HourTaskSlice"))
-        #expect(combinedSource.contains("struct AnalyticsTimelineSnapshot"))
-        #expect(combinedSource.contains("Color(hex: colorHex)"))
-        #expect(combinedSource.contains("AnalyticsLegendSwatch(color: .blue, title: AppStrings.wallTime)") == false)
-        #expect(combinedSource.contains("HourStackLayoutEngine.layout"))
-        #expect(combinedSource.contains("RoundedRectangle(cornerRadius: cornerRadius"))
-        #expect(combinedSource.contains("availableHeight * CGFloat(point.totalSeconds)") == false)
-        #expect(combinedSource.contains(".clipShape(Capsule())") == false)
-        #expect(englishStrings.contains("\"analytics.hourDistribution.taskColorHint\""))
+        let activity = HourTaskActivityService().hourlyActivity(
+            segments: segments,
+            tasks: [design, review],
+            sessions: [],
+            date: day,
+            now: day.addingTimeInterval(12 * 3600),
+            calendar: calendar
+        )
+        let nineOClockSlices = activity[9].slices
+
+        #expect(nineOClockSlices.map(\.taskID) == [design.id, review.id])
+        #expect(nineOClockSlices.map(\.colorHex) == ["0A84FF", "FF9F0A"])
+        #expect(nineOClockSlices.map(\.seconds) == [45 * 60, 45 * 60])
     }
 
     @Test

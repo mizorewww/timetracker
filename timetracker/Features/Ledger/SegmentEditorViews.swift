@@ -114,7 +114,13 @@ struct SegmentEditorPanel: View {
                     Button(role: .destructive) {
                         isDeleteConfirmationPresented = true
                     } label: {
-                        Label(AppStrings.localized("timeline.deleteSegment"), systemImage: "trash")
+                        Label {
+                            Text(AppStrings.localized("timeline.deleteSegment"))
+                                .foregroundStyle(.red)
+                        } icon: {
+                            Image(systemName: "trash")
+                                .foregroundStyle(.red)
+                        }
                     }
                     .accessibilityIdentifier("segmentEditor.delete")
                 }
@@ -131,6 +137,7 @@ struct SegmentEditorPanel: View {
                             requestCancel()
                         }
                         .keyboardShortcut(.cancelAction)
+                        .accessibilityIdentifier("segmentEditor.cancel")
                     }
 
                     ToolbarItem(placement: .confirmationAction) {
@@ -139,6 +146,7 @@ struct SegmentEditorPanel: View {
                         }
                         .keyboardShortcut(.defaultAction)
                         .disabled(draft.taskID == nil || validation != .valid || noteError != nil)
+                        .accessibilityIdentifier("segmentEditor.save")
                     }
                 }
         }
@@ -155,6 +163,7 @@ struct SegmentEditorPanel: View {
             Button(deletionImpact.confirmationActionTitle, role: .destructive) {
                 onDelete(draft)
             }
+            .accessibilityIdentifier("segmentEditor.delete.confirm")
             Button(AppStrings.cancel, role: .cancel) {}
         } message: {
             Text(deletionImpact.confirmationMessage)

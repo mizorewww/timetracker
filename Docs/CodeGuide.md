@@ -153,6 +153,13 @@ Analytics 月导航先从所选月份的 `Calendar` interval start 位移到目�
 
 SwiftUI 写入表面也共用这一语义：`ManualTimePanel` 和 `SegmentEditorPanel` 的开始/结束 `DatePicker` 上限为当前 `now`，时长与保存 enablement 调用 `TrackedTimePolicy`。两个表单都包含任务、两项日期时间、验证和多行备注，iOS 只使用 `.large` detent；不得把完整编辑器塞回不可完成核心流程的 `.medium` 高度。`TrackedTimeDisplaySnapshot` 是 Today timeline、Task Detail recent records 和 `DurationLabel` 的共享显示适配层；future-ended 只显示到 `now`，future-only/future-active 在开始前显示 0，已结束的固定 label 不启动每秒刷新。
 
+`SegmentEditorSheet` 是 Today、Analytics Timeline 与普通 Task Detail 历史记录的唯一编辑
+surface。页面只把完整 `TimelineEntryID.trackedSegment` 交给
+`AppPresentationRouter.presentEditSegment(_:using:)`；Store 必须从当前 canonical、未删除
+winner 生成 draft，并拒绝 Health namespace、tombstone、缺失关系或 busy presentation。
+View 不持有 `TimeSegment`、不从 UUID 猜 namespace，也不手工刷新 snapshot；保存/删除继续
+通过 store-scoped command 推进 ledger/rollup/analytics revision。
+
 并行计时是合法状态，因此：
 
 - gross duration 是所有片段时长之和。

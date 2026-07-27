@@ -727,6 +727,139 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testAnalyticsHistoryRecordReusesSegmentEditorForDeletion() throws {
+        let app = launchApp(
+            route: "analytics",
+            replacesDemoDataOnLaunch: true
+        )
+        XCTAssertTrue(analyticsIsReady(in: app))
+
+        let time = app.descendants(matching: .any)[
+            "analytics.category.time"
+        ].firstMatch
+        scrollUntilHittable(time, direction: .up, in: app)
+        XCTAssertTrue(time.waitForExistence(timeout: 5) && time.isHittable)
+        activate(time)
+
+        let detail = app.descendants(matching: .any)[
+            "analytics.categoryDetail.time"
+        ].firstMatch
+        XCTAssertTrue(detail.waitForExistence(timeout: 8))
+        let timeline = app.descendants(matching: .any)[
+            "analytics.timeline.section"
+        ].firstMatch
+        scrollUntilHittable(
+            timeline,
+            direction: .up,
+            maximumScrolls: 12,
+            in: app
+        )
+        XCTAssertTrue(
+            timeline.waitForExistence(timeout: 8) && timeline.isHittable
+        )
+        let record = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "analytics.timeline.entry.trackedSegment."
+            )
+        ).firstMatch
+        scrollUntilHittable(
+            record,
+            direction: .up,
+            maximumScrolls: 20,
+            in: app
+        )
+        XCTAssertTrue(record.waitForExistence(timeout: 8) && record.isHittable)
+        XCTAssertEqual(record.elementType, .button)
+        let deletedIdentifier = record.identifier
+        activate(record)
+
+        let editor = app.descendants(matching: .any)["segmentEditor.view"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        try capture(
+            "\(platformScreenshotPrefix(in: app))-analytics-segment-editor",
+            app: app
+        )
+
+        let delete = app.buttons["segmentEditor.delete"].firstMatch
+        scrollUntilHittable(delete, direction: .up, in: app)
+        XCTAssertTrue(delete.waitForExistence(timeout: 3) && delete.isHittable)
+        activate(delete)
+        let confirm = app.buttons["segmentEditor.delete.confirm"].firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 3) && confirm.isHittable)
+        activate(confirm)
+
+        XCTAssertTrue(editor.waitForNonExistence(timeout: 8))
+        XCTAssertTrue(
+            app.descendants(matching: .any)[deletedIdentifier]
+                .waitForNonExistence(timeout: 8),
+            "Deleting from Analytics must refresh the exact timeline record."
+        )
+    }
+
+    @MainActor
+    func testTaskDetailHistoryRecordReusesSegmentEditorForSaving() throws {
+        let app = launchApp(
+            route: "task-detail",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Read Apple HIG"
+        )
+        XCTAssertTrue(taskDetailIsReady(in: app))
+
+        let record = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "task.detail.history.trackedSegment."
+            )
+        ).firstMatch
+        scrollUntilHittable(
+            record,
+            direction: .up,
+            maximumScrolls: 24,
+            in: app
+        )
+        XCTAssertTrue(record.waitForExistence(timeout: 8) && record.isHittable)
+        XCTAssertEqual(record.elementType, .button)
+        let recordIdentifier = record.identifier
+        activate(record)
+
+        let editor = app.descendants(matching: .any)["segmentEditor.view"]
+        let note = app.descendants(matching: .any)["segmentEditor.note"]
+            .firstMatch
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        XCTAssertTrue(note.waitForExistence(timeout: 3) && note.isHittable)
+        activate(note)
+        note.typeKey("a", modifierFlags: .command)
+        replaceText("Edited from Task Detail", in: note)
+        activate(app.buttons["segmentEditor.save"].firstMatch)
+        XCTAssertTrue(editor.waitForNonExistence(timeout: 8))
+
+        let refreshedRecord = app.buttons[recordIdentifier].firstMatch
+        scrollUntilHittable(
+            refreshedRecord,
+            direction: .up,
+            maximumScrolls: 24,
+            in: app
+        )
+        XCTAssertTrue(
+            refreshedRecord.waitForExistence(timeout: 8) &&
+                refreshedRecord.isHittable
+        )
+        activate(refreshedRecord)
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            note.value as? String ?? note.label,
+            "Edited from Task Detail"
+        )
+        try capture(
+            "\(platformScreenshotPrefix(in: app))-task-detail-segment-editor",
+            app: app
+        )
+        activate(app.buttons["segmentEditor.cancel"].firstMatch)
+        XCTAssertTrue(editor.waitForNonExistence(timeout: 5))
+    }
+
+    @MainActor
     func testActiveFocusDeletionExplainsWholeSessionImpact() throws {
         #if os(macOS)
         throw XCTSkip("The compact time-record confirmation requires an iOS simulator.")
@@ -9485,6 +9618,10 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(
             fixedHealthRecord.waitForExistence(timeout: 8) &&
                 fixedHealthRecord.isHittable
+        )
+        XCTAssertFalse(
+            app.buttons[fixedHealthRecord.identifier].exists,
+            "Apple Health history must remain read-only even when ledger records are editable."
         )
 
         scrollUntilFullyVisibleAboveSystemChrome(chart, in: app)

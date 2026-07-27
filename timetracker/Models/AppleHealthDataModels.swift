@@ -205,6 +205,7 @@ nonisolated enum AppleHealthReadError: LocalizedError, Equatable, Sendable {
     case unavailable
     case authorizationRequestStatusUnavailable
     case requiredTypesUnavailable
+    case replicaAnchorUnreadable
 
     var errorDescription: String? {
         switch self {
@@ -217,6 +218,8 @@ nonisolated enum AppleHealthReadError: LocalizedError, Equatable, Sendable {
             )
         case .requiredTypesUnavailable:
             NSLocalizedString("health.error.requiredTypesUnavailable", comment: "")
+        case .replicaAnchorUnreadable:
+            NSLocalizedString("health.error.replicaAnchorUnreadable", comment: "")
         }
     }
 }

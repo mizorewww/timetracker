@@ -413,6 +413,7 @@
 "action.retry" = "重試";
 "health.error.unavailable" = "此裝置無法使用 Apple 健康資料。";
 "health.error.requiredTypesUnavailable" = "此裝置無法提供運動或睡眠資料。";
+"health.error.replicaAnchorUnreadable" = "本機 Apple 健康同步檢查點無法讀取。";
 "health.timeline.source" = "Apple 健康";
 "health.timeline.pathFormat" = "%1$@ · %2$@";
 "health.timeline.exerciseCategory" = "運動";

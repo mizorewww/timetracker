@@ -413,6 +413,7 @@
 "action.retry" = "Retry";
 "health.error.unavailable" = "Apple Health data is unavailable on this device.";
 "health.error.requiredTypesUnavailable" = "Workout or sleep data is unavailable on this device.";
+"health.error.replicaAnchorUnreadable" = "The local Apple Health sync checkpoint is unreadable.";
 "health.timeline.source" = "Apple Health";
 "health.timeline.pathFormat" = "%1$@ · %2$@";
 "health.timeline.exerciseCategory" = "Exercise";

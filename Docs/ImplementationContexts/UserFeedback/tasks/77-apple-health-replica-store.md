@@ -47,7 +47,7 @@
 
 - [x] 新独立 store 与主 store/CloudKit configuration 物理隔离；unit/UI test
   永远使用内存或显式隔离 URL。
-- [ ] 第一次同步、幂等重放、HealthKit 修改、撤销授权/查询失败、取消、记录删除与
+- [x] 第一次同步、幂等重放、HealthKit 修改、撤销授权/查询失败、取消、记录删除与
   anchor 原子推进/回滚。
 - [ ] 任意 UI/command 不能修改 Health replica；只读投影与现有时间线/分析语义一致。
 - [ ] JSON 导出包含确定性 Health records，空/损坏/不可用 replica 有明确结果，
@@ -91,3 +91,8 @@
   CloudKit-disabled 独立容器、备份排除与 iOS Data Protection、唯一 SwiftData
   repository、只读值快照、幂等 upsert/修改/明确删除/双 anchor 同事务提交和
   clear。磁盘重开可继续读写；`make test` 1428 tests / 160 suites 通过。
+- 2026-07-27：完成 anchored sync 第二层：workout/sleep 独立分页读取
+  `HKAnchoredObjectQueryDescriptor`，安全归档 `HKQueryAnchor`，显式收敛
+  `HKDeletedObject`，且只有两条 HealthKit 流均成功后才原子提交记录与双 anchor。
+  查询失败、取消和过期请求均不产生半代数据；`make test` 1431 tests / 161 suites
+  与签名 iOS generic-device build 均通过。

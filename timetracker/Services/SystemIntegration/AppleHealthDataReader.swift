@@ -87,7 +87,11 @@ enum AppleHealthDataReaderFactory {
 import HealthKit
 
 @MainActor
-final class HealthKitAppleHealthDataReader: AppleHealthDataReading {
+final class HealthKitAppleHealthDataReader:
+    AppleHealthDataReading,
+    AppleHealthReplicaChangeReading
+{
+    private static let replicaQueryPageLimit = 1000
     private let healthStore: HKHealthStore
 
     init(healthStore: HKHealthStore = HKHealthStore()) {
@@ -142,6 +146,31 @@ final class HealthKitAppleHealthDataReader: AppleHealthDataReading {
         return AppleHealthSampleBatch(workouts: workouts, sleep: sleep)
     }
 
+    func replicaChanges(
+        after anchors: AppleHealthReplicaAnchors
+    ) async throws -> AppleHealthReplicaChangeBatch {
+        guard isHealthDataAvailable else {
+            throw AppleHealthReadError.unavailable
+        }
+        try Task.checkCancellation()
+        let workoutChanges = try await workoutReplicaChanges(
+            after: anchors.workout
+        )
+        try Task.checkCancellation()
+        let sleepChanges = try await sleepReplicaChanges(
+            after: anchors.sleep
+        )
+        try Task.checkCancellation()
+        return AppleHealthReplicaChangeBatch(
+            workouts: workoutChanges.added,
+            deletedWorkoutIDs: workoutChanges.deleted,
+            workoutAnchor: workoutChanges.anchor,
+            sleep: sleepChanges.added,
+            deletedSleepIDs: sleepChanges.deleted,
+            sleepAnchor: sleepChanges.anchor
+        )
+    }
+
     private func readTypes() throws -> Set<HKObjectType> {
         guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
             throw AppleHealthReadError.requiredTypesUnavailable
@@ -186,6 +215,132 @@ final class HealthKitAppleHealthDataReader: AppleHealthDataReading {
                     sourceProductType: sample.sourceRevision.productType
                 )
             }
+    }
+
+    private func workoutReplicaChanges(
+        after anchorData: Data?
+    ) async throws -> (
+        added: [AppleHealthWorkoutSample],
+        deleted: Set<UUID>,
+        anchor: Data
+    ) {
+        var anchor = try Self.decodeReplicaAnchor(anchorData)
+        var added: [AppleHealthWorkoutSample] = []
+        var deleted: Set<UUID> = []
+        while true {
+            try Task.checkCancellation()
+            let descriptor = HKAnchoredObjectQueryDescriptor<HKWorkout>(
+                predicates: [.workout()],
+                anchor: anchor,
+                limit: Self.replicaQueryPageLimit
+            )
+            let result = try await descriptor.result(for: healthStore)
+            try Task.checkCancellation()
+            added.append(contentsOf: result.addedSamples.map { workout in
+                AppleHealthWorkoutSample(
+                    id: workout.uuid,
+                    kind: Self.workoutKind(
+                        for: workout.workoutActivityType
+                    ),
+                    startedAt: workout.startDate,
+                    endedAt: workout.endDate,
+                    sourceBundleIdentifier:
+                    workout.sourceRevision.source.bundleIdentifier
+                )
+            })
+            deleted.formUnion(result.deletedObjects.map(\.uuid))
+            anchor = result.newAnchor
+            let pageCount = result.addedSamples.count +
+                result.deletedObjects.count
+            guard pageCount >= Self.replicaQueryPageLimit else {
+                return try (
+                    added,
+                    deleted,
+                    Self.encodeReplicaAnchor(result.newAnchor)
+                )
+            }
+        }
+    }
+
+    private func sleepReplicaChanges(
+        after anchorData: Data?
+    ) async throws -> (
+        added: [AppleHealthSleepSample],
+        deleted: Set<UUID>,
+        anchor: Data
+    ) {
+        guard let sleepType = HKObjectType.categoryType(
+            forIdentifier: .sleepAnalysis
+        ) else {
+            throw AppleHealthReadError.requiredTypesUnavailable
+        }
+        var anchor = try Self.decodeReplicaAnchor(anchorData)
+        var added: [AppleHealthSleepSample] = []
+        var deleted: Set<UUID> = []
+        while true {
+            try Task.checkCancellation()
+            let descriptor =
+                HKAnchoredObjectQueryDescriptor<HKCategorySample>(
+                    predicates: [
+                        .categorySample(type: sleepType),
+                    ],
+                    anchor: anchor,
+                    limit: Self.replicaQueryPageLimit
+                )
+            let result = try await descriptor.result(for: healthStore)
+            try Task.checkCancellation()
+            added.append(contentsOf: result.addedSamples.compactMap {
+                sample in
+                guard let stage = Self.sleepStage(
+                    for: sample.value
+                ) else {
+                    return nil
+                }
+                return AppleHealthSleepSample(
+                    id: sample.uuid,
+                    stage: stage,
+                    startedAt: sample.startDate,
+                    endedAt: sample.endDate,
+                    sourceBundleIdentifier:
+                    sample.sourceRevision.source.bundleIdentifier,
+                    sourceProductType:
+                    sample.sourceRevision.productType
+                )
+            })
+            deleted.formUnion(result.deletedObjects.map(\.uuid))
+            anchor = result.newAnchor
+            let pageCount = result.addedSamples.count +
+                result.deletedObjects.count
+            guard pageCount >= Self.replicaQueryPageLimit else {
+                return try (
+                    added,
+                    deleted,
+                    Self.encodeReplicaAnchor(result.newAnchor)
+                )
+            }
+        }
+    }
+
+    private static func encodeReplicaAnchor(
+        _ anchor: HKQueryAnchor
+    ) throws -> Data {
+        try NSKeyedArchiver.archivedData(
+            withRootObject: anchor,
+            requiringSecureCoding: true
+        )
+    }
+
+    private static func decodeReplicaAnchor(
+        _ data: Data?
+    ) throws -> HKQueryAnchor? {
+        guard let data else { return nil }
+        guard let anchor = try NSKeyedUnarchiver.unarchivedObject(
+            ofClass: HKQueryAnchor.self,
+            from: data
+        ) else {
+            throw AppleHealthReadError.replicaAnchorUnreadable
+        }
+        return anchor
     }
 
     static func workoutKind(for activity: HKWorkoutActivityType) -> AppleHealthWorkoutKind {

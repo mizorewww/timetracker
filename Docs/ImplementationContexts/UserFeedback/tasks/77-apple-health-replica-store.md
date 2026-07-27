@@ -50,7 +50,7 @@
 - [x] 第一次同步、幂等重放、HealthKit 修改、撤销授权/查询失败、取消、记录删除与
   anchor 原子推进/回滚。
 - [x] 任意 UI/command 不能修改 Health replica；只读投影与现有时间线/分析语义一致。
-- [ ] JSON 导出包含确定性 Health records，空/损坏/不可用 replica 有明确结果，
+- [x] JSON 导出包含确定性 Health records，空/损坏/不可用 replica 有明确结果，
   且敏感字段与主快照边界符合文档。
 - [x] 新 Health schema V1 的磁盘重开与 current compatibility fixture；首版不虚构
   V0 migration。
@@ -101,3 +101,9 @@
   在授权后先 anchored refresh，再从 replica 的 interval snapshot 投影，旧的窄范围
   reader fake 仍可回退兼容。隐藏时间线不清库；Clear All 明确清除 records 与 anchors。
   `make test` 1433 tests / 162 suites 与签名 iOS generic-device build 均通过。
+- 2026-07-27：完成 Settings 用户 JSON 导出 envelope
+  `timetracker.userData` V1：分离 `businessData` 与版本化 `appleHealth`，确定性导出
+  workout/sleep UUID、类型/阶段、时间范围与来源，以及 replica 最后成功同步时间；
+  opaque anchors 永不出站。合法空库编码显式空数组，任一副本读取错误使整个导出
+  fail closed；原 Cloud 恢复快照格式与路径保持不变。`make test` 1435 tests /
+  162 suites 通过。

@@ -500,7 +500,7 @@ struct DataModelContractTests {
     }
 
     @Test @MainActor
-    func jsonExportIncludesCloudSyncedData() throws {
+    func jsonExportIncludesBusinessDataAndAppleHealthReplica() throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
@@ -512,16 +512,111 @@ struct DataModelContractTests {
             endedAt: start.addingTimeInterval(900),
             note: "Export note"
         )
+        let healthReplica = try makeAppleHealthReplicaTestRepository()
+        let workoutID = UUID()
+        let sleepID = UUID()
+        try healthReplica.apply(
+            AppleHealthReplicaChangeBatch(
+                workouts: [
+                    appleHealthWorkout(
+                        id: workoutID,
+                        kind: .running,
+                        start: 3000,
+                        end: 3600,
+                        source: "com.apple.Health"
+                    ),
+                ],
+                deletedWorkoutIDs: [],
+                workoutAnchor: Data("private-workout-anchor".utf8),
+                sleep: [
+                    appleHealthSleep(
+                        id: sleepID,
+                        stage: .asleepREM,
+                        start: 4000,
+                        end: 4600,
+                        source: "com.apple.Health",
+                        productType: "Watch7,4"
+                    ),
+                ],
+                deletedSleepIDs: [],
+                sleepAnchor: Data("private-sleep-anchor".utf8)
+            ),
+            syncedAt: Date(timeIntervalSince1970: 5000)
+        )
 
-        let store = makeTestStore()
+        let store = TimeTrackerStore(
+            appleHealthDataReader: UnavailableAppleHealthDataReader(),
+            appleHealthReplicaRepository: healthReplica,
+            appleHealthTimelinePreferenceStore:
+            TestAppleHealthTimelinePreferenceStore(),
+            writeAuthorization: .isolatedTestHarness
+        )
         store.configureIfNeeded(context: context)
         let json = try store.jsonExport()
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let export = try decoder.decode(
+            TimeTrackerUserDataExport.self,
+            from: Data(json.utf8)
+        )
 
-        #expect(json.contains("\"format\" : \"timetracker.cloudSyncedData\""))
-        #expect(json.contains("\"tasks\""))
-        #expect(json.contains("\"segments\""))
-        #expect(json.contains("JSON Task"))
-        #expect(json.contains("Export note"))
+        #expect(export.format == "timetracker.userData")
+        #expect(export.schemaVersion == 1)
+        #expect(export.businessData.tasks.map(\.title) == ["JSON Task"])
+        #expect(export.businessData.sessions.map(\.note) == ["Export note"])
+        #expect(export.appleHealth.schemaVersion == 1)
+        #expect(export.appleHealth.recordCount == 2)
+        #expect(export.appleHealth.lastSuccessfulSyncAt ==
+            Date(timeIntervalSince1970: 5000))
+        #expect(export.appleHealth.workouts.map(\.id) == [workoutID])
+        #expect(export.appleHealth.workouts.map(\.kind) == ["running"])
+        #expect(export.appleHealth.sleep.map(\.id) == [sleepID])
+        #expect(export.appleHealth.sleep.map(\.stage) == ["asleepREM"])
+        #expect(export.appleHealth.sleep.map(\.sourceProductType) == [
+            "Watch7,4",
+        ])
+        #expect(json.contains("private-workout-anchor") == false)
+        #expect(json.contains("private-sleep-anchor") == false)
+    }
+
+    @Test @MainActor
+    func jsonExportEncodesAnExplicitEmptyHealthReplica() throws {
+        let context = try makeTestContext()
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+
+        let json = try store.jsonExport()
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let export = try decoder.decode(
+            TimeTrackerUserDataExport.self,
+            from: Data(json.utf8)
+        )
+
+        #expect(export.appleHealth.recordCount == 0)
+        #expect(export.appleHealth.lastSuccessfulSyncAt == nil)
+        #expect(export.appleHealth.workouts.isEmpty)
+        #expect(export.appleHealth.sleep.isEmpty)
+    }
+
+    @Test @MainActor
+    func jsonExportFailsClosedWhenTheHealthReplicaCannotBeRead() throws {
+        let context = try makeTestContext()
+        let store = TimeTrackerStore(
+            appleHealthDataReader: UnavailableAppleHealthDataReader(),
+            appleHealthReplicaRepository:
+            UnavailableAppleHealthReplicaRepository(
+                error: JSONExportProbeError.replicaUnavailable
+            ),
+            appleHealthTimelinePreferenceStore:
+            TestAppleHealthTimelinePreferenceStore(),
+            writeAuthorization: .isolatedTestHarness
+        )
+        store.configureIfNeeded(context: context)
+
+        #expect(throws: JSONExportProbeError.replicaUnavailable) {
+            try store.jsonExport()
+        }
     }
 
     @Test @MainActor
@@ -532,5 +627,9 @@ struct DataModelContractTests {
             try store.jsonExport()
         }
         #expect(store.errorMessage == nil)
+    }
+
+    private enum JSONExportProbeError: Error, Equatable {
+        case replicaUnavailable
     }
 }

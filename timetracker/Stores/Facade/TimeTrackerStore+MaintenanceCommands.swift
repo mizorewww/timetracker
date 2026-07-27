@@ -104,6 +104,9 @@ extension TimeTrackerStore {
 
     func jsonExport() throws -> String {
         guard let modelContext else { throw StoreError.notConfigured }
-        return try syncConflictService.exportCloudSyncedData(context: modelContext)
+        return try syncConflictService.exportUserData(
+            context: modelContext,
+            appleHealthReplica: appleHealthReplicaRepository
+        )
     }
 }

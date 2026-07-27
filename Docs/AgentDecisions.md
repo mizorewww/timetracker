@@ -1465,9 +1465,9 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 ## AD-117：共享 Blossom 颜色选择器并补足触控语义
 
-状态：Accepted
+状态：Accepted（macOS 顶层 presenter 条款由 AD-135 取代）
 
-替代关系：本决策只对 BlossomColorPicker 取代 AD-011 的“当前不新增第三方库”；不得据此引入 FlowDown 的其余依赖栈。
+替代关系：本决策只对 BlossomColorPicker 取代 AD-011 的“当前不新增第三方库”；不得据此引入 FlowDown 的其余依赖栈。AD-135 只替代本决策的 macOS 顶层 presenter 条款。
 
 背景：任务、分类、Checklist 与 Pomodoro 计划共享同一组符号和颜色，但 iPhone 的完整 inline 色板会压缩符号 viewport；软件键盘出现后，小屏设备可能看不到可点图标。文字菜单虽然释放了空间，却把本应直接识别的颜色变成需要阅读和逐层扫描的命令。用户明确指定 [Lakr233/BlossomColorPicker](https://github.com/Lakr233/BlossomColorPicker/)；审查的官方提交 `9a1ee3df309e37ae271362818dcdfdb072ea9611` 使用 MIT 许可证、没有网络或数据访问，也没有传递依赖。其顶层 iOS presenter 固定使用 30 pt 花瓣并自行寻找 window，而且没有公开 `BlossomStyle` 参数；公开的 `BlossomColorPickerCore` 允许应用复用同一个默认花瓣视图、模型、色板、亮度滑杆和命中算法。首版适配虽然复用了 Core，却自行改成 44/88 pt 环半径，偏离了“只把上游组件放大”的用户要求。
 
@@ -1475,7 +1475,7 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 - 工程通过 Swift Package Manager 固定官方 BlossomColorPicker 的精确提交，不复制或改写其色轮实现。`Package.resolved` 与工程引用必须同时锁定该 revision。
 - iOS/iPadOS 使用原生 44 pt `Button` 作为当前颜色入口，并在 scene-owned 的系统 SwiftUI popover 中直接使用库公开的默认 `ExpandedBlossomView`、`BlossomColorPickerModel` 与 `PetalLayout()`。整个上游视图统一按 `44 / BlossomConstants.petalSize` 等比放大，使可见花瓣从上游 30 pt 变为 44 pt；花瓣相对位置、颜色、动画、亮度轨道和命中逻辑保持上游默认值。应用薄适配层只负责统一缩放、键盘焦点、popover 边界与十六进制 binding，不另造或重排色轮，也不在系统 popover 内添加第二张应用自有 picker 卡片。
-- macOS 直接使用库的顶层 `BlossomColorPicker` presenter；平台差异只存在于同一个 `SymbolColorWell` 内。任务、分类、Checklist 与 Pomodoro 计划继续只复用 `SymbolColorPickerButton`，调用方不得复制 picker。
+- macOS 的展示与坐标换算由 AD-135 约束；平台差异只存在于同一个 `SymbolColorWell` 内。任务、分类、Checklist 与 Pomodoro 计划继续只复用 `SymbolColorPickerButton`，调用方不得复制 picker。
 - 打开颜色入口前结束符号搜索焦点；即使软件键盘仍在，符号 viewport 也至少保留一个完整 44 pt 可点行。选择符号、提交搜索或滚动同样遵循统一的焦点规则。
 - 人工选择可保存任意有效的六位 sRGB 十六进制值；既有 24 色只继续作为 AI 输出白名单，不能把 Blossom 选出的颜色在保存时偷偷量化回固定 palette。
 - Blossom 包含的浅色在深色外观下不能继续叠加固定白色图标。选中符号、Checklist 完成标记和 Timeline 色块统一根据实际背景亮度选择黑/白前景，并保持至少 4.5:1 对比度。
@@ -1800,6 +1800,26 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：Apple Health 详情只承载可读分析与必要状态，不再暗示目录可编辑或可归档；周期分析能力和 HealthKit 只读投影语义不受影响。Task 77 后续把投影的数据源迁移到独立的设备本地 replica，但没有改变本决策的可见组合。普通任务仍拥有完整编辑、执行、预测和记录能力。该裁剪只复用原生 SwiftUI `List`/`Section`/`Picker` 和现有投影，不引入新的第三方依赖。
 
 验证：正常字号 Health 历史 fixture 验证三段顺序、周期控件位于 Task Analysis 之后、跨日/周/月与历史导航不变；逐 viewport 扫描 lazy `List`，证明所有普通任务 identifier 缺席。保留 failure/retry、empty/reactivation、iPhone/iPad 方向截图和 macOS unavailable 截图。既有普通 Task Detail identity、heatmap、icon、timer/Add Time/More 测试保护未改分支。
+
+## AD-135：macOS Blossom 从所属颜色控件换算屏幕坐标
+
+状态：Accepted
+
+替代关系：本决策只替代 AD-117 的“macOS 直接使用库顶层 presenter”条款；其固定 revision、公开 Core、默认花瓣几何、任意六位 sRGB、对比度和四类编辑器共享入口要求继续有效。
+
+背景：BlossomColorPicker revision `9a1ee3df309e37ae271362818dcdfdb072ea9611` 的 macOS 顶层 presenter 从 SwiftUI `GeometryReader` 取得 `.global` frame，却再通过 `NSApp.keyWindow` 转成屏幕坐标。颜色 well 位于应用自己的 SF Symbols popover 时，source view 所属窗口与 key window 不是同一个坐标空间；正常窗口位置下，194×194 pt 花瓣窗口中心会偏离 well 约 75 pt。上游默认分支与固定 revision 相同，没有提供 owner window 或 anchor `NSView` 注入点，也没有更新修复。
+
+决策：
+
+- macOS 继续直接复用 `BlossomColorPickerCore` 的公开 `ExpandedBlossomView`、`BlossomColorPickerModel`、默认 `PetalLayout()`、色板、亮度轨道、动画和 194 pt 默认总尺寸；不得复制花瓣布局、增加 magic offset 或引入第二个颜色库。
+- `SymbolColorWell` 通过一个无视觉 `NSViewRepresentable` 取得真正属于该 well 的 anchor `NSView`。薄 AppKit presenter 必须先用 `anchorView.convert(anchorView.bounds, to: nil)` 得到所属窗口坐标，再由 `anchorView.window.convertToScreen` 得到屏幕坐标；不得使用 `NSApp.keyWindow`、`NSApp.mainWindow` 或假设外层 popover 位于主窗口。
+- 默认空间以 well 中心作为 Blossom 中心，保持库原有“从色块绽放”的交互；只有接近屏幕工作区边缘时才按 owner screen 的 `visibleFrame` 夹紧窗口。picker 作为 owner window 的透明、无阴影、临时 child window 展示，因此 owner 移动、层级和关闭关系保持一致。
+- 外部鼠标按下、应用失活、owner 关闭或 SwiftUI well 消失时必须收起模型并清理 event monitor、notification observer、child window 和延迟关闭任务。模型仍是颜色写回与展开状态的唯一 owner；iOS/iPadOS 的 scene-owned SwiftUI popover 与 30→44 pt 等比 Core 路径不变。
+- 任务、分类、Checklist 和 Pomodoro 计划继续只通过共享 `SymbolColorWell` 获得该行为；应用不新增第三方依赖。BlossomColorPicker 仍是用户明确指定且经 AD-117 审查的低 star 例外，不能据此放宽 AD-011 的一般依赖门禁。
+
+后果：macOS 花瓣从实际被点按的颜色 well 中心展开，不再因嵌套 popover 与 key window 的坐标空间不同而漂移；屏幕边缘仍能完整显示。应用承担一层很薄的 AppKit presentation lifecycle，但不维护颜色算法或视觉几何。未来升级上游时，若其 presenter 接受真实 owner/anchor 且通过相同回归，可删除本适配层。
+
+验证：先失败的 macOS XCUITest 记录 well 中心与 Blossom 中心相距 75 pt；修复后用新建的 180...210 pt 方形窗口定位实际 194 pt Blossom，并断言普通位置中心距离不超过 4 pt。最终结果包 1/1 通过且 `runtimeWarnings` 为空，正常字号全屏截图确认 SF Symbols popover 与花瓣层级无漂移；现有 iPhone 与 iPad 图标/颜色选择 UI 回归各 1/1 通过。完整签名单元、格式、本地化、构建与全设备安装仍是任务关闭门禁。
 
 ## 2. Agent 工作清单
 

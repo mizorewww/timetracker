@@ -2204,6 +2204,83 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testMacOSBlossomColorPickerStaysAnchoredToColorWell() throws {
+        #if os(macOS)
+        let app = launchApp(
+            route: "task-detail",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Read Apple HIG",
+            additionalLaunchArguments: ["--uitesting-reset-demo-preferences"]
+        )
+        try placeMainWindowOnPrimaryScreen(in: app)
+
+        let detail = app.descendants(matching: .any)["task.detail"].firstMatch
+        XCTAssertTrue(detail.waitForExistence(timeout: 15))
+
+        let iconButton = app.descendants(matching: .any)[
+            "task.detail.icon.edit"
+        ].firstMatch
+        scrollUntilHittable(iconButton, direction: .up, in: app)
+        XCTAssertTrue(iconButton.waitForExistence(timeout: 5) && iconButton.isHittable)
+        activate(iconButton)
+
+        let picker = app.descendants(matching: .any)[
+            "symbol.picker.view"
+        ].firstMatch
+        XCTAssertTrue(picker.waitForExistence(timeout: 8))
+
+        let colorWell = app.descendants(matching: .any)[
+            "symbol.picker.color.well"
+        ].firstMatch
+        XCTAssertTrue(colorWell.waitForExistence(timeout: 5) && colorWell.isHittable)
+        let colorWellFrame = colorWell.frame
+        let windowFramesBeforeOpening = app.windows.allElementsBoundByIndex.map(\.frame)
+
+        activate(colorWell)
+
+        let blossomDeadline = Date().addingTimeInterval(5)
+        var blossomWindow: XCUIElement?
+        while Date() < blossomDeadline, blossomWindow == nil {
+            blossomWindow = app.windows.allElementsBoundByIndex.first { candidate in
+                let frame = candidate.frame
+                let isBlossomSize = (180 ... 210).contains(frame.width)
+                    && (180 ... 210).contains(frame.height)
+                let existedBeforeOpening = windowFramesBeforeOpening.contains { existingFrame in
+                    hypot(existingFrame.midX - frame.midX, existingFrame.midY - frame.midY) <= 1
+                        && abs(existingFrame.width - frame.width) <= 1
+                        && abs(existingFrame.height - frame.height) <= 1
+                }
+                return isBlossomSize && !existedBeforeOpening
+            }
+            if blossomWindow == nil {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+            }
+        }
+        let resolvedBlossomWindow = try XCTUnwrap(
+            blossomWindow,
+            "Opening the color well must create the 194 pt Blossom picker window."
+        )
+        let blossomFrame = resolvedBlossomWindow.frame
+        let centerDistance = hypot(
+            blossomFrame.midX - colorWellFrame.midX,
+            blossomFrame.midY - colorWellFrame.midY
+        )
+        XCTAssertLessThanOrEqual(
+            centerDistance,
+            4,
+            "The Blossom picker must stay centered on its color well. "
+                + "well=\(colorWellFrame), blossom=\(blossomFrame)"
+        )
+        try recordScreenshot(
+            XCUIScreen.main.screenshot(),
+            name: "mac-blossom-color-picker-anchor"
+        )
+        #else
+        throw XCTSkip("This regression covers the macOS Blossom window presenter.")
+        #endif
+    }
+
+    @MainActor
     func testRecurringOccurrenceHeatmapToggleControlsTheParentCard() throws {
         let taskTitle = "Daily Push-ups · Today"
         let templateTaskID = UUID().uuidString.uppercased()
@@ -11516,6 +11593,7 @@ final class timetrackerUITests: XCTestCase {
         ).click()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 3))
     }
+
     #endif
 
     @MainActor

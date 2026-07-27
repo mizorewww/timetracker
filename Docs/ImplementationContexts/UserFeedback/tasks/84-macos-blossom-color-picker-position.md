@@ -1,6 +1,6 @@
 # 84：macOS Blossom Color Picker 位置实现记忆
 
-状态：2026-07-28 进行中
+状态：2026-07-28 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -29,15 +29,15 @@
 - [x] 先复现并补 macOS UI 自动化红测。
 - [x] 实现后跑受影响定向测试、完整 `make test`、格式与本地化门禁。
 - [x] macOS 截图验收。
-- [ ] 清理自有资源。
-- [ ] `make build-install-all` 安装最终任务版本。
+- [x] 清理自有资源。
+- [x] `make build-install-all` 安装最终任务版本。
 
 ## Checkpoint 编排
 
 - [x] A：完成调用点、上游实现、HIG 与测试边界审计。
 - [x] B：新增先失败的位置回归测试。
 - [x] C：实现正确锚定并验证跨平台无回退。
-- [ ] D：完成定向、全量、截图、Release 全设备安装与关闭。
+- [x] D：完成定向、全量、截图、Release 全设备安装与关闭。
 
 ## 库策略
 
@@ -79,5 +79,8 @@
   `NotificationCenter` observer 产生 Swift 6 actor isolation 告警；改用
   `NSObject` selector observer 后，Release macOS 构建只保留仓库既有告警。随后
   macOS 定向 UI 再次 1/1 通过且 `runtimeWarnings` 为空，格式、本地化和
-  1447 tests / 162 suites 全量门禁再次通过。剩余告警修复 checkpoint、最终
-  全设备安装和资源收口。
+  1447 tests / 162 suites 全量门禁再次通过。
+- 2026-07-28：告警修复 checkpoint `3d73fc5f` 后再次执行
+  `make build-install-all`；Release iOS+Watch companion 成功安装到 iPad Pro M4
+  与 iPhone Air，Release macOS app 成功复制到 `/Applications/timetracker.app`。
+  活跃链接和自有 UI 测试资源已收口，第 84 项完成。

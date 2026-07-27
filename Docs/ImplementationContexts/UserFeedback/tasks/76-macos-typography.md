@@ -1,6 +1,6 @@
 # 76：macOS 全局字体可读性 实现记忆
 
-状态：2026-07-27 实现中
+状态：2026-07-27 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -38,7 +38,7 @@
 - [x] A：领取反馈、建立活动实现记忆并生成 macOS 主要页面字体清单。
 - [x] B：保存修改前截图，按 HIG 将问题收敛到明确的共享 owner。
 - [x] C：分小 checkpoint 实现、验证并更新工程文档。
-- [ ] D：完成跨页面/跨平台 UI、全量测试、Release 全设备安装与收口。
+- [x] D：完成跨页面/跨平台 UI、全量测试、Release 全设备安装与收口。
 
 ## 库策略
 
@@ -139,3 +139,12 @@
 - 2026-07-27：更新 `Docs/UI-Design.md`、`Docs/CodeGuide.md` 与
   `Docs/Testing.md`，固化 macOS 13pt body/12pt callout 的正文语义基线、合法
   metadata 边界、跨平台局部映射和七页普通字号验收矩阵；checkpoint C 完成。
+- 2026-07-27：最终门禁通过：`make test` 为 1422 tests / 158 suites，
+  `make format-check` 为 0/831 需格式化，`make localization-check` 为 9/9
+  资源三语 key 对齐。
+- 2026-07-27：`CONFIGURATION=Release make build-install-all` 成功构建签名
+  iOS/iPadOS + embedded Watch 与 universal macOS app；iPad Pro M4 和
+  `/Applications/timetracker.app` 均复核为 1.1.264 (319)，macOS bundle 通过
+  Designated Requirement 验证。Watch companion
+  `me.mezorewww.timetracker.watchkitapp` 已嵌入，按配对 Watch 的 Automatic App
+  Install 交由系统安装。任务完成并移除 `~76` 活动链接。

@@ -11,15 +11,24 @@ struct HomeWeeklyGrossTimeChart: View {
             VStack(spacing: 0) {
                 DailyTimeSeriesChart(
                     points: snapshot.daily,
-                    mode: .grossBars,
+                    mode: .grossAndWallBars,
                     accessibilityTitle: AppStrings.localized(
                         "home.weeklyGross.title"
                     ),
-                    accessibilitySummary: DurationFormatter.spoken(
-                        snapshot.totalGrossSeconds
+                    accessibilitySummary: String.localizedStringWithFormat(
+                        AppStrings.localized(
+                            "home.weeklyGross.accessibilitySummaryFormat"
+                        ),
+                        DurationFormatter.spoken(
+                            snapshot.totalGrossSeconds
+                        ),
+                        DurationFormatter.spoken(
+                            snapshot.totalWallSeconds
+                        )
                     ),
                     dateDomain: chartDomain
                 )
+                .accessibilityIdentifier("home.weeklyGross.chart")
             }
             .frame(maxWidth: HomeLayoutPolicy.visualizationContentMaximumWidth)
             .frame(height: chartHeight)

@@ -149,6 +149,7 @@ struct HomeUIContractTests {
         #expect(snapshot.daily.map(\.grossSeconds) == [9000, 0, 1800, 9000])
         #expect(snapshot.daily.map(\.wallSeconds) == [7200, 0, 1800, 9000])
         #expect(snapshot.totalGrossSeconds == 19800)
+        #expect(snapshot.totalWallSeconds == 18000)
         #expect(snapshot.hasTrackedTime)
         #expect(snapshot.requiresLiveRefresh)
     }

@@ -66,9 +66,19 @@ struct HomeWeeklyGrossTimeSection: View {
             VStack(alignment: .leading, spacing: 10) {
                 HomeWeeklyGrossTimeHeader(
                     container: .card,
-                    total: snapshot.flatMap { snapshot in
+                    total: snapshot.flatMap { snapshot -> String? in
                         snapshot.hasTrackedTime
-                            ? DurationFormatter.chart(snapshot.totalGrossSeconds)
+                            ? String.localizedStringWithFormat(
+                                AppStrings.localized(
+                                    "home.weeklyGross.totalFormat"
+                                ),
+                                DurationFormatter.chart(
+                                    snapshot.totalGrossSeconds
+                                ),
+                                DurationFormatter.chart(
+                                    snapshot.totalWallSeconds
+                                )
+                            )
                             : nil
                     }
                 )
@@ -98,14 +108,14 @@ struct HomeWeeklyGrossTimeSection: View {
                     if let snapshot {
                         HomeWeeklyGrossTimeChart(
                             snapshot: snapshot,
-                            chartHeight: 170,
+                            chartHeight: 190,
                             emptyHeight: 64,
                             calendar: calendar
                         )
                     } else {
                         ProgressView()
                             .frame(maxWidth: .infinity)
-                            .frame(height: 170)
+                            .frame(height: 190)
                     }
                 }
                 .homeVisualizationListCard(
@@ -114,11 +124,7 @@ struct HomeWeeklyGrossTimeSection: View {
             } header: {
                 HomeWeeklyGrossTimeHeader(
                     container: .listSection,
-                    total: snapshot.flatMap { snapshot in
-                        snapshot.hasTrackedTime
-                            ? DurationFormatter.chart(snapshot.totalGrossSeconds)
-                            : nil
-                    }
+                    total: nil
                 )
                 .textCase(nil)
             }

@@ -91,6 +91,10 @@ struct WeeklyGrossTimeSnapshot {
         daily.reduce(0) { $0 + $1.grossSeconds }
     }
 
+    var totalWallSeconds: Int {
+        daily.reduce(0) { $0 + $1.wallSeconds }
+    }
+
     var hasTrackedTime: Bool {
         daily.contains { $0.grossSeconds > 0 }
     }

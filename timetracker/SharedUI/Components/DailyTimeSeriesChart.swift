@@ -3,6 +3,7 @@ import SwiftUI
 
 enum DailyTimeSeriesChartMode {
     case grossBars
+    case grossAndWallBars
     case wallBarsAndGrossLine
 }
 
@@ -35,9 +36,32 @@ struct DailyTimeSeriesChart: View {
         switch mode {
         case .grossBars:
             grossChart
+        case .grossAndWallBars:
+            grossAndWallChart
         case .wallBarsAndGrossLine:
             comparisonChart
         }
+    }
+
+    private var grossAndWallChart: some View {
+        configuredChart
+            .chartForegroundStyleScale([
+                AppStrings.grossTime: AppColors.grossTime,
+                AppStrings.wallTime: AppColors.wallTime,
+            ])
+            .chartLegend(
+                position: .bottom,
+                alignment: .leading,
+                spacing: 12
+            )
+            .chartXScale(
+                domain: resolvedDateDomain,
+                range: .plotDimension(
+                    startPadding: 8,
+                    endPadding: trailingAxisClearance
+                )
+            )
+            .accessibilityLabel(groupedChartAccessibilityLabel)
     }
 
     private var grossChart: some View {
@@ -94,7 +118,7 @@ struct DailyTimeSeriesChart: View {
                 }
             }
             .chartXAxis {
-                if mode == .grossBars {
+                if mode != .wallBarsAndGrossLine {
                     AxisMarks(values: .stride(by: .day)) {
                         AxisValueLabel(
                             format: .dateTime.weekday(.abbreviated)
@@ -116,7 +140,8 @@ struct DailyTimeSeriesChart: View {
 
     private var chart: some View {
         Chart(points) { point in
-            if mode == .grossBars {
+            switch mode {
+            case .grossBars:
                 BarMark(
                     x: .value(
                         AppStrings.localized("analytics.chart.day"),
@@ -132,7 +157,61 @@ struct DailyTimeSeriesChart: View {
                 .accessibilityValue(
                     "\(AppStrings.grossTime), \(DurationFormatter.spoken(point.grossSeconds, locale: locale))"
                 )
-            } else {
+            case .grossAndWallBars:
+                BarMark(
+                    x: .value(
+                        AppStrings.localized("analytics.chart.day"),
+                        point.date,
+                        unit: .day
+                    ),
+                    y: .value(AppStrings.grossTime, point.grossMinutes)
+                )
+                .foregroundStyle(
+                    by: .value(
+                        AppStrings.localized("analytics.chart.metric"),
+                        AppStrings.grossTime
+                    )
+                )
+                .position(
+                    by: .value(
+                        AppStrings.localized("analytics.chart.metric"),
+                        AppStrings.grossTime
+                    ),
+                    axis: .horizontal
+                )
+                .cornerRadius(3)
+                .accessibilityLabel(accessibleDate(point.date))
+                .accessibilityValue(
+                    "\(AppStrings.grossTime), \(DurationFormatter.spoken(point.grossSeconds, locale: locale))"
+                )
+
+                BarMark(
+                    x: .value(
+                        AppStrings.localized("analytics.chart.day"),
+                        point.date,
+                        unit: .day
+                    ),
+                    y: .value(AppStrings.wallTime, point.wallMinutes)
+                )
+                .foregroundStyle(
+                    by: .value(
+                        AppStrings.localized("analytics.chart.metric"),
+                        AppStrings.wallTime
+                    )
+                )
+                .position(
+                    by: .value(
+                        AppStrings.localized("analytics.chart.metric"),
+                        AppStrings.wallTime
+                    ),
+                    axis: .horizontal
+                )
+                .cornerRadius(3)
+                .accessibilityLabel(accessibleDate(point.date))
+                .accessibilityValue(
+                    "\(AppStrings.wallTime), \(DurationFormatter.spoken(point.wallSeconds, locale: locale))"
+                )
+            case .wallBarsAndGrossLine:
                 BarMark(
                     x: .value(
                         AppStrings.localized("analytics.chart.day"),
@@ -174,6 +253,13 @@ struct DailyTimeSeriesChart: View {
                 )
             }
         }
+    }
+
+    private var groupedChartAccessibilityLabel: String {
+        guard let accessibilitySummary, !accessibilitySummary.isEmpty else {
+            return accessibilityTitle
+        }
+        return "\(accessibilityTitle), \(accessibilitySummary)"
     }
 
     private func accessibleDate(_ date: Date) -> String {

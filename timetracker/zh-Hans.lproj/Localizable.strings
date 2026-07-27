@@ -13,10 +13,12 @@
 "home.switchTimer" = "切换计时";
 "home.now.title" = "现在";
 "home.overview.title" = "概览";
-"home.weeklyGross.title" = "本周累计时间";
-"home.weeklyGross.footer" = "每根柱形按天相加每个任务计时器的完整时长。例如，两个计时器重叠 30 分钟，累计时间会增加 60 分钟。";
+"home.weeklyGross.title" = "本周时间";
+"home.weeklyGross.footer" = "每天同时比较累计时间与实际时间：累计时间会相加所有任务计时器，实际时间会合并重叠部分。若两个计时器重叠 30 分钟，累计时间增加 60 分钟，实际时间增加 30 分钟。";
+"home.weeklyGross.totalFormat" = "累计 %@ · 实际 %@";
+"home.weeklyGross.accessibilitySummaryFormat" = "累计时间，%@；实际时间，%@";
 "home.weeklyGross.empty" = "本周还没有计时";
-"home.weeklyGross.emptyDescription" = "开始一个任务后，这里会按天显示累计时间。";
+"home.weeklyGross.emptyDescription" = "开始一个任务后，这里会按天显示累计时间和实际时间。";
 "action.startTimer" = "开始计时";
 "action.newTask" = "新建任务";
 "action.addTime" = "补录时间";

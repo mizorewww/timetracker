@@ -13,10 +13,12 @@
 "home.switchTimer" = "Switch Timer";
 "home.now.title" = "Now";
 "home.overview.title" = "Overview";
-"home.weeklyGross.title" = "This Week’s Gross Time";
-"home.weeklyGross.footer" = "Each bar adds the full duration of every task timer for that day. If two timers overlap for 30 minutes, Gross Time increases by 60 minutes.";
+"home.weeklyGross.title" = "This Week’s Time";
+"home.weeklyGross.footer" = "Each day compares Gross Time, the sum of every task timer, with Wall Time, where overlaps count once. If two timers overlap for 30 minutes, Gross Time increases by 60 minutes while Wall Time increases by 30 minutes.";
+"home.weeklyGross.totalFormat" = "Gross %@ · Wall %@";
+"home.weeklyGross.accessibilitySummaryFormat" = "Gross Time, %@; Wall Time, %@";
 "home.weeklyGross.empty" = "No tracked time this week";
-"home.weeklyGross.emptyDescription" = "Start a task and its time will appear here by day.";
+"home.weeklyGross.emptyDescription" = "Start a task and its Gross and Wall Time will appear here by day.";
 "action.startTimer" = "Start Timer";
 "action.newTask" = "New Task";
 "action.addTime" = "Add Time";

@@ -7483,6 +7483,9 @@ final class timetrackerUITests: XCTestCase {
         let info = app.descendants(matching: .any)[
             "home.weeklyGross.info"
         ].firstMatch
+        let chart = app.descendants(matching: .any)[
+            "home.weeklyGross.chart"
+        ].firstMatch
         let oldInlineFooter = app.staticTexts[
             "Daily Gross Time across all tasks; overlapping timers count separately."
         ].firstMatch
@@ -7505,13 +7508,24 @@ final class timetrackerUITests: XCTestCase {
         )
         XCTAssertTrue(header.isHittable, "The weekly title must be on-screen.")
         XCTAssertTrue(card.isHittable, "The weekly chart card must be on-screen.")
-        XCTAssertEqual(card.label, "This Week’s Gross Time")
+        XCTAssertTrue(
+            chart.waitForExistence(timeout: 3),
+            "The weekly comparison chart must expose its Gross and Wall Time summary."
+        )
+        let chartCopy = [
+            chart.label,
+            chart.value as? String ?? "",
+        ].joined(separator: " ")
+        XCTAssertTrue(
+            chartCopy.contains("Gross Time") && chartCopy.contains("Wall Time"),
+            "The weekly chart must identify both compared series. Copy: \(chartCopy)"
+        )
         #if os(macOS)
         let headerText = header.descendants(matching: .any)
             .matching(
                 NSPredicate(
                     format: "label BEGINSWITH %@",
-                    "This Week’s Gross Time"
+                    "This Week’s Time"
                 )
             )
             .firstMatch
@@ -7522,15 +7536,15 @@ final class timetrackerUITests: XCTestCase {
         ].joined(separator: " ")
         XCTAssertNotEqual(
             aggregateCopy,
-            "This Week’s Gross Time ",
-            "The weekly chart header must expose its aggregate duration."
+            "This Week’s Time ",
+            "The weekly chart header must expose the aggregate comparison."
         )
         #else
         let chartSummary = app.descendants(matching: .any)
             .matching(
                 NSPredicate(
                     format: "label == %@ AND value != nil AND value != ''",
-                    "This Week’s Gross Time"
+                    "This Week’s Time"
                 )
             )
             .firstMatch
@@ -7538,7 +7552,7 @@ final class timetrackerUITests: XCTestCase {
             .matching(
                 NSPredicate(
                     format: "label BEGINSWITH %@",
-                    "This Week’s Gross Time,"
+                    "This Week’s Time,"
                 )
             )
             .firstMatch
@@ -7596,10 +7610,12 @@ final class timetrackerUITests: XCTestCase {
         ].joined(separator: " ").lowercased()
         XCTAssertTrue(
             explanation.contains("overlap") &&
+                explanation.contains("gross time") &&
+                explanation.contains("wall time") &&
                 explanation.contains("two timers") &&
                 explanation.contains("30 minutes") &&
                 explanation.contains("60 minutes"),
-            "The weekly explanation must clearly demonstrate how two overlapping timers accumulate. Copy: \(explanation)"
+            "The weekly explanation must define both time series and demonstrate overlap. Copy: \(explanation)"
         )
         try capture(
             "\(screenshotPrefix)-home-weekly-gross-info",

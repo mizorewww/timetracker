@@ -113,7 +113,7 @@ with `TIMETRACKER_UI_TEST_WINDOW_WIDTH` and
 `TIMETRACKER_UI_TEST_WINDOW_HEIGHT`; the AppDelegate honors these values only
 during UI testing. The iPad fixture uses an explicitly owned 13-inch landscape
 simulator and hides the sidebar so the Today detail crosses the breakpoint. On
-both platforms, assert that the real Weekly Gross Time and Quick Start headings
+both platforms, assert that the real Weekly Time and Quick Start headings
 are horizontally separated and vertically overlap, then retain a normal-size
 screenshot. Run the compact-shell Today regression separately on iPhone.
 

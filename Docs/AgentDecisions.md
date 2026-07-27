@@ -524,7 +524,7 @@
 
 背景：旧 Today 把摘要、通用新建任务、计时入口、预测和时间线放在相近视觉层级，手机上首屏目的不明确，宽屏又把卡片无限拉长。各 section 独立查询和分组同一批数据，还会让一次 view composition 重复扫描账本。辅助功能字号下保留横向密集行则会截断任务名、趋势和操作。
 
-决策：Today 的信息优先级固定为 Now、Overview、Quick Start、Timeline，再到 Forecast 和 Countdown。无活动计时时只有一个突出的 Start Timer；已有活动计时时根据 `allowParallelTimers` 显示次级 Start Another Timer 或 Switch Timer。通用新建任务不与 Today 计时操作并列，只保留在任务域和任务选择器。iPhone 使用单栏顺序；iPad/macOS 先从详情 viewport 扣除两侧 page padding，再以 1180 pt 为内容宽度上限。实际内容宽度不足 1000 pt 时，所有后续 section 保持单栏阅读顺序；达到 1000 pt 时，Weekly Gross Time/Activity Heatmaps 可视化组以 678...748 pt 主列和 Quick Start 的 300...410 pt 尾列组成第一行，Timeline 在下一行占弹性主列，存在 Forecast/Countdown 时后者占固定 360 pt 尾列。根组合每次只构造一个 `TodayHomeContent`，向各 section 传入稳定、去重的预计算数组。摘要先规范化一次候选 segment，再用单个循环同时聚合今日与前一日；Wall 只在各自区间列表上做合并。每秒 `TimelineView` 只包住活动时长，结束记录保持静态，摘要每 30 秒刷新。辅助功能字号使用纵向指标、可换行任务操作和更高的任务选择器 presentation。
+决策：Today 的信息优先级固定为 Now、Overview、Quick Start、Timeline，再到 Forecast 和 Countdown。无活动计时时只有一个突出的 Start Timer；已有活动计时时根据 `allowParallelTimers` 显示次级 Start Another Timer 或 Switch Timer。通用新建任务不与 Today 计时操作并列，只保留在任务域和任务选择器。iPhone 使用单栏顺序；iPad/macOS 先从详情 viewport 扣除两侧 page padding，再以 1180 pt 为内容宽度上限。实际内容宽度不足 1000 pt 时，所有后续 section 保持单栏阅读顺序；达到 1000 pt 时，Weekly Time/Activity Heatmaps 可视化组以 678...748 pt 主列和 Quick Start 的 300...410 pt 尾列组成第一行，Timeline 在下一行占弹性主列，存在 Forecast/Countdown 时后者占固定 360 pt 尾列。Weekly Time 复用每天 Gross/Wall 读模型，以固定 Gross→Wall 顺序的非堆叠 grouped bars 比较二者。根组合每次只构造一个 `TodayHomeContent`，向各 section 传入稳定、去重的预计算数组。摘要先规范化一次候选 segment，再用单个循环同时聚合今日与前一日；Wall 只在各自区间列表上做合并。每秒 `TimelineView` 只包住活动时长，结束记录保持静态，摘要每 30 秒刷新。辅助功能字号使用纵向指标、可换行任务操作和更高的任务选择器 presentation。
 
 后果：可以打破旧 Today 顺序、按钮名称和宽屏排版，但所有平台共享同一计时命令、任务可用性、读模型事实与可访问性标识。新增 Today 卡片必须说明它属于主工作流还是辅助信息，不得重新引入第二个竞争主动作、无界宽度或 section 内重复全量查询。第三方列表/布局库不能仅为这个原生层级引入；FlowDown 继续只作模式参考。
 

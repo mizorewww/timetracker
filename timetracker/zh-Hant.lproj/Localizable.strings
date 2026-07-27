@@ -13,10 +13,12 @@
 "home.switchTimer" = "切換計時";
 "home.now.title" = "現在";
 "home.overview.title" = "概覽";
-"home.weeklyGross.title" = "本週累計時間";
-"home.weeklyGross.footer" = "每根柱形按天相加每個任務計時器的完整時長。例如，兩個計時器重疊 30 分鐘，累計時間會增加 60 分鐘。";
+"home.weeklyGross.title" = "本週時間";
+"home.weeklyGross.footer" = "每天同時比較累計時間與實際時間：累計時間會相加所有任務計時器，實際時間會合併重疊部分。若兩個計時器重疊 30 分鐘，累計時間增加 60 分鐘，實際時間增加 30 分鐘。";
+"home.weeklyGross.totalFormat" = "累計 %@ · 實際 %@";
+"home.weeklyGross.accessibilitySummaryFormat" = "累計時間，%@；實際時間，%@";
 "home.weeklyGross.empty" = "本週還沒有計時";
-"home.weeklyGross.emptyDescription" = "開始一個任務後，這裡會按天顯示累計時間。";
+"home.weeklyGross.emptyDescription" = "開始一個任務後，這裡會按天顯示累計時間和實際時間。";
 "action.startTimer" = "開始計時";
 "action.newTask" = "新增任務";
 "action.addTime" = "補錄時間";

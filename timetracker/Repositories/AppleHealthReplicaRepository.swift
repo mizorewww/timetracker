@@ -20,6 +20,42 @@ protocol AppleHealthReplicaRepository: AppleHealthReplicaReading {
 }
 
 @MainActor
+final class UnavailableAppleHealthReplicaRepository:
+    AppleHealthReplicaRepository
+{
+    private let error: Error
+
+    init(error: Error) {
+        self.error = error
+    }
+
+    func snapshot(
+        overlapping _: DateInterval
+    ) throws -> AppleHealthReplicaSnapshot {
+        throw error
+    }
+
+    func allSamples() throws -> AppleHealthReplicaSnapshot {
+        throw error
+    }
+
+    func anchors() throws -> AppleHealthReplicaAnchors {
+        throw error
+    }
+
+    func apply(
+        _: AppleHealthReplicaChangeBatch,
+        syncedAt _: Date
+    ) throws {
+        throw error
+    }
+
+    func clear() throws {
+        throw error
+    }
+}
+
+@MainActor
 final class SwiftDataAppleHealthReplicaRepository:
     AppleHealthReplicaRepository
 {

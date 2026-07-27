@@ -2,6 +2,9 @@ import Foundation
 import SwiftData
 
 enum AppleHealthReplicaModelContainerFactory {
+    @MainActor private static let applicationRepository:
+        any AppleHealthReplicaRepository = makeApplicationRepository()
+
     static var persistentStoreURL: URL {
         AppCloudSync.persistentStoreURL
             .deletingLastPathComponent()
@@ -44,6 +47,42 @@ enum AppleHealthReplicaModelContainerFactory {
             migrationPlan: AppleHealthReplicaMigrationPlan.self,
             configurations: [configuration]
         )
+    }
+
+    @MainActor
+    static func platformDefaultRepository()
+        -> any AppleHealthReplicaRepository
+    {
+        if AppRuntimeEnvironment.isTestHost {
+            return makeRepository(
+                container: {
+                    try makeInMemoryContainer(
+                        name: "AppleHealthReplicaTests-\(UUID().uuidString)"
+                    )
+                }
+            )
+        }
+        return applicationRepository
+    }
+
+    @MainActor
+    private static func makeApplicationRepository()
+        -> any AppleHealthReplicaRepository
+    {
+        makeRepository(container: { try makePersistentContainer() })
+    }
+
+    @MainActor
+    private static func makeRepository(
+        container: () throws -> ModelContainer
+    ) -> any AppleHealthReplicaRepository {
+        do {
+            return try SwiftDataAppleHealthReplicaRepository(
+                container: container()
+            )
+        } catch {
+            return UnavailableAppleHealthReplicaRepository(error: error)
+        }
     }
 
     private static func preparePersistentDirectory(at storeURL: URL) throws {

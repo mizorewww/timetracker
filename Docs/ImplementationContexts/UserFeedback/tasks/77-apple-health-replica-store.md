@@ -49,7 +49,7 @@
   永远使用内存或显式隔离 URL。
 - [x] 第一次同步、幂等重放、HealthKit 修改、撤销授权/查询失败、取消、记录删除与
   anchor 原子推进/回滚。
-- [ ] 任意 UI/command 不能修改 Health replica；只读投影与现有时间线/分析语义一致。
+- [x] 任意 UI/command 不能修改 Health replica；只读投影与现有时间线/分析语义一致。
 - [ ] JSON 导出包含确定性 Health records，空/损坏/不可用 replica 有明确结果，
   且敏感字段与主快照边界符合文档。
 - [x] 新 Health schema V1 的磁盘重开与 current compatibility fixture；首版不虚构
@@ -96,3 +96,8 @@
   `HKDeletedObject`，且只有两条 HealthKit 流均成功后才原子提交记录与双 anchor。
   查询失败、取消和过期请求均不产生半代数据；`make test` 1431 tests / 161 suites
   与签名 iOS generic-device build 均通过。
+- 2026-07-27：完成只读消费接线：shipping App 共享一个 app-scoped persistent
+  repository，unit/UI test 每个 store 使用独立内存容器；时间线和 Health 任务统计
+  在授权后先 anchored refresh，再从 replica 的 interval snapshot 投影，旧的窄范围
+  reader fake 仍可回退兼容。隐藏时间线不清库；Clear All 明确清除 records 与 anchors。
+  `make test` 1433 tests / 162 suites 与签名 iOS generic-device build 均通过。

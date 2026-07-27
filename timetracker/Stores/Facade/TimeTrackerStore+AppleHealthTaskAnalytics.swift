@@ -58,7 +58,7 @@ extension TimeTrackerStore {
             now: now,
             calendar: calendar
         )
-        let batch = try await appleHealthDataReader.samples(
+        let batch = try await appleHealthSamples(
             overlapping: queryPlan.queryInterval
         )
         try Task.checkCancellation()

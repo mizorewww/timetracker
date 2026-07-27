@@ -244,10 +244,9 @@ extension TimeTrackerStore {
             end: visibleInterval.end
         )
         do {
-            let reader = appleHealthDataReader
             let loadTask = Task { @MainActor in
                 try Task.checkCancellation()
-                let batch = try await reader.samples(
+                let batch = try await appleHealthSamples(
                     overlapping: queryInterval
                 )
                 try Task.checkCancellation()
@@ -301,6 +300,21 @@ extension TimeTrackerStore {
             appleHealthTimelineItems = []
             appleHealthTimelineState = .failed(error.localizedDescription)
         }
+    }
+
+    func appleHealthSamples(
+        overlapping interval: DateInterval
+    ) async throws -> AppleHealthSampleBatch {
+        guard let appleHealthReplicaSyncService else {
+            return try await appleHealthDataReader.samples(
+                overlapping: interval
+            )
+        }
+        _ = try await appleHealthReplicaSyncService.synchronize()
+        try Task.checkCancellation()
+        return try appleHealthReplicaRepository.snapshot(
+            overlapping: interval
+        ).samples
     }
 
     private func appleHealthVisibleInterval(

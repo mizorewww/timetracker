@@ -77,9 +77,32 @@ struct DataMaintenanceLifecycleTests {
         let healthPreferences = TestAppleHealthTimelinePreferenceStore(
             isTimelineEnabled: true
         )
-        let store = makeTestStore(
+        let healthReplica = try makeAppleHealthReplicaTestRepository()
+        try healthReplica.apply(
+            AppleHealthReplicaChangeBatch(
+                workouts: [
+                    AppleHealthWorkoutSample(
+                        id: UUID(),
+                        kind: .walking,
+                        startedAt: Date(timeIntervalSince1970: 100),
+                        endedAt: Date(timeIntervalSince1970: 200),
+                        sourceBundleIdentifier: "test.health"
+                    ),
+                ],
+                deletedWorkoutIDs: [],
+                workoutAnchor: Data("workout-1".utf8),
+                sleep: [],
+                deletedSleepIDs: [],
+                sleepAnchor: Data("sleep-1".utf8)
+            ),
+            syncedAt: Date(timeIntervalSince1970: 300)
+        )
+        let store = TimeTrackerStore(
             llmCredentialStore: credentialStore,
-            appleHealthTimelinePreferenceStore: healthPreferences
+            appleHealthDataReader: UnavailableAppleHealthDataReader(),
+            appleHealthReplicaRepository: healthReplica,
+            appleHealthTimelinePreferenceStore: healthPreferences,
+            writeAuthorization: .isolatedTestHarness
         )
         store.configureIfNeeded(context: context)
         store.selectedTaskID = task.id
@@ -121,6 +144,8 @@ struct DataMaintenanceLifecycleTests {
         #expect(store.isAppleHealthTimelineEnabled == false)
         #expect(store.appleHealthTimelineItems.isEmpty)
         #expect(store.appleHealthTimelineState == .unavailable)
+        #expect(try healthReplica.allSamples().recordCount == 0)
+        #expect(try healthReplica.anchors() == .empty)
         #expect(try context.fetch(FetchDescriptor<TaskNode>()).allSatisfy { $0.deletedAt != nil })
         #expect(try context.fetch(FetchDescriptor<TaskCategory>()).allSatisfy { $0.deletedAt != nil })
         #expect(try context.fetch(FetchDescriptor<TaskCategoryAssignment>()).allSatisfy { $0.deletedAt != nil })

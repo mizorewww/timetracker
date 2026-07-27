@@ -10,6 +10,8 @@ final class TimeTrackerStore {
     let inboxSuggestionService: LLMInboxSuggestionService
     let checklistVisualSuggestionService: LLMChecklistVisualSuggestionService
     let appleHealthDataReader: any AppleHealthDataReading
+    let appleHealthReplicaRepository: any AppleHealthReplicaRepository
+    let appleHealthReplicaSyncService: AppleHealthReplicaSyncService?
     let appleHealthTimelinePreferenceStore: any AppleHealthTimelinePreferenceStoring
     let writeAuthorization: StoreWriteAuthorization
     let taskDraftRecoveryController: TaskDraftRecoveryController
@@ -19,6 +21,8 @@ final class TimeTrackerStore {
         inboxSuggestionService: LLMInboxSuggestionService? = nil,
         checklistVisualSuggestionService: LLMChecklistVisualSuggestionService? = nil,
         appleHealthDataReader: (any AppleHealthDataReading)? = nil,
+        appleHealthReplicaRepository:
+        (any AppleHealthReplicaRepository)? = nil,
         appleHealthTimelinePreferenceStore: (any AppleHealthTimelinePreferenceStoring)? = nil,
         writeAuthorization: StoreWriteAuthorization = .applicationState,
         syncConflictService: SyncConflictService? = nil,
@@ -34,7 +38,23 @@ final class TimeTrackerStore {
         let resolvedAppleHealthPreferences =
             appleHealthTimelinePreferenceStore
                 ?? Self.defaultAppleHealthTimelinePreferenceStore()
+        let resolvedAppleHealthReplica =
+            appleHealthReplicaRepository
+                ?? AppleHealthReplicaModelContainerFactory
+                .platformDefaultRepository()
         self.appleHealthDataReader = resolvedAppleHealthReader
+        self.appleHealthReplicaRepository = resolvedAppleHealthReplica
+        if let changeReader =
+            resolvedAppleHealthReader
+                as? any AppleHealthReplicaChangeReading
+        {
+            appleHealthReplicaSyncService = AppleHealthReplicaSyncService(
+                reader: changeReader,
+                repository: resolvedAppleHealthReplica
+            )
+        } else {
+            appleHealthReplicaSyncService = nil
+        }
         self.appleHealthTimelinePreferenceStore = resolvedAppleHealthPreferences
         isAppleHealthTimelineEnabled = resolvedAppleHealthPreferences.isTimelineEnabled
         appleHealthTimelineState = if resolvedAppleHealthReader.isHealthDataAvailable {

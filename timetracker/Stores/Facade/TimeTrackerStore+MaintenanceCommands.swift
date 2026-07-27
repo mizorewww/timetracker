@@ -38,6 +38,7 @@ extension TimeTrackerStore {
             appleHealthTimelinePreferenceStore
                 .taskCatalogClearRecoveryTaskIDs =
                 try visibleAppleHealthTaskCatalogTaskIDsForClear()
+            try appleHealthReplicaRepository.clear()
             try SeedData.clearAll(context: modelContext)
         }
         if !didClear, localSettingsWereCleared {

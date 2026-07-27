@@ -43,6 +43,7 @@ struct SettingsView: View {
                     .tag(category)
                     .accessibilityIdentifier("settings.category.\(category.rawValue)")
             }
+            .listStyle(.sidebar)
             .toolbar(removing: .sidebarToggle)
             .navigationTitle(AppStrings.settings)
             .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)

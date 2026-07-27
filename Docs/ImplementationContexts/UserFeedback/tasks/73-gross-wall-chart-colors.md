@@ -1,9 +1,9 @@
 # 73：Gross / Wall 双系列柱状图 实现记忆
 
-状态：2026-07-27 实现中
+状态：2026-07-27 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
-> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
+> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[x]` 条目。
 
 ## 认领的反馈条目
 
@@ -29,7 +29,7 @@
 - [x] A：领取反馈、建立活动实现记忆并审计图表 owner、数据语义与现有测试。
 - [x] B：补充先失败的双系列投影/可访问性行为测试。
 - [x] C：实现双系列图表、语义化配色并更新相关文档。
-- [ ] D：完成格式、跨平台截图、全量测试、Release 全设备安装与收口。
+- [x] D：完成格式、跨平台截图、全量测试、Release 全设备安装与收口。
 
 ## 库策略
 
@@ -56,5 +56,13 @@
   图例顺序、零基线、轴标签及卡片边界清晰。
 - 2026-07-27：`make format-check`、`git diff --check`、
   `make localization-check`、`make check-hooks` 通过；默认
-  `make test` 1422 tests / 158 suites 全绿。待实现提交后执行 Release
-  `make build-install-all` 并收口。
+  `make test` 1422 tests / 158 suites 全绿。
+- 2026-07-27：实现提交 `2fee02dc`（`Compare weekly gross and wall time`）
+  由提交钩子推进到 1.1.252 (307)。Release `make build-install-all`
+  成功，安装到 iPad Pro M4、iPhone Air、配对 Watch companion 与
+  `/Applications/timetracker.app`；两个 iOS 设备和 macOS 均核对为
+  1.1.252 (307)，构建信息为 `2fee02dc6573`、`dirty=false`。
+- 2026-07-27：UI runner 已终止，任务创建的 iPhone/iPad 模拟器已删除，
+  无 Booted simulator 或 owned `xcodebuild` / `xctest` / app 进程；
+  `make clean` 已清除安装 DerivedData。反馈标为 `[x]` 并移除 `~73`
+  活动链接。

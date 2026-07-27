@@ -2,7 +2,7 @@
 
 Status: current implementation and architecture guardrails
 
-Reviewed: 2026-07-26
+Reviewed: 2026-07-28
 
 Time Tracker is a local-first SwiftUI app whose source of truth is the time ledger, not a screen-level timer flag. This document answers two practical questions:
 
@@ -124,6 +124,16 @@ Ordinary stopwatch restarts use one narrow canonicalization rule. When the same 
 `SyncedPreference` stores sync-eligible user-facing settings as JSON values in SwiftData so they travel through the same iCloud-backed store as tasks and timers. The iCloud enablement flag is different: it is a device-local `UserDefaults` startup configuration because the model container must know whether to start in CloudKit mode before SwiftData can fetch cloud values. It is excluded from `SyncedPreference`, conflict snapshots, and export/restore boundaries, and changes take effect on the next launch.
 
 `ChecklistItem` belongs to a `TaskNode`, but it is not a task. Checklist items are the product-level completion and progress signal and can provide forecast evidence; completing them never locks the task or blocks later work. Timers, manual entries, pomodoros, widgets, and Live Activities still attach time to the task itself.
+
+Checklist visual suggestion is a latest-input-wins side effect, not part of draft
+identity. The facade waits for a short stable-input window, counts pending and
+in-flight work against the same concurrency limit, and cancels work whose title,
+task context, configuration, or item/visual revision is no longer current.
+Completion still passes through the store-scoped fresh-context command boundary.
+An unchanged checklist save must not rotate content or visual revisions, and
+writing the same icon/color is a durable no-op. Task editing rebases a resulting
+visual-only revision onto the existing row identities and user text; it never
+replaces the active field, dismisses focus, or overwrites a locally edited visual.
 
 `TaskRecurrenceRule` turns one task into a daily template in a frozen rule timezone. `StoreScopedTaskRecurrenceCommandCoordinator` materializes at most the current local day, never backfills missed dates, and permanently skips days while a rule or template branch is unavailable. The deterministic `TaskRecurrenceOccurrence` is both the idempotency claim and the link to a deterministic generated child task. Physical claims, tombstones, and staged partial CloudKit rows veto background reconstruction, while replay preserves user edits to an existing child. A template remains a legal parent/content task but is excluded from Timer, Pomodoro, manual-segment, and App Intent direct-work admission; its generated child is the work-bearing task. `TaskQuantityGoal` is copied as configuration to a new child, but quantity entries are not copied between days.
 

@@ -1,6 +1,6 @@
 # 82：AI 视觉推荐打断输入与重复预测实现记忆
 
-状态：2026-07-28 进行中
+状态：2026-07-28 实现与全量门禁完成，等待设备安装
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -20,25 +20,26 @@
 
 ## 预期行为与 UI 验收清单（改动前）
 
-- [ ] 正常连续输入任务标题时，键盘/输入焦点不丢失，插入点不跳动。
-- [ ] 一次连续编辑只对稳定后的最新有效输入发起必要预测；旧任务可取消或其结果被丢弃。
-- [ ] 同一输入和同一预测结果不会形成属性写回 → 再预测的闭环。
-- [ ] 过期响应不能覆盖更新后的标题，也不能覆盖用户手动选择的图标/颜色。
-- [ ] 新建、编辑、详情与恢复草稿路径遵守相同语义；保存后 fresh reload 正确。
-- [ ] 正常字号下在受影响平台完成 XCTest/XCUITest 与截图验收。
+- [x] 正常连续输入任务标题时，键盘/输入焦点不丢失，插入点不跳动。
+- [x] 一次连续编辑只对稳定后的最新有效输入发起必要预测；旧任务可取消或其结果被丢弃。
+- [x] 同一输入和同一预测结果不会形成属性写回 → 再预测的闭环。
+- [x] 过期响应不能覆盖更新后的标题，也不能覆盖用户手动选择的图标/颜色。
+- [x] 新建、编辑、详情与恢复草稿路径遵守相同语义；保存后 fresh reload 正确。
+- [x] 正常字号下在受影响平台完成 XCTest/XCUITest 与截图验收。
 
 ## 测试优先清单
 
-- [ ] 先补服务/session 边界测试，复现连续编辑触发重复预测与过期响应写回。
-- [ ] 先补 UI 自动化或确定性焦点测试，证明预测完成时文本输入仍连续。
-- [ ] 实现后复跑定向行为测试和 iPhone/macOS UI 验收并保留截图。
-- [ ] 完整测试、格式/本地化门禁与 Release 全设备安装通过。
+- [x] 先补服务/session 边界测试，复现连续编辑触发重复预测与过期响应写回。
+- [x] 先补 UI 自动化或确定性焦点测试，证明预测完成时文本输入仍连续。
+- [x] 实现后复跑定向行为测试和 iPhone UI 验收并保留截图；macOS 编译并明确跳过软件键盘专属断言。
+- [x] 完整测试及格式/本地化门禁通过。
+- [ ] Release 全设备安装通过。
 
 ## Checkpoint 编排
 
-- [ ] A：完成调用链、焦点、副作用循环、测试与依赖审计。
-- [ ] B：新增先失败的行为/交互回归测试。
-- [ ] C：实现最新输入获胜、取消/去抖、去重及手动选择保护。
+- [x] A：完成调用链、焦点、副作用循环、测试与依赖审计。
+- [x] B：新增先失败的行为/交互回归测试。
+- [x] C：实现最新输入获胜、取消/去抖、去重及手动选择保护。
 - [ ] D：完成定向、全量、截图、Release 全设备安装与关闭。
 
 ## 库策略
@@ -56,3 +57,29 @@
 ## 进度记录
 
 - 2026-07-28：按反馈顺序认领任务并建立 `~82` 活动实现记忆，进入 Checkpoint A。
+- 2026-07-28：三路只读审计确认根因组合：task-detail autosave 无变化也旋转
+  checklist/visual revision；失效请求没有按最新输入 identity 取消；请求指纹遗漏
+  task title/path；visual-only store refresh 用整份 draft 替换或造成下一次 autosave
+  的伪 CAS conflict，从而清空焦点并触发重试闭环。
+- 2026-07-28：先补红测，再实现 350 ms trailing debounce、pending/in-flight
+  统一并发槽、完整 scheduling fingerprint 和 latest identity 重验；无变化 checklist
+  save/visual write 变为 no-op。
+- 2026-07-28：`TaskEditorSession` 按 persisted checklist ID 做 visual-only 三方
+  rebase，保留 visible row UUID、文本、顺序、dirty state 与焦点；本地手动 visual
+  胜过 AI，并推进 baseline 使后续 autosave 可成功。
+- 2026-07-28：定向行为测试通过：
+  `LLMSuggestionCancellationTests` 11/11、
+  `StoreScopedTaskDraftCommandCoordinatorTests` 10/10、
+  `TaskEditorSessionTests` 25/25。
+- 2026-07-28：iPhone 正常字号 XCUITest 通过；首个 AI 结果落下后没有重新点击
+  输入框即可继续输入，键盘保持可见，最终只接受最新文本的 Dark green 视觉。
+  结果包：`build/UITestResults/iOS-20260728-011306.xcresult`；目检截图：
+  `build/UITestResults/iOS-20260728-011306-attachments/D7C17149-9F77-4903-9BAF-7D3F11962CA1.png`。
+- 2026-07-28：未新增第三方依赖。采用 Apple 原生 Swift Concurrency
+  `Task` 取消/`Task.sleep` 与 SwiftUI `FocusState`，并复用既有 store-scoped
+  command、LLM transport 和 symbol/color picker。
+- 2026-07-28：补充 `CoreCommandHandlerTests` 契约，确认无变化 visual save
+  保留原 `clientMutationID`、`updatedAt` 与远端 writer；定向套件 17/17 通过。
+- 2026-07-28：完整 `make test` 通过（1447 tests / 162 suites，52.505 秒）；
+  `make format-check` 为 0/842，localization parity 为 9/9，hooks 与
+  `git diff --check` 均通过。等待实现 checkpoint 提交与 `make build-install-all`。

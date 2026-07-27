@@ -2519,6 +2519,101 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testChecklistVisualSuggestionKeepsLatestTypingFocused() throws {
+        #if os(macOS)
+        throw XCTSkip(
+            "The software-keyboard interruption regression is iPhone-specific."
+        )
+        #else
+        let app = launchApp(
+            route: "task-detail",
+            contentSizeCategory: "UICTContentSizeCategoryL",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Read Apple HIG",
+            additionalLaunchArguments: [
+                "--uitesting-checklist-visual-suggestion",
+            ],
+            autosaveDelayMilliseconds: 100
+        )
+        ensureTaskDetailIsReady(named: "Read Apple HIG", in: app)
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+        let titleField = app.descendants(matching: .any)
+            .matching(
+                NSPredicate(
+                    format: "identifier BEGINSWITH %@",
+                    "task.editor.checklist.title."
+                )
+            )
+            .firstMatch
+        let visualPicker = app.descendants(matching: .any)
+            .matching(
+                NSPredicate(
+                    format: "identifier BEGINSWITH %@",
+                    "symbol.picker.open.checklist."
+                )
+            )
+            .firstMatch
+
+        scrollUntilHittable(
+            titleField,
+            direction: .up,
+            maximumScrolls: 12,
+            in: app
+        )
+        XCTAssertTrue(
+            titleField.waitForExistence(timeout: 5) &&
+                titleField.isHittable
+        )
+        XCTAssertTrue(
+            waitUntil(timeout: 8) {
+                visualPicker.exists &&
+                    (visualPicker.value as? String) == "Violet"
+            },
+            "The seed suggestion must settle before the edit race starts."
+        )
+        activate(titleField)
+        titleField.typeKey("a", modifierFlags: .command)
+        titleField.typeText("orange draft")
+        XCTAssertEqual(titleField.value as? String, "orange draft")
+
+        XCTAssertTrue(
+            waitUntil(timeout: 8) {
+                visualPicker.exists &&
+                    (visualPicker.value as? String) == "Orange"
+            },
+            "The deterministic AI result must arrive while the title is active."
+        )
+        XCTAssertTrue(
+            app.keyboards.firstMatch.exists,
+            "Applying an AI visual must not dismiss the active keyboard."
+        )
+
+        titleField.typeText(" final")
+        let finalTitle = "orange draft final"
+        XCTAssertEqual(
+            titleField.value as? String,
+            finalTitle,
+            "Typing must continue without tapping the field again."
+        )
+        XCTAssertTrue(
+            waitUntil(timeout: 8) {
+                (visualPicker.value as? String) == "Dark green"
+            },
+            "Only the latest checklist title may determine the final visual."
+        )
+        XCTAssertEqual(
+            titleField.value as? String,
+            finalTitle,
+            "The latest AI completion must preserve all text and focus identity."
+        )
+        try capture(
+            "\(screenshotPrefix)-checklist-ai-keeps-latest-typing",
+            app: app
+        )
+        #endif
+    }
+
+    @MainActor
     func testTaskDetailMarkdownPreviewExpandsToAutosavingEditor() throws {
         let app = launchApp(
             route: "tasks",

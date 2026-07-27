@@ -105,6 +105,9 @@ extension TimeTrackerStore {
         ) else { return }
         checklistVisualSuggestionTasksByItemID.removeValue(forKey: itemID)
         checklistVisualSuggestionInFlightIDs.remove(itemID)
+        checklistVisualSuggestionSchedulingFingerprintByItemID.removeValue(
+            forKey: itemID
+        )
         if shouldAutoSuggest {
             autoSuggestChecklistVisualsIfNeeded()
         }
@@ -134,11 +137,23 @@ struct ChecklistVisualSuggestionRequest {
     var fingerprint: String {
         [
             title,
+            taskTitle,
+            taskPath,
             instructions,
             endpoint.trimmingCharacters(in: .whitespacesAndNewlines),
             modelID.trimmingCharacters(in: .whitespacesAndNewlines),
             reasoningEffort.rawValue,
             String(apiKey.hashValue),
+        ].joined(separator: "|")
+    }
+
+    var schedulingFingerprint: String {
+        [
+            fingerprint,
+            baseline.itemMutationID.uuidString,
+            baseline.visualMutationID?.uuidString ?? "none",
+            baseline.visualUserEditedAt?.timeIntervalSinceReferenceDate
+                .description ?? "none",
         ].joined(separator: "|")
     }
 }

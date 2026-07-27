@@ -59,6 +59,7 @@ struct ContentView: View {
             #endif
             #if DEBUG
             store.applyLiveLLMConfigurationIfRequested()
+            store.applyChecklistVisualSuggestionFixtureIfRequested()
             store.applyFirstHealthTimelineFixtureIfRequested()
             store.applyUIAuditRouteIfRequested()
             #endif

@@ -745,6 +745,133 @@ struct TaskEditorSessionTests {
     }
 
     @Test
+    func visualOnlyStoreSyncPreservesEditorIdentityWhileMergingSuggestion() throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "visual-only-sync"
+        ).createTask(
+            title: "Release",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        try ChecklistDraftService().save(
+            drafts: [
+                ChecklistEditorDraft(title: "Prepare notes"),
+                ChecklistEditorDraft(title: "Publish notes"),
+            ],
+            taskID: task.id,
+            context: context,
+            deviceID: "visual-only-sync"
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let storedTask = try #require(store.task(for: task.id))
+        let initialDraft = store.editorDraft(for: storedTask)
+        let session = TaskEditorSession(
+            store: store,
+            initialDraft: initialDraft
+        )
+        let draftID = session.draft.id
+        let checklistDraftIDs = session.draft.checklistItems.map(\.id)
+        let prepareIndex = try #require(
+            session.draft.checklistItems.firstIndex {
+                $0.title == "Prepare notes"
+            }
+        )
+        let publishIndex = try #require(
+            session.draft.checklistItems.firstIndex {
+                $0.title == "Publish notes"
+            }
+        )
+        session.draft.checklistItems[prepareIndex].title =
+            "Prepare final release notes"
+        session.draft.checklistItems[publishIndex].iconName = "star"
+        session.draft.checklistItems[publishIndex].colorHex = "EF4444"
+        let items = store.checklistItems(for: task.id)
+        let prepareItem = try #require(
+            items.first { $0.title == "Prepare notes" }
+        )
+        let publishItem = try #require(
+            items.first { $0.title == "Publish notes" }
+        )
+        let coordinator = StoreScopedChecklistCommandCoordinator(
+            container: context.container,
+            writeAuthorization: .isolatedTestHarness,
+            deviceID: "visual-suggestion"
+        )
+        let prepareOutcome = try coordinator.applyVisualSuggestion(
+            baseline: ChecklistVisualSuggestionBaseline(
+                item: prepareItem,
+                visual: store.checklistVisual(for: prepareItem),
+                normalizedTitle: prepareItem.title
+            ),
+            result: LLMChecklistVisualSuggestionResult(
+                iconName: "paintbrush",
+                colorHex: "16A34A",
+                reason: "Matches release work",
+                modelID: "test-model"
+            )
+        )
+        let publishOutcome = try coordinator.applyVisualSuggestion(
+            baseline: ChecklistVisualSuggestionBaseline(
+                item: publishItem,
+                visual: store.checklistVisual(for: publishItem),
+                normalizedTitle: publishItem.title
+            ),
+            result: LLMChecklistVisualSuggestionResult(
+                iconName: "doc.text",
+                colorHex: "7C3AED",
+                reason: "Matches publishing work",
+                modelID: "test-model"
+            )
+        )
+        #expect(prepareOutcome.didMutate)
+        #expect(publishOutcome.didMutate)
+        try store.refresh(
+            plan: StoreRefreshPlan(
+                scopes: [.checklist],
+                directlyAffectedChecklistTaskIDs: [task.id]
+            )
+        )
+        let sourceDraft = try store.editorDraft(
+            for: #require(store.task(for: task.id))
+        )
+
+        session.synchronizeWithStoreIfClean(
+            taskID: task.id,
+            sourceBaseline: sourceDraft.baseline,
+            parentCandidateIDs: store.validParentTasks(
+                for: task.id
+            ).map(\.id)
+        )
+
+        #expect(session.draft.id == draftID)
+        #expect(session.draft.checklistItems.map(\.id) == checklistDraftIDs)
+        #expect(
+            session.draft.checklistItems[prepareIndex].title ==
+                "Prepare final release notes"
+        )
+        #expect(
+            session.draft.checklistItems[prepareIndex].iconName == "paintbrush"
+        )
+        #expect(
+            session.draft.checklistItems[prepareIndex].colorHex == "16A34A"
+        )
+        #expect(session.draft.checklistItems[publishIndex].iconName == "star")
+        #expect(
+            session.draft.checklistItems[publishIndex].colorHex == "EF4444"
+        )
+        #expect(session.draft.baseline == sourceDraft.baseline)
+        #expect(session.hasUnsavedChanges)
+        #expect(
+            store.saveTaskDraftResult(session.draft) ==
+                .saved(taskID: task.id)
+        )
+    }
+
+    @Test
     func acceptedAutosaveFailsClosedWhenPersistedChecklistIdentityDiverges() throws {
         let context = try makeTestContext()
         let created = try SwiftDataTaskRepository(

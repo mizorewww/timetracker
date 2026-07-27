@@ -6,6 +6,11 @@ struct StoreLLMSuggestionTask {
     let task: Task<Void, Never>
 }
 
+struct StoreChecklistVisualSuggestionDebounceTask {
+    let schedulingFingerprint: String
+    let task: Task<Void, Never>
+}
+
 struct LLMSuggestionTaskSnapshot {
     let inboxRequestIDsByItemID: [UUID: UUID]
     let checklistRequestIDsByItemID: [UUID: UUID]

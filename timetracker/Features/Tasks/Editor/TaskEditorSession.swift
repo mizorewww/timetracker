@@ -132,6 +132,17 @@ final class TaskEditorSession {
         sourceBaseline: TaskEditorDraftBaseline?,
         parentCandidateIDs: [UUID]
     ) {
+        if sourceBaseline != sessionBaseline.baseline,
+           let task = store.task(for: taskID)
+        {
+            let latestDraft = store.editorDraft(for: task)
+            if Self.hasOnlyChecklistVisualChanges(
+                from: sessionBaseline.baseline,
+                to: latestDraft.baseline
+            ), mergeChecklistVisualChanges(from: latestDraft) {
+                return
+            }
+        }
         guard hasUnsavedChanges == false else { return }
         guard sourceBaseline != sessionBaseline.baseline else {
             guard parentCandidateIDs != parentCandidates.map(\.id) else {
@@ -144,6 +155,104 @@ final class TaskEditorSession {
             return
         }
         acceptLatestDraft(for: taskID)
+    }
+
+    private func mergeChecklistVisualChanges(
+        from latestDraft: TaskEditorDraft
+    ) -> Bool {
+        let latestByExistingID = latestDraft.checklistItems.reduce(
+            into: [UUID: ChecklistEditorDraft]()
+        ) { result, item in
+            guard let existingID = item.existingID else { return }
+            result[existingID] = item
+        }
+        let baselineByExistingID = sessionBaseline.checklistItems.reduce(
+            into: [UUID: ChecklistEditorDraft]()
+        ) { result, item in
+            guard let existingID = item.existingID else { return }
+            result[existingID] = item
+        }
+        guard latestByExistingID.count == latestDraft.checklistItems.count,
+              baselineByExistingID.count ==
+              sessionBaseline.checklistItems.count,
+              Set(latestByExistingID.keys) ==
+              Set(baselineByExistingID.keys),
+              draft.checklistItems.allSatisfy({
+                  guard let existingID = $0.existingID else { return false }
+                  return latestByExistingID[existingID] != nil &&
+                      baselineByExistingID[existingID] != nil
+              })
+        else {
+            return false
+        }
+
+        var rebasedDraft = draft
+        for index in rebasedDraft.checklistItems.indices {
+            let visibleItem = rebasedDraft.checklistItems[index]
+            guard let existingID = visibleItem.existingID,
+                  let oldItem = baselineByExistingID[existingID],
+                  let latestItem = latestByExistingID[existingID]
+            else {
+                return false
+            }
+            let userEditedVisual =
+                visibleItem.iconName != oldItem.iconName ||
+                visibleItem.colorHex != oldItem.colorHex
+            if userEditedVisual == false {
+                rebasedDraft.checklistItems[index].iconName =
+                    latestItem.iconName
+                rebasedDraft.checklistItems[index].colorHex =
+                    latestItem.colorHex
+            }
+        }
+        rebasedDraft.baseline = latestDraft.baseline
+
+        var rebasedSessionBaseline = sessionBaseline
+        for index in rebasedSessionBaseline.checklistItems.indices {
+            guard let existingID =
+                rebasedSessionBaseline.checklistItems[index].existingID,
+                let latestItem = latestByExistingID[existingID]
+            else {
+                return false
+            }
+            rebasedSessionBaseline.checklistItems[index].iconName =
+                latestItem.iconName
+            rebasedSessionBaseline.checklistItems[index].colorHex =
+                latestItem.colorHex
+        }
+        rebasedSessionBaseline.baseline = latestDraft.baseline
+
+        draft = rebasedDraft
+        sessionBaseline = rebasedSessionBaseline
+        parentCandidates = Self.parentCandidates(
+            for: rebasedDraft,
+            store: store
+        )
+        pendingReloadDraft = nil
+        return true
+    }
+
+    private static func hasOnlyChecklistVisualChanges(
+        from oldBaseline: TaskEditorDraftBaseline?,
+        to newBaseline: TaskEditorDraftBaseline?
+    ) -> Bool {
+        guard let oldBaseline, let newBaseline,
+              oldBaseline.checklistVisualMutationIDs !=
+              newBaseline.checklistVisualMutationIDs
+        else {
+            return false
+        }
+        return oldBaseline.taskMutationID == newBaseline.taskMutationID &&
+            oldBaseline.checklistItemMutationIDs ==
+            newBaseline.checklistItemMutationIDs &&
+            oldBaseline.categoryAssignmentMutationID ==
+            newBaseline.categoryAssignmentMutationID &&
+            oldBaseline.quantityGoalMutationID ==
+            newBaseline.quantityGoalMutationID &&
+            oldBaseline.recurrenceRuleMutationID ==
+            newBaseline.recurrenceRuleMutationID &&
+            oldBaseline.quantityEntryRevision ==
+            newBaseline.quantityEntryRevision
     }
 
     func restoreRecoveredDraft(_ recoveredDraft: TaskEditorDraft) {

@@ -83,6 +83,11 @@ iOS 的 `SyncConflictState.json`、pending forced-upload 恢复镜像和腐损�
 
 Checklist 请求发送完整标题、所属任务标题和完整任务显示路径。Inbox、checklist 与任务计划共用本机 picker 的完整规范 SF Symbols 目录，模型返回的 icon 必须属于请求已公告的同一目录。
 
+Checklist 自动建议对连续编辑采用本机 latest-input debounce，并取消已过期的
+pending/in-flight 工作；客户端只接受仍匹配最新标题、task path 与本地 revision
+的响应。取消只能阻止本机继续处理或落库，不能撤回 endpoint 已经接收的数据，也
+不等同于远端删除。用户手动选择的图标/颜色始终优先于迟到的自动建议。
+
 ### 任务计划生成
 
 请求只在用户从任务页填写需求并明确点按“生成”后发出。Request 页会先显示当前 Category、Task 和 Checklist 的准确数量。发送内容包括：

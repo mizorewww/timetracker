@@ -57,6 +57,25 @@ extension SeedData {
                 )
             )
             if CommandLine.arguments.contains(
+                UITestChecklistVisualSuggestionFixture.enableArgument
+            ) {
+                let checklistItem = ChecklistItem(
+                    taskID: hig.id,
+                    title: "Draft release notes",
+                    sortOrder: 10,
+                    deviceID: "demo"
+                )
+                context.insert(checklistItem)
+                context.insert(
+                    ChecklistItemVisual(
+                        checklistItemID: checklistItem.id,
+                        iconName: ChecklistVisualSanitizer.defaultIcon,
+                        colorHex: ChecklistVisualSanitizer.defaultColor,
+                        deviceID: "demo"
+                    )
+                )
+            }
+            if CommandLine.arguments.contains(
                 "--uitesting-first-health-timeline"
             ) {
                 try addFirstHealthTimelineUITestFixture(

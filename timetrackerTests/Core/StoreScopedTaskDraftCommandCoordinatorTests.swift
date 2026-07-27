@@ -106,6 +106,52 @@ struct StoreScopedTaskDraftCommandCoordinatorTests {
     }
 
     @Test
+    func taskMetadataAutosaveDoesNotAdvanceUnchangedChecklistRevisions() throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "metadata-autosave"
+        ).createTask(
+            title: "Release",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        try ChecklistDraftService().save(
+            drafts: [ChecklistEditorDraft(title: "Prepare notes")],
+            taskID: task.id,
+            context: context,
+            deviceID: "metadata-autosave"
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let checklistItem = try #require(store.checklistItems(for: task.id).first)
+        let visual = try #require(store.checklistVisual(for: checklistItem))
+        let itemMutationID = checklistItem.clientMutationID
+        let visualMutationID = visual.clientMutationID
+        let itemUpdatedAt = checklistItem.updatedAt
+        let visualUpdatedAt = visual.updatedAt
+        var draft = try store.editorDraft(for: #require(store.task(for: task.id)))
+        draft.title = "Release plan"
+
+        #expect(store.saveTaskDraft(draft))
+
+        let freshContext = ModelContext(context.container)
+        let persistedItem = try #require(
+            try freshContext.fetch(FetchDescriptor<ChecklistItem>())
+                .first { $0.id == checklistItem.id }
+        )
+        let persistedVisual = try #require(
+            try freshContext.fetch(FetchDescriptor<ChecklistItemVisual>())
+                .first { $0.checklistItemID == checklistItem.id }
+        )
+        #expect(persistedItem.clientMutationID == itemMutationID)
+        #expect(persistedVisual.clientMutationID == visualMutationID)
+        #expect(persistedItem.updatedAt == itemUpdatedAt)
+        #expect(persistedVisual.updatedAt == visualUpdatedAt)
+    }
+
+    @Test
     func staleDraftCannotOverwriteSiblingTaskMutation() throws {
         let context = try makeTestContext()
         let task = try SwiftDataTaskRepository(context: context, deviceID: "test").createTask(

@@ -32,7 +32,8 @@ final class TimeTrackerStore {
             llmCredentialStore ?? Self.defaultLLMCredentialStore()
         self.inboxSuggestionService = inboxSuggestionService ?? LLMInboxSuggestionService()
         self.checklistVisualSuggestionService =
-            checklistVisualSuggestionService ?? LLMChecklistVisualSuggestionService()
+            checklistVisualSuggestionService ??
+            Self.defaultChecklistVisualSuggestionService()
         let resolvedAppleHealthReader =
             appleHealthDataReader ?? AppleHealthDataReaderFactory.platformDefault()
         let resolvedAppleHealthPreferences =
@@ -85,12 +86,28 @@ final class TimeTrackerStore {
     {
         #if DEBUG
         if CommandLine.arguments.contains("--uitesting"),
-           CommandLine.arguments.contains("--uitesting-live-llm")
+           CommandLine.arguments.contains("--uitesting-live-llm") ||
+           CommandLine.arguments.contains(
+               UITestChecklistVisualSuggestionFixture.enableArgument
+           )
         {
             return UITestLLMCredentialStore()
         }
         #endif
         return KeychainLLMCredentialStore()
+    }
+
+    private static func defaultChecklistVisualSuggestionService()
+        -> LLMChecklistVisualSuggestionService
+    {
+        #if DEBUG
+        if let fixture =
+            UITestChecklistVisualSuggestionFixture.serviceIfRequested()
+        {
+            return fixture
+        }
+        #endif
+        return LLMChecklistVisualSuggestionService()
     }
 
     deinit {
@@ -101,6 +118,9 @@ final class TimeTrackerStore {
             request.task.cancel()
         }
         for request in checklistVisualSuggestionTasksByItemID.values {
+            request.task.cancel()
+        }
+        for request in checklistVisualSuggestionDebounceTasksByItemID.values {
             request.task.cancel()
         }
     }
@@ -186,6 +206,9 @@ final class TimeTrackerStore {
     @ObservationIgnored var checklistVisualSuggestionFailureFingerprintByItemID: [UUID: String] = [:]
     @ObservationIgnored var checklistVisualSuggestionRetryAfterByItemID: [UUID: Date] = [:]
     @ObservationIgnored var checklistVisualSuggestionTasksByItemID: [UUID: StoreLLMSuggestionTask] = [:]
+    @ObservationIgnored var checklistVisualSuggestionSchedulingFingerprintByItemID: [UUID: String] = [:]
+    @ObservationIgnored var checklistVisualSuggestionDebounceTasksByItemID:
+        [UUID: StoreChecklistVisualSuggestionDebounceTask] = [:]
     var preferences = AppPreferences.defaults
     var isAppleHealthTimelineEnabled: Bool
     var appleHealthTimelineItems: [AppleHealthTimelineItem] = []

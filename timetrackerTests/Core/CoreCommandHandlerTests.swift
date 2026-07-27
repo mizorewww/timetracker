@@ -49,7 +49,7 @@ struct CoreCommandHandlerTests {
     }
 
     @Test @MainActor
-    func checklistMutationsRecordTheCurrentDeviceAsTheLatestWriter() throws {
+    func checklistMutationsStampOnlyRecordsTheyActuallyChange() throws {
         let context = try makeTestContext()
         let taskID = UUID()
         let handler = ChecklistCommandHandler()
@@ -121,6 +121,9 @@ struct CoreCommandHandlerTests {
             visual.deviceID = "remote-device"
         }
         try context.save()
+        let unchangedVisualMutationID = firstVisual.clientMutationID
+        let unchangedVisualUpdatedAt = firstVisual.updatedAt
+
         try ChecklistDraftService().save(
             drafts: [ChecklistEditorDraft(item: first, visual: firstVisual)],
             taskID: taskID,
@@ -129,7 +132,9 @@ struct CoreCommandHandlerTests {
         )
 
         #expect(first.deviceID == "local-device")
-        #expect(firstVisual.deviceID == "local-device")
+        #expect(firstVisual.deviceID == "remote-device")
+        #expect(firstVisual.clientMutationID == unchangedVisualMutationID)
+        #expect(firstVisual.updatedAt == unchangedVisualUpdatedAt)
         #expect(second.deletedAt != nil)
         #expect(second.deviceID == "local-device")
         #expect(secondVisual.deletedAt != nil)

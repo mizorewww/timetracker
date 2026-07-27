@@ -187,7 +187,7 @@ Inbox 的 primary command 与 suggestion writer 都由 `StoreScopedInboxCommandC
 
 Inbox AI 状态不再只依赖物理 `InboxItem.id`。`suggestionContextID` 是逻辑条目的不透明 UUID，`suggestionRevisionID` 在真实标题修改时轮换，`dismissedSuggestionRevisionID` 只标记当前修订。`InboxSuggestionIdentityService` 用纯 resolution 分开计算内容 LWW winner 与 dismissal identities：只有 exact `(context, revision)` 的 marker 会字段级合并，不能让旧 dismissal 整行覆盖较新的 notes、completion、completedAt 或 sortOrder，也不能跨标题 revision。读取层把 winner 与合并 dismissal 放入不可持久化的 `InboxItemReadModel`；fetch、refresh、排序、索引和 UI 读取不得为投影修改 SwiftData winner。command 通过身份/文本预检后才在原子 mutation 内 materialize，保证无效 reorder 等路径零写入。command 在驳回、删除、应用、重排或标题修改时同时处理同一 context 的 sibling（包括同 UUID 的不同 SwiftData 对象）与 suggestion。异步建议成功和失败都校验请求时标题与完整 identity；apply 必须从 context 重选 canonical active/ready suggestion，不能信任 UI 缓存对象。禁止用标题、规范化标题或其哈希生成 identity；相同标题的独立条目必须保持独立。每条 item/suggestion 只增加固定数量 UUID 字段，不维护无界驳回历史。
 
-Checklist AI visual request 也不是对 scene 缓存的写授权。请求必须固化 item 的 mutation ID、规范化标题和 logical visual 的 `(ID, clientMutationID, userEditedAt)`；completion 在共享 store lock 内 fresh context 重验 task 可追踪性、item 和 visual revision 后才写入。任何另一个 scene 的手动图标/颜色编辑、标题/完成/删除、task 不可用或 logical visual 重建都会使结果变成无副作用的 stale discard，并只刷新当前 scene 的 read model。
+Checklist AI visual request 也不是对 scene 缓存的写授权。请求必须固化 item 的 mutation ID、规范化标题、完整 task title/path 和 logical visual 的 `(ID, clientMutationID, userEditedAt)`；调度再把这些 provider input 与 item/visual revision 组成 scheduling fingerprint。标题或 task context 连续变化时使用 trailing debounce，pending 与 in-flight 共同计入并发上限；新 fingerprint 必须取消旧 pending/in-flight，并在等待结束、发请求前、completion 写入前分别重验 latest identity。completion 在共享 store lock 内 fresh context 重验 task 可追踪性、item 和 visual revision 后才写入。任何另一个 scene 的手动图标/颜色编辑、标题/完成/删除、task 不可用或 logical visual 重建都会使结果变成无副作用的 stale discard，并只刷新当前 scene 的 read model。相同 checklist 内容的 autosave 不得旋转 item/visual mutation ID，相同 icon/color 的建议写入必须是 durable no-op；否则 revision churn 会把正常输入误判为 stale 并形成重复预测闭环。
 
 同一 App 进程中的多 scene 通过 `StoreMutationBroadcaster` 加速收敛：本地 durable commit 完成、当前 scene 已刷新并记录 snapshot 后，以 source store 广播 events；其它 scene 只按 event plan 刷新 read model，并在任务/ledger plan 时校正失效 selection/route，不再次记录 snapshot 或自动启动 LLM。发送者按 identity 跳过重复 refresh。该通知不是跨进程协议；Widget、Watch、Intent 和其它进程仍须依赖 durable snapshot、persistent history/CloudKit 回调与各自的 post-commit 机制。
 
@@ -416,7 +416,7 @@ Settings 采用 `LLMConfigurationDraft`：endpoint/API key/模型/思考强度�
 
 自动建议是另一个明确的本机同意开关，默认 false，不进入 CloudKit 或 JSON。只完成配置不会开启后台发送；开启后才会为 Inbox/checklist 触发受并发和退避控制的请求。发行时必须锁定默认 endpoint/第三方 endpoint 的运营方、用途、保留期、删除渠道和隐私披露；“OpenAI-compatible”不是数据不保留的保证。
 
-Inbox 和 checklist 视觉自动建议各自最多同时发出 3 个请求；一个请求完成或过期后再补下一项。Checklist 失败按请求指纹记录并至少退避 60 秒，配置或内容变化后才立即形成新请求；保存失败必须保留对应错误状态，不能让网络成功掩盖持久化失败。
+Inbox 和 checklist 视觉自动建议各自最多占用 3 个调度槽；Checklist 的 pending debounce 与已发请求共同占用槽位，稳定输入窗口为 350 ms，一个请求完成、取消或过期后再补下一项。Checklist 失败按完整请求指纹记录并至少退避 60 秒，配置、标题、task title/path 或相关 revision 变化后才立即形成新请求；保存失败必须保留对应错误状态，不能让网络成功掩盖持久化失败。Task editor 收到仅 visual revision 变化时按 persisted checklist ID 做三方合并：保留 visible row UUID、文本、顺序和焦点，只在用户没有本地修改 icon/color 时接收 AI visual，并同步推进保存 baseline，避免下一次 autosave 产生伪 CAS 冲突。
 
 任务计划的生产链是 `LLMTaskWorkspacePlanningService` → `AITaskWorkspaceOverlay` → `AITaskWorkspacePlanGeneratorViews` → `StoreScopedAITaskAtomicMutationCoordinator` → `TimeTrackerStore+AITaskPlanCommands`。旧 `LLMTaskPlanService`、create-only draft view 和 `StoreScopedAITaskPlanCommandCoordinator` 只保留兼容测试，不是生产入口；新代码不得静默回退到旧 flat JSON。
 

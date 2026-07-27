@@ -1,6 +1,60 @@
 #if DEBUG
 import Foundation
 
+enum UITestChecklistVisualSuggestionFixture {
+    static let enableArgument =
+        "--uitesting-checklist-visual-suggestion"
+
+    static func serviceIfRequested(
+        arguments: [String] = CommandLine.arguments
+    ) -> LLMChecklistVisualSuggestionService? {
+        guard AppRuntimeEnvironment.isTestHost,
+              arguments.contains("--uitesting"),
+              arguments.contains(enableArgument)
+        else {
+            return nil
+        }
+
+        return LLMChecklistVisualSuggestionService { request in
+            try await Task.sleep(for: .milliseconds(700))
+            try Task.checkCancellation()
+
+            let requestBody = request.httpBody.flatMap {
+                String(data: $0, encoding: .utf8)
+            }?.lowercased() ?? ""
+            let colorHex = if requestBody.contains("final") {
+                "16A34A"
+            } else if requestBody.contains("orange") {
+                "F97316"
+            } else {
+                "7C3AED"
+            }
+            let content = """
+            {"iconName":"sparkles","colorHex":"\(colorHex)",\
+            "reason":"Deterministic UI-test suggestion"}
+            """
+            let data = try JSONSerialization.data(
+                withJSONObject: [
+                    "choices": [
+                        [
+                            "message": [
+                                "content": content,
+                            ],
+                        ],
+                    ],
+                ]
+            )
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (data, response)
+        }
+    }
+}
+
 extension TimeTrackerStore {
     @discardableResult
     func applyFirstHealthTimelineFixtureIfRequested(
@@ -71,6 +125,29 @@ extension TimeTrackerStore {
             reasoningEffort: .max
         )
         #endif
+    }
+
+    @discardableResult
+    func applyChecklistVisualSuggestionFixtureIfRequested(
+        arguments: [String] = CommandLine.arguments
+    ) -> Bool {
+        guard AppRuntimeEnvironment.isTestHost,
+              arguments.contains("--uitesting"),
+              arguments.contains(
+                  UITestChecklistVisualSuggestionFixture.enableArgument
+              ),
+              setLLMConfiguration(
+                  endpoint: "https://ui-test.invalid/v1",
+                  apiKey: "ui-test-key",
+                  selectedModel: "ui-test-model",
+                  availableModelIDs: ["ui-test-model"],
+                  reasoningEffort: .high
+              )
+        else {
+            return false
+        }
+        setLLMAutomaticSuggestionsEnabled(true)
+        return true
     }
 
     /// Drives the app to a screen for screenshot audits.

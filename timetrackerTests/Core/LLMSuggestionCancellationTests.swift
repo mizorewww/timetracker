@@ -159,6 +159,74 @@ struct LLMSuggestionCancellationTests {
     }
 
     @Test @MainActor
+    func checklistVisualSuggestionWaitsForLatestStableTitleAndCancelsSupersededWork() async throws {
+        let context = try makeTestContext()
+        let task = TaskNode(title: "Release", parentID: nil, deviceID: "test")
+        let checklistItem = ChecklistItem(
+            taskID: task.id,
+            title: "Prepare notes",
+            deviceID: "test"
+        )
+        context.insert(task)
+        context.insert(checklistItem)
+        try context.save()
+
+        let gate = ControlledLLMTransport(payload: .checklist)
+        let store = Self.configuredStore(
+            context: context,
+            task: task,
+            inboxItems: [],
+            checklistItems: [checklistItem],
+            checklistGate: gate
+        )
+        store.preferences.llmAutomaticSuggestionsEnabled = true
+
+        store.autoSuggestChecklistVisualsIfNeeded()
+        #expect(await Self.eventually { await gate.requestCount == 1 })
+
+        try Self.saveChecklistTitle(
+            "Prepare release notes",
+            taskID: task.id,
+            store: store
+        )
+        #expect(store.checklistVisualSuggestionInFlightIDs.isEmpty)
+        await gate.resumeRequest(at: 0)
+        #expect(await Self.eventually { await gate.cancelledRequestCount == 1 })
+
+        try Self.saveChecklistTitle(
+            "Prepare release notes carefully",
+            taskID: task.id,
+            store: store
+        )
+        try Self.saveChecklistTitle(
+            "Prepare final release notes",
+            taskID: task.id,
+            store: store
+        )
+
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(await gate.requestCount == 1)
+        #expect(await Self.eventually { await gate.requestCount == 2 })
+        #expect(
+            await gate.requestBody(at: 1)?
+                .contains("Prepare final release notes") == true
+        )
+
+        await gate.resumeRequest(at: 1)
+        #expect(await Self.eventually {
+            guard let currentItem = store.checklistItems(for: task.id).first else {
+                return false
+            }
+            return store.checklistVisualSuggestionInFlightIDs.isEmpty &&
+                store.checklistVisual(for: currentItem)?
+                .suggestionTitleSnapshot == "Prepare final release notes"
+        })
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(await gate.requestCount == 2)
+        #expect(store.errorMessage == nil)
+    }
+
+    @Test @MainActor
     func configurationChangeCancelsOldRequestWithoutLettingItsCleanupRemoveTheReplacement() async throws {
         let context = try makeTestContext()
         let task = TaskNode(title: "Planning", parentID: nil, deviceID: "test")
@@ -635,6 +703,19 @@ struct LLMSuggestionCancellationTests {
     }
 
     @MainActor
+    private static func saveChecklistTitle(
+        _ title: String,
+        taskID: UUID,
+        store: TimeTrackerStore
+    ) throws {
+        let task = try #require(store.task(for: taskID))
+        var draft = store.editorDraft(for: task)
+        let index = try #require(draft.checklistItems.indices.first)
+        draft.checklistItems[index].title = title
+        #expect(store.saveTaskDraft(draft))
+    }
+
+    @MainActor
     private static func insertLLMConfiguration(into context: ModelContext) {
         context.insert(SyncedPreference(
             key: AppPreferenceKey.llmEndpoint.rawValue,
@@ -679,6 +760,7 @@ private actor ControlledLLMTransport {
 
     private let payload: Payload
     private var continuations: [Int: CheckedContinuation<Void, Never>] = [:]
+    private var requestBodies: [String] = []
     private(set) var requestCount = 0
     private(set) var cancelledRequestCount = 0
 
@@ -689,6 +771,11 @@ private actor ControlledLLMTransport {
     func send(_ request: URLRequest) async throws -> (Data, URLResponse) {
         let requestIndex = requestCount
         requestCount += 1
+        requestBodies.append(
+            request.httpBody.flatMap {
+                String(data: $0, encoding: .utf8)
+            } ?? ""
+        )
         await withCheckedContinuation { continuation in
             continuations[requestIndex] = continuation
         }
@@ -736,6 +823,10 @@ private actor ControlledLLMTransport {
 
     func resumeRequest(at index: Int) {
         continuations.removeValue(forKey: index)?.resume()
+    }
+
+    func requestBody(at index: Int) -> String? {
+        requestBodies.indices.contains(index) ? requestBodies[index] : nil
     }
 
     func resumeAll() {

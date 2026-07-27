@@ -163,19 +163,28 @@ struct ChecklistDraftService {
             for (index, draft) in preparedDrafts.enumerated() {
                 let sortOrder = Double(index + 1) * 10
                 if let existingID = draft.existingID, let item = existingByID[existingID] {
-                    item.title = draft.title
-                    if item.isCompleted != draft.isCompleted {
+                    let completionChanged = item.isCompleted != draft.isCompleted
+                    let itemChanged = item.title != draft.title ||
+                        completionChanged ||
+                        item.sortOrder != sortOrder ||
+                        item.deletedAt != nil ||
+                        (draft.isCompleted == false &&
+                            item.sortOrderBeforeCompletion != nil)
+                    if completionChanged {
                         item.completedAt = draft.isCompleted ? now : nil
                     }
-                    item.isCompleted = draft.isCompleted
-                    item.sortOrder = sortOrder
-                    if draft.isCompleted == false {
-                        item.sortOrderBeforeCompletion = nil
+                    if itemChanged {
+                        item.title = draft.title
+                        item.isCompleted = draft.isCompleted
+                        item.sortOrder = sortOrder
+                        if draft.isCompleted == false {
+                            item.sortOrderBeforeCompletion = nil
+                        }
+                        item.deletedAt = nil
+                        item.updatedAt = now
+                        item.deviceID = deviceID
+                        item.clientMutationID = UUID()
                     }
-                    item.deletedAt = nil
-                    item.updatedAt = now
-                    item.deviceID = deviceID
-                    item.clientMutationID = UUID()
                     upsertVisual(
                         for: item.id,
                         draft: draft,
@@ -236,6 +245,7 @@ struct ChecklistDraftService {
         if let existing {
             let visualChanged = ChecklistVisualSanitizer.sanitizedIcon(existing.iconName) != draft.iconName ||
                 ChecklistVisualSanitizer.sanitizedColor(existing.colorHex) != draft.colorHex
+            guard visualChanged || existing.deletedAt != nil else { return }
             existing.iconName = draft.iconName
             existing.colorHex = draft.colorHex
             if visualChanged {

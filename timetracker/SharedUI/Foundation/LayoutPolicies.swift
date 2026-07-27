@@ -67,6 +67,7 @@ struct HomeLayoutPolicy {
     private static let currentStatePrimaryMinimumWidth: CGFloat = 420
     private static let currentStatePrimaryMaximumWidth: CGFloat = 620
     private static let currentStateOverviewMinimumWidth: CGFloat = 280
+    private static let quickStartMinimumWidth: CGFloat = 300
     static let visualizationContentMaximumWidth: CGFloat = 720
     static let visualizationCardPadding: CGFloat = 14
 
@@ -116,6 +117,25 @@ struct HomeLayoutPolicy {
             contentWidth,
             Self.visualizationContentMaximumWidth +
                 (Self.visualizationCardPadding * 2)
+        )
+    }
+
+    var wideVisualizationColumnWidth: CGFloat {
+        min(
+            visualizationSectionWidth,
+            max(
+                0,
+                contentWidth - contentSpacing -
+                    Self.quickStartMinimumWidth
+            )
+        )
+    }
+
+    var wideQuickStartColumnWidth: CGFloat {
+        max(
+            0,
+            contentWidth - contentSpacing -
+                wideVisualizationColumnWidth
         )
     }
 

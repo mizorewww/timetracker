@@ -72,6 +72,7 @@ struct CoreArchitectureBehaviorTests {
         #expect(HomeLayoutPolicy(width: 1100).supportingColumnWidth == 360)
         let narrowToday = HomeLayoutPolicy(width: 799)
         let wideToday = HomeLayoutPolicy(width: 800)
+        let twoColumnToday = HomeLayoutPolicy(width: 1056)
         let widestToday = HomeLayoutPolicy(width: 1400)
         #expect(
             narrowToday.usesSideBySideCurrentState(prefersSingleColumn: false) ==
@@ -92,6 +93,16 @@ struct CoreArchitectureBehaviorTests {
         )
         #expect(widestToday.currentStatePrimaryColumnWidth == 620)
         #expect(widestToday.currentStateOverviewColumnWidth == 538)
+        #expect(twoColumnToday.wideVisualizationColumnWidth == 678)
+        #expect(twoColumnToday.wideQuickStartColumnWidth == 300)
+        #expect(
+            twoColumnToday.wideVisualizationColumnWidth +
+                twoColumnToday.contentSpacing +
+                twoColumnToday.wideQuickStartColumnWidth ==
+                twoColumnToday.contentWidth
+        )
+        #expect(widestToday.wideVisualizationColumnWidth == 748)
+        #expect(widestToday.wideQuickStartColumnWidth == 410)
         // One split preset for every platform that shows the split shell. Its
         // detail minimum must stay under the shell breakpoint, otherwise there
         // would be a band of widths the split view cannot satisfy and the

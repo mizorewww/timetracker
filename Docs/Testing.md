@@ -106,6 +106,17 @@ make UI_TEST_ONLY=timetrackerUITests/timetrackerUITests/testName test-ui-macos
 Override `UI_TEST_DEVICE_TYPE` and `UI_TEST_RUNTIME` for an iPad or another reviewed
 runtime; do not borrow an existing Booted device implicitly.
 
+Wide Today layout coverage pairs behavior and real geometry. `HomeLayoutPolicy`
+tests fix the 1000 pt content-width breakpoint and the 678...748 / 300...410 pt
+column conservation. The macOS UI fixture may request a deterministic test window
+with `TIMETRACKER_UI_TEST_WINDOW_WIDTH` and
+`TIMETRACKER_UI_TEST_WINDOW_HEIGHT`; the AppDelegate honors these values only
+during UI testing. The iPad fixture uses an explicitly owned 13-inch landscape
+simulator and hides the sidebar so the Today detail crosses the breakpoint. On
+both platforms, assert that the real Weekly Gross Time and Quick Start headings
+are horizontally separated and vertically overlap, then retain a normal-size
+screenshot. Run the compact-shell Today regression separately on iPhone.
+
 ## What Must Stay Covered
 
 The default UI matrix uses normal text sizes and ordinary interaction paths. The accessibility-specific invariants below protect already-implemented behavior, but maximum Dynamic Type, VoiceOver traversal, and dedicated accessibility screenshot/trace batches run only when the changed code affects text reflow/semantics, a regression is reported, or the release risk explicitly calls for them.

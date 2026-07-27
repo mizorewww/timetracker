@@ -4735,6 +4735,68 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testWideTodayPacksQuickStartBesideVisualizations() throws {
+        #if os(macOS)
+        let app = launchApp(
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchEnvironment: [
+                "TIMETRACKER_UI_TEST_WINDOW_WIDTH": "1500",
+                "TIMETRACKER_UI_TEST_WINDOW_HEIGHT": "1000",
+            ]
+        )
+        try placeMainWindowOnPrimaryScreen(in: app)
+        XCTAssertGreaterThanOrEqual(
+            app.windows.firstMatch.frame.width,
+            1450,
+            "The deterministic fixture must exercise the widest Today layout."
+        )
+        #else
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let app = launchApp(replacesDemoDataOnLaunch: true)
+        guard min(app.frame.width, app.frame.height) >= 700 else {
+            throw XCTSkip("The regular-width iOS layout requires an iPad simulator.")
+        }
+        let hideSidebar = app.buttons["Hide Sidebar"].firstMatch
+        if hideSidebar.waitForExistence(timeout: 2), hideSidebar.isHittable {
+            activate(hideSidebar)
+        }
+        #endif
+        XCTAssertTrue(homeIsReady(in: app))
+        let home = app.descendants(matching: .any)["home.view"].firstMatch
+        XCTAssertTrue(waitUntil(timeout: 5) {
+            home.exists && home.frame.width >= 1056
+        }, "The fixture must expose at least 1056 pt to the Today detail.")
+
+        let weeklyHeading = app.descendants(matching: .any)[
+            "home.weeklyGross.header.title"
+        ].firstMatch
+        let quickStartHeading = app.descendants(matching: .any)[
+            "home.quickStart"
+        ].firstMatch
+        let weeklyFrame = try validVisibleFrame(
+            for: weeklyHeading,
+            in: app
+        )
+        let quickStartFrame = try validVisibleFrame(
+            for: quickStartHeading,
+            in: app
+        )
+        XCTAssertLessThan(
+            weeklyFrame.maxX,
+            quickStartFrame.minX,
+            "The widest Today layout must place Quick Start in a separate trailing lane."
+        )
+        XCTAssertTrue(
+            weeklyFrame.minY < quickStartFrame.maxY &&
+                quickStartFrame.minY < weeklyFrame.maxY,
+            "Quick Start and the first visualization heading must overlap vertically instead of stacking."
+        )
+        let prefix = platformScreenshotPrefix(in: app)
+        try capture("\(prefix)-home-adaptive-packed-columns", app: app)
+    }
+
+    @MainActor
     func testAnalyticsRangeSwitchKeepsPeriodControlsMounted() throws {
         let app = launchApp(
             route: "analytics",

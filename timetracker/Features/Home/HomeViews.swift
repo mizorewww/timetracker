@@ -61,39 +61,61 @@ private struct DesktopTodayContent: View {
                 openTask: openTask,
                 startTimer: startTimer
             )
-            visualizationSections
-                .frame(
-                    maxWidth: layout.visualizationSectionWidth,
-                    alignment: .leading
-                )
+            visualizationAndQuickStart
 
             if layout.usesTwoColumnContent, content.hasSupportingContent {
                 HStack(alignment: .top, spacing: layout.contentSpacing) {
-                    primarySections
+                    timelineSection
                         .frame(maxWidth: .infinity, alignment: .topLeading)
                     supportingSections
                         .frame(width: layout.supportingColumnWidth, alignment: .topLeading)
                 }
             } else {
-                primarySections
+                timelineSection
                 supportingSections
             }
         }
     }
 
-    private var primarySections: some View {
-        VStack(alignment: .leading, spacing: layout.contentSpacing) {
-            QuickStartSection(
-                store: store,
-                tasks: content.quickStartTasks,
-                openTask: openTask
-            )
-            TimelineSection(
-                store: store,
-                segments: content.timelineSegments,
-                openTask: openTask
-            )
+    @ViewBuilder
+    private var visualizationAndQuickStart: some View {
+        if layout.usesTwoColumnContent {
+            HStack(alignment: .top, spacing: layout.contentSpacing) {
+                visualizationSections
+                    .frame(
+                        width: layout.wideVisualizationColumnWidth,
+                        alignment: .topLeading
+                    )
+                quickStartSection
+                    .frame(
+                        width: layout.wideQuickStartColumnWidth,
+                        alignment: .topLeading
+                    )
+            }
+        } else {
+            visualizationSections
+                .frame(
+                    maxWidth: layout.visualizationSectionWidth,
+                    alignment: .leading
+                )
+            quickStartSection
         }
+    }
+
+    private var quickStartSection: some View {
+        QuickStartSection(
+            store: store,
+            tasks: content.quickStartTasks,
+            openTask: openTask
+        )
+    }
+
+    private var timelineSection: some View {
+        TimelineSection(
+            store: store,
+            segments: content.timelineSegments,
+            openTask: openTask
+        )
     }
 
     private var visualizationSections: some View {

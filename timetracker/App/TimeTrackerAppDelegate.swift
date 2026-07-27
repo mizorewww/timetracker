@@ -24,6 +24,7 @@ final class TimeTrackerAppDelegate: NSObject, NSApplicationDelegate {
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                 self.openUITestWindowIfNeeded()
+                self.resizeUITestWindowIfRequested()
             }
         }
     }
@@ -52,6 +53,31 @@ final class TimeTrackerAppDelegate: NSObject, NSApplicationDelegate {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         uiTestWindow = window
+    }
+
+    private func resizeUITestWindowIfRequested() {
+        let environment = ProcessInfo.processInfo.environment
+        guard
+            let widthText = environment["TIMETRACKER_UI_TEST_WINDOW_WIDTH"],
+            let width = Double(widthText),
+            width.isFinite,
+            width > 0
+        else {
+            return
+        }
+        let height = environment["TIMETRACKER_UI_TEST_WINDOW_HEIGHT"]
+            .flatMap(Double.init)
+            .flatMap { value in
+                value.isFinite && value > 0 ? value : nil
+            } ?? 900
+        guard let window = NSApp.windows.first(where: { window in
+            window.isVisible && window.canBecomeMain && !window.title.isEmpty
+        }) else {
+            return
+        }
+        window.setContentSize(NSSize(width: width, height: height))
+        window.center()
+        window.makeKeyAndOrderFront(nil)
     }
 }
 #endif

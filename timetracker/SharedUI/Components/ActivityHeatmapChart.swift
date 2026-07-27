@@ -1,75 +1,96 @@
 import Charts
 import SwiftUI
 
-nonisolated enum ActivityHeatmapLayoutContext: Equatable, Sendable {
-    case phone
-    case regular
-}
-
 nonisolated struct ActivityHeatmapLayoutPolicy: Equatable, Sendable {
-    private static let dayCount: CGFloat = 7
+    static let minimumCellSize: CGFloat = 12
+    static let maximumCellSize: CGFloat = 24
 
-    let context: ActivityHeatmapLayoutContext
+    private static let dayCount: CGFloat = 7
+    private static let horizontalAxisReserve: CGFloat = 34
+    private static let verticalAxisReserve: CGFloat = 27
+
+    let availableWidth: CGFloat
     let weekCount: Int
 
     var cellSize: CGFloat {
-        switch (context, weekCount) {
-        case (.phone, ...5):
-            15
-        case (.phone, ...14):
-            12
-        case (.phone, ...27):
-            11
-        case (.phone, _):
-            10
-        case (.regular, ...5):
-            14
-        case (.regular, ...14):
-            11
-        case (.regular, ...27):
-            10
-        case (.regular, _):
-            9
+        guard normalizedAvailableWidth > 0 else {
+            return Self.minimumCellSize
         }
+
+        for candidate in stride(
+            from: Int(Self.maximumCellSize),
+            through: Int(Self.minimumCellSize),
+            by: -1
+        ) {
+            let size = CGFloat(candidate)
+            if chartWidth(cellSize: size) <= normalizedAvailableWidth {
+                return size
+            }
+        }
+        return Self.minimumCellSize
     }
 
     var cellSpacing: CGFloat {
-        3
+        Self.cellSpacing(for: cellSize)
     }
 
     var chartWidth: CGFloat {
-        let columns = CGFloat(max(1, weekCount))
-        return columns * cellSize
-            + max(0, columns - 1) * cellSpacing
-            + 34
+        chartWidth(cellSize: cellSize)
     }
 
     var chartHeight: CGFloat {
         let rows = Self.dayCount
         return rows * cellSize
             + (rows - 1) * cellSpacing
-            + 27
+            + Self.verticalAxisReserve
     }
-}
 
-extension EnvironmentValues {
-    @Entry var activityHeatmapLayoutContext: ActivityHeatmapLayoutContext = .regular
+    var overflowsAvailableWidth: Bool {
+        guard normalizedAvailableWidth > 0 else { return false }
+        return chartWidth > normalizedAvailableWidth + 0.5
+    }
+
+    private var normalizedAvailableWidth: CGFloat {
+        guard availableWidth.isFinite, availableWidth > 0 else { return 0 }
+        return availableWidth
+    }
+
+    private func chartWidth(cellSize: CGFloat) -> CGFloat {
+        let columns = CGFloat(max(1, weekCount))
+        return columns * cellSize
+            + max(0, columns - 1) * Self.cellSpacing(for: cellSize)
+            + Self.horizontalAxisReserve
+    }
+
+    private static func cellSpacing(for cellSize: CGFloat) -> CGFloat {
+        switch cellSize {
+        case ...13:
+            2
+        case ...19:
+            3
+        default:
+            4
+        }
+    }
 }
 
 struct ActivityHeatmapChart: View {
     let snapshot: TaskActivityHeatmapSnapshot
+    let availableWidth: CGFloat
 
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @Environment(\.calendar) private var calendar
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.locale) private var locale
-    @Environment(\.activityHeatmapLayoutContext)
-    private var layoutContext
 
     private let cells: [ActivityHeatmapChartCell]
 
-    init(snapshot: TaskActivityHeatmapSnapshot) {
+    init(
+        snapshot: TaskActivityHeatmapSnapshot,
+        availableWidth: CGFloat
+    ) {
         self.snapshot = snapshot
+        self.availableWidth = availableWidth
         cells = snapshot.weeks.enumerated().flatMap { weekIndex, week in
             week.days.enumerated().map { weekdayIndex, day in
                 ActivityHeatmapChartCell(
@@ -126,7 +147,13 @@ struct ActivityHeatmapChart: View {
                 position: .top,
                 values: monthMarkers.map(\.weekPosition)
             ) { value in
-                AxisValueLabel(anchor: .topLeading) {
+                AxisValueLabel(
+                    anchor: .topLeading,
+                    collisionResolution: .greedy(
+                        priority: 1,
+                        minimumSpacing: 6
+                    )
+                ) {
                     if let position = value.as(Double.self),
                        let marker = monthMarkers.first(where: {
                            $0.weekPosition == position
@@ -175,7 +202,7 @@ struct ActivityHeatmapChart: View {
 
     private var layoutPolicy: ActivityHeatmapLayoutPolicy {
         ActivityHeatmapLayoutPolicy(
-            context: layoutContext,
+            availableWidth: availableWidth,
             weekCount: snapshot.weeks.count
         )
     }

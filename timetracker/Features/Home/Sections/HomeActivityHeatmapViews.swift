@@ -63,10 +63,6 @@ struct HomeActivityHeatmapSection: View {
                     section(loadedHeatmaps?.snapshots)
                 }
             }
-            .environment(
-                \.activityHeatmapLayoutContext,
-                activityHeatmapLayoutContext
-            )
             .task(id: request) {
                 guard request.selectedTaskIDs.isEmpty == false else {
                     loadedHeatmaps = nil
@@ -195,15 +191,6 @@ struct HomeActivityHeatmapSection: View {
             AppStrings.localized("home.heatmap.taskCount"),
             Int64(count)
         )
-    }
-
-    private var activityHeatmapLayoutContext: ActivityHeatmapLayoutContext {
-        switch container {
-        case .card:
-            .regular
-        case .listSection:
-            .phone
-        }
     }
 
     private func refreshClock() {

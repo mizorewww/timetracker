@@ -309,60 +309,90 @@ struct TodayActivityHeatmapTests {
     }
 
     @Test
-    func layoutPolicyScalesCellsForPeriodAndContainer() {
-        let periods: [ActivityHeatmapPeriod] = [
-            .oneMonth,
-            .threeMonths,
-            .sixMonths,
-            .oneYear,
-        ]
-        let phoneMonth = ActivityHeatmapLayoutPolicy(
-            context: .phone,
+    func layoutPolicyUsesAvailableWidthForShortRanges() {
+        let narrowMonth = ActivityHeatmapLayoutPolicy(
+            availableWidth: 140,
             weekCount: ActivityHeatmapPeriod.oneMonth.weekCount
         )
+        let phoneMonth = ActivityHeatmapLayoutPolicy(
+            availableWidth: 320,
+            weekCount: ActivityHeatmapPeriod.oneMonth.weekCount
+        )
+        let phoneQuarter = ActivityHeatmapLayoutPolicy(
+            availableWidth: 320,
+            weekCount: ActivityHeatmapPeriod.threeMonths.weekCount
+        )
+        let regularHalfYear = ActivityHeatmapLayoutPolicy(
+            availableWidth: 720,
+            weekCount: ActivityHeatmapPeriod.sixMonths.weekCount
+        )
+
+        #expect(narrowMonth.cellSize < phoneMonth.cellSize)
+        #expect(phoneMonth.cellSize == 24)
+        #expect(phoneMonth.cellSpacing == 4)
+        #expect(phoneMonth.chartWidth <= 320)
+        #expect(phoneMonth.chartHeight == 219)
+        #expect(phoneQuarter.cellSize == 17)
+        #expect(phoneQuarter.chartWidth <= 320)
+        #expect(regularHalfYear.cellSize == 21)
+        #expect(regularHalfYear.chartWidth <= 720)
+        #expect(regularHalfYear.chartWidth >= 700)
+    }
+
+    @Test
+    func layoutPolicyPreservesReadableScrollableCellsForLongRanges() {
         let phoneYear = ActivityHeatmapLayoutPolicy(
-            context: .phone,
+            availableWidth: 320,
             weekCount: ActivityHeatmapPeriod.oneYear.weekCount
         )
-        let regularMonth = ActivityHeatmapLayoutPolicy(
-            context: .regular,
-            weekCount: ActivityHeatmapPeriod.oneMonth.weekCount
-        )
         let regularYear = ActivityHeatmapLayoutPolicy(
-            context: .regular,
+            availableWidth: 720,
             weekCount: ActivityHeatmapPeriod.oneYear.weekCount
         )
 
+        #expect(phoneYear.cellSize == 12)
+        #expect(regularYear.cellSize == 12)
+        #expect(phoneYear.cellSpacing == 2)
+        #expect(phoneYear.chartWidth == regularYear.chartWidth)
+        #expect(phoneYear.chartWidth > 720)
+        #expect(phoneYear.overflowsAvailableWidth)
+        #expect(regularYear.overflowsAvailableWidth)
+    }
+
+    @Test
+    func layoutPolicyIsMonotonicAndHandlesInvalidWidths() {
+        let widths: [CGFloat] = [120, 180, 240, 320, 720]
+        let sizes = widths.map {
+            ActivityHeatmapLayoutPolicy(
+                availableWidth: $0,
+                weekCount: ActivityHeatmapPeriod.threeMonths.weekCount
+            ).cellSize
+        }
         #expect(
-            periods.map {
-                ActivityHeatmapLayoutPolicy(
-                    context: .phone,
-                    weekCount: $0.weekCount
-                ).cellSize
-            } == [15, 12, 11, 10]
+            zip(sizes, sizes.dropFirst()).allSatisfy {
+                $0.0 <= $0.1
+            }
         )
-        #expect(
-            periods.map {
-                ActivityHeatmapLayoutPolicy(
-                    context: .regular,
-                    weekCount: $0.weekCount
-                ).cellSize
-            } == [14, 11, 10, 9]
+
+        for width in [CGFloat.zero, -10, .nan, .infinity] {
+            let policy = ActivityHeatmapLayoutPolicy(
+                availableWidth: width,
+                weekCount: ActivityHeatmapPeriod.oneMonth.weekCount
+            )
+            #expect(policy.cellSize.isFinite)
+            #expect(policy.cellSpacing.isFinite)
+            #expect(policy.chartWidth.isFinite)
+            #expect(policy.chartHeight.isFinite)
+            #expect(policy.cellSize >= 12)
+            #expect(policy.cellSize <= 24)
+        }
+
+        let empty = ActivityHeatmapLayoutPolicy(
+            availableWidth: 320,
+            weekCount: 0
         )
-        #expect(phoneMonth.cellSize > 9)
-        #expect(phoneYear.cellSize >= 10)
-        #expect(regularMonth.cellSize > 9)
-        #expect(regularYear.cellSize == 9)
-        #expect(phoneMonth.cellSize > phoneYear.cellSize)
-        #expect(regularMonth.cellSize > regularYear.cellSize)
-        #expect(phoneMonth.chartWidth < phoneYear.chartWidth)
-        #expect(regularMonth.chartWidth < regularYear.chartWidth)
-        #expect(phoneMonth.chartHeight > phoneYear.chartHeight)
-        #expect(regularMonth.chartHeight > regularYear.chartHeight)
-        #expect(phoneMonth.chartWidth == 121)
-        #expect(phoneYear.chartWidth == 720)
-        #expect(regularMonth.chartHeight == 143)
-        #expect(regularYear.chartHeight == 108)
+        #expect(empty.chartWidth.isFinite)
+        #expect(empty.chartHeight.isFinite)
     }
 
     @Test @MainActor

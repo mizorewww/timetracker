@@ -1058,15 +1058,35 @@ final class timetrackerUITests: XCTestCase {
             ]
         )
         #if os(macOS)
-        try placeMainWindowOnPrimaryScreen(in: app)
+        openSettings(in: app)
         #endif
         XCTAssertTrue(
             app.descendants(matching: .any)["settings.view"]
                 .waitForExistence(timeout: 8)
         )
 
-        #if os(iOS)
+        #if os(macOS)
+        let generalSettingsWindow = try XCTUnwrap(
+            app.windows.allElementsBoundByIndex.first { window in
+                window.descendants(matching: .any)["settings.view"].exists
+            }
+        )
+        let general = generalSettingsWindow.descendants(matching: .any)
+            .matching(identifier: "settings.category.general")
+            .firstMatch
+        #else
         let general = app.buttons["settings.category.general"].firstMatch
+        #endif
+        #if os(macOS)
+        XCTAssertTrue(
+            waitForElement(
+                general,
+                timeout: 5,
+                diagnosticName: "heatmap-period-settings-general",
+                in: app
+            )
+        )
+        #else
         XCTAssertTrue(
             waitForElement(
                 general,
@@ -1078,6 +1098,17 @@ final class timetrackerUITests: XCTestCase {
         activate(general)
         #endif
 
+        #if os(macOS)
+        let periodPicker = generalSettingsWindow.descendants(matching: .any)[
+            "settings.todayHeatmap.period"
+        ].firstMatch
+        let settingsScrollView = generalSettingsWindow.scrollViews[
+            "settings.view"
+        ].firstMatch
+        for _ in 0 ..< 10 where !periodPicker.isHittable {
+            settingsScrollView.scroll(byDeltaX: 0, deltaY: -420)
+        }
+        #else
         let periodPicker = app.descendants(matching: .any)[
             "settings.todayHeatmap.period"
         ].firstMatch
@@ -1087,6 +1118,7 @@ final class timetrackerUITests: XCTestCase {
             maximumScrolls: 10,
             in: app
         )
+        #endif
         XCTAssertTrue(
             waitForElement(
                 periodPicker,
@@ -1207,8 +1239,12 @@ final class timetrackerUITests: XCTestCase {
 
         let rangeIdentifier = "home.heatmap.range.\(taskID)"
         let chartIdentifier = "home.heatmap.chart.\(taskID)"
+        let scrollerIdentifier = "home.heatmap.scroller.\(taskID)"
         let range = app.descendants(matching: .any)[rangeIdentifier].firstMatch
         let chart = app.descendants(matching: .any)[chartIdentifier].firstMatch
+        let scroller = app.descendants(matching: .any)[
+            scrollerIdentifier
+        ].firstMatch
         XCTAssertTrue(
             waitForElement(
                 range,
@@ -1225,6 +1261,14 @@ final class timetrackerUITests: XCTestCase {
                 in: app
             )
         )
+        XCTAssertTrue(
+            waitForElement(
+                scroller,
+                timeout: 5,
+                diagnosticName: "heatmap-period-scroller",
+                in: app
+            )
+        )
         let oneMonthRange = [
             range.label,
             range.value.map { String(describing: $0) } ?? "",
@@ -1232,12 +1276,17 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertFalse(oneMonthRange.trimmingCharacters(in: .whitespaces).isEmpty)
         XCTAssertGreaterThanOrEqual(
             chart.frame.height,
-            138,
-            "The short range must enlarge the Heatmap cells on every platform."
+            210,
+            "A one-month Heatmap must use the 24-point readable cell cap."
+        )
+        XCTAssertGreaterThanOrEqual(
+            chart.frame.width,
+            168,
+            "A one-month Heatmap must not remain the old 116–121 point cluster."
         )
         XCTAssertLessThanOrEqual(
             chart.frame.width,
-            checklistGrid.frame.width + 2,
+            scroller.frame.width + 2,
             "A one-month Heatmap must fit its card without horizontal overflow."
         )
         XCTAssertLessThanOrEqual(
@@ -1269,17 +1318,38 @@ final class timetrackerUITests: XCTestCase {
             ]
         )
         #if os(macOS)
-        try placeMainWindowOnPrimaryScreen(in: relaunchedApp)
+        openSettings(in: relaunchedApp)
         #endif
         XCTAssertTrue(
             relaunchedApp.descendants(matching: .any)["settings.view"]
                 .waitForExistence(timeout: 8)
         )
 
-        #if os(iOS)
+        #if os(macOS)
+        let persistedSettingsWindow = try XCTUnwrap(
+            relaunchedApp.windows.allElementsBoundByIndex.first { window in
+                window.descendants(matching: .any)["settings.view"].exists
+            }
+        )
+        let persistedGeneral = persistedSettingsWindow
+            .descendants(matching: .any)
+            .matching(identifier: "settings.category.general")
+            .firstMatch
+        #else
         let persistedGeneral = relaunchedApp.buttons[
             "settings.category.general"
         ].firstMatch
+        #endif
+        #if os(macOS)
+        XCTAssertTrue(
+            waitForElement(
+                persistedGeneral,
+                timeout: 5,
+                diagnosticName: "heatmap-period-persisted-general",
+                in: relaunchedApp
+            )
+        )
+        #else
         XCTAssertTrue(
             waitForElement(
                 persistedGeneral,
@@ -1291,6 +1361,21 @@ final class timetrackerUITests: XCTestCase {
         activate(persistedGeneral)
         #endif
 
+        #if os(macOS)
+        let persistedPeriodPicker = persistedSettingsWindow
+            .descendants(matching: .any)[
+                "settings.todayHeatmap.period"
+            ].firstMatch
+        let persistedSettingsScrollView = persistedSettingsWindow.scrollViews[
+            "settings.view"
+        ].firstMatch
+        for _ in 0 ..< 10 where !persistedPeriodPicker.isHittable {
+            persistedSettingsScrollView.scroll(
+                byDeltaX: 0,
+                deltaY: -420
+            )
+        }
+        #else
         let persistedPeriodPicker = relaunchedApp.descendants(matching: .any)[
             "settings.todayHeatmap.period"
         ].firstMatch
@@ -1300,6 +1385,7 @@ final class timetrackerUITests: XCTestCase {
             maximumScrolls: 10,
             in: relaunchedApp
         )
+        #endif
         XCTAssertTrue(
             waitForElement(
                 persistedPeriodPicker,
@@ -7596,14 +7682,22 @@ final class timetrackerUITests: XCTestCase {
         let heatmapTaskID = heatmapChart.identifier.dropFirst(
             "home.heatmap.chart.".count
         )
+        let heatmapScroller = app.descendants(matching: .any)[
+            "home.heatmap.scroller.\(heatmapTaskID)"
+        ].firstMatch
         let heatmapCard = app.descendants(matching: .any)[
             "home.heatmap.card.\(heatmapTaskID)"
         ].firstMatch
         scrollUntilFullyVisibleAboveSystemChrome(heatmapCard, in: app)
         assertReadableHomeVisualization(
             card: heatmapCard,
-            contains: heatmapChart,
+            contains: heatmapScroller,
             in: app
+        )
+        XCTAssertGreaterThan(
+            heatmapChart.frame.width,
+            heatmapScroller.frame.width,
+            "A one-year Heatmap must keep readable cells and expose horizontal scrolling."
         )
         XCTAssertEqual(
             heatmapCard.frame.minX,
@@ -7638,6 +7732,9 @@ final class timetrackerUITests: XCTestCase {
         let landscapeHeatmapChart = app.descendants(matching: .any)[
             heatmapChart.identifier
         ].firstMatch
+        let landscapeHeatmapScroller = app.descendants(matching: .any)[
+            heatmapScroller.identifier
+        ].firstMatch
         let landscapeHeatmapCard = app.descendants(matching: .any)[
             heatmapCard.identifier
         ].firstMatch
@@ -7647,8 +7744,12 @@ final class timetrackerUITests: XCTestCase {
         )
         assertReadableHomeVisualization(
             card: landscapeHeatmapCard,
-            contains: landscapeHeatmapChart,
+            contains: landscapeHeatmapScroller,
             in: app
+        )
+        XCTAssertGreaterThan(
+            landscapeHeatmapChart.frame.width,
+            landscapeHeatmapScroller.frame.width
         )
         XCTAssertEqual(
             landscapeHeatmapCard.frame.minX,

@@ -1,9 +1,9 @@
 # 78：分析页与任务详情共用独立时间段编辑 UI 实现记忆
 
-状态：2026-07-27 实现中
+状态：2026-07-27 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
-> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
+> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[x]` 条目。
 
 ## 认领的反馈条目
 
@@ -31,9 +31,9 @@
 - [x] 两个入口都复用可删除 segment 的共享 editor，并保留取消、失败反馈和并发安全语义。
 - [x] 活动 timer 保留既有规则；Apple Health 只读记录、重复/已删除 identity 不获得非法
   编辑入口。
-- [~] iPhone/iPad 正常字号定向 UI 测试与截图已覆盖入口、修改、删除确认及返回；macOS
+- [x] iPhone/iPad 正常字号定向 UI 测试与截图已覆盖入口、修改、删除确认及返回；macOS
   signed build 通过，XCUITest 被系统 `WidgetRenderer_Activities` crash reporter 抢焦点
-  阻断，保留 xcresult 作为未完成的平台证据。
+  阻断，保留 xcresult 作为该平台 inconclusive 证据。
 
 ## Checkpoint 编排
 
@@ -41,7 +41,7 @@
 - [x] B：先补 command/store 边界测试，锁定 canonical identity 与 presentation 语义。
 - [x] C：复用独立 segment editor presentation，接入分析页与任务详情并补 UI
   acceptance 测试。
-- [~] D：完成全量、截图、Release 全设备安装与收口。
+- [x] D：完成全量、截图、Release 全设备安装与收口。
 
 ## 库策略
 
@@ -135,3 +135,8 @@
 - 2026-07-27：完整 `make test` 首轮只暴露一条遗留源码字符串扫描误报；按仓库测试
   规则将它替换为 `HourTaskActivityService` 的任务身份、颜色和时长分桶行为测试。
   最终 `make test` 通过 1438 tests / 162 suites。
+- 2026-07-27：实现提交 `f9f80be2` 后运行 `make build-install-all` 成功；Release App
+  已安装到实体 iPhone Air，内嵌 Watch companion 的签名与 designated requirement
+  通过，macOS App 已复制并验签到 `/Applications/timetracker.app`。运行时没有可直接
+  枚举的实体 Apple Watch，配对手表由 iPhone Watch App 的 Automatic App Install
+  接管 companion 安装。反馈条目与子条目均标记完成，并移除 `~78` 活动链接。

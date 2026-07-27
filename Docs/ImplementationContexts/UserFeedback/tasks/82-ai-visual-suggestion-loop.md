@@ -1,6 +1,6 @@
 # 82：AI 视觉推荐打断输入与重复预测实现记忆
 
-状态：2026-07-28 实现与全量门禁完成，等待设备安装
+状态：2026-07-28 完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -33,14 +33,14 @@
 - [x] 先补 UI 自动化或确定性焦点测试，证明预测完成时文本输入仍连续。
 - [x] 实现后复跑定向行为测试和 iPhone UI 验收并保留截图；macOS 编译并明确跳过软件键盘专属断言。
 - [x] 完整测试及格式/本地化门禁通过。
-- [ ] Release 全设备安装通过。
+- [x] Release 全设备安装通过。
 
 ## Checkpoint 编排
 
 - [x] A：完成调用链、焦点、副作用循环、测试与依赖审计。
 - [x] B：新增先失败的行为/交互回归测试。
 - [x] C：实现最新输入获胜、取消/去抖、去重及手动选择保护。
-- [ ] D：完成定向、全量、截图、Release 全设备安装与关闭。
+- [x] D：完成定向、全量、截图、Release 全设备安装与关闭。
 
 ## 库策略
 
@@ -83,3 +83,8 @@
 - 2026-07-28：完整 `make test` 通过（1447 tests / 162 suites，52.505 秒）；
   `make format-check` 为 0/842，localization parity 为 9/9，hooks 与
   `git diff --check` 均通过。等待实现 checkpoint 提交与 `make build-install-all`。
+- 2026-07-28：实现 checkpoint `3218876a`（`1.1.289 (344)`）完成；
+  `make build-install-all` Release 构建、签名并安装到 iPad Pro M4、
+  iPhone Air（含嵌入式 Watch companion）及 `/Applications/timetracker.app`。
+  当前没有可见的独立物理 Apple Watch，因此 companion 的独立设备覆盖仍按项目
+  既有规则依赖配对 iPhone 的 Automatic App Install。

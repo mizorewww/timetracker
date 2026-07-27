@@ -1,1 +1,0 @@
-../tasks/82-ai-visual-suggestion-loop.md

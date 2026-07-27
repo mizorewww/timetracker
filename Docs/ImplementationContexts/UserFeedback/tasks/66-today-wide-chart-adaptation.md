@@ -1,6 +1,6 @@
 # 66：Today 宽屏 Heatmap 与柱状图自适应 实现记忆
 
-状态：2026-07-27 进行中
+状态：2026-07-27 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -31,9 +31,9 @@
 ## Checkpoint 编排
 
 - [x] A：领取反馈并建立活动实现记忆。
-- [~] B：审计 Today 顶部图表组合、尺寸策略、测试夹具与 HIG 约束。
-- [ ] C：先补布局/验收测试，再实现宽度自适应并更新当前文档。
-- [ ] D：完成单测、三平台 XCUITest/截图、Release 全设备安装与收口。
+- [x] B：审计 Today 顶部图表组合、尺寸策略、测试夹具与 HIG 约束。
+- [x] C：先补布局/验收测试，再实现宽度自适应并更新当前文档。
+- [x] D：完成单测、三平台 XCUITest/截图、Release 全设备安装与收口。
 
 ## 子 Agent 分工
 
@@ -49,3 +49,27 @@
 ## 进度记录
 
 - 2026-07-27：认领任务，创建实现记忆和 `~66` 活动链接，开始三路只读审计。
+- 2026-07-27：代码审计确认外层 Section/Card 曾占满宽度，而周柱状图内部固定
+  `720 pt`、Heatmap 内容约 `667 pt`；设计审计建议两类可视化独立位于可选下部
+  分栏之前，避免 Forecast/Countdown 出现时触发宽度突变；测试审计确认可复用
+  `--uitesting-today-heatmap` fixture 与现有稳定 identifier。
+- 2026-07-27：新增共享宽度策略：窄内容区自然填充，宽内容区的可视化 Section
+  上限为 `720 pt` 内容加两侧各 `14 pt` 卡片内边距；Weekly Gross 与 Activity
+  Heatmaps 保持同宽、左对齐，并移到可选 Today 下部双栏之前。短 Heatmap 改为
+  左对齐，溢出内容初始仍显示最新日期。同步更新 Architecture、CodeGuide 和
+  UI-Design。
+- 2026-07-27：测试先行补充布局策略单测，以及宽屏 iPad/macOS 的真实几何断言与
+  截图测试。macOS 通过
+  `build/UITestResults/macOS-20260727-130940.xcresult`；iPad Pro 13-inch 竖屏与
+  横屏通过 `build/UITestResults/iOS-20260727-131054.xcresult`；iPhone 既有卡片
+  分离回归通过 `build/UITestResults/iOS-20260727-131430.xcresult`。三组截图均已
+  导出并目检，无裁切、重叠或超宽拉伸；两台 owned iOS 模拟器均已关闭并删除。
+- 2026-07-27：未新增第三方库；使用 SwiftUI、Apple Charts 和现有 Heatmap
+  组件完成。Apple HIG/SwiftUI 指引落实为基于可用宽度的单一布局策略、稳定的
+  leading alignment、可读内容上限和 iPhone 紧凑布局回归。
+- 2026-07-27：最终门禁通过：`CoreArchitectureBehaviorTests` 4 项、
+  `TodayActivityHeatmapTests` 12 项、完整 `make test` 1420 项/157 suites、
+  SwiftFormat 830 个 Swift 文件、本地化 parity 9/9。`make build-install-all`
+  成功构建 Release 1.1.231 (286)，安装到 iPad Pro M4、iPhone Air，并将签名
+  有效的 macOS App 复制到 `/Applications/timetracker.app`。Watch companion
+  已嵌入并通过签名验证；本次没有可见的物理 Apple Watch。

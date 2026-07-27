@@ -61,6 +61,11 @@ private struct DesktopTodayContent: View {
                 openTask: openTask,
                 startTimer: startTimer
             )
+            visualizationSections
+                .frame(
+                    maxWidth: layout.visualizationSectionWidth,
+                    alignment: .leading
+                )
 
             if layout.usesTwoColumnContent, content.hasSupportingContent {
                 HStack(alignment: .top, spacing: layout.contentSpacing) {
@@ -78,14 +83,6 @@ private struct DesktopTodayContent: View {
 
     private var primarySections: some View {
         VStack(alignment: .leading, spacing: layout.contentSpacing) {
-            HomeWeeklyGrossTimeSection(
-                store: store,
-                container: .card
-            )
-            HomeActivityHeatmapSection(
-                store: store,
-                container: .card
-            )
             QuickStartSection(
                 store: store,
                 tasks: content.quickStartTasks,
@@ -95,6 +92,19 @@ private struct DesktopTodayContent: View {
                 store: store,
                 segments: content.timelineSegments,
                 openTask: openTask
+            )
+        }
+    }
+
+    private var visualizationSections: some View {
+        VStack(alignment: .leading, spacing: layout.contentSpacing) {
+            HomeWeeklyGrossTimeSection(
+                store: store,
+                container: .card
+            )
+            HomeActivityHeatmapSection(
+                store: store,
+                container: .card
             )
         }
     }

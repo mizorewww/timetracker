@@ -7211,6 +7211,120 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTodayWideVisualizationsUseReadableWidth() throws {
+        #if os(iOS)
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        #endif
+
+        let app = launchApp(
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: [
+                "--uitesting-today-heatmap",
+                "--uitesting-reset-demo-preferences",
+            ]
+        )
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: app)
+        #endif
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let prefix = platformScreenshotPrefix(in: app)
+        if prefix == "iphone" {
+            throw XCTSkip("Readable-width chart caps apply to the regular Today canvas.")
+        }
+
+        let weeklyCard = app.descendants(matching: .any)[
+            "home.weeklyGross.card"
+        ].firstMatch
+        scrollUntilFullyVisibleAboveSystemChrome(weeklyCard, in: app)
+        assertReadableHomeVisualization(
+            card: weeklyCard,
+            in: app
+        )
+        try capture("\(prefix)-home-wide-weekly-gross", app: app)
+
+        let heatmapChart = app.descendants(matching: .any)
+            .matching(
+                NSPredicate(
+                    format: "identifier BEGINSWITH %@",
+                    "home.heatmap.chart."
+                )
+            )
+            .firstMatch
+        XCTAssertTrue(heatmapChart.waitForExistence(timeout: 8))
+        let heatmapTaskID = heatmapChart.identifier.dropFirst(
+            "home.heatmap.chart.".count
+        )
+        let heatmapCard = app.descendants(matching: .any)[
+            "home.heatmap.card.\(heatmapTaskID)"
+        ].firstMatch
+        scrollUntilFullyVisibleAboveSystemChrome(heatmapCard, in: app)
+        assertReadableHomeVisualization(
+            card: heatmapCard,
+            contains: heatmapChart,
+            in: app
+        )
+        XCTAssertEqual(
+            heatmapCard.frame.minX,
+            weeklyCard.frame.minX,
+            accuracy: 2,
+            "The two Today visualization types must share a leading edge."
+        )
+        XCTAssertEqual(
+            heatmapCard.frame.width,
+            weeklyCard.frame.width,
+            accuracy: 2,
+            "The two Today visualization types must share one readable card width."
+        )
+        try capture("\(prefix)-home-wide-heatmap", app: app)
+
+        #if os(iOS)
+        XCUIDevice.shared.orientation = .landscapeLeft
+        XCTAssertTrue(waitUntil(timeout: 5) {
+            let frame = app.windows.firstMatch.frame
+            return frame.width > frame.height
+        })
+
+        let landscapeWeeklyCard = app.descendants(matching: .any)[
+            "home.weeklyGross.card"
+        ].firstMatch
+        scrollUntilFullyVisibleAboveSystemChrome(landscapeWeeklyCard, in: app)
+        assertReadableHomeVisualization(
+            card: landscapeWeeklyCard,
+            in: app
+        )
+
+        let landscapeHeatmapChart = app.descendants(matching: .any)[
+            heatmapChart.identifier
+        ].firstMatch
+        let landscapeHeatmapCard = app.descendants(matching: .any)[
+            heatmapCard.identifier
+        ].firstMatch
+        scrollUntilFullyVisibleAboveSystemChrome(
+            landscapeHeatmapCard,
+            in: app
+        )
+        assertReadableHomeVisualization(
+            card: landscapeHeatmapCard,
+            contains: landscapeHeatmapChart,
+            in: app
+        )
+        XCTAssertEqual(
+            landscapeHeatmapCard.frame.minX,
+            landscapeWeeklyCard.frame.minX,
+            accuracy: 2
+        )
+        XCTAssertEqual(
+            landscapeHeatmapCard.frame.width,
+            landscapeWeeklyCard.frame.width,
+            accuracy: 2
+        )
+        try capture("ipad-home-wide-visualizations-landscape", app: app)
+        #endif
+    }
+
+    @MainActor
     func testTodayVisualizationCardsAreVisuallyIndependent() throws {
         #if os(macOS)
         throw XCTSkip("Native List card separation is verified on iPhone and iPad.")
@@ -10611,6 +10725,53 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(
             card.frame.insetBy(dx: -2, dy: -2).contains(grid.frame),
             "A Heatmap grid must belong only to its task card."
+        )
+    }
+
+    @MainActor
+    private func assertReadableHomeVisualization(
+        card: XCUIElement,
+        contains plot: XCUIElement? = nil,
+        in app: XCUIApplication
+    ) {
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+
+        let cardFrame = card.frame
+        let windowFrame = app.windows.firstMatch.frame
+        XCTAssertTrue(
+            cardFrame.origin.x.isFinite &&
+                cardFrame.origin.y.isFinite &&
+                cardFrame.width.isFinite &&
+                cardFrame.height.isFinite
+        )
+        XCTAssertGreaterThan(cardFrame.width, 0)
+        XCTAssertGreaterThan(cardFrame.height, 0)
+        XCTAssertLessThanOrEqual(
+            cardFrame.width,
+            750,
+            "Regular Today visualization cards must keep their 748-point readable-width cap."
+        )
+        XCTAssertGreaterThanOrEqual(cardFrame.minX, windowFrame.minX - 2)
+        XCTAssertLessThanOrEqual(cardFrame.maxX, windowFrame.maxX + 2)
+
+        guard let plot else { return }
+        XCTAssertTrue(plot.waitForExistence(timeout: 5))
+        let plotFrame = plot.frame
+        XCTAssertTrue(
+            plotFrame.origin.x.isFinite &&
+                plotFrame.origin.y.isFinite &&
+                plotFrame.width.isFinite &&
+                plotFrame.height.isFinite
+        )
+        XCTAssertGreaterThan(plotFrame.width, 0)
+        XCTAssertGreaterThan(plotFrame.height, 0)
+        XCTAssertGreaterThanOrEqual(plotFrame.minX, cardFrame.minX - 2)
+        XCTAssertLessThanOrEqual(plotFrame.maxX, cardFrame.maxX + 2)
+        XCTAssertEqual(
+            plotFrame.minX,
+            cardFrame.minX + 14,
+            accuracy: 2,
+            "Visualization plots must align with the card's content edge instead of floating inside wide cards."
         )
     }
 

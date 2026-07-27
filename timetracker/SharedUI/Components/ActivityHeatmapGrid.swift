@@ -14,7 +14,7 @@ struct ActivityHeatmapGrid: View {
             }
             .scrollIndicators(.hidden)
             .defaultScrollAnchor(.trailing, for: .initialOffset)
-            .defaultScrollAnchor(.trailing, for: .alignment)
+            .defaultScrollAnchor(.leading, for: .alignment)
 
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {

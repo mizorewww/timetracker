@@ -109,4 +109,18 @@ struct CoreArchitectureBehaviorTests {
         #expect(PomodoroPageLayoutPolicy(viewportWidth: 390, prefersSingleColumn: false).verticalPadding == 16)
         #expect(PomodoroPageLayoutPolicy(viewportWidth: 900, prefersSingleColumn: false).verticalPadding == 24)
     }
+
+    @Test @MainActor
+    func homeVisualizationsFillNarrowContentAndCapReadableWidth() {
+        let widths: [CGFloat] = [0, 600, 900, 1400]
+        let policies = widths.map(HomeLayoutPolicy.init(width:))
+
+        #expect(policies.map(\.visualizationSectionWidth) == [0, 564, 748, 748])
+        #expect(
+            policies.allSatisfy {
+                $0.visualizationSectionWidth >= 0 &&
+                    $0.visualizationSectionWidth <= $0.contentWidth
+            }
+        )
+    }
 }

@@ -86,7 +86,7 @@ struct HomeWeeklyGrossTimeSection: View {
                             .frame(height: 210)
                     }
                 }
-                .padding(14)
+                .padding(HomeLayoutPolicy.visualizationCardPadding)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .appCard(padding: 0)
                 .accessibilityElement(children: .contain)

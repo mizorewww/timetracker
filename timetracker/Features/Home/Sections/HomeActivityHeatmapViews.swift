@@ -128,7 +128,7 @@ struct HomeActivityHeatmapSection: View {
                         LazyVStack(spacing: 10) {
                             ForEach(snapshots) { snapshot in
                                 TaskActivityHeatmapCard(snapshot: snapshot)
-                                    .padding(14)
+                                    .padding(HomeLayoutPolicy.visualizationCardPadding)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .appCard(padding: 0)
                                     .accessibilityElement(children: .contain)
@@ -186,7 +186,7 @@ struct HomeActivityHeatmapSection: View {
         ProgressView()
             .frame(maxWidth: .infinity)
             .frame(height: 120)
-            .padding(14)
+            .padding(HomeLayoutPolicy.visualizationCardPadding)
             .appCard(padding: 0)
     }
 

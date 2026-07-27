@@ -21,7 +21,7 @@ struct HomeWeeklyGrossTimeChart: View {
                     dateDomain: chartDomain
                 )
             }
-            .frame(maxWidth: 720)
+            .frame(maxWidth: HomeLayoutPolicy.visualizationContentMaximumWidth)
             .frame(height: chartHeight)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityElement(children: .contain)

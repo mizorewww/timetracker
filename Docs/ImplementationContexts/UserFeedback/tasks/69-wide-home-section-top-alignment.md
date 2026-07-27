@@ -1,6 +1,6 @@
 # 69：宽屏主页区块起始高度一致 实现记忆
 
-状态：2026-07-27 进行中
+状态：2026-07-27 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -28,7 +28,7 @@
 - [x] A：领取反馈并建立活动实现记忆。
 - [x] B：并行审计宽屏主页组合、间距来源与稳定 UI 测试探针。
 - [x] C：先补失败的几何测试，再实现最小共享布局修复并更新文档。
-- [~] D：完成格式、单测、iPad/macOS XCUITest/截图、紧凑回归、Release 全设备安装与收口。
+- [x] D：完成格式、单测、iPad/macOS XCUITest/截图、紧凑回归、Release 全设备安装与收口。
 
 ## 子 Agent 分工
 
@@ -50,3 +50,4 @@
 - 2026-07-27：macOS 与 iPad Pro 13″ M4 横屏几何测试均以标题叶子探针在 2 pt 容差内通过；普通字号截图确认标题、首卡顶部、双栏间距和 Info 按钮正常。最终严格证据为 `macOS-20260727-160325.xcresult` 与 `iOS-20260727-160541.xcresult`；一次因错误 Make 变量而落到 iPhone 并跳过的运行不计作验收。
 - 2026-07-27：默认 iPhone 的 `AdaptiveShellUITests/testNowSectionRendersInWhicheverShellIsChosen` 通过，确认紧凑单列 Now 未回归；结果为 `iOS-20260727-160737.xcresult`。
 - 2026-07-27：SwiftFormat 830 个文件零改动/零 lint，本地化 9/9、版本钩子检查通过；signed macOS 全量 `make test` 共 1419 个测试通过。
+- 2026-07-27：Release 1.1.240 (295) 全设备门禁通过；iOS app 与内嵌 Watch 伴侣签名有效并安装到 iPad Pro M4 `748D0137-ADC3-58AF-855C-1E98B3125F93`、iPhone Air `FBA36694-D841-56D4-8ED6-21942873B21B`，macOS 通用 app 签名有效并复制到 `/Applications/timetracker.app`。当前无可见物理 Apple Watch，故实表仅依赖配对 iPhone 的自动安装。

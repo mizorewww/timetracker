@@ -1,9 +1,11 @@
 #if os(macOS)
+import MacKeyboardShortcuts
 import SwiftUI
 
 struct TimeTrackerCommands: Commands {
     @FocusedValue(\.timeTrackerStore) private var store
     @FocusedValue(\.appPresentationRouter) private var presentationRouter
+    let shortcutSettings: MacKeyboardShortcutSettings
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
@@ -12,13 +14,17 @@ struct TimeTrackerCommands: Commands {
                 presentationRouter.presentNewTask(using: store)
             }
             .keyboardShortcut("n", modifiers: [.command])
+            .accessibilityIdentifier("menu.shortcut.newTask")
             .disabled(store == nil || presentationRouter?.canPresent != true)
 
             Button(AppStrings.addTime) {
                 guard let store, let presentationRouter else { return }
                 presentationRouter.presentManualTime(using: store)
             }
-            .keyboardShortcut("m", modifiers: [.command, .shift])
+            .keyboardShortcut(shortcut(for: .addTime))
+            .id(shortcutIdentity(for: .addTime))
+            .accessibilityIdentifier("menu.shortcut.addTime")
+            .accessibilityValue(shortcutDescription(for: .addTime))
             .disabled(store == nil || presentationRouter?.canPresent != true)
         }
 
@@ -26,13 +32,19 @@ struct TimeTrackerCommands: Commands {
             Button(AppStrings.localized("menu.startSelectedTask")) {
                 store?.startSelectedTask()
             }
-            .keyboardShortcut("s", modifiers: [.command, .shift])
+            .keyboardShortcut(shortcut(for: .startSelectedTask))
+            .id(shortcutIdentity(for: .startSelectedTask))
+            .accessibilityIdentifier("menu.shortcut.startSelectedTask")
+            .accessibilityValue(shortcutDescription(for: .startSelectedTask))
             .disabled(canTrackSelectedTask == false)
 
             Button(AppStrings.localized("menu.startPomodoro")) {
                 store?.startPomodoroForSelectedTask()
             }
-            .keyboardShortcut("p", modifiers: [.command, .shift])
+            .keyboardShortcut(shortcut(for: .startPomodoro))
+            .id(shortcutIdentity(for: .startPomodoro))
+            .accessibilityIdentifier("menu.shortcut.startPomodoro")
+            .accessibilityValue(shortcutDescription(for: .startPomodoro))
             .disabled(canTrackSelectedTask == false)
 
             Divider()
@@ -71,9 +83,31 @@ struct TimeTrackerCommands: Commands {
             Button(AppStrings.localized("menu.refreshData")) {
                 store?.refreshQuietly()
             }
-            .keyboardShortcut("r", modifiers: [.command])
+            .keyboardShortcut(shortcut(for: .refreshData))
+            .id(shortcutIdentity(for: .refreshData))
+            .accessibilityIdentifier("menu.shortcut.refreshData")
+            .accessibilityValue(shortcutDescription(for: .refreshData))
             .disabled(store == nil)
         }
+    }
+
+    private func shortcut(
+        for action: MacKeyboardShortcutAction
+    ) -> KeyboardShortcut? {
+        shortcutSettings.shortcut(for: action)?.toSwiftUI
+    }
+
+    private func shortcutIdentity(
+        for action: MacKeyboardShortcutAction
+    ) -> String {
+        "\(action.rawValue)-\(shortcutSettings.revision)"
+    }
+
+    private func shortcutDescription(
+        for action: MacKeyboardShortcutAction
+    ) -> String {
+        shortcutSettings.shortcut(for: action).map(String.init(describing:))
+            ?? AppStrings.localized("settings.keyboardShortcuts.none")
     }
 
     private var canTrackSelectedTask: Bool {

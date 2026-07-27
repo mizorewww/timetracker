@@ -139,6 +139,8 @@
 "liveActivity.settings.retry" = "重試即時動態";
 "settings.category.general.title" = "一般";
 "settings.category.general.subtitle" = "計時行為與倒數事件";
+"settings.category.shortcuts.title" = "鍵盤快速鍵";
+"settings.category.shortcuts.subtitle" = "自訂常用時間管理操作";
 "settings.category.archivedTasks.title" = "封存任務";
 "settings.category.archivedTasks.subtitle" = "查看並取消封存任務";
 "settings.category.focus.title" = "專注";
@@ -149,6 +151,11 @@
 "settings.category.intelligence.subtitle" = "私人端點與模型設定";
 "settings.category.advanced.title" = "進階";
 "settings.category.advanced.subtitle" = "維護、診斷與 App 資訊";
+"settings.keyboardShortcuts.title" = "鍵盤快速鍵";
+"settings.keyboardShortcuts.footer" = "快速鍵僅在 Time Tracker 位於前景時生效。「新增任務」、「設定」和導覽快速鍵保持固定。一般按鍵需配合 Command、Option 或 Control；功能鍵可單獨使用。";
+"settings.keyboardShortcuts.resetAll" = "還原預設快速鍵";
+"settings.keyboardShortcuts.none" = "無";
+"settings.keyboardShortcuts.duplicateFormat" = "%@ 已使用這個快速鍵。";
 "settings.defaultMode" = "預設模式";
 "settings.focusMinutes" = "專注分鐘";
 "settings.breakMinutes" = "休息分鐘";

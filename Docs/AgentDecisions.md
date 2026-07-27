@@ -1,7 +1,7 @@
 # TimeTracker Agent 决策文档
 
 状态：有效决策记录
-最近更新：2026-07-26
+最近更新：2026-07-28
 
 本文记录自动化 Agent 和维护者在实现、审核、重构时必须保持的工程边界。它不是待办清单，也不替代代码审核。一次性发现写入带日期的 Audit 文档，未来计划写入 Plan 文档。
 
@@ -1820,6 +1820,25 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：macOS 花瓣从实际被点按的颜色 well 中心展开，不再因嵌套 popover 与 key window 的坐标空间不同而漂移；屏幕边缘仍能完整显示。应用承担一层很薄的 AppKit presentation lifecycle，但不维护颜色算法或视觉几何。未来升级上游时，若其 presenter 接受真实 owner/anchor 且通过相同回归，可删除本适配层。
 
 验证：先失败的 macOS XCUITest 记录 well 中心与 Blossom 中心相距 75 pt；修复后用新建的 180...210 pt 方形窗口定位实际 194 pt Blossom，并断言普通位置中心距离不超过 4 pt。最终结果包 1/1 通过且 `runtimeWarnings` 为空，正常字号全屏截图确认 SF Symbols popover 与花瓣层级无漂移；现有 iPhone 与 iPad 图标/颜色选择 UI 回归各 1/1 通过。完整签名单元、格式、本地化、构建与全设备安装仍是任务关闭门禁。
+
+## AD-136：macOS 菜单快捷键是设备本地应用内偏好
+
+状态：Accepted
+
+背景：macOS 的常用时间管理动作需要可发现、可录制且即时更新的菜单快捷键。只用 SwiftUI 可以绑定已知组合，却没有可靠的键码录制、菜单/系统冲突校验和键盘布局转换；自行复制这些能力会形成第二套脆弱实现。另一方面，成熟库的命名模式注册全局 hotkey，并固定写入 `UserDefaults.standard`，不符合本应用只在前台响应、使用隔离 `AppDefaults`、可测试原子写入的要求。主应用 target 同时进入 macOS 与 iOS 构建图，也不能让 macOS-only 包污染 iOS 链接。
+
+决策：
+
+- 使用精确锁定的 Sindre Sorhus `KeyboardShortcuts 3.0.1`（revision `49c3fc04ea827f816df67843bfcc57286b47ff06`、MIT、审计时约 2.7k stars）提供 binding recorder、键码转换、本地化和菜单/系统/不可用组合冲突策略；不得在应用内重写录制器或键码表。
+- 远程包经本地 `MacKeyboardShortcuts` Swift Package 的 `.when(platforms: [.macOS])` 条件适配进入共享 Xcode target。适配层只 re-export 库，不拥有行为或视觉实现。
+- 触发继续由原生 SwiftUI `Commands` / `keyboardShortcut` 负责，因此只在 Time Tracker 为当前应用时响应，菜单始终展示当前组合。应用根持有一个 `MacKeyboardShortcutSettings`，同一实例注入主场景、Settings 场景和 Commands；修改发布 revision，使相关菜单项无需重启即可重建。
+- 只开放添加时间、开始所选任务、开始番茄钟和刷新数据。`Command-N`、`Command-,`、`Command-1...5` 依照平台惯例保持固定；库判定的菜单冲突、系统冲突和不可用组合全部阻止。应用命令边界还拒绝动作间重复、固定组合和无修饰普通键，功能键可以单独使用。
+- 自定义属于设备与键盘布局偏好，不进入 `TimeTrackerStore`、SwiftData、CloudKit 或同步导出。`MacKeyboardShortcutPreferenceCommand` 只通过 `AppDefaults.shared` 写一个 4 KiB 上限的原子 Codable blob；缺少动作继承默认，`disabled` 是显式清空，`custom` 是覆盖。损坏、超限、未知 schema、不可表示、重复或保留组合在读取时整体回退默认且不回写。
+- 不使用库的 `KeyboardShortcuts.Name` / global hotkey 存储路径；Settings 必须使用 binding recorder，持久化和 durable validation 仍属于应用命令边界。
+
+后果：用户获得符合 macOS 菜单习惯的即时自定义能力，同时不会在后台抢占系统按键，也不会把一台 Mac 的物理键盘选择同步到其它设备。应用维护少量动作策略和原子 payload，但录制、键码与底层冲突识别由成熟库承担。新增快捷动作必须同时定义默认/保留策略、菜单可用条件、三语文案和命令边界测试，不能把标准菜单快捷键改作可配置动作。
+
+验证：行为测试覆盖四项默认、跨实例覆盖、显式清空、自定义覆盖、重置、损坏/超限回退、重复、固定组合和无修饰普通键拒绝。macOS UI 自动化在普通字号下确认四个原生 recorder、默认组合和默认态禁用的重置按钮，保存 Settings 与带快捷键的 File 菜单截图，并实际按下 `Shift-Command-M` 触发 focused-scene 的添加时间动作。iOS 签名构建证明条件依赖没有进入非 macOS 产品。完整 `make test`、格式、本地化和 `make build-install-all` 仍是任务关闭门禁。
 
 ## 2. Agent 工作清单
 

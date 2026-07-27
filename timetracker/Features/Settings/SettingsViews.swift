@@ -5,6 +5,9 @@ struct SettingsView: View {
     let store: TimeTrackerStore
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @Environment(AppSceneFeedbackRouter.self) var feedbackRouter
+    #if os(macOS)
+    @Environment(MacKeyboardShortcutSettings.self) var shortcutSettings
+    #endif
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State var pendingDestructiveConfirmation: SettingsDestructiveConfirmation?
     @State var isExportPresented = false

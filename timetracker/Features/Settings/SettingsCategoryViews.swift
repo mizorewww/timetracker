@@ -29,6 +29,9 @@ struct SettingsSidebarIconMetrics: Equatable {
 
 enum SettingsCategory: String, CaseIterable, Identifiable {
     case general
+    #if os(macOS)
+    case shortcuts
+    #endif
     case archivedTasks
     case focus
     case dataAndSync
@@ -50,6 +53,9 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .general: "switch.2"
+        #if os(macOS)
+        case .shortcuts: "keyboard"
+        #endif
         case .archivedTasks: "archivebox"
         case .focus: "timer"
         case .dataAndSync: "externaldrive.badge.icloud"
@@ -61,6 +67,9 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
     var tint: Color {
         switch self {
         case .general: .blue
+        #if os(macOS)
+        case .shortcuts: .indigo
+        #endif
         case .archivedTasks: .orange
         case .focus: .orange
         case .dataAndSync: .cyan

@@ -31,6 +31,19 @@ enum MacKeyboardShortcutAction:
         }
     }
 
+    var title: String {
+        switch self {
+        case .addTime:
+            AppStrings.addTime
+        case .startSelectedTask:
+            AppStrings.localized("menu.startSelectedTask")
+        case .startPomodoro:
+            AppStrings.localized("menu.startPomodoro")
+        case .refreshData:
+            AppStrings.localized("menu.refreshData")
+        }
+    }
+
     static let reservedShortcuts: Set<KeyboardShortcuts.Shortcut> = [
         KeyboardShortcuts.Shortcut(.n, modifiers: [.command]),
         KeyboardShortcuts.Shortcut(.comma, modifiers: [.command]),

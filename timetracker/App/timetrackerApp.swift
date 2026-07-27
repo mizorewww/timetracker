@@ -14,6 +14,7 @@ struct timetrackerApp: App {
     static let applicationStore = TimeTrackerStore()
     @NSApplicationDelegateAdaptor(TimeTrackerAppDelegate.self) private var appDelegate
     @State private var store = timetrackerApp.applicationStore
+    @State private var shortcutSettings = MacKeyboardShortcutSettings()
     #endif
 
     static let applicationModelContainer = timetrackerApp.makeModelContainer()
@@ -32,6 +33,7 @@ struct timetrackerApp: App {
         Window(AppStrings.localized("app.name"), id: "main") {
             ContentView(store: store)
                 .frame(minWidth: 680, minHeight: 500)
+                .environment(shortcutSettings)
         }
         .modelContainer(sharedModelContainer)
         .defaultSize(width: 1180, height: 760)
@@ -39,13 +41,14 @@ struct timetrackerApp: App {
         .windowToolbarStyle(.unified)
         .commands {
             SidebarCommands()
-            TimeTrackerCommands()
+            TimeTrackerCommands(shortcutSettings: shortcutSettings)
         }
 
         Settings {
             SettingsSceneView(store: store)
                 .modelContainer(sharedModelContainer)
                 .frame(minWidth: 640, idealWidth: 720, minHeight: 620, idealHeight: 720)
+                .environment(shortcutSettings)
         }
         #else
         WindowGroup {

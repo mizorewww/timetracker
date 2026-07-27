@@ -29,6 +29,12 @@ final class MacKeyboardShortcutSettings {
         values[action]?.shortcut
     }
 
+    var isUsingDefaults: Bool {
+        MacKeyboardShortcutAction.allCases.allSatisfy {
+            shortcut(for: $0) == $0.defaultShortcut
+        }
+    }
+
     @discardableResult
     func setShortcut(
         _ shortcut: KeyboardShortcuts.Shortcut?,

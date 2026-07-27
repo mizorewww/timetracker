@@ -139,6 +139,8 @@
 "liveActivity.settings.retry" = "Retry Live Activity";
 "settings.category.general.title" = "General";
 "settings.category.general.subtitle" = "Timing behavior and countdown events";
+"settings.category.shortcuts.title" = "Shortcuts";
+"settings.category.shortcuts.subtitle" = "Customize frequent time-tracking actions";
 "settings.category.archivedTasks.title" = "Archived Tasks";
 "settings.category.archivedTasks.subtitle" = "View and unarchive tasks";
 "settings.category.focus.title" = "Focus";
@@ -149,6 +151,11 @@
 "settings.category.intelligence.subtitle" = "Private endpoint and model settings";
 "settings.category.advanced.title" = "Advanced";
 "settings.category.advanced.subtitle" = "Maintenance, diagnostics, and app information";
+"settings.keyboardShortcuts.title" = "Keyboard Shortcuts";
+"settings.keyboardShortcuts.footer" = "Shortcuts work while Time Tracker is active. New Task, Settings, and navigation shortcuts stay fixed. Ordinary keys require Command, Option, or Control; function keys can be used alone.";
+"settings.keyboardShortcuts.resetAll" = "Restore Default Shortcuts";
+"settings.keyboardShortcuts.none" = "None";
+"settings.keyboardShortcuts.duplicateFormat" = "%@ already uses this shortcut.";
 "settings.defaultMode" = "Default Mode";
 "settings.focusMinutes" = "Focus Minutes";
 "settings.breakMinutes" = "Break Minutes";

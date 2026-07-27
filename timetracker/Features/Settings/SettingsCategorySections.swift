@@ -59,6 +59,11 @@ extension SettingsView {
                 }
             )
 
+        #if os(macOS)
+        case .shortcuts:
+            MacKeyboardShortcutSettingsSection(settings: shortcutSettings)
+        #endif
+
         case .archivedTasks:
             ArchivedTasksSettingsSection(
                 store: store,

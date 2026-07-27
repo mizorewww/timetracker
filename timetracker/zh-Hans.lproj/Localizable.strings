@@ -139,6 +139,8 @@
 "liveActivity.settings.retry" = "重试实时活动";
 "settings.category.general.title" = "通用";
 "settings.category.general.subtitle" = "计时行为与倒计时事件";
+"settings.category.shortcuts.title" = "键盘快捷键";
+"settings.category.shortcuts.subtitle" = "自定义常用时间管理操作";
 "settings.category.archivedTasks.title" = "归档任务";
 "settings.category.archivedTasks.subtitle" = "查看并取消归档任务";
 "settings.category.focus.title" = "专注";
@@ -149,6 +151,11 @@
 "settings.category.intelligence.subtitle" = "私有端点与模型设置";
 "settings.category.advanced.title" = "高级";
 "settings.category.advanced.subtitle" = "维护、诊断与应用信息";
+"settings.keyboardShortcuts.title" = "键盘快捷键";
+"settings.keyboardShortcuts.footer" = "快捷键仅在 Time Tracker 位于前台时生效。“新建任务”、“设置”和导航快捷键保持固定。普通按键需配合 Command、Option 或 Control；功能键可单独使用。";
+"settings.keyboardShortcuts.resetAll" = "恢复默认快捷键";
+"settings.keyboardShortcuts.none" = "无";
+"settings.keyboardShortcuts.duplicateFormat" = "%@ 已使用这个快捷键。";
 "settings.defaultMode" = "默认模式";
 "settings.focusMinutes" = "专注分钟";
 "settings.breakMinutes" = "休息分钟";

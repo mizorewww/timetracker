@@ -104,6 +104,86 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testMacKeyboardShortcutSettingsUpdatesMenuAndAction() throws {
+        #if os(macOS)
+        let app = launchApp(replacesDemoDataOnLaunch: true)
+        XCTAssertTrue(homeIsReady(in: app))
+
+        openSettings(in: app)
+        let shortcutsCategory = app.descendants(matching: .any)[
+            "settings.category.shortcuts"
+        ].firstMatch
+        XCTAssertTrue(
+            shortcutsCategory.waitForExistence(timeout: 5) &&
+                shortcutsCategory.isHittable
+        )
+        activate(shortcutsCategory)
+
+        let settingsWindow = try XCTUnwrap(
+            app.windows.allElementsBoundByIndex.first { window in
+                window.descendants(matching: .any)[
+                    "settings.shortcuts.view"
+                ].exists
+            }
+        )
+        XCTAssertTrue(
+            waitUntil(timeout: 5) {
+                settingsWindow.searchFields.count == 4
+            },
+            "The shortcut section must expose one native recorder for each configurable action."
+        )
+        let addTimeRecorder = settingsWindow.searchFields.firstMatch
+        XCTAssertTrue(
+            addTimeRecorder.waitForExistence(timeout: 5) &&
+                addTimeRecorder.isHittable
+        )
+        XCTAssertTrue(
+            shortcutPresentation(of: addTimeRecorder).contains("M"),
+            "Add Time must expose its default Shift-Command-M shortcut."
+        )
+        try recordScreenshot(
+            settingsWindow.screenshot(),
+            name: "mac-settings-keyboard-shortcuts-defaults"
+        )
+        let resetAll = app.buttons["settings.shortcuts.resetAll"].firstMatch
+        XCTAssertTrue(resetAll.waitForExistence(timeout: 5))
+        XCTAssertFalse(
+            resetAll.isEnabled,
+            "Reset All must stay disabled while every action uses its default."
+        )
+
+        settingsWindow.typeKey("w", modifierFlags: .command)
+        app.activate()
+
+        let fileMenu = app.menuBars.menuBarItems["File"].firstMatch
+        XCTAssertTrue(fileMenu.waitForExistence(timeout: 3))
+        fileMenu.click()
+        let addTimeMenuItem = app.menuItems["Add Time"].firstMatch
+        XCTAssertTrue(addTimeMenuItem.waitForExistence(timeout: 3))
+        try recordScreenshot(
+            XCUIScreen.main.screenshot(),
+            name: "mac-file-menu-add-time-shortcut"
+        )
+        app.typeKey(.escape, modifierFlags: [])
+
+        app.typeKey("m", modifierFlags: [.shift, .command])
+        let manualTimeNote = app.descendants(matching: .any)[
+            "manualTime.note"
+        ].firstMatch
+        XCTAssertTrue(
+            manualTimeNote.waitForExistence(timeout: 5),
+            "The restored shortcut must invoke Add Time in the focused main scene."
+        )
+        let cancel = app.buttons["Cancel"].firstMatch
+        XCTAssertTrue(cancel.waitForExistence(timeout: 3) && cancel.isHittable)
+        activate(cancel)
+        XCTAssertTrue(manualTimeNote.waitForNonExistence(timeout: 5))
+        #else
+        throw XCTSkip("macOS-only shortcut settings")
+        #endif
+    }
+
+    @MainActor
     func testTrailingMenusStayReachableAtTaskCardEdges() throws {
         #if os(macOS)
         throw XCTSkip("Card-edge geometry is verified on iPhone.")
@@ -11118,6 +11198,14 @@ final class timetrackerUITests: XCTestCase {
                 title
             ))
             .firstMatch
+    }
+
+    private func shortcutPresentation(of element: XCUIElement) -> String {
+        [
+            element.label,
+            element.value.map { String(describing: $0) } ?? "",
+            element.title,
+        ].joined(separator: " ")
     }
 
     private func taskCategorySortRow(

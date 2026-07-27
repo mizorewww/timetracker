@@ -7,7 +7,6 @@ struct TaskChecklistEditorSection: View {
     let toggleChecklistItem: (UUID) -> Void
     let moveChecklistItems: (IndexSet, Int) -> Void
     let addChecklistItem: (Int?) -> Void
-    @State private var isSorting = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -15,19 +14,10 @@ struct TaskChecklistEditorSection: View {
             checklistRows
             addButton
         } header: {
-            HStack {
-                Text(.app("editor.checklist.title"))
-                Spacer()
-                Button(isSorting ? AppStrings.done : AppStrings.localized("common.sort")) {
-                    isSorting.toggle()
-                }
-                .font(.caption)
-                .buttonStyle(.borderless)
-            }
+            Text(.app("editor.checklist.title"))
         } footer: {
             Text(.app("editor.checklist.footer"))
         }
-        .checklistSortingMode(isSorting)
         .animation(
             reduceMotion ? nil : .snappy(duration: 0.28),
             value: rowPlacements
@@ -44,7 +34,6 @@ struct TaskChecklistEditorSection: View {
         ForEach(rowPlacements) { placement in
             ChecklistEditorRow(
                 item: $checklistItems[placement.sourceIndex],
-                isSorting: isSorting,
                 canMoveUp: canMove(placement: placement, direction: -1),
                 canMoveDown: canMove(placement: placement, direction: 1),
                 moveUp: { moveChecklistItem(visualIndex: placement.visualIndex, direction: -1) },
@@ -103,17 +92,6 @@ struct TaskChecklistEditorSection: View {
     private func deleteChecklistItem(at index: Int) {
         guard checklistItems.indices.contains(index) else { return }
         _ = checklistItems.remove(at: index)
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func checklistSortingMode(_ isSorting: Bool) -> some View {
-        #if os(macOS)
-        self
-        #else
-        environment(\.editMode, .constant(isSorting ? .active : .inactive))
-        #endif
     }
 }
 

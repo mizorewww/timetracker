@@ -4,7 +4,6 @@ struct InboxView: View {
     let store: TimeTrackerStore
     @State private var draft = InboxCaptureDraft()
     @State private var addFocusToken = 0
-    @State private var isSorting = false
     @State private var showsCompleted = false
     @State private var completionPresentationRevision = 0
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -30,7 +29,6 @@ struct InboxView: View {
     var body: some View {
         inboxList
         #if os(iOS)
-        .environment(\.editMode, .constant(isSorting ? EditMode.active : EditMode.inactive))
         .listStyle(.insetGrouped)
         .scrollDismissesKeyboard(.interactively)
         #else
@@ -43,27 +41,6 @@ struct InboxView: View {
             .navigationBarTitleDisplayMode(.large)
         #endif
             .accessibilityIdentifier("inbox.view")
-            .toolbar {
-                #if os(iOS)
-                if openItems.count > 1 {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button(action: toggleSorting) {
-                            Label(
-                                isSorting ? AppStrings.done : AppStrings.localized("common.sort"),
-                                systemImage: isSorting ? "checkmark" : "arrow.up.arrow.down"
-                            )
-                            .labelStyle(.iconOnly)
-                        }
-                        .accessibilityIdentifier("inbox.sort")
-                    }
-                }
-                #endif
-            }
-            .onChange(of: openItems.count) { _, count in
-                if count < 2 {
-                    isSorting = false
-                }
-            }
     }
 
     private var inboxList: some View {
@@ -141,12 +118,6 @@ struct InboxView: View {
 
     private func focusCaptureField() {
         addFocusToken += 1
-    }
-
-    private func toggleSorting() {
-        #if os(iOS)
-        isSorting.toggle()
-        #endif
     }
 
     private func moveInboxItems(from sourceOffsets: IndexSet, to destination: Int) {

@@ -92,6 +92,59 @@ struct TaskEditorSessionTests {
     }
 
     @Test
+    func directChecklistReorderPersistsAcrossDraftSaveAndFreshReload() throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "direct-checklist-reorder"
+        ).createTask(
+            title: "Persistent direct reorder",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        try ChecklistDraftService().save(
+            drafts: [
+                ChecklistEditorDraft(title: "First"),
+                ChecklistEditorDraft(title: "Second"),
+                ChecklistEditorDraft(title: "Third"),
+            ],
+            taskID: task.id,
+            context: context,
+            deviceID: "direct-checklist-reorder"
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        let storedTask = try #require(store.task(for: task.id))
+        let session = TaskEditorSession(
+            store: store,
+            initialDraft: store.editorDraft(for: storedTask)
+        )
+
+        session.moveChecklistItems(
+            fromOffsets: IndexSet(integer: 0),
+            toOffset: 3
+        )
+
+        #expect(session.draft.checklistItems.map(\.title) == [
+            "Second",
+            "Third",
+            "First",
+        ])
+        #expect(store.saveTaskDraft(session.draft))
+
+        let relaunchedStore = makeTestStore()
+        relaunchedStore.configureIfNeeded(
+            context: ModelContext(context.container)
+        )
+        #expect(relaunchedStore.checklistItems(for: task.id).map(\.title) == [
+            "Second",
+            "Third",
+            "First",
+        ])
+    }
+
+    @Test
     func newlyCompletedChecklistItemMovesAfterEveryCompletedItem() {
         var initialDraft = TaskEditorDraft(parentID: nil)
         let newlyCompleted = ChecklistEditorDraft(title: "Finish me")

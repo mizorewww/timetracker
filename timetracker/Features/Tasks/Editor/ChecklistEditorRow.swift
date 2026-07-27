@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ChecklistEditorRow: View {
     @Binding var item: ChecklistEditorDraft
-    let isSorting: Bool
     let canMoveUp: Bool
     let canMoveDown: Bool
     let moveUp: () -> Void
@@ -55,7 +54,7 @@ struct ChecklistEditorRow: View {
             )
             .focused(focus, equals: item.id)
 
-            sortingControls
+            macOSOrderingControls
             Button(role: .destructive) {
                 delete()
             } label: {
@@ -71,32 +70,35 @@ struct ChecklistEditorRow: View {
         }
         .frame(minHeight: 44)
         .contentShape(Rectangle())
-        .opacity(isSorting ? 0.98 : 1)
         .accessibilityElement(children: .contain)
     }
 
     @ViewBuilder
-    private var sortingControls: some View {
+    private var macOSOrderingControls: some View {
         #if os(macOS)
-        if isSorting {
-            HStack(spacing: 4) {
-                Button(action: moveUp) {
-                    Image(systemName: "chevron.up")
-                        .frame(width: 28, height: 28)
-                }
-                .disabled(!canMoveUp)
-                .accessibilityLabel(AppStrings.localized("common.moveUp"))
-
-                Button(action: moveDown) {
-                    Image(systemName: "chevron.down")
-                        .frame(width: 28, height: 28)
-                }
-                .disabled(!canMoveDown)
-                .accessibilityLabel(AppStrings.localized("common.moveDown"))
+        HStack(spacing: 4) {
+            Button(action: moveUp) {
+                Image(systemName: "chevron.up")
+                    .frame(width: 28, height: 28)
             }
-            .buttonStyle(.borderless)
-            .foregroundStyle(.secondary)
+            .disabled(!canMoveUp)
+            .accessibilityLabel(AppStrings.localized("common.moveUp"))
+            .accessibilityIdentifier(
+                "task.editor.checklist.moveUp.\(item.id.uuidString)"
+            )
+
+            Button(action: moveDown) {
+                Image(systemName: "chevron.down")
+                    .frame(width: 28, height: 28)
+            }
+            .disabled(!canMoveDown)
+            .accessibilityLabel(AppStrings.localized("common.moveDown"))
+            .accessibilityIdentifier(
+                "task.editor.checklist.moveDown.\(item.id.uuidString)"
+            )
         }
+        .buttonStyle(.borderless)
+        .foregroundStyle(.secondary)
         #endif
     }
 }

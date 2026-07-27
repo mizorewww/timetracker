@@ -2777,6 +2777,93 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testDirectReorderingSurfacesDoNotShowSortMode() throws {
+        #if os(macOS)
+        let app = launchApp(
+            route: "task-detail",
+            contentSizeCategory: "UICTContentSizeCategoryL",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Design macOS UI"
+        )
+        ensureTaskDetailIsReady(named: "Design macOS UI", in: app)
+        let checklistItem = app.buttons["Polish timeline"].firstMatch
+        scrollUntilHittable(checklistItem, direction: .up, in: app)
+        XCTAssertTrue(
+            checklistItem.waitForExistence(timeout: 5) &&
+                checklistItem.isHittable
+        )
+        XCTAssertTrue(
+            app.buttons["Sort"].firstMatch.waitForNonExistence(timeout: 2),
+            "Checklist direct reordering must not retain the redundant Sort header."
+        )
+        XCTAssertTrue(
+            app.buttons
+                .matching(NSPredicate(
+                    format: "identifier BEGINSWITH %@",
+                    "task.editor.checklist.moveUp."
+                ))
+                .firstMatch.waitForExistence(timeout: 5),
+            "macOS must keep an always-visible Move Up alternative to drag."
+        )
+        XCTAssertTrue(
+            app.buttons
+                .matching(NSPredicate(
+                    format: "identifier BEGINSWITH %@",
+                    "task.editor.checklist.moveDown."
+                ))
+                .firstMatch.waitForExistence(timeout: 5),
+            "macOS must keep an always-visible Move Down alternative to drag."
+        )
+        try capture("mac-task-checklist-direct-reordering", app: app)
+        #else
+        let app = launchApp(
+            route: "task-detail",
+            contentSizeCategory: "UICTContentSizeCategoryL",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Design macOS UI"
+        )
+        ensureTaskDetailIsReady(named: "Design macOS UI", in: app)
+
+        let checklistItem = app.buttons["Polish timeline"].firstMatch
+        scrollUntilHittable(checklistItem, direction: .up, in: app)
+        XCTAssertTrue(
+            checklistItem.waitForExistence(timeout: 5) &&
+                checklistItem.isHittable
+        )
+        XCTAssertTrue(
+            app.buttons["Sort"].firstMatch.waitForNonExistence(timeout: 2),
+            "Checklist rows already support direct drag, so the redundant Sort mode must not be shown."
+        )
+        try capture(
+            "\(platformScreenshotPrefix(in: app))-task-checklist-direct-reordering",
+            app: app
+        )
+
+        app.terminate()
+        let inboxApp = launchApp(
+            route: "inbox",
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: [
+                "--uitesting-inbox-suggestion",
+            ]
+        )
+        XCTAssertTrue(
+            inboxApp.descendants(matching: .any)["inbox.view"]
+                .waitForExistence(timeout: 8)
+        )
+        XCTAssertTrue(
+            inboxApp.descendants(matching: .any)["inbox.sort"]
+                .firstMatch.waitForNonExistence(timeout: 2),
+            "Inbox onMove supports direct long-press drag and must not require a separate Sort mode."
+        )
+        try capture(
+            "\(platformScreenshotPrefix(in: inboxApp))-inbox-direct-reordering",
+            app: inboxApp
+        )
+        #endif
+    }
+
+    @MainActor
     func testCompletingChecklistItemMovesItBelowIncompleteWork() throws {
         #if os(macOS)
         throw XCTSkip("Checklist movement is visually verified in the compact iPhone layout.")

@@ -86,7 +86,7 @@ Avoid:
 
 ### Inbox
 
-One native `List` with native row behaviors (swipe, context menu, edit/reorder); capture, open items, completed items, and suggestion feedback live in native list sections. The capture row behaves like a native text field: submit clears and refocuses. Acceptance: no horizontal clipping on the smallest iPhone width; swipe actions remain visible after suggestion dismissal; capture and navigation actions do not compete visually.
+One native `List` with native row behaviors (swipe, context menu, direct reorder); capture, open items, completed items, and suggestion feedback live in native list sections. Open items reorder by long-pressing and dragging the row without entering a separate Sort/Edit mode; capture and completed rows remain outside that move scope. The capture row behaves like a native text field: submit clears and refocuses. Acceptance: no horizontal clipping on the smallest iPhone width; swipe actions remain visible after suggestion dismissal; capture and navigation actions do not compete visually.
 
 ### Today
 
@@ -104,7 +104,7 @@ Keep `List` with flat visible rows from `TaskTreeFlattener`, native swipe action
 
 ### Task Editor
 
-`NavigationStack` + `Form` with `LabeledContent`, native `Picker`, `TextField`, `Toggle`, and toolbar save/cancel. The task estimate control stays explicit: 15-minute steps, zero as "not set," and a concise explanation that it estimates this task's own work while child forecasts remain separate. Reuse `SymbolColorPickerRow` for tasks, categories, checklist items, and Inbox suggestion visuals; checklist rows reuse one shared row component; macOS uses up/down controls for checklist ordering, iOS uses native move. Acceptance: long checklist text wraps; Return submits where the user expects submit; adding a checklist item creates a focused empty row; forecast source copy distinguishes explicit estimate from checklist evidence and stays readable at accessibility sizes.
+`NavigationStack` + `Form` with `LabeledContent`, native `Picker`, `TextField`, `Toggle`, and toolbar save/cancel. The task estimate control stays explicit: 15-minute steps, zero as "not set," and a concise explanation that it estimates this task's own work while child forecasts remain separate. Reuse `SymbolColorPickerRow` for tasks, categories, checklist items, and Inbox suggestion visuals; checklist rows reuse one shared row component and reorder directly by long-press drag without a separate Sort mode. iOS and iPadOS use native move; macOS keeps direct drag plus always-visible up/down controls as the non-drag alternative. Movement stays inside the incomplete or completed group. Acceptance: long checklist text wraps; Return submits where the user expects submit; adding a checklist item creates a focused empty row; direct reordering persists after the draft saves; forecast source copy distinguishes explicit estimate from checklist evidence and stays readable at accessibility sizes.
 
 ### Analytics
 

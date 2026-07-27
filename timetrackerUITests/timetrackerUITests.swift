@@ -6785,16 +6785,23 @@ final class timetrackerUITests: XCTestCase {
 
     @MainActor
     func testUIRefactorBaselineScreenshots() throws {
-        let app = launchApp()
+        let app = launchApp(replacesDemoDataOnLaunch: true)
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: app)
+        #endif
 
         XCTAssertTrue(homeIsReady(in: app))
-        try capture("iphone-home-baseline", app: app)
+        try capture("\(screenshotPrefix)-typography-today", app: app)
 
         openSection("Inbox", tabIdentifier: "phone.tab.inbox", sidebarIdentifier: "sidebar.Inbox", in: app)
-        XCTAssertTrue(app.descendants(matching: .any)["inbox.view"].waitForExistence(timeout: 8))
-        try capture("iphone-inbox-baseline", app: app)
+        let inboxView = app.descendants(matching: .any)["inbox.view"].firstMatch
+        XCTAssertTrue(inboxView.waitForExistence(timeout: 8))
+        try capture("\(screenshotPrefix)-typography-inbox", app: app)
 
         openSection("Tasks", tabIdentifier: "phone.tab.tasks", sidebarIdentifier: "sidebar.Tasks", in: app)
+        let tasksView = app.descendants(matching: .any)["tasks.view"].firstMatch
+        XCTAssertTrue(tasksView.waitForExistence(timeout: 8))
         let firstTaskRow = app.buttons
             .matching(NSPredicate(format: "identifier BEGINSWITH %@", "tasks.row."))
             .firstMatch
@@ -6806,23 +6813,38 @@ final class timetrackerUITests: XCTestCase {
                 in: app
             )
         )
-        try capture("iphone-tasks-baseline", app: app)
+        try capture("\(screenshotPrefix)-typography-tasks", app: app)
 
         activate(firstTaskRow)
         XCTAssertTrue(taskDetailIsReady(in: app))
-        try capture("iphone-task-detail-baseline", app: app)
+        try capture("\(screenshotPrefix)-typography-task-detail", app: app)
 
         openSection("Focus", tabIdentifier: "phone.tab.focus", sidebarIdentifier: "sidebar.Pomodoro", in: app)
-        XCTAssertTrue(app.descendants(matching: .any)["pomodoro.view"].waitForExistence(timeout: 8))
-        try capture("iphone-focus-baseline", app: app)
+        let focusView = app.descendants(matching: .any)["pomodoro.view"].firstMatch
+        XCTAssertTrue(focusView.waitForExistence(timeout: 8))
+        try capture("\(screenshotPrefix)-typography-focus", app: app)
 
         openSection("Analytics", tabIdentifier: "phone.tab.analytics", sidebarIdentifier: "sidebar.Analytics", in: app)
         XCTAssertTrue(analyticsIsReady(in: app))
-        try capture("iphone-analytics-baseline", app: app)
+        try capture("\(screenshotPrefix)-typography-analytics", app: app)
 
         openSettings(in: app)
         XCTAssertTrue(app.descendants(matching: .any)["settings.view"].waitForExistence(timeout: 8))
-        try capture("iphone-settings-baseline", app: app)
+        #if os(macOS)
+        let settingsWindow = try XCTUnwrap(
+            app.windows.allElementsBoundByIndex.first { window in
+                window.descendants(matching: .any)["settings.view"].exists
+            },
+            "The macOS Settings window must exist for typography acceptance."
+        )
+        try placeWindowOnPrimaryScreen(settingsWindow, in: app)
+        try capture(
+            "\(screenshotPrefix)-typography-settings",
+            element: settingsWindow
+        )
+        #else
+        try capture("\(screenshotPrefix)-typography-settings", app: app)
+        #endif
     }
 
     @MainActor

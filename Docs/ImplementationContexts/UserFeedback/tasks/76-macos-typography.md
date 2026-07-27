@@ -35,8 +35,8 @@
 
 ## Checkpoint 编排
 
-- [ ] A：领取反馈、建立活动实现记忆并生成 macOS 主要页面字体清单。
-- [ ] B：保存修改前截图，按 HIG 将问题收敛到明确的共享 owner。
+- [x] A：领取反馈、建立活动实现记忆并生成 macOS 主要页面字体清单。
+- [x] B：保存修改前截图，按 HIG 将问题收敛到明确的共享 owner。
 - [ ] C：分小 checkpoint 实现、验证并更新工程文档。
 - [ ] D：完成跨页面/跨平台 UI、全量测试、Release 全设备安装与收口。
 
@@ -54,6 +54,56 @@
 - 可并行的静态页面清单、HIG 复核与测试覆盖审计由子代理完成；所有结论回写本文件，
   子代理不得并发修改同一 Swift 文件。
 
+## 审计结论
+
+- 代码审计确认不存在根视图字体 environment、全局 font scale 或全局 small control；
+  根因是多个正文、状态、指标标签和操作提示被降成 macOS 下仅 10–11pt 的
+  `caption`、`footnote`、`subheadline`。
+- Apple HIG 的 macOS 原生语义基线为 `body/headline` 13pt、`callout` 12pt、
+  `subheadline` 11pt、`caption/footnote/caption2` 10pt。macOS 没有 Dynamic
+  Type，本任务应继续使用系统语义样式，并在语义 owner 局部做平台映射。
+- 优先 owner 为 Analytics 的 detail section、glossary/insight/overview rows，
+  其次为 Inbox suggestion、Focus setup/active/recent rows、Task Detail 的状态/
+  record/breakdown rows，以及 Today forecast、Settings sync/error helper。
+- `TaskCategorySectionHeaderStyle.standard` 与既有 UI 规范的持久 macOS
+  `.body.semibold` 冲突；`.compact` 及 sidebar count/path 等合法 metadata
+  不应被机械放大。
+- 必须保留 10pt 的类别包括图表 axis/legend、task parent path、时间戳、badge、
+  count pill、build/debug/provider ID 等可忽略 metadata。任何影响用户决策的
+  forecast reason、insight explanation、sync/error/warning 不属于 metadata。
+- 不采用根级 `.environment(\.font, ...)`、固定 point size、`minimumScaleFactor`
+  挤压或第三方/自研字体缩放框架；不逐页散落大量平台条件。
+
+## 修改前证据
+
+- Today：
+  `build/UITestResults/task76-baseline-today/macOS-20260727-191625.xcresult`
+- Focus：
+  `build/UITestResults/task76-baseline-focus/macOS-20260727-191743.xcresult`
+- Analytics：
+  `build/UITestResults/task76-baseline-analytics/macOS-20260727-191842.xcresult`
+- Settings：
+  `build/UITestResults/task76-baseline-settings/macOS-20260727-191922.xcresult`
+- Task Detail identity：
+  `build/UITestResults/task76-baseline-detail-identity/macOS-20260727-192000.xcresult`
+- `testTaskDetailPromotesTimerAndManualTimeActions` 在任何实现前暴露既有验收失败：
+  timer button accessibility frame 高度为 24pt，低于已有 28pt 下限。此项纳入
+  自绘操作标签可读性修正，不以字体变大伪造 hit target。
+- 单页截图与静态审计均显示：导航标题、标准 row label 和原生 Settings controls
+  多数已经符合 13pt 基线；集中问题是解释正文、主 row identity、重要状态仍停在
+  10–11pt。
+- 测试审计选择强化既有 `testUIRefactorBaselineScreenshots()`，用确定性 demo data
+  覆盖 Today、Inbox、Tasks、Task Detail、Focus、Analytics、Settings。macOS
+  Settings 必须截图真实 settings window，不能继续由“最大窗口”启发式误拍主窗口。
+- 强化后的七页矩阵已在实现前通过：
+  `build/UITestResults/task76-baseline-matrix/macOS-20260727-192340.xcresult`；
+  附件使用 `mac-typography-*` 命名，主窗口被放置到主显示器，Settings 使用真实
+  独立窗口。
+
 ## 进度记录
 
 - 2026-07-27：认领任务并建立 `~76` 活动实现记忆。
+- 2026-07-27：完成 Apple HIG、代码 owner、测试覆盖与修改前视觉层级并行审计；
+  确认采用局部系统语义字体修正而非全局缩放。
+- 2026-07-27：确定性 macOS 七页字体截图矩阵通过（1 test / 7 screenshots），
+  checkpoint B 完成。

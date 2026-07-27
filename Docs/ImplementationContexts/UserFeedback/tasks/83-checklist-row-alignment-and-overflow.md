@@ -1,6 +1,6 @@
 # 83：Checklist 行对齐与超长内容实现记忆
 
-状态：2026-07-28 进行中
+状态：2026-07-28 完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -33,14 +33,14 @@
 - [x] 先补布局 policy / presentation 边界测试或 UI 自动化红测。
 - [x] 实现后跑受影响定向测试、完整 `make test`、格式与本地化门禁。
 - [x] iPhone/iPad/macOS 正常字号截图验收并清理自有资源。
-- [ ] `make build-install-all` 安装最终任务版本。
+- [x] `make build-install-all` 安装最终任务版本。
 
 ## Checkpoint 编排
 
 - [x] A：完成视图所有者、平台差异、HIG 与测试边界审计。
 - [x] B：新增先失败的布局/交互回归测试。
 - [x] C：实现居中、多行与操作区域保护。
-- [ ] D：完成定向、全量、截图、Release 全设备安装与关闭。
+- [x] D：完成定向、全量、截图、Release 全设备安装与关闭。
 
 ## 库策略
 
@@ -75,3 +75,7 @@
   截图前关闭了系统 `WidgetRenderer_Activities` 崩溃报告窗口并重拍干净证据。
 - 2026-07-28：`make format`、`make format-check`、`make localization-check` 通过；
   完整 `make test` 通过 1,447 tests / 162 suites。
+- 2026-07-28：实现 checkpoint 已提交为 `4582169d`；`make build-install-all`
+  成功构建并安装 Release `1.1.292 (347)` 到 iPad Pro M4、iPhone Air（包含并验证
+  Watch companion）和 `/Applications/timetracker.app`。当前未发现可直接安装的
+  物理 Watch，配对设备开启 Automatic App Install 后由 iPhone 安装 companion。

@@ -8,8 +8,13 @@ struct ActiveTimersSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionTitle(title: AppStrings.localized("home.now.title"))
-                .accessibilityIdentifier("home.activeTimers")
+            HomeSectionHeader(
+                container: .card,
+                title: AppStrings.localized("home.now.title"),
+                accessibilityIdentifier: "home.activeTimers"
+            ) {
+                EmptyView()
+            }
 
             if segments.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
@@ -18,6 +23,8 @@ struct ActiveTimersSection: View {
                         .padding(14)
                 }
                 .appCard(padding: 0)
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("home.now.card")
                 Text(.app("timer.chooseTaskFooter"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -31,6 +38,8 @@ struct ActiveTimersSection: View {
                     startTimer: startTimer
                 )
                 .appCard(padding: 0)
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("home.now.card")
             }
         }
     }

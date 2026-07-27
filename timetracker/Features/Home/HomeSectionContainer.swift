@@ -30,6 +30,7 @@ struct HomeSectionHeader<Trailing: View>: View {
         HStack(alignment: .center, spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 titleView
+                    .accessibilityIdentifier("\(accessibilityIdentifier).title")
                 Spacer(minLength: 8)
                 if let summary {
                     Text(summary)
@@ -43,8 +44,18 @@ struct HomeSectionHeader<Trailing: View>: View {
 
             trailing
         }
+        .frame(minHeight: cardHeaderMinimumHeight)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(accessibilityIdentifier)
+    }
+
+    private var cardHeaderMinimumHeight: CGFloat? {
+        switch container {
+        case .card:
+            AppLayout.minimumInteractiveTarget
+        case .listSection:
+            nil
+        }
     }
 
     @ViewBuilder

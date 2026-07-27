@@ -26,9 +26,9 @@
 ## Checkpoint 编排
 
 - [x] A：领取反馈并建立活动实现记忆。
-- [~] B：并行审计宽屏主页组合、间距来源与稳定 UI 测试探针。
-- [ ] C：先补失败的几何测试，再实现最小共享布局修复并更新文档。
-- [ ] D：完成格式、单测、iPad/macOS XCUITest/截图、紧凑回归、Release 全设备安装与收口。
+- [x] B：并行审计宽屏主页组合、间距来源与稳定 UI 测试探针。
+- [x] C：先补失败的几何测试，再实现最小共享布局修复并更新文档。
+- [~] D：完成格式、单测、iPad/macOS XCUITest/截图、紧凑回归、Release 全设备安装与收口。
 
 ## 子 Agent 分工
 
@@ -44,3 +44,9 @@
 ## 进度记录
 
 - 2026-07-27：认领任务，创建实现记忆和 `~69` 活动链接。
+- 2026-07-27：代码、设计与测试子 Agent 独立审计一致定位到 header slot 不同：Overview 的 Info 按钮把标题行撑到平台最小点击高度，而 Now 仅有自然 headline 高度。
+- 2026-07-27：先用确定性 fixture 获得 macOS 失败证据：Now/Overview 可见标题顶部分别为 110/116 pt；旧测试错误地比较标题与外层 group，12 pt 容差会假绿。
+- 2026-07-27：card `HomeSectionHeader` 统一复用 `AppLayout.minimumInteractiveTarget`，宽屏 Now 改用同一 header；`.listSection` 与 iPhone 紧凑组合不变。没有增加透明按钮、偏移、设备分支或第三方库。
+- 2026-07-27：macOS 与 iPad Pro 13″ M4 横屏几何测试均以标题叶子探针在 2 pt 容差内通过；普通字号截图确认标题、首卡顶部、双栏间距和 Info 按钮正常。最终严格证据为 `macOS-20260727-160325.xcresult` 与 `iOS-20260727-160541.xcresult`；一次因错误 Make 变量而落到 iPhone 并跳过的运行不计作验收。
+- 2026-07-27：默认 iPhone 的 `AdaptiveShellUITests/testNowSectionRendersInWhicheverShellIsChosen` 通过，确认紧凑单列 Now 未回归；结果为 `iOS-20260727-160737.xcresult`。
+- 2026-07-27：SwiftFormat 830 个文件零改动/零 lint，本地化 9/9、版本钩子检查通过；signed macOS 全量 `make test` 共 1419 个测试通过。

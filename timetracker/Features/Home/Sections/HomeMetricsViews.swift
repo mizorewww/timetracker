@@ -10,10 +10,12 @@ struct TodayOverviewSection: View {
                 showsWallTime: store.preferences.showGrossAndWallTogether
             )
             CompactTodaySummaryRow(store: store)
+                .accessibilityIdentifier("home.overview")
                 .padding(14)
                 .frame(maxWidth: .infinity)
                 .appCard(padding: 0)
-                .accessibilityIdentifier("home.overview")
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("home.overview.card")
         }
     }
 }

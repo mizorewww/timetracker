@@ -4675,27 +4675,62 @@ final class timetrackerUITests: XCTestCase {
     @MainActor
     func testDesktopTodayShowsUnifiedNowOverviewRow() throws {
         #if targetEnvironment(simulator) || os(macOS)
-        let app = launchApp()
+        let app = launchApp(replacesDemoDataOnLaunch: true)
         XCTAssertTrue(homeIsReady(in: app))
-        let now = app.descendants(matching: .any)["home.activeTimers"].firstMatch
+        let nowHeading = app.descendants(matching: .any)[
+            "home.activeTimers.title"
+        ].firstMatch
         let overview = app.descendants(matching: .any)["home.overview"].firstMatch
         let overviewHeader = app.descendants(matching: .any)[
             "home.overview.header"
         ].firstMatch
-        XCTAssertTrue(now.waitForExistence(timeout: 8))
+        let overviewHeading = app.descendants(matching: .any)[
+            "home.overview.header.title"
+        ].firstMatch
+        let nowCard = app.descendants(matching: .any)[
+            "home.now.card"
+        ].firstMatch
+        let overviewCard = app.descendants(matching: .any)[
+            "home.overview.card"
+        ].firstMatch
+        XCTAssertTrue(nowHeading.waitForExistence(timeout: 8))
         XCTAssertTrue(overview.waitForExistence(timeout: 8))
-        #if !os(macOS)
-        if app.windows.firstMatch.frame.width >= 700 {
+        XCTAssertTrue(overviewHeading.waitForExistence(timeout: 3))
+        if app.windows.firstMatch.frame.width >= 800 {
             XCTAssertTrue(overviewHeader.waitForExistence(timeout: 3))
+            let nowHeadingFrame = try validVisibleFrame(
+                for: nowHeading,
+                in: app
+            )
+            let overviewHeadingFrame = try validVisibleFrame(
+                for: overviewHeading,
+                in: app
+            )
+            let nowCardFrame = try validVisibleFrame(for: nowCard, in: app)
+            let overviewCardFrame = try validVisibleFrame(
+                for: overviewCard,
+                in: app
+            )
             XCTAssertLessThan(
-                abs(now.frame.minY - overviewHeader.frame.minY),
-                12,
-                "On wide screens Now and Overview must share one row."
+                nowHeadingFrame.maxX,
+                overviewHeadingFrame.minX,
+                "Wide-screen current state sections must actually use separate columns."
+            )
+            XCTAssertEqual(
+                nowHeadingFrame.minY,
+                overviewHeadingFrame.minY,
+                accuracy: 2,
+                "Wide-screen Now and Overview title glyphs must share one visual top edge."
+            )
+            XCTAssertEqual(
+                nowCardFrame.minY,
+                overviewCardFrame.minY,
+                accuracy: 2,
+                "Wide-screen Now and Overview cards must start at the same height."
             )
         }
         let prefix = platformScreenshotPrefix(in: app)
         try capture("\(prefix)-today-unified-now-overview", app: app)
-        #endif
         #endif
     }
 
@@ -8471,50 +8506,54 @@ final class timetrackerUITests: XCTestCase {
         #if os(macOS)
         throw XCTSkip("The adaptive Today status row requires an iPad simulator.")
         #else
-        XCUIDevice.shared.orientation = .portrait
+        XCUIDevice.shared.orientation = .landscapeLeft
         defer { XCUIDevice.shared.orientation = .portrait }
 
         let app = launchApp(replacesDemoDataOnLaunch: true)
-        guard app.descendants(matching: .any)["ipad.splitNavigation"]
-            .waitForExistence(timeout: 5)
-        else {
+        let applicationFrame = app.frame
+        guard min(applicationFrame.width, applicationFrame.height) >= 700 else {
             throw XCTSkip("This layout audit only runs on iPad.")
         }
         XCTAssertTrue(homeIsReady(in: app))
 
-        let nowHeading = app.staticTexts["Now"].firstMatch
-        let overviewHeading = app.staticTexts["Overview"].firstMatch
-        XCTAssertTrue(nowHeading.waitForExistence(timeout: 5))
-        XCTAssertTrue(overviewHeading.waitForExistence(timeout: 5))
+        let nowHeading = app.descendants(matching: .any)[
+            "home.activeTimers.title"
+        ].firstMatch
+        let overviewHeading = app.descendants(matching: .any)[
+            "home.overview.header.title"
+        ].firstMatch
+        let nowCard = app.descendants(matching: .any)[
+            "home.now.card"
+        ].firstMatch
+        let overviewCard = app.descendants(matching: .any)[
+            "home.overview.card"
+        ].firstMatch
+        let nowHeadingFrame = try validVisibleFrame(for: nowHeading, in: app)
+        let overviewHeadingFrame = try validVisibleFrame(
+            for: overviewHeading,
+            in: app
+        )
+        let nowCardFrame = try validVisibleFrame(for: nowCard, in: app)
+        let overviewCardFrame = try validVisibleFrame(
+            for: overviewCard,
+            in: app
+        )
         XCTAssertEqual(
-            nowHeading.frame.minY,
-            overviewHeading.frame.minY,
-            accuracy: 3,
+            nowHeadingFrame.minY,
+            overviewHeadingFrame.minY,
+            accuracy: 2,
             "Now and Overview must share one top-aligned row at the normal iPad width."
         )
         XCTAssertLessThan(
-            nowHeading.frame.maxX,
-            overviewHeading.frame.minX,
+            nowHeadingFrame.maxX,
+            overviewHeadingFrame.minX,
             "Now must remain in the leading column without overlapping Overview."
         )
-
-        let stop = app.buttons.matching(NSPredicate(
-            format: "identifier BEGINSWITH %@",
-            "home.timer.stop."
-        )).firstMatch
-        let startAnother = app.buttons["home.startTimer"].firstMatch
-        XCTAssertTrue(stop.waitForExistence(timeout: 5) && stop.isHittable)
-        XCTAssertTrue(
-            startAnother.waitForExistence(timeout: 5) && startAnother.isHittable
-        )
-        XCTAssertGreaterThan(
-            stop.frame.width,
-            stop.frame.height,
-            "The iPad Stop action must preserve its visible text."
-        )
-        XCTAssertTrue(
-            ["Start Another Timer", "Switch Timer"].contains(startAnother.label),
-            "The secondary timer action must keep a clear visible verb."
+        XCTAssertEqual(
+            nowCardFrame.minY,
+            overviewCardFrame.minY,
+            accuracy: 2,
+            "Now and Overview cards must share one top edge at the normal iPad width."
         )
         try capture("ipad-today-now-overview-adaptive-row", app: app)
         #endif

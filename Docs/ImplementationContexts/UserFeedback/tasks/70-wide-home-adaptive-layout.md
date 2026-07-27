@@ -1,6 +1,6 @@
 # 70：宽屏主页自适应排布 实现记忆
 
-状态：2026-07-27 进行中
+状态：2026-07-27 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -28,7 +28,7 @@
 - [x] A：领取反馈、建立活动实现记忆并审计当前宽屏主页结构。
 - [x] B：确定自适应排布规则，补充失败的几何/行为测试。
 - [x] C：实现最小布局变更，更新相关设计与测试文档。
-- [~] D：完成格式、跨尺寸 XCUITest/截图、全量测试、Release 全设备安装与收口。
+- [x] D：完成格式、跨尺寸 XCUITest/截图、全量测试、Release 全设备安装与收口。
 
 ## 库策略
 
@@ -44,3 +44,4 @@
 - 2026-07-27：`HomeLayoutPolicy` 现在从实际内容宽度派生 678...748 pt 可视化列和 300...410 pt Quick Start 列；`DesktopTodayContent` 在 1000 pt 断点以上先排“可视化 + Quick Start”，再排“Timeline + 可选 360 pt 辅助列”，较窄 proposal 保持原单列顺序。
 - 2026-07-27：macOS 1500×1000 确定性窗口测试通过（`macOS-20260727-163153.xcresult`）；iPad Pro 13 英寸横屏收起 sidebar 后同一测试通过（`iOS-20260727-163331.xcresult`）。已人工检查 `mac-home-adaptive-packed-columns` 与 `ipad-home-adaptive-packed-columns` 截图，列宽、空白利用、阅读顺序和按钮尺寸正常。
 - 2026-07-27：格式化后 macOS 宽屏回归再次通过（`macOS-20260727-164013.xcresult`），iPhone 紧凑主页回归通过（`iOS-20260727-164039.xcresult`）。`make format-check`、`make localization-check`、`make check-hooks` 均通过；默认 `make test` 在 `Test-timetracker-2026.07.27_16-42-24-+0800.xcresult` 中通过 1419 项测试。
+- 2026-07-27：实现 checkpoint `523f21a2` 后，`make build-install-all` 成功构建并安装 Release 1.1.243（298）：iPad Pro M4 `748D0137-ADC3-58AF-855C-1E98B3125F93`、iPhone Air `FBA36694-D841-56D4-8ED6-21942873B21B`、有效嵌入式 Watch companion，以及 `/Applications/timetracker.app`。

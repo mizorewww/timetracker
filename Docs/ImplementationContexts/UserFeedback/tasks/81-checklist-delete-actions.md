@@ -1,6 +1,6 @@
 # 81：Checklist 删除二级菜单与滑动操作实现记忆
 
-状态：2026-07-28 实现中
+状态：2026-07-28 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -33,14 +33,14 @@
 - [x] 先补或扩展删除后 save → fresh reload 的行为回归。
 - [x] 先补 UI 自动化，证明改动前常驻垃圾桶仍存在或新入口缺失。
 - [x] 实现后复跑 iPhone/macOS UI 自动化并保留正常字号截图。
-- [~] 完整测试、格式/本地化门禁与 Release 全设备安装通过。
+- [x] 完整测试、格式/本地化门禁与 Release 全设备安装通过。
 
 ## Checkpoint 编排
 
 - [x] A：完成删除入口、共用 row、command/session、平台能力、测试与依赖审计。
 - [x] B：补充失败的行为/交互测试。
 - [x] C：实现原生二级菜单与滑动操作，收口冗余按钮。
-- [~] D：完成定向、全量、截图、Release 全设备安装与关闭。
+- [x] D：完成定向、全量、截图、Release 全设备安装与关闭。
 
 ## 库策略
 
@@ -80,3 +80,7 @@
 - 2026-07-28：完整 `make test` 通过（1444 tests / 162 suites）；`make format-check`
   通过（0/842），`make localization-check` 通过（9/9、主资源 1282 keys），
   `git diff --check` 通过。等待实现 checkpoint 提交与 Release 全设备安装。
+- 2026-07-28：实现 checkpoint 提交 `1840ca5a`（1.1.286 / 341）完成 Release
+  `make build-install-all`：安装到 iPad Pro M4、iPhone Air，iOS 包包含 Watch
+  companion，并将签名验证通过的 macOS App 复制到 `/Applications/timetracker.app`。
+  任务完成；closeout 提交后再以最终 HEAD 复跑同一安装门禁。

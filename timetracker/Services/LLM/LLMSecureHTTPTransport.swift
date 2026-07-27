@@ -92,18 +92,18 @@ nonisolated enum LLMSecureHTTPTransport {
         _ response: URLResponse,
         maximumResponseByteCount: Int
     ) throws {
+        try validateResponseStatus(response, data: Data())
         try validateResponseMetadata(
             response,
             maximumResponseByteCount: maximumResponseByteCount
         )
-        try validateResponseStatus(response, data: Data())
     }
 
     private static func validateResponseMetadata(
         _ response: URLResponse,
         maximumResponseByteCount: Int
     ) throws {
-        guard let httpResponse = response as? HTTPURLResponse else {
+        guard response is HTTPURLResponse else {
             throw LLMModelServiceError.invalidResponse
         }
         guard response.expectedContentLength <= Int64(maximumResponseByteCount) else {

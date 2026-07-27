@@ -806,7 +806,7 @@ struct PreferenceSyncBehaviorTests {
     }
 
     @Test @MainActor
-    func checklistCompletionMovesOnlyTheTargetToTheDestinationGroupEnd() throws {
+    func checklistCompletionMovesOnlyTheTargetAndUncompletionRestoresItsPosition() throws {
         let context = try makeTestContext()
         let task = try SwiftDataTaskRepository(context: context, deviceID: "test")
             .createTask(
@@ -852,7 +852,7 @@ struct PreferenceSyncBehaviorTests {
         )
 
         #expect(store.toggleChecklistItem(completedA))
-        #expect(store.checklistItemsForDisplay(for: task.id).map(\.title) == ["B", "A", "C"])
+        #expect(store.checklistItemsForDisplay(for: task.id).map(\.title) == ["A", "B", "C"])
         #expect(Dictionary(uniqueKeysWithValues: store.checklistItems(for: task.id)
                 .filter { $0.id != itemA.id }
                 .map { ($0.id, $0.clientMutationID) }) == siblingMutationIDByID)

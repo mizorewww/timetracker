@@ -134,7 +134,7 @@ extension SwiftDataTaskRepository {
         )
         let node = target.node
         node.statusRaw = LegacyTaskStatusRaw.archived
-        node.archivedAt = node.archivedAt ?? now
+        node.archivedAt = node.archivedAt ?? mutationDate
         node.updatedAt = mutationDate
         node.deviceID = deviceID
         node.clientMutationID = UUID()

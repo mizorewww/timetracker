@@ -13,10 +13,12 @@ struct TodayOverviewSection: View {
                 .accessibilityIdentifier("home.overview")
                 .padding(14)
                 .frame(maxWidth: .infinity)
+                .frame(maxHeight: .infinity)
                 .appCard(padding: 0)
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("home.overview.card")
         }
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 }
 

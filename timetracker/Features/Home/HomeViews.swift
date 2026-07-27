@@ -162,12 +162,15 @@ private struct DesktopTodayCurrentStateSections: View {
                         width: layout.currentStatePrimaryColumnWidth,
                         alignment: .topLeading
                     )
+                    .frame(maxHeight: .infinity, alignment: .topLeading)
                 overview
                     .frame(
                         width: layout.currentStateOverviewColumnWidth,
                         alignment: .topLeading
                     )
+                    .frame(maxHeight: .infinity, alignment: .topLeading)
             }
+            .fixedSize(horizontal: false, vertical: true)
         } else {
             VStack(alignment: .leading, spacing: layout.contentSpacing) {
                 activeTimers

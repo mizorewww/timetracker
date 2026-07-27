@@ -4814,6 +4814,12 @@ final class timetrackerUITests: XCTestCase {
                 accuracy: 2,
                 "Wide-screen Now and Overview cards must start at the same height."
             )
+            XCTAssertEqual(
+                nowCardFrame.maxY,
+                overviewCardFrame.maxY,
+                accuracy: 2,
+                "Wide-screen Now and Overview cards must end on the same row boundary."
+            )
         }
         let prefix = platformScreenshotPrefix(in: app)
         try capture("\(prefix)-today-unified-now-overview", app: app)
@@ -8733,6 +8739,12 @@ final class timetrackerUITests: XCTestCase {
             overviewCardFrame.minY,
             accuracy: 2,
             "Now and Overview cards must share one top edge at the normal iPad width."
+        )
+        XCTAssertEqual(
+            nowCardFrame.maxY,
+            overviewCardFrame.maxY,
+            accuracy: 2,
+            "Now and Overview cards must share one bottom edge without an empty Overview gutter."
         )
         try capture("ipad-today-now-overview-adaptive-row", app: app)
         #endif

@@ -56,7 +56,7 @@
   作为时长，所以中间 Awake 不会被误算为睡眠。
 - 多来源重复 episode 会在完整覆盖证据下去重并优先保留详细阶段更完整的来源；不同 source/product 不会被盲目连接。
 - `TimeTrackerStore` 查询当天开始前 18 小时的上下文，先构造 episode 再裁剪到可见日期，避免跨午夜睡眠丢失前序阶段。
-- Health 样本只存在于内存 `appleHealthTimelineItems`；不会写入 SwiftData、CloudKit 或同步偏好，本地只持久化时间线开关。
+- 当时的实现只把 Health 样本放在内存 `appleHealthTimelineItems`。Task 77 已将其后续持久化边界迁移到独立、CloudKit-disabled 的设备本地 replica；仍不进入主 SwiftData/CloudKit 或同步偏好。
 - 保留的有意边界：如果同一晚真实数据中途改变 product type，当前实现会保持不同来源分段。没有真实样本证据前不放宽，
   以免误合并 iPhone、Watch 或第三方来源。
 

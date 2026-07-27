@@ -1,7 +1,7 @@
 # TimeTracker 隐私与安全说明
 
 状态：工程级数据流说明，非法律隐私政策
-校对日期：2026-07-26
+校对日期：2026-07-27
 
 本文说明仓库当前实现如何存储和传输数据，并列出发行前安全门禁。最终上架文案仍需根据实际发行地区、服务方和 App Store 隐私申报单独审核。
 
@@ -18,7 +18,7 @@
 | AI 自动建议同意 | 本机 UserDefaults | 不同步；开启后才允许客户端自动向已配置 endpoint 发送必要字段 | 不导出 |
 | Widget 快照 | App Group 共享容器 | 同一设备的小组件扩展 | 不作为独立备份 |
 | Watch 快照和命令 | 主应用与 Watch 内存/队列 | 配对设备之间的 WatchConnectivity | 不作为独立备份 |
-| Apple 健康运动与睡眠记录 | 读取后仅保留在进程内存 | 不传输，不进入 CloudKit | 不导出 |
+| Apple 健康运动与睡眠记录 | 独立、只读、device-local SwiftData replica；排除备份 | 不由 App 传输，不进入 CloudKit/iCloud | 用户主动 JSON 导出 |
 | Apple 健康任务模板 | SwiftData；模板内容与实际健康记录无关 | 作为普通任务定义进入用户的 CloudKit | JSON |
 | 诊断与测试截图 | 开发环境文件 | 仅在维护者主动分享时 | 不属于应用 JSON |
 
@@ -125,11 +125,13 @@ Checklist 请求发送完整标题、所属任务标题和完整任务显示路�
 
 ### Apple 健康
 
-Apple 健康集成只申请读取运动和睡眠分析类型，不向 HealthKit 写入数据。用户明确开启“显示 Apple 健康时间线并添加任务模板”后，应用查询当天截至当前时刻的记录，在内存中裁剪、去重和投影；样本 UUID、来源 bundle、睡眠阶段、日期与时间区间都不会写入 SwiftData、CloudKit、JSON 导出或普通诊断日志。关闭显示会立即丢弃这份内存投影。
+Apple 健康集成只申请读取运动和睡眠分析类型，不向 HealthKit 写入数据。获得读取能力后，应用使用 HealthKit anchored query 增量读取新增、修改和删除，并把稳定样本 UUID、类型/阶段、日期与时间区间、来源 bundle 以及睡眠来源产品类型保存到独立的本机只读 SwiftData replica。opaque HealthKit anchors 只作为本机增量检查点保存。界面和分析只消费不可变值快照，不提供新增、编辑、删除、补录、计时或 AI 修改入口。
+
+该 replica 使用独立的版本化 schema 和 `cloudKitDatabase: .none`，不属于主业务模型、`SyncDataSnapshot`、CloudKit conflict、restore 或 fingerprint 边界；iOS 文件使用首次解锁后数据保护并排除系统备份。它不会通过 iCloud 或 App 自身跨设备同步。“同步 Apple 健康”只表示从当前设备 HealthKit 增量刷新。关闭时间线只隐藏投影，不删除 replica；macOS 没有 HealthKit reader，也不会把其它设备的健康记录伪装成本机数据。
 
 开启功能还会创建一组固定的普通 Task/Category 导航元数据，包括所有应用支持的运动类型以及“睡觉”。目录集合在读取任何 Health 样本前即已确定，不根据用户是否真实进行过某项运动或睡眠而增减，因此目录的存在不能表达个人健康行为。它们是不可由用户编辑的 sync-only canonical 元数据，并按普通任务定义参与 CloudKit 同步；目录维护只收敛固定身份和位置，不读取或持久化 Health 样本。Archive 与 tombstone 恢复仍按目录协调器的既有收敛规则处理。
 
-“清空全部数据”会像处理其他任务一样为模板写入同步 tombstone，并在本机保存一次性的可恢复任务 ID 集合。用户之后重新开启 Health 时间线时，只允许重建清空前仍可见的模板；早已被用户删除的模板不会因普通刷新复活。重建会生成完整的默认分类、根任务和分类关系，不恢复清空前已被明确丢弃的自定义 payload。该一次性凭据只在本机 UserDefaults 中保存，不包含任何 Health 样本内容。
+“清空全部数据”会清除本机 Health replica 的记录和两个增量检查点，并像处理其他任务一样为模板写入同步 tombstone，在本机保存一次性的可恢复任务 ID 集合。用户之后重新开启 Health 时间线时，只允许重建清空前仍可见的模板；早已被用户删除的模板不会因普通刷新复活。重建会生成完整的默认分类、根任务和分类关系，不恢复清空前已被明确丢弃的自定义 payload。该一次性凭据只在本机 UserDefaults 中保存，不包含任何 Health 样本内容。
 
 这一边界用于满足 Apple 对个人健康信息不得存入 iCloud 的要求。发行前仍应复核 [App Review Guideline 5.1.3](https://developer.apple.com/app-store/review/guidelines/) 与 HealthKit entitlement、用途说明和 App Store 隐私申报。
 
@@ -157,10 +159,12 @@ Widget、Live Activity 和系统使用 `timetracker` URL 打开主应用。应�
 
 ## 6. JSON 导出
 
-JSON 导出包含可同步业务数据的快照，并过滤敏感 preference。当前不存在 importer、校验和、签名、加密或事务恢复，所以它：
+用户主动发起的 JSON 导出使用版本化 `timetracker.userData` envelope，分别包含过滤敏感 preference 后的可同步业务快照，以及当前设备的 Apple Health replica。Health payload 包含记录 UUID、类型/阶段、时间范围和来源标识，但不包含 opaque 同步检查点。合法空 replica 会明确编码为空数组；任一数据源读取或编码失败时整体失败，不输出半份文件。App 不会自动上传该文件。
+
+当前不存在 importer、校验和、签名、加密或事务恢复，所以它：
 
 - 不是可恢复备份。
-- 可能包含任务名称和详细时间记录等个人信息。
+- 可能包含任务名称、详细时间记录以及敏感的运动/睡眠时间和来源标识。
 - 应保存到用户信任的位置。
 - 不应在工单、日志或公开仓库中直接上传。
 

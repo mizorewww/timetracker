@@ -177,7 +177,7 @@
 "settings.export.saved" = "JSON 导出已保存。";
 "settings.optimizeDatabase" = "清理已删除记录";
 "settings.data" = "数据";
-"settings.data.footer" = "JSON 会导出用户原始记录和同步偏好；可重建的分析缓存不包含在内。";
+"settings.data.footer" = "JSON 会导出用户原始记录、同步偏好和本机 Apple 健康副本。文件可能包含敏感的健康时间和来源标识，请妥善保存。可重建的分析缓存和健康同步检查点不包含在内。";
 "settings.data.cleanupFooter" = "测试和演示数据库可永久清理超过 90 天的墓碑。生产数据库会保留墓碑，避免离线设备恢复已删除数据。";
 "settings.icloud" = "iCloud 同步";
 "settings.currentStorage" = "当前存储";
@@ -446,7 +446,7 @@
 "health.settings.showInTimeline" = "在时间线中显示 Apple 健康";
 "health.settings.refresh" = "刷新今天的数据";
 "health.settings.openSystemSettings" = "打开设置";
-"health.settings.footer" = "运动和睡眠记录只留在本机，绝不会写入任务数据库或 iCloud。对应的可编辑任务标签会像其他任务一样同步，但仅用于同步：请在 Apple 健身中开始运动，也不要手动为睡眠计时。";
+"health.settings.footer" = "可读取的运动和睡眠记录会复制到 TimeTracker 的本机只读副本。该副本绝不会同步到 iCloud，但会包含在用户主动发起的 JSON 导出中。可编辑的任务标签仍会像其他任务一样同步；请在 Apple 健身中开始运动，也不要手动为睡眠计时。";
 "health.settings.taskSetupFailed.title" = "无法更新健康任务";
 "health.taskSetup.error.generatedAssignmentUnavailable" = "无法将健康任务加入对应分类。";
 "health.settings.requesting.message" = "请在系统访问面板中完成选择。";
@@ -987,7 +987,7 @@
 "task.detail.appleHealth.analysisSubtitle" = "显示所选范围内可读取的 Apple 健康记录。睡眠总时长不包含清醒阶段。";
 "task.detail.appleHealth.history.chart" = "每日 Apple 健康时长";
 "task.detail.appleHealth.history.title" = "Apple 健康历史记录";
-"task.detail.appleHealth.history.subtitle" = "来自 Apple 健康的只读锻炼或睡眠记录，不会复制到 TimeTracker。";
+"task.detail.appleHealth.history.subtitle" = "来自本机副本的只读运动或睡眠记录，无法在此编辑，也不会通过 iCloud 同步。";
 "task.detail.appleHealth.history.empty" = "这个范围内没有 Apple 健康记录";
 "forecast.today.title" = "预计进度";
 "forecast.accessibilityValueFormat" = "%@，%@。%@";

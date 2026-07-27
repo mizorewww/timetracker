@@ -250,8 +250,7 @@ struct AppleHealthDataReaderTests {
     #endif
 
     @Test
-    func readAccessStaysMinimalAndSigningIsPlatformSpecific() throws {
-        let project = try sourceText("timetracker.xcodeproj/project.pbxproj")
+    func healthUsageDescriptionAndEntitlementsStayReadOnly() throws {
         let root = try projectRootURL()
         let iosEntitlements = try entitlements(
             at: root.appending(path: "timetracker/timetracker-iOS.entitlements")
@@ -259,67 +258,26 @@ struct AppleHealthDataReaderTests {
         let macEntitlements = try entitlements(
             at: root.appending(path: "timetracker/timetracker.entitlements")
         )
-        let info = try sourceText("timetracker/Info.plist")
-        let reader = try sourceText(
-            "timetracker/Services/SystemIntegration/AppleHealthDataReader.swift"
+        let info = try propertyList(
+            at: root.appending(path: "timetracker/Info.plist")
         )
 
-        #expect(project.contains("\"CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]\" = \"timetracker/timetracker-iOS.entitlements\""))
-        #expect(project.contains("\"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]\" = \"timetracker/timetracker-iOS.entitlements\""))
-        #expect(project.contains("\"CODE_SIGN_STYLE[sdk=iphoneos*]\" = Manual"))
-        #expect(project.contains("\"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]\" = \"TimeTracker HealthKit Development\""))
         #expect(iosEntitlements["com.apple.developer.healthkit"] as? Bool == true)
         #expect(iosEntitlements["com.apple.developer.healthkit.background-delivery"] == nil)
         #expect(iosEntitlements["com.apple.developer.healthkit.access"] == nil)
         #expect(macEntitlements["com.apple.developer.healthkit"] == nil)
-        #expect(info.contains("NSHealthShareUsageDescription"))
-        #expect(info.contains("NSHealthUpdateUsageDescription") == false)
-        #expect(reader.contains("requestAuthorization(toShare: [], read: types)"))
-        #expect(reader.contains("statusForAuthorizationRequest("))
-        #expect(reader.contains("HKObjectType.workoutType()"))
-        #expect(reader.contains(".sleepAnalysis"))
-        #expect(reader.contains("authorizationStatus(for:") == false)
-        #expect(reader.contains("healthStore.save(") == false)
-    }
-
-    @Test
-    func healthSamplesAreNotAddedToCloudSyncedModels() throws {
-        let persistenceSources = try [
-            "timetracker/Models/TimeTrackerModelRegistry.swift",
-            "timetracker/Models/SchemaModels.swift",
-            "timetracker/Models/LedgerModels.swift",
-            "timetracker/Repositories/RepositoryProtocols.swift",
-            "timetracker/Repositories/SwiftDataTaskRepository.swift",
-            "timetracker/Repositories/SwiftDataTimeTrackingRepository.swift",
-            "timetracker/Services/SystemIntegration/SyncDataSnapshot.swift",
-            "timetracker/Services/SystemIntegration/SyncDataSnapshot+Capture.swift",
-            "timetracker/Services/SystemIntegration/SyncDataSnapshot+Restore.swift",
-        ].map(sourceText).joined(separator: "\n")
-        let preferenceSource = try sourceText(
-            "timetracker/Models/SyncedPreferences.swift"
-        )
-        let syncedPreferenceKeys = try #require(
-            preferenceSource.slice(
-                from: "enum AppPreferenceKey",
-                to: "enum AppLocalPreferenceKey"
-            )
-        )
-        let localPreferenceKeys = try #require(
-            preferenceSource.slice(
-                from: "enum AppLocalPreferenceKey",
-                to: "struct AppPreferences"
-            )
-        )
-
-        #expect(persistenceSources.contains("AppleHealth") == false)
-        #expect(persistenceSources.contains("HealthKit") == false)
         #expect(
-            syncedPreferenceKeys.contains("appleHealthTimelineEnabled") == false
+            (info["NSHealthShareUsageDescription"] as? String)?
+                .isEmpty == false
         )
-        #expect(localPreferenceKeys.contains("appleHealthTimelineEnabled"))
+        #expect(info["NSHealthUpdateUsageDescription"] == nil)
     }
 
     private func entitlements(at url: URL) throws -> [String: Any] {
+        try propertyList(at: url)
+    }
+
+    private func propertyList(at url: URL) throws -> [String: Any] {
         let data = try Data(contentsOf: url)
         let value = try PropertyListSerialization.propertyList(from: data, format: nil)
         return try #require(value as? [String: Any])

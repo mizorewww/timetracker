@@ -1797,7 +1797,7 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 - Health 分支不显示普通 identity/editor、tracking availability 说明、quantity、heatmap tracking、forecast、Add Time、More/Archive、autosave failure 或 draft-recovery UI。系统 navigation title 与返回行为保留。
 - 普通任务组合不变，继续满足 AD-095 的非分析内容独立加载和 AD-124 的 identity row；三个 Apple 平台共享同一语义分支，不新增按设备型号的布局。
 
-后果：Apple Health 详情只承载可读分析与必要状态，不再暗示目录可编辑或可归档；周期分析能力和既有 HealthKit 内存投影不受影响。普通任务仍拥有完整编辑、执行、预测和记录能力。该裁剪只复用原生 SwiftUI `List`/`Section`/`Picker` 和现有投影，不引入新的第三方依赖。
+后果：Apple Health 详情只承载可读分析与必要状态，不再暗示目录可编辑或可归档；周期分析能力和 HealthKit 只读投影语义不受影响。Task 77 后续把投影的数据源迁移到独立的设备本地 replica，但没有改变本决策的可见组合。普通任务仍拥有完整编辑、执行、预测和记录能力。该裁剪只复用原生 SwiftUI `List`/`Section`/`Picker` 和现有投影，不引入新的第三方依赖。
 
 验证：正常字号 Health 历史 fixture 验证三段顺序、周期控件位于 Task Analysis 之后、跨日/周/月与历史导航不变；逐 viewport 扫描 lazy `List`，证明所有普通任务 identifier 缺席。保留 failure/retry、empty/reactivation、iPhone/iPad 方向截图和 macOS unavailable 截图。既有普通 Task Detail identity、heatmap、icon、timer/Add Time/More 测试保护未改分支。
 

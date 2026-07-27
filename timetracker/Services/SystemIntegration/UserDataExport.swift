@@ -31,7 +31,7 @@ struct AppleHealthReplicaExport: Codable, Equatable {
         let endedAt: Date
         let sourceBundleIdentifier: String
 
-        init(_ sample: AppleHealthWorkoutSample) {
+        nonisolated init(_ sample: AppleHealthWorkoutSample) {
             id = sample.id
             kind = sample.kind.rawValue
             startedAt = sample.startedAt
@@ -48,7 +48,7 @@ struct AppleHealthReplicaExport: Codable, Equatable {
         let sourceBundleIdentifier: String
         let sourceProductType: String?
 
-        init(_ sample: AppleHealthSleepSample) {
+        nonisolated init(_ sample: AppleHealthSleepSample) {
             id = sample.id
             stage = sample.stage.rawValue
             startedAt = sample.startedAt

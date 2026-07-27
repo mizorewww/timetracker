@@ -6,7 +6,10 @@ import Foundation
 /// so ordinary Debug launches keep using HealthKit and Release builds contain
 /// no fixture path.
 @MainActor
-final class UITestAppleHealthDataReader: AppleHealthDataReading {
+final class UITestAppleHealthDataReader:
+    AppleHealthDataReading,
+    AppleHealthReplicaChangeReading
+{
     private static let enableArgument = "--uitesting-apple-health"
     private static let historyArgument =
         "--uitesting-apple-health-history"
@@ -140,6 +143,34 @@ final class UITestAppleHealthDataReader: AppleHealthDataReading {
             historyBatch()
         }
         return filtered(batch, overlapping: interval)
+    }
+
+    func replicaChanges(
+        after _: AppleHealthReplicaAnchors
+    ) async throws -> AppleHealthReplicaChangeBatch {
+        try Task.checkCancellation()
+
+        if shouldInjectReadFailure {
+            throw UITestAppleHealthFixtureError.injectedFirstReadFailure
+        }
+        let batch: AppleHealthSampleBatch = if returnsEmpty || shouldReturnEmptyUntilSceneReactivation {
+            .empty
+        } else {
+            switch fixtureMode {
+            case .currentDay:
+                currentDayBatch(endingAt: referenceDate)
+            case .history:
+                historyBatch()
+            }
+        }
+        return AppleHealthReplicaChangeBatch(
+            workouts: batch.workouts,
+            deletedWorkoutIDs: [],
+            workoutAnchor: Data("ui-test-workout-v1".utf8),
+            sleep: batch.sleep,
+            deletedSleepIDs: [],
+            sleepAnchor: Data("ui-test-sleep-v1".utf8)
+        )
     }
 
     private func isTaskDetailHistoryQuery(_ interval: DateInterval) -> Bool {

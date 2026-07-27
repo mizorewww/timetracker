@@ -39,7 +39,7 @@
   App Intent、深链、Watch、macOS 菜单和 quantity 入口复用领域能力或 fresh-context admission。
 - 最底层计时 repository/command 在任何写入前再次拒绝 sync-only 分支，因此被拒绝的 Health 操作不会先停止另一个普通计时器。
 - HealthKit 集成只有 sample query/read 路径，授权请求 `toShare: []`；没有 workout session、sample save 或其他写入路径。
-  导入的 workout/sleep samples 仅保存在内存 timeline state，不进入 SwiftData 或 CloudKit。
+  当时导入的 workout/sleep samples 仅保存在内存 timeline state。Task 77 已将后续持久化边界迁移到独立、CloudKit-disabled 的设备本地 replica；仍不进入主 SwiftData 或 CloudKit。
 
 ## Apple 参考与库边界
 

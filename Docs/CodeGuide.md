@@ -191,7 +191,9 @@ Checklist AI visual request 也不是对 scene 缓存的写授权。请求必须
 
 任务树 UI 不直接从 `body` 重建层级。`TimeTrackerStore.rebuildTaskIndexes` 在 task mutation/refresh 后建立排序后的 `TaskTreeIndexes`、可见性和显示路径；task category 或 assignment mutation 也进入同一个 `rebuildTaskTreeReadIndex` 失效边界。不可变 `TaskTreeReadIndex` 只保存稳定 task/category ID、已过滤的 child buckets、section root IDs、child count 和搜索值，不保存第二份持久事实。只有新 index 与旧 index 在语义上不同才推进 `taskTreeReadIndexRevision`。`TaskTreeProjectionCache` 以该 revision 为失效 token，为展开状态和搜索 query 各保留最多四个 ID/value projection；命中时不得再排序 category、过滤每行 children、遍历祖先标题路径或扫描全部搜索文档。timer、ledger、selection 等无关刷新不拥有这个 revision。row identity 始终是持久 `TaskNode.id`，category section identity 始终来自 category UUID（未分类使用固定 `uncategorized`）；不得把标题、数组位置或展开状态变成 identity。任何直接改变会影响层级、可见性、标题路径或搜索文本的模型写入，都必须完成既有 task/category domain refresh，使上述唯一失效 owner 能发布新 index。
 
-Apple Health 固定目录由 fresh sibling context 协调器幂等维护。固定 Category/Task/Assignment 是不可由用户编辑的 sync-only 导航元数据；fresh transaction 若已确认其 canonical ID 的 tombstone，必须写入时间戳严格更新的 active replacement，即使删除来自另一设备/旧版本且本机没有 Clear All recovery receipt。相反，只有本机 recovery receipt 而尚未观察到对应 row 时必须保持 pending，不能先写 seed-timestamp row 后消费回执，否则迟到的 CloudKit tombstone 会再次取得 LWW。Archive 与 delete 分开处理，现有 archive 不因目录维护被清除。若 CloudKit 或其他 scene 已先写入完整目录，协调器会得到 canonical no-op；此时 facade 仍必须调用 `refreshStoreScopedTaskReadModels()` 收敛 Task/Category/Assignment、任务树和搜索投影。该入口只走 `StoreRefreshCoordinator.refreshReadModels`，不得把 no-op 伪装成新的 domain event、同步 generation 或自动建议触发器，也不得把 HealthKit 样本带入持久层。macOS 没有 HealthKit reader，但仍消费同一普通任务目录元数据。
+Apple Health 固定目录由 fresh sibling context 协调器幂等维护。固定 Category/Task/Assignment 是不可由用户编辑的 sync-only 导航元数据；fresh transaction 若已确认其 canonical ID 的 tombstone，必须写入时间戳严格更新的 active replacement，即使删除来自另一设备/旧版本且本机没有 Clear All recovery receipt。相反，只有本机 recovery receipt 而尚未观察到对应 row 时必须保持 pending，不能先写 seed-timestamp row 后消费回执，否则迟到的 CloudKit tombstone 会再次取得 LWW。Archive 与 delete 分开处理，现有 archive 不因目录维护被清除。若 CloudKit 或其他 scene 已先写入完整目录，协调器会得到 canonical no-op；此时 facade 仍必须调用 `refreshStoreScopedTaskReadModels()` 收敛 Task/Category/Assignment、任务树和搜索投影。该入口只走 `StoreRefreshCoordinator.refreshReadModels`，不得把 no-op 伪装成新的 domain event、同步 generation 或自动建议触发器，也不得把 HealthKit 样本带入主业务持久层。macOS 没有 HealthKit reader，但仍消费同一普通任务目录元数据。
+
+HealthKit 样本只进入 CloudKit-disabled 的 `AppleHealthReplicaSchemaV1` store。`AppleHealthReplicaRepository` 是唯一 SwiftData owner，向 UI/Analytics 返回不可变值快照；`AppleHealthReplicaSyncService` 在两个 anchored stream 都成功后，才在一个 replica transaction 内提交 upsert、明确删除与双 anchor。不要把 replica model 注册到 `TimeTrackerModelRegistry`，也不要扩展 `SyncDataSnapshot`、Cloud conflict、restore 或 fingerprint。时间线隐藏只清空界面投影；Clear All 才清除 replica records 与 anchors。UI test reader 必须实现 change-reading 协议，让截图经过隔离的内存 replica，而不是绕过本层。
 
 持久实体去重遵循确定性 last-write-wins：先比较 `updatedAt`，同一时间 tombstone 胜过 active row，再以 `createdAt`、`deviceID`、`clientMutationID` 稳定打破平局；没有 mutation ID 的 `TimeSegment` 使用稳定内容键。清理产生的 duplicate tombstone 不得反过来覆盖真正的新 canonical row。所有“只取可见记录”的查询必须先 deduplicate/LWW、再过滤 tombstone，禁止把过滤顺序颠倒。
 
@@ -270,7 +272,10 @@ fresh-store hydration 以持久 `CloudRecoveryImportSession` 为屏障，而不�
 - `SyncConflictService.swift`：bootstrap 与 prompt 组装。
 - `SyncConflictService+LocalMutation.swift`、`+CloudImport.swift`、`+CloudExport.swift`、`+CloudRecoveryEvents.swift`、`+Recovery.swift`、`+Resolution.swift`：本地变更、云事件/恢复回执与显式恢复流程。
 - `SyncConflictService+State.swift`、`+StateWriting.swift`、`+StateLock.swift`、`+StateLocations.swift`、`+SnapshotSlots.swift`、`+SnapshotSlotLocations.swift` 与 `SyncConflictStateManifest.swift`：有界本机 manifest/slot state 读写、pending forced-upload mirror、跨进程锁、文件位置与 epoch/generation/checkpoint state；`SyncConflictState.swift` 仍是运行时读模型，不是新的磁盘格式。
-- `SyncConflictService+Export.swift`：过滤后的 JSON export encoding。
+- `SyncConflictService+Export.swift`：Cloud 恢复边界使用的过滤后 business snapshot encoding。
+- `UserDataExport.swift`：Settings 用户导出的版本化 envelope，组合 business snapshot 与设备本地 Health replica；不是 importer/恢复格式。
+- `AppleHealthReplicaModelContainerFactory.swift`、`AppleHealthReplicaRepository.swift`：独立 schema/container 与唯一持久层 owner。
+- `AppleHealthReplicaSyncService.swift`、`AppleHealthDataReader.swift`：双 stream anchored 增量读取与提交编排。
 - `SyncDataSnapshot.swift`：版本化全域快照、摘要和 fingerprint。
 - `SyncDataSnapshot+Capture.swift`：按域捕获当前事实。
 - `SyncDataSnapshot+Preflight.swift`、`SyncDataSnapshot+PreflightContent.swift` 与 `SyncDataSnapshot+PreflightSemantics.swift`：在恢复事务前对不可信 transport 做结构、内容和语义预检。

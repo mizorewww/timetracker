@@ -60,8 +60,8 @@
 ## Checkpoint 编排
 
 - [x] A：完成现状、Apple 合规、schema/container、导出和测试边界审计。
-- [ ] B：先写独立 store/schema/repository/sync/export 的失败行为测试。
-- [ ] C：分层实现本地 replica、只读投影和 JSON 导出，更新当前工程文档。
+- [x] B：先写独立 store/schema/repository/sync/export 的失败行为测试。
+- [x] C：分层实现本地 replica、只读投影和 JSON 导出，更新当前工程文档。
 - [ ] D：完成全量/真机验证、Release 全设备安装与收口。
 
 ## 库策略
@@ -107,3 +107,10 @@
   opaque anchors 永不出站。合法空库编码显式空数组，任一副本读取错误使整个导出
   fail closed；原 Cloud 恢复快照格式与路径保持不变。`make test` 1435 tests /
   162 suites 通过。
+- 2026-07-27：完成用户可见边界与 UI fixture 收口：三语 Settings/Health 详情明确
+  本机只读、不经 iCloud、JSON 含敏感健康字段；默认文件名改为
+  `time-tracker-user-data.json`。UI fixture 现在实现 anchored change reader，所有
+  iOS Health 截图先写隔离内存 replica 再读取；现有 failure/empty/retry/reactivation
+  语义保留。当前 Architecture、CodeGuide、ProjectMap、PrivacyAndSecurity、
+  Testing、UserGuide 与 UI-Design 已更新。`make test` 1434 tests / 162 suites、
+  localization parity 与签名 generic iOS build 通过。

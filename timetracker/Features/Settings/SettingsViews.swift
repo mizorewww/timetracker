@@ -28,7 +28,7 @@ struct SettingsView: View {
                 isPresented: $isExportPresented,
                 document: exportDocument,
                 contentType: .json,
-                defaultFilename: "time-tracker-export.json"
+                defaultFilename: "time-tracker-user-data.json"
             ) { result in
                 handleExportResult(result)
             }

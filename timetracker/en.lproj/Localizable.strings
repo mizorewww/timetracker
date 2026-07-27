@@ -177,7 +177,7 @@
 "settings.export.saved" = "JSON export saved.";
 "settings.optimizeDatabase" = "Clean Deleted Records";
 "settings.data" = "Data";
-"settings.data.footer" = "JSON exports your source records and synced preferences. Rebuildable analytics caches are not included.";
+"settings.data.footer" = "JSON exports your source records, synced preferences, and the device-local Apple Health replica. The file may contain sensitive health times and source identifiers; store it securely. Rebuildable analytics caches and Health sync checkpoints are not included.";
 "settings.data.cleanupFooter" = "Test and demo stores can permanently purge tombstones older than 90 days. Production stores retain them to prevent an offline device from restoring deleted data.";
 "settings.icloud" = "iCloud Sync";
 "settings.currentStorage" = "Current Storage";
@@ -446,7 +446,7 @@
 "health.settings.showInTimeline" = "Show Apple Health in Timeline";
 "health.settings.refresh" = "Refresh Today’s Data";
 "health.settings.openSystemSettings" = "Open Settings";
-"health.settings.footer" = "Workout and sleep records stay on this device and never enter the task database or iCloud. Their editable task labels sync like other tasks, but are sync-only: start workouts in Apple Fitness, and do not manually time sleep.";
+"health.settings.footer" = "Readable workout and sleep records are copied into a read-only, device-local TimeTracker replica. The replica never syncs to iCloud and is included in a user-initiated JSON export. Editable task labels sync like other tasks; start workouts in Apple Fitness and do not manually time sleep.";
 "health.settings.taskSetupFailed.title" = "Health tasks could not be updated";
 "health.taskSetup.error.generatedAssignmentUnavailable" = "The Health task could not be assigned to its category.";
 "health.settings.requesting.message" = "Complete the system access sheet to continue.";
@@ -987,7 +987,7 @@
 "task.detail.appleHealth.analysisSubtitle" = "Shows readable Apple Health records in the selected range. Sleep totals exclude awake periods.";
 "task.detail.appleHealth.history.chart" = "Apple Health time by day";
 "task.detail.appleHealth.history.title" = "Apple Health History";
-"task.detail.appleHealth.history.subtitle" = "Read-only workout or sleep records from Apple Health. They aren’t copied into TimeTracker.";
+"task.detail.appleHealth.history.subtitle" = "Read-only workout or sleep records served from the device-local replica. They cannot be edited here or synced through iCloud.";
 "task.detail.appleHealth.history.empty" = "No Apple Health records in this range";
 "forecast.today.title" = "Forecast";
 "forecast.accessibilityValueFormat" = "%@, %@. %@";

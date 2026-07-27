@@ -1,6 +1,6 @@
 # 71：macOS 设置图标对齐与尺寸 实现记忆
 
-状态：2026-07-27 进行中
+状态：2026-07-27 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -28,7 +28,7 @@
 - [x] A：领取反馈、建立活动实现记忆并审计 Settings 图标 owner。
 - [x] B：确定原生 macOS 图标槽位规则，补充先失败的尺寸策略测试。
 - [x] C：实现最小平台布局修复并更新设计文档。
-- [~] D：完成格式、macOS 截图、跨平台回归、全量测试、Release 全设备安装与收口。
+- [x] D：完成格式、macOS 截图、跨平台回归、全量测试、Release 全设备安装与收口。
 
 ## 库策略
 
@@ -46,3 +46,6 @@
 - 2026-07-27：一次中间方案把 15/22 固定值锁死，审计指出它不响应 Sidebar Icon Size 后即撤回；随后清理了该方案造成的精确 DerivedData stale ABI 构建产物。
 - 2026-07-27：`make format` 与 `make format-check` 通过（831 个 Swift 文件无改动）；iPhone 17 Pro `iOS-20260727-170407.xcresult` 与 iPad Pro 13-inch M4 `iOS-20260727-170709.xcresult` 的 Settings 导航回归通过，临时模拟器均由 Makefile 删除。
 - 2026-07-27：默认 `make test` 通过，1420 tests / 158 suites，0 failures。
+- 2026-07-27：实现 checkpoint `c9af4e8c`（`Align mac settings category icons`）将版本推进到 1.1.246 (301)。
+- 2026-07-27：`make build-install-all` 的 Release 构建、签名与安装通过；1.1.246 (301) 已安装到 iPad Pro M4 `748D0137-ADC3-58AF-855C-1E98B3125F93`、iPhone Air `FBA36694-D841-56D4-8ED6-21942873B21B`，嵌入 Watch app 验签通过，macOS app 已复制并验签到 `/Applications/timetracker.app`。没有可见物理 Apple Watch，伴生 app 将由已配对 iPhone 的 Automatic App Install 管理。
+- 2026-07-27：任务完成，反馈标为 `[x]`，活动链接已移除；Release 构建资源随后按工作流清理。

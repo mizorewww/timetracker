@@ -1,1 +1,0 @@
-../tasks/71-mac-settings-icon-alignment.md

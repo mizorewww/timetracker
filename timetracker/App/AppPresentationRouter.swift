@@ -151,8 +151,16 @@ extension AppPresentationRouter {
 
     @discardableResult
     func presentEditSegment(_ segment: TimeSegment, using store: TimeTrackerStore) -> Bool {
-        guard let draft = store.segmentEditorDraft(for: segment) else {
-            store.errorMessage = SegmentMutationError.inconsistentSession.localizedDescription
+        presentEditSegment(.trackedSegment(segment.id), using: store)
+    }
+
+    @discardableResult
+    func presentEditSegment(_ entryID: TimelineEntryID, using store: TimeTrackerStore) -> Bool {
+        guard case .trackedSegment = entryID else {
+            return false
+        }
+        guard let draft = store.segmentEditorDraft(for: entryID) else {
+            store.errorMessage = SegmentMutationError.staleDraft.localizedDescription
             return false
         }
         return present(.segmentEditor(draft))

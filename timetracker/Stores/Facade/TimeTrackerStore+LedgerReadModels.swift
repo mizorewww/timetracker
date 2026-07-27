@@ -116,6 +116,32 @@ extension TimeTrackerStore {
         )
     }
 
+    func segmentEditorDraft(for entryID: TimelineEntryID) -> SegmentEditorDraft? {
+        guard case let .trackedSegment(segmentID) = entryID else {
+            return nil
+        }
+
+        let segment: TimeSegment? = if ledgerDomainStore.hasIndexedSegmentHistory {
+            ledgerDomainStore.segment(for: segmentID).flatMap { candidate in
+                guard candidate.deletedAt == nil,
+                      isReadableLedgerSegment(candidate)
+                else {
+                    return nil
+                }
+                return candidate
+            }
+        } else {
+            allSegments
+                .visibleDeduplicatedByID()
+                .first { $0.id == segmentID }
+        }
+
+        guard let segment else {
+            return nil
+        }
+        return segmentEditorDraft(for: segment)
+    }
+
     func secondsForTaskTotal(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
         ledgerSummaryService.totalSeconds(taskIDs: [task.id], segments: allSegments, mode: mode, now: now)
     }

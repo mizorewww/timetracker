@@ -264,4 +264,161 @@ struct CoreAppPresentationRouterTests {
         #expect(store.errorMessage != nil)
         #expect(router.sheet?.id == presentation.id)
     }
+
+    @Test @MainActor
+    func trackedTimelineIdentityPresentsTheExactSegmentEditorDraft() throws {
+        let taskID = UUID()
+        let startedAt = Date(timeIntervalSinceReferenceDate: 10000)
+        let session = TimeSession(
+            taskID: taskID,
+            source: .manual,
+            deviceID: "test",
+            startedAt: startedAt,
+            titleSnapshot: "Exact record"
+        )
+        session.note = "Original note"
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .manual,
+            deviceID: "test",
+            startedAt: startedAt,
+            endedAt: startedAt.addingTimeInterval(1800)
+        )
+        let store = makeTestStore()
+        store.sessions = [session]
+        store.allSegments = [segment]
+        let router = AppPresentationRouter()
+
+        #expect(
+            router.presentEditSegment(
+                .trackedSegment(segment.id),
+                using: store
+            )
+        )
+
+        guard case let .segmentEditor(draft) = try #require(router.sheet).content else {
+            Issue.record("The tracked identity did not present a segment editor.")
+            return
+        }
+        #expect(draft.segmentID == segment.id)
+        #expect(draft.baseline.sessionID == session.id)
+        #expect(draft.baseline.sessionMutationID == session.clientMutationID)
+        #expect(draft.note == "Original note")
+    }
+
+    @Test @MainActor
+    func appleHealthNamespacesNeverResolveThroughTheLedgerEditor() {
+        let sharedID = UUID()
+        let taskID = UUID()
+        let session = TimeSession(
+            taskID: taskID,
+            source: .manual,
+            deviceID: "test"
+        )
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .manual,
+            deviceID: "test"
+        )
+        segment.id = sharedID
+        let store = makeTestStore()
+        store.sessions = [session]
+        store.allSegments = [segment]
+
+        for healthID in [
+            TimelineEntryID.appleHealthWorkout(sharedID),
+            TimelineEntryID.appleHealthSleep(sharedID),
+        ] {
+            let router = AppPresentationRouter()
+            #expect(router.presentEditSegment(healthID, using: store) == false)
+            #expect(router.sheet == nil)
+        }
+        #expect(store.errorMessage == nil)
+    }
+
+    @Test @MainActor
+    func canonicalSegmentResolutionRejectsANewerTombstone() {
+        let sharedID = UUID()
+        let taskID = UUID()
+        let startedAt = Date(timeIntervalSinceReferenceDate: 20000)
+        let session = TimeSession(
+            taskID: taskID,
+            source: .manual,
+            deviceID: "test",
+            startedAt: startedAt
+        )
+        let visible = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .manual,
+            deviceID: "older",
+            startedAt: startedAt,
+            endedAt: startedAt.addingTimeInterval(600)
+        )
+        visible.id = sharedID
+        visible.updatedAt = startedAt
+        let tombstone = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .manual,
+            deviceID: "newer",
+            startedAt: startedAt,
+            endedAt: startedAt.addingTimeInterval(600)
+        )
+        tombstone.id = sharedID
+        tombstone.updatedAt = startedAt.addingTimeInterval(10)
+        tombstone.deletedAt = tombstone.updatedAt
+        let store = makeTestStore()
+        store.sessions = [session]
+        store.allSegments = [visible, tombstone]
+        let router = AppPresentationRouter()
+
+        #expect(
+            router.presentEditSegment(
+                .trackedSegment(sharedID),
+                using: store
+            ) == false
+        )
+        #expect(router.sheet == nil)
+        #expect(
+            store.errorMessage ==
+                SegmentMutationError.staleDraft.localizedDescription
+        )
+    }
+
+    @Test @MainActor
+    func busyRouterDoesNotReplaceItsSheetWhenAHistoryRowRequestsEditing() throws {
+        let taskID = UUID()
+        let session = TimeSession(
+            taskID: taskID,
+            source: .manual,
+            deviceID: "test"
+        )
+        let segment = TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .manual,
+            deviceID: "test"
+        )
+        let store = makeTestStore()
+        store.sessions = [session]
+        store.allSegments = [segment]
+        let router = AppPresentationRouter()
+        #expect(router.present(.startTaskPicker))
+        let presentationID = try #require(router.sheet?.id)
+
+        #expect(
+            router.presentEditSegment(
+                .trackedSegment(segment.id),
+                using: store
+            ) == false
+        )
+        #expect(router.sheet?.id == presentationID)
+        guard case .startTaskPicker = try #require(router.sheet).content else {
+            Issue.record("The history row replaced an existing scene sheet.")
+            return
+        }
+    }
 }

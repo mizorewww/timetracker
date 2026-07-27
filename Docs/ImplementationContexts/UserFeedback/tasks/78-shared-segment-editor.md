@@ -23,6 +23,8 @@
 
 ## 测试优先清单
 
+- [x] `.trackedSegment` 可按精确、带命名空间的身份解析 canonical editor draft；
+  Apple Health、newer tombstone 与 busy presentation 均不会误开或替换 sheet。
 - [~] 分析 Timeline 的历史 segment 可打开独立 editor，修改后 analytics snapshot
   刷新且写入只发生一次。
 - [ ] 任务详情的历史 segment 可打开同一 editor，修改后详情统计与记录列表刷新。
@@ -33,8 +35,9 @@
 ## Checkpoint 编排
 
 - [x] A：完成现状、Apple HIG、SwiftUI 数据流、现有依赖和测试覆盖审计。
-- [~] B：先补 command/store 边界与 UI acceptance 测试。
-- [ ] C：提取/复用独立 segment editor presentation，接入分析页与任务详情。
+- [x] B：先补 command/store 边界测试，锁定 canonical identity 与 presentation 语义。
+- [~] C：复用独立 segment editor presentation，接入分析页与任务详情并补 UI
+  acceptance 测试。
 - [ ] D：完成全量、截图、Release 全设备安装与收口。
 
 ## 库策略
@@ -114,3 +117,6 @@
 - 2026-07-27：认领任务并建立 `~78` 活动实现记忆。
 - 2026-07-27：完成主代理与三个只读子代理的代码、HIG/SwiftUI、测试覆盖审计；确认
   复用现有 editor 与 command 边界，不引入新依赖，Checkpoint B 转入测试先行。
+- 2026-07-27：新增 router/store identity 边界测试并确认先红后绿；共享入口现在只接收
+  `.trackedSegment`，从当前 canonical 可见记录生成 draft，Health 同 UUID、newer
+  tombstone 与 busy router 均被安全拒绝。定向 17 tests 通过，Checkpoint B 完成。

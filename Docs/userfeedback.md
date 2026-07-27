@@ -1,0 +1,132 @@
+# Timetracker 交互问题
+
+Note: 所有由codex完成的清单应该让codex自己勾选,如果有新的问题,直接在列表下面添加
+Note: 鼓励使用模拟器等测试资源,但每次使用资源之后一定要释放
+Note: `[~]` 表示 Codex 当前正在处理；本文件是任务内容和状态的唯一来源
+
+- [x] Bug: 点击任务详情/Task Analysis,切换 day/week/month 会跳到页面顶部,预期:不应该移动,因为用户本意是停在这里查看相关数据
+- [x] UI: Today/Now 的正在计时界面的排版很糟糕
+  - [x] 1. 分割线层级不对,左右间隔应该一致
+  - [x] 2. 我建议把时间放在较为左侧,应该是(icon)(较大的字体的任务名,下方较小字体的path)(时间,高度要等于前面的元素)(停止按钮) 2.1 如果path过长,建议改为/aaa/.../bbb/task这样的模式,如果还是过长,只显示首个字符
+  - [x] 3. Today/Quick Start排版依旧很糟糕,建议复用Now里面的组件,Running标记不必出现,因为后面有start/stop按钮
+- [x] UI: Tasks界面的Category的长度不对,右侧有奇怪的空白(或者说,它和卡片的右侧结束对不上)
+- [x] UI: ipad 的标题应该自动出现在顶部,目前状态:和页面在一起,并且上滑也没有预期的标题出现在顶部
+- [x] UI: ipad 侧边栏的任务有奇怪的缩进,我发现/下的任务前面还会有缩进,不应该有的
+- [x] UI: Timeline 建议从中间开始排版,居中设计,这样看起来视觉更好.
+- [x]  UI: 主页任务卡片的三点二级操作按钮,依旧排版的很奇怪,我认为没有和最右侧元素的结尾对其(实际上这是我第二次提到奇怪的spacing问题了)
+- [x] UI: timeline实际上我没看到它显示开始时间,这不对
+- [x] UI: 在任务编辑的color&icon选择器中,iphone上展开了键盘,就把icon选择器完全遮挡了,我建议你把color做成二级菜单而不是这样的完全展开,请参考 https://github.com/Lakr233/BlossomColorPicker/
+- [x] UI:Inbox请做成原生卡片的模式,然后现在排版很混乱,ai建议的图标也看不见.同时,适当加一些动画.
+- [x] feature:建议AI可以生成category,tasks和checklist,并且把提示词暴露在设置里允许用户编辑
+- [x] UI: Live activity也很怪异,建议和第二条UI对齐(除了不必做停止指示)
+- [x] feature: Apple watch端目前没有办法新建计时(似乎是我开了一个计时之后,我就没办法新建计时了).我的设想是这样的,apple watch是一个三页的app,第一页展示active timer,第二页展示quick start,第三页则是完整所有任务
+- [x] UI: 灵动岛的live activity堆砌元素过多,建议只有icon,任务名称和时间,并且这三个在同一行,之前的排版很糟糕
+- [x] features: 把status完全删掉,这不是这个软件需要的语义,需要完成的语义应该被转移到任务的checklist
+- [x] UI: Tasks界面把任务名称/计时状态/checklist完成状态全都堆在一起,这不好,我建议的排版是icon|任务名称\n checklist |space|(右对齐)计时状态(只用放一个图标即可)|时间|点进去的指示. 如果任务名称过长,就将任务名称单独放在一行(允许换行),下一行再排版其他元素.
+  - [x] 这里也包含任务选择器,过于怪异了,首先,对于这个软件所有地方都是的,有了running 标志就不必有stop标志,反之亦然,因为这两个明明意思是一样的.
+  - [x] 然后排版也很诡异,请仔细看一下
+- [x] UI&Bug: quick start 的开始按钮,图标没有居中.并且,点击进入任务详情界面,退出来居然是tasks界面而不是today,这不符合“从哪里进去就从哪里出来的预期”
+- [x] feature: 如果同一个任务两个计时段间隔小于一分钟,自动合并为一段
+- [x] UI: analytics里面既然把difinitions单独开一个卡片,那么,就不用加info icon了,并且这个卡片可以做的更加详细
+- [x] UI:Today界面,现在开始和暂停,ios上暂停没有文字,开始却有文字,请你在iphone上全部去除文字,ipad上全部保留文字
+- [x] UI: Toady 界面,可以放一个累积时间的,本周的柱状图
+- [x] UI: ipad上,正在计时的卡片去拉长适应空间,相当诡异,建议将其和概览合并成一行
+- [x] feature: 接入healthkit,接入运动数据和睡眠数据,将其整合在timeline上,并且自动创建运动category下面的任务和日常category的睡觉
+- [x] UI: Inbox任务卡片的排版非常灾难.请单独checkcircle和任务文字是一行,然后Suggested: icon | task,然后是左右两边的dismiss | add to task 的icon(在iphone上建议简化为打勾和打叉符号) 请截图并仔细思考如何排版
+- [x] feature: Inbox 不仅得是LLM可以建议移动到task下/category下/作为一个task的checklist,用户自己也要可以这样选择
+- [x] UI: 任务选择器的状态指示依旧没有统一样式,start another timer的正在计时和没有被计时图标大小和位置不一
+- [x] feature: 统一删除和归档的语义,现在任务不允许删除,只允许归档,在设置中添加一个归档的任务的菜单,允许解除归档.同时,把为了实现删除功能写的代码全部删掉,全面审核,让软件的语义更加简单.然后task页面左滑快捷操作也把删除替换成归档
+- [x] feature: 把快速操作的编辑去掉,统一任务的详情和编辑页面,仔细考虑如何排版.同时,软件备注使用https://github.com/Lakr233/MarkdownView.
+  - [x] feature: 合并之后,自动保存,不用手动点击save
+  - [x] feature: markdown可以展开编辑
+- [x] bug: 任务详情现在看不到任务名称了
+- [x] bug: 我看不到liveactivity和灵动岛了,或许是liveactivity单纯坏了或者是有条件能让它失效
+- [x] UI: 任务详情的stop应该放在最上面的任务卡片里呀,为何没有复用.然后鉴于上面提到我们要合并任务详情和edit,所以add time放在本来的edit按钮哪里
+- [x] UI: 勾选checklist加动画,同时完成的内容要自动跑到最下面
+- [x] feature: Today界面,用户可以在设置里加上github那样的Heatmap,用户可以在设置里加上要上heatmap的任务.heatmap颜色深浅的数据来源可以是子任务完成数量.
+  - [x] feature: 是否追踪heatmap应该在任务详情页面可以被打开,默认关闭
+  - [x] feature: 此处的产品语义是: 每个任务都有单独的heatmap和heatmap配色方案(复用blossomcolor组件,有一个主题色和从深到浅的配色,深到浅每个配色的阈值的数值由max(每日任务时常)来决定)
+  - [x] feature: 任务量任务可以由任务量来决定深色还是浅色
+- [x] feature: 用户可以创建重复任务,和简单任务量任务: 比如一个真实案例: 每天做50个俯卧撑,这个任务就是一个父任务,父任务可以自动生成每天的子任务,一个子任务是一个50个俯卧撑的任务量任务
+- [x] UI: Inbox的任务正文应该和checkcircle居中对齐.Suggested应该和checkcircle同一垂直线左对齐
+- [x] UI: Quickstart 编辑页面逻辑不对,点击添加应该是任务有一个动画,直接跑到固定列表里面,下面就不显示了(或者做拖动手势)
+- [x] UI:侧边栏: 正在计时的icon应该和图标在同一水平线上,现在并不是,同时两个任务上下之间有奇怪的spacing
+- [x] UI: MacOS设置侧边栏固定展开,删除侧边栏展开状态切换按钮
+- [x] Bug: 时间线将不同类型的睡眠拆成了多段,睡眠时间实际上应该合并
+- [x] feature: 不应该在quickstrat里允许开始workout,应该用apple的健身app开始workout,workout应该是仅同步的,睡眠也一样
+- [x] feature: 配置AI的时候,不同的AI提示词应该都可以被编辑
+- [x] feature/AI: Tasks/Generate task plan,应该可以一次性让AI生成多个任务.这里的AI提示词,需要详细向AI介绍软件中的各种任务类型.最终预期效果应该是: 输入: 帮我生成一个读书任务,checklist里有1-10章,每一章的checklist. 然后就可以自动生成到某个category
+  - [x] 这部分值得好好设计,请单独写文档
+  - [x] 编辑提示词采用markdownview
+- [x] Bug: Apple Health 类任务,应该自动显示在task里(虽然他们是特殊任务,只能从apple health同步,不允许开始计时,也不能在计时任务选择器里被选择)
+- [x] Bug: Inbox中将任务勾选完成后没办法将其切换为没有完成的状态
+- [x] UI/Bug: 目前手机上的任务,如果时间太短,没办法容纳图标,会向上拓展而非预期的向下拓展,这导致两个任务之间的timeline ciew 没有预期的spacing(实际上,算法应该是,如果两个任务的结束时间和开始时间在图上画出来小于某个阈值,那么就换一条轨道显示),并且也会遮挡可能有的 xxx min elapsed
+  - [x] UI/Bug: ipad上任务也会挡住 xxx min elapsed. 请尝试生成大量时间重叠,时间短的小任务来查看各个平台的timeline效果
+  - [x] UI/Bug: iphone上 xxx min elapsed现在(在尝试修复重叠问题后)会互相遮挡了,请全平台测试,把这个视觉搞搞好
+  - [x] UI: 在codex尝试修改之后这个图变的非常的奇怪,一条彩色条的宽度都不够容纳图标,居然还敢说视觉通过,很诡异,这个时间条至少要把图标抱住还有padding,否则看起来非常丑还不能传递信息.以及现在用圆点在下面文字标注,实际上应该显示图标的
+  - [x] UI: 目前的省略xxx分钟,胶囊宽度是固定的,导致无法容纳所有文字,建议将其抱住
+- [x]: Bug/Dev: 现在git commit的hook似乎不往上bump版本了,这让测试缺乏在用什么版本的提示,只能靠commit hash来确定,这不好,请每次git commit都bump版本
+- [x] UI: live acitivty 时间最右边有奇怪的spacing,排版也不够美观UI Note: 真人安装了codex的commit后,我的live activity彻底看不到了,能看到的时候也是黑框框,原先蛮好的
+  - [x] UI: 不知道为什么,codex反而劣化了liveactivity的设计,请回滚到原来的设计.现在不仅没有解决问题,反而让排版错乱更严重了
+- [x] UI: 主页的统计图不要滥用渐变色,把标题移动到卡片外,说明文字说的明白一点,放在info的二级菜单
+  - [x] 主页的各种说明文字都放在二级菜单
+- [x] Bug: Apple Health 类型任务, task详情,summary没办法显示过去所有时长,统计也没法看过去所有时间线
+- [x] Bug: Apple Helth 任务可以被改变categty
+- [x] Bug: apple health 任务似乎无法查看过去累积时间和过去时间段
+- [x] UI: 首页不要把heatmap和柱状图混在一起,每个元素请单独做卡片
+  - [x] UI: heatmap和柱状图的风格和原生卡片不一致
+  - [x] UI: heatmap和柱状图的标题与主页其他标题字体不一致,卡片左右间距也不一致.
+    - [x] 请写主页设计规范
+- [x] feature: category的展开和收起
+- [x] feature: category的排序
+- [x] feature: 设置中heatmap的默认时间段长度选择(比如显示这一个月)(也就是高度有几日,现在的方块在iphone上有些略小)
+- [x] feature/Bug: 任务量任务的heatmap逻辑有问题,如果是可以重复的任务,父任务下面的子任务负责记录多少个(时间),父任务显示heatmap.
+- [x] feature: 任务详情页面,点击图标应该跳转到图标编辑页面
+  - [x] UI: 现在图标右侧有奇怪的空间
+- [x] UI: Analytics 界面,切换 Day/Week/Month 的时候会闪烁
+- [x] UI: 番茄钟页面的卡片是自己画的,要么切换成原生,要么圆角和原生同步
+- [x] feature/test: AI的三个提示词为什么只有一个是允许markdownview来preview?AI真的可以稳定实现完成自动化生成任务吗,请测试.(代码库完全私有,不必考虑api泄漏问题 deepseek api: sk-66f353878d3042c0a12915630e9a46b1 模型 deepseek-v4-flash) 我认为你写的提示词完全不正确,甚至都没有指定输出格式,并且还是zero-shot.(这种较为死板的任务不要使用zeroshot)请妥善设计harness.(或者你没有把完整提示词暴露给用户).以及,我觉得把sfsymbol完成发给AI并不是一个很昂贵的选择,因为这是低频任务.(还有,支持deepseek的CoT,对deepseek设计支持思考预算)(测试提示词:帮我生成 category阅读，下放一个任务：人工智能：现代方法，生成checklist 1-28,现在这个提示词是可以work的).现在的实现其实已经足够稳定,我只是希望逻辑能多给用户暴露,防止疑惑
+  - [x] UI: 生成的plan开关重叠在一起了,请复用task详情里的UI.
+  - [x] Bug: 在保存ai提示词的时候卡死
+  - [x] Bug: 依然没有解决AI给出超级大json的问题,不知道为什么要限制各个组件的长度.限制长度是一个很糟糕的设计
+  - [x] Bug: 在利用Inbox页面的生成任务功能的时候,我发现AI似乎没有办法插入任务?因为我已经有一个‘a’ Category,我让AI在 ‘a’ Category 插入任务,却生成了一个新的 a Category. 请让AI得知完整上下文,并且支持增删改查. (Note: 增删改查请当作工具一样调用,不要担心AI上下文不够(也就是不要限制提示词大小,现代的LLM通常有 >= 256K 的上下文))
+- [x] Bug: task详情子任务,勾选完成后,跑下去没有动画,会让用户很疑惑
+  - [x] Bug: 勾选完成后取消勾选,没有办法跑到原来的位置
+- [x] Feature: iOS shortcut支持&文档(这个请开一个文件夹讲shortcut设计)
+- [x] feature: quickstart要可以被排序
+- [x] UI: ipad/mac上的Now界面和overview请和iphone同步,没有必要做ipad/mac和iphone之间的差异化设计,同时,由于ipad/mac屏幕更加宽,所以把overview和now放在同一行(也就是Now|overview 而不是iphone上的 now \n overview)
+- [x] UI: heatmap 在分析页面也放一份
+- [x] code: inbox和task详情的checklist尽量复用
+- [x] performance: 主页在首次快速滑动的时候,有时会卡顿
+- [x] Bug: 提示生成的计划含有过多分类,任务或者清单项,软件应该忠实渲染,同时,我尝试在一个任务下面生成150个checklist然后失败了
+- [x] Bug: 目前总是提示icloud冲突,可merge的应该优先merge,实在冲突再提示选择副本
+- [x] UI: 生成任务展示模型目前输出了多少token,让用户知道是否卡死
+- [x] UI/debug: AI生成任务界面可以查看CoT和原始输出
+- [x] Bug: 现在启动MacOS 干净的 Release App 不知道为什么会让测试数据覆盖icloud(结合下一条) 让 release 构建不要混入测试数据, make build_install_all 也要默认release config
+- [x] Bug: 可能是某次不小心把测试数据写进正式运行的app里了,inbox里老是出现莫名其妙的first,把这个删掉,同时搜索其他类似的测试数据,以后测试数据要放在一起,不可以干扰app运行
+- [x] UI: 尽量少搞platform specific的ui，是否渲染iPhone界面根据宽度决定。建议全量审查一次代码，和平台相关的代码能删就删
+- [x] Bug: 当你在停止一个任务的时候,的确停止了,但是主页上的timeline显示没有正确停止
+- [x] Bug: 任务里的apple health显示消失了
+- [x] UI: apple health任务在任务详情只留下摘要,任务分析和最近记录,其他都不要显示(其他都是给普通任务用的)
+- [x] UI: ipad/macos上的today上面的heatmap和柱状图组件似乎无法自适应过宽的宽度
+- [x] UI/Bug: 若主页上timeline第一个是apple health,第一个apple heath时间显示会和图表重叠
+  - [x] Note: 此处建议apple heath和普通任务复用显示方案,否则老容易出bug
+- [x] UI: iphone上timeline的时间标注在重叠任务较少的时候没有左对齐(可能是设计出来为了避让xxx min skipped,但是实际上应该左对齐)
+- [x] UI: 在宽度较宽的设备上,现在和概览的开始高度不一致
+- [x] UI: 宽度较宽的设备的主页排布浪费空间,建议自动排布
+- [x] UI: Mac上的设置,图标没有居中.大小也不合适
+- [x] Bug: 在设置了heatmap的range后,heatmap并没有自动变大来适应所有显示空间.实际上现在的heatmap单个瓷砖有点过于小了
+- [x] UI: Gross Time 的柱状图配色很难看,其实可以是两个,一个gross一个wall
+- [x] UI: Overview的gross 和wall time下方有奇怪的空间
+- [x] UI: 侧边栏的分类图标和文字都太小了
+- [x] UI: Mac App的各种字体都有些小
+- [x] feature: apple health 软件维护单独的自己的数据库,可以被同步(但不能被修改).设置里的导出json也可以导出
+- [ ] UI: 分析页面复用主页的时间段编辑组件，否则没有办法删除和修改过去的时间段，任务详情页面同理
+  - [ ] 实际上时间段编辑应该单独做UI
+- [ ] AI: 目前timetracker的提示词不足，ai容易混淆子任务和checklist
+- [ ] UI: 多引入直接拖拽排序而不是排序按钮（现在任务子菜单不点击排序也可以拖拽排序了，所以排序代码属于冗余代码，删掉。
+- [ ] UI: 任务checklist删除图标变成二级菜单和左右滑动的操作
+- [ ] bug：因为任务的ai自动推荐机制，一次如果在变动任务的时候ai预测图标，输入会直接被打断，并且每次改变会让任务无限重复预测
+- [ ] UI: 任务checklist 的图标没有居中,并且不支持超长checklist,并且checklist文本显示应该从中间
+- [ ] UI/Bug: Mac上的Blossom Color Picker 出现在意外的位置
+- [ ] feature: Mac 在设置里加上快捷键设置,适当绑定快捷键

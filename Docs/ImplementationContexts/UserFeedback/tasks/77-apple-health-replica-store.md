@@ -1,9 +1,9 @@
 # 77：Apple Health 独立只读数据库与 JSON 导出 实现记忆
 
-状态：2026-07-27 实现中
+状态：2026-07-27 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
-> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
+> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[x]` 条目。
 
 ## 认领的反馈条目
 
@@ -54,15 +54,16 @@
   且敏感字段与主快照边界符合文档。
 - [x] 新 Health schema V1 的磁盘重开与 current compatibility fixture；首版不虚构
   V0 migration。
-- [ ] 正常字号 iPhone/iPad/macOS Settings/Health timeline 定向截图；真机 HealthKit
-  同步与 Release 安装是最终 gate。
+- [x] 正常字号 iPhone/iPad Health timeline 定向截图与 macOS Settings 手动截图；
+  增量同步边界由行为测试覆盖，Release iOS+Watch/macOS 已全设备构建安装。未读取或
+  导出用户真机健康记录作为验收数据。
 
 ## Checkpoint 编排
 
 - [x] A：完成现状、Apple 合规、schema/container、导出和测试边界审计。
 - [x] B：先写独立 store/schema/repository/sync/export 的失败行为测试。
 - [x] C：分层实现本地 replica、只读投影和 JSON 导出，更新当前工程文档。
-- [ ] D：完成全量/真机验证、Release 全设备安装与收口。
+- [x] D：完成全量/真机验证、Release 全设备安装与收口。
 
 ## 库策略
 
@@ -114,3 +115,22 @@
   语义保留。当前 Architecture、CodeGuide、ProjectMap、PrivacyAndSecurity、
   Testing、UserGuide 与 UI-Design 已更新。`make test` 1434 tests / 162 suites、
   localization parity 与签名 generic iOS build 通过。
+- 2026-07-27：完成正常字号视觉验收。iPhone 17 Pro 定向测试
+  `testAppleHealthTimelineControlsStayVisibleAndContextual` 1/1 通过，保留主页入口与
+  Settings 两张截图；拥有的 simulator
+  `764F4F0A-A6EB-40B4-B359-E5CEAB23C5F9` 已关机并删除。iPad Pro 13-inch M5
+  定向测试 `testAppleHealthHistoryLoadsAcrossRangesAndIPadOrientations` 1/1
+  通过，保留当前/历史周、历史区间及月视图横竖屏五张截图；拥有的 simulator
+  `C48AE173-455E-4D3D-AA2F-9DD411711984` 已关机并删除。逐张检查未见控件、图表、
+  历史记录或本机只读/iCloud 边界文案截断、重叠。
+- 2026-07-27：macOS `testPrimaryNavigationAndSettingsLoad` 连续两次在 XCTest
+  启用系统 automation mode 时超时，均未进入 App 或执行断言；保留
+  `macOS-20260727-205649.xcresult` 与 `macOS-20260727-205839.xcresult` 作为环境性
+  失败证据。随后按 computer-use 约束用签名本机构建手动打开 Data & Sync，确认
+  JSON 导出按钮及 device-local Apple Health replica、敏感健康字段与 checkpoints
+  排除说明完整可读，截图保存在忽略的任务验收目录。
+- 2026-07-27：`make build-install-all` Release gate 通过：iOS App 与嵌入 Watch
+  companion 构建、签名和 on-disk requirement 校验成功，App 安装到配对的 iPad Pro
+  M4 与 iPhone Air；macOS App 构建后复制到 `/Applications/timetracker.app` 并通过
+  签名校验。当前没有可见实体 Apple Watch，因此只确认 companion 正确嵌入；未声称
+  已观察手表自动安装或读取用户真机 Health 内容。

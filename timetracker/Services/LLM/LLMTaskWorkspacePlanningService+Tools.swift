@@ -421,6 +421,13 @@ extension LLMTaskWorkspacePlanningService {
                 preconditionFailure("Finalize is handled before tool execution")
             }
         } catch let error as LLMTaskWorkspacePlanningError {
+            if case .invalidToolArguments = error {
+                return try encodeToolResult(
+                    AITaskWorkspaceToolFailureResult(
+                        error: error.localizedDescription
+                    )
+                )
+            }
             throw error
         } catch {
             return try encodeToolResult(

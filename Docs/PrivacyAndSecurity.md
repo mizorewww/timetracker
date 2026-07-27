@@ -113,7 +113,7 @@ Checklist 请求发送完整标题、所属任务标题和完整任务显示路�
 - HTTP 仅允许 localhost、以 .localhost 结尾的保留主机，以及经数值解析确认的 ::1 和 127.0.0.0/8 回环地址；不能用字符串前缀接受 `127.evil.com` 等伪装主机。
 - 携带 Authorization 的重定向只允许 scheme、host 和有效端口全部相同；跨源、端口变化和 HTTPS 降级会被拒绝。
 - 响应通过禁用缓存与 cookie 的 ephemeral 会话读取；缓冲路径资源超时 60 秒，旧 create-only SSE 兼容路径使用 300 秒资源预算，Content-Length 与实际读取正文都限制为 2 MiB。非 2xx 在 headers 后立即取消，不为错误页继续读取正文；用户取消会传递给底层 network task。
-- 当前任务工作区计划使用多轮 buffered function-calling，而不是旧 create-only SSE 路径。assistant `tool_calls`、对应 `tool_call_id` 结果与 reasoning passback 只存在于本次 generation session；推理内容和原始 provider 响应只作为预览的临时来源，不写入 SwiftData、不同步、不导出、不进入日志。
+- 当前任务工作区计划使用多轮 buffered function-calling，而不是旧 create-only SSE 路径。assistant `tool_calls`、对应 `tool_call_id` 结果与 reasoning passback 只存在于本次 generation session；无效工具参数的纠正结果也只返回不含凭据的本机校验错误，不附加新的用户数据。推理内容和原始 provider 响应只作为预览的临时来源，不写入 SwiftData、不同步、不导出、不进入日志。
 - 选择第三方 endpoint 等同于授权该服务按其条款处理上述字段。
 - 请求、响应和错误日志不得输出密钥；生产诊断应避免记录完整用户文本。
 

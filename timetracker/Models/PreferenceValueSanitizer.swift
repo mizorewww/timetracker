@@ -171,10 +171,14 @@ enum AppPreferenceValueSanitizer {
             value,
             defaultInstructions: kind.defaultInstructions
         )
-        if kind == .taskPlan,
-           instructions == LLMTaskPlanPrompt.legacyDefaultInstructions
-        {
-            return LLMTaskPlanPrompt.defaultInstructions
+        if kind == .taskPlan {
+            let supersededDefaults = [
+                LLMTaskPlanPrompt.legacyDefaultInstructions,
+                LLMTaskPlanPrompt.previousTypedDefaultInstructions,
+            ]
+            if supersededDefaults.contains(instructions) {
+                return LLMTaskPlanPrompt.defaultInstructions
+            }
         }
         if instructions == kind.previousDefaultInstructions {
             return kind.defaultInstructions

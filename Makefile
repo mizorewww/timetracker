@@ -119,7 +119,7 @@ test-ui-macos: ## 在 macOS 上运行所选 XCUITest
 	    -parallel-testing-enabled NO
 
 .PHONY: test-llm-live
-test-llm-live: ## 用真实 DeepSeek API 验证三条提示词与任务计划(prompts/prompt28/prompt150/all)
+test-llm-live: ## 用真实 DeepSeek API 验证提示词与任务计划(prompts/prompt28/prompt150/semantics/all)
 	@test -n "$${TIMETRACKER_LIVE_LLM_API_KEY:-}" || \
 	  { echo "TIMETRACKER_LIVE_LLM_API_KEY must be set in the environment or .env" >&2; exit 2; }
 	@set -eu; \

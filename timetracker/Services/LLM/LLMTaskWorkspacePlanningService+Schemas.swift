@@ -62,16 +62,18 @@ extension LLMTaskWorkspacePlanningService {
         definition(
             .createTask,
             """
-            Propose a Task. parentID and categoryID are mutually exclusive; \
-            categoryID is valid only for a root Task.
+            Propose an independently timed work unit that is useful to time \
+            independently. Use parentID for a child Task. parentID and \
+            categoryID are mutually exclusive; categoryID is valid only for \
+            a root Task.
             """,
             properties: taskProperties
         ),
         definition(
             .updateTask,
             """
-            Replace editable fields on one exact Task UUID. This can also move \
-            the Task by changing parentID/categoryID.
+            Replace editable fields on one exact independently timed Task UUID. \
+            This can also move the Task by changing parentID/categoryID.
             """,
             properties: ["id": uuidSchema].merging(
                 taskProperties,
@@ -89,8 +91,9 @@ extension LLMTaskWorkspacePlanningService {
         definition(
             .createChecklistItem,
             """
-            Propose a Checklist item under one exact Task UUID. The app \
-            generates and returns the Checklist UUID.
+            Propose an untimed completion step that cannot be timed \
+            independently under one exact Task UUID. The app generates and \
+            returns the Checklist UUID.
             """,
             properties: [
                 "taskID": uuidSchema,
@@ -102,7 +105,10 @@ extension LLMTaskWorkspacePlanningService {
         ),
         definition(
             .updateChecklistItem,
-            "Replace editable fields on one exact Checklist UUID.",
+            """
+            Replace editable fields on one exact untimed Checklist UUID; it \
+            cannot be timed independently.
+            """,
             properties: [
                 "id": uuidSchema,
                 "title": stringSchema,
@@ -119,8 +125,11 @@ extension LLMTaskWorkspacePlanningService {
         definition(
             .finalizePlan,
             """
-            Finish the proposal. Call this by itself only after all requested \
-            changes are represented in the in-memory workspace.
+            Before finishing, audit that every Task is useful to time \
+            independently, every Checklist is an untimed completion step, and \
+            the same work is not represented as both. Call this by itself only \
+            after all requested changes are represented in the in-memory \
+            workspace.
             """,
             properties: [:]
         ),

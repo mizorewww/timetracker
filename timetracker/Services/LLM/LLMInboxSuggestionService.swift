@@ -318,8 +318,10 @@ extension LLMInboxSuggestionService {
     colorHex. destinationKind must be childTask, category, or checklist. For \
     childTask and checklist, destinationID must exactly match an ID from tasks. \
     For category, destinationID must exactly match an ID from categories. Use \
-    childTask to create a new child task, category to create a new root task in \
-    that category, and checklist to create a checklist item in that task. Use an \
+    childTask only when the inbox work is useful to time independently under \
+    that Task. Use category to create an independently timed root Task in that \
+    Category. Use checklist for an untimed completion step inside that Task. \
+    Never represent the same work as both a Task and a Checklist item. Use an \
     SF Symbol from allowedSymbols and a color from allowedColors exactly.
     """
 }

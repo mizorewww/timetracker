@@ -9,6 +9,22 @@ final class LiveDeepSeekTaskWorkspaceTests: XCTestCase {
         "帮我生成 category阅读，下放一个任务：人工智能：现代方法，生成checklist 1-28"
     private static let prompt150 =
         "帮我生成 category阅读，下放一个任务：人工智能：现代方法，生成checklist 1-150"
+    private static let semanticHierarchyPrompt = """
+    Only refine the existing task "Phoenix Release". Do not change or add \
+    any other root task or category.
+    Under it, create two child Tasks that must be timed independently, with \
+    the exact titles "Run Data Migration [TRACK-A]" and \
+    "Write Release Notes [TRACK-B]".
+    Inside "Run Data Migration [TRACK-A]", create three untimed steps that \
+    are completed only by checking them off, with the exact Checklist titles \
+    "Back Up Database [STEP-A1]", "Run Migration [STEP-A2]", and \
+    "Verify Rollback [STEP-A3]".
+    Inside "Write Release Notes [TRACK-B]", create two equivalent untimed \
+    Checklist steps with the exact titles "Summarize Changes [STEP-B1]" and \
+    "Proofread Copy [STEP-B2]".
+    Never create a TRACK item as a Checklist item, and never create a STEP \
+    item as a Task.
+    """
 
     func testPrompt28UsesTheProductionDeepSeekService() async throws {
         let configuration = try liveConfiguration(for: "prompt28")
@@ -85,6 +101,127 @@ final class LiveDeepSeekTaskWorkspaceTests: XCTestCase {
             Set(checklistItems.map(\.taskID)),
             [generatedTaskID]
         )
+    }
+
+    func testMixedTaskHierarchySemanticsUseTheProductionDeepSeekService()
+        async throws
+    {
+        let configuration = try liveConfiguration(for: "semantics")
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(
+            context: context,
+            deviceID: "live-deepseek-harness"
+        )
+        let root = try repository.createTask(
+            title: "Phoenix Release",
+            parentID: nil,
+            colorHex: "1677FF",
+            iconName: "shippingbox"
+        )
+        let coordinator = StoreScopedAITaskAtomicMutationCoordinator(
+            container: context.container,
+            writeAuthorization: .isolatedTestHarness,
+            deviceID: "live-deepseek-harness"
+        )
+        let baseline = try coordinator.captureBaseline()
+
+        let plan = try await generate(
+            prompt: Self.semanticHierarchyPrompt,
+            workspace: baseline.snapshot,
+            configuration: configuration
+        )
+
+        let resultingTasks = plan.resultingSnapshot.tasks
+        let rootAfter = try XCTUnwrap(
+            resultingTasks.first { $0.id == root.id }
+        )
+        XCTAssertEqual(rootAfter.title, root.title)
+        XCTAssertNil(rootAfter.parentID)
+        XCTAssertEqual(resultingTasks.count, 3)
+        XCTAssertEqual(plan.resultingSnapshot.categories.count, 0)
+
+        let trackedTitles = [
+            "Run Data Migration [TRACK-A]",
+            "Write Release Notes [TRACK-B]",
+        ]
+        let trackedTasks = try trackedTitles.map { title in
+            try XCTUnwrap(
+                resultingTasks.first { $0.title == title },
+                "Missing independently timed child Task: \(title)"
+            )
+        }
+        XCTAssertTrue(trackedTasks.allSatisfy { $0.parentID == root.id })
+        XCTAssertTrue(trackedTasks.allSatisfy { $0.categoryID == nil })
+
+        let expectedChecklistTitlesByTask = [
+            trackedTasks[0].id: Set([
+                "Back Up Database [STEP-A1]",
+                "Run Migration [STEP-A2]",
+                "Verify Rollback [STEP-A3]",
+            ]),
+            trackedTasks[1].id: Set([
+                "Summarize Changes [STEP-B1]",
+                "Proofread Copy [STEP-B2]",
+            ]),
+        ]
+        XCTAssertEqual(plan.resultingSnapshot.checklistItems.count, 5)
+        for (taskID, expectedTitles) in expectedChecklistTitlesByTask {
+            XCTAssertEqual(
+                Set(
+                    plan.resultingSnapshot.checklistItems
+                        .filter { $0.taskID == taskID }
+                        .map(\.title)
+                ),
+                expectedTitles
+            )
+        }
+        XCTAssertTrue(
+            plan.resultingSnapshot.checklistItems.allSatisfy {
+                $0.taskID != root.id
+            }
+        )
+        XCTAssertFalse(
+            resultingTasks.contains {
+                $0.title.contains("[STEP-")
+            }
+        )
+        XCTAssertFalse(
+            plan.resultingSnapshot.checklistItems.contains {
+                $0.title.contains("[TRACK-")
+            }
+        )
+        XCTAssertGreaterThanOrEqual(plan.toolCallCount, 8)
+        XCTAssertFalse(plan.reasoningContent?.isEmpty ?? true)
+        XCTAssertNotNil(plan.rawResponseContent)
+
+        let outcome = try coordinator.apply(
+            AITaskAtomicMutationPlan(
+                baseline: baseline,
+                operations: plan.operations
+            )
+        )
+        XCTAssertTrue(outcome.didMutateTasks)
+        XCTAssertTrue(outcome.didMutateChecklists)
+
+        let persisted = ModelContext(context.container)
+        let persistedTasks = try persisted.fetch(
+            FetchDescriptor<TaskNode>()
+        ).visibleDeduplicatedByID()
+        let persistedChecklistItems = try persisted.fetch(
+            FetchDescriptor<ChecklistItem>()
+        ).visibleDeduplicatedByID()
+        XCTAssertEqual(persistedTasks.count, 3)
+        XCTAssertEqual(persistedChecklistItems.count, 5)
+        for (taskID, expectedTitles) in expectedChecklistTitlesByTask {
+            XCTAssertEqual(
+                Set(
+                    persistedChecklistItems
+                        .filter { $0.taskID == taskID }
+                        .map(\.title)
+                ),
+                expectedTitles
+            )
+        }
     }
 
     func testInboxRoutingPromptUsesTheProductionDeepSeekService() async throws {
@@ -209,15 +346,74 @@ private extension LiveDeepSeekTaskWorkspaceTests {
         workspace: AITaskWorkspaceSnapshot,
         configuration: LiveConfiguration
     ) async throws -> LLMTaskWorkspacePlan {
-        try await LLMTaskWorkspacePlanningService().generate(
-            request: prompt,
-            instructions: LLMTaskPlanPrompt.defaultInstructions,
-            workspace: workspace,
-            endpoint: configuration.endpoint,
-            apiKey: configuration.apiKey,
-            modelID: configuration.modelID,
-            reasoningEffort: .max
-        )
+        var latestToolSummary = "No provider tool response was decoded."
+        let service = LLMTaskWorkspacePlanningService { request in
+            let response = try await LLMSecureHTTPTransport.data(for: request)
+            latestToolSummary = Self.redactedToolSummary(response.0)
+            return response
+        }
+        do {
+            return try await service.generate(
+                request: prompt,
+                instructions: LLMTaskPlanPrompt.defaultInstructions,
+                workspace: workspace,
+                endpoint: configuration.endpoint,
+                apiKey: configuration.apiKey,
+                modelID: configuration.modelID,
+                reasoningEffort: .max
+            )
+        } catch {
+            XCTFail(
+                "Live provider failed after: \(latestToolSummary)"
+            )
+            throw error
+        }
+    }
+
+    static func redactedToolSummary(_ data: Data) -> String {
+        guard
+            let object = try? JSONSerialization.jsonObject(with: data),
+            let envelope = object as? [String: Any],
+            let choices = envelope["choices"] as? [[String: Any]],
+            let message = choices.first?["message"] as? [String: Any],
+            let calls = message["tool_calls"] as? [[String: Any]]
+        else {
+            return "Provider response had no decodable tool calls."
+        }
+        return calls.map { call in
+            guard
+                let function = call["function"] as? [String: Any],
+                let name = function["name"] as? String
+            else {
+                return "unnamed tool call"
+            }
+            guard
+                name == AITaskWorkspaceToolName.createTask.rawValue,
+                let arguments = function["arguments"] as? String,
+                let argumentData = arguments.data(using: .utf8),
+                let value = try? JSONSerialization.jsonObject(
+                    with: argumentData
+                ),
+                let dictionary = value as? [String: Any]
+            else {
+                return name
+            }
+            let keys = Set(dictionary.keys)
+            let missing = LLMTaskWorkspacePlanningService.taskCreateKeys
+                .subtracting(keys)
+                .sorted()
+            let extra = keys.subtracting(
+                LLMTaskWorkspacePlanningService.taskCreateKeys
+            ).sorted()
+            let iconIsAllowed = (dictionary["iconName"] as? String)
+                .map(SymbolCatalog.symbolNameSet.contains) ?? false
+            let colorIsAllowed = (dictionary["colorHex"] as? String)
+                .map(TaskColorPalette.hexValues.contains) ?? false
+            return """
+            create_task(missing=\(missing), extra=\(extra), \
+            iconAllowed=\(iconIsAllowed), colorAllowed=\(colorIsAllowed))
+            """
+        }.joined(separator: "; ")
     }
 
     func verifyGeneratedWorkspace(

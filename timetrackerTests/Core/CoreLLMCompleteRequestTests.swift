@@ -65,6 +65,10 @@ struct CoreLLMCompleteRequestTests {
         )
         let body = try #require(request.httpBody)
         let prompt = try Self.decodeInboxPrompt(from: request)
+        let envelope = try Self.decodeRequestEnvelope(from: request)
+        let fixedContract = try #require(
+            envelope.messages.first { $0.role == "system" }?.content
+        )
 
         #expect(prompt.inboxTitle == inboxTitle.trimmingCharacters(
             in: .whitespacesAndNewlines
@@ -87,6 +91,16 @@ struct CoreLLMCompleteRequestTests {
         #expect(prompt.allowedSymbols == SymbolCatalog.symbolNames)
         #expect(prompt.allowedSymbols.count > 1000)
         #expect(body.count > 64 * 1024)
+        #expect(
+            fixedContract.contains(
+                "childTask only when the inbox work is useful to time independently"
+            )
+        )
+        #expect(
+            fixedContract.contains(
+                "checklist for an untimed completion step"
+            )
+        )
     }
 
     @Test
@@ -236,6 +250,135 @@ struct CoreLLMCompleteRequestTests {
         }
     }
 
+    @Test @MainActor
+    func taskPlanningRequestDefinesOneUnambiguousTaskChecklistBoundary()
+        async throws
+    {
+        var capturedRequest: URLRequest?
+        let service = LLMTaskWorkspacePlanningService { request in
+            capturedRequest = request
+            let response = """
+            {
+              "choices": [{
+                "index": 0,
+                "message": {
+                  "role": "assistant",
+                  "content": "",
+                  "reasoning_content": "The proposal is complete.",
+                  "tool_calls": [{
+                    "id": "finalize-1",
+                    "type": "function",
+                    "function": {
+                      "name": "finalize_plan",
+                      "arguments": "{}"
+                    }
+                  }]
+                },
+                "finish_reason": "tool_calls"
+              }]
+            }
+            """
+            return try (
+                Data(response.utf8),
+                #require(
+                    HTTPURLResponse(
+                        url: request.url!,
+                        statusCode: 200,
+                        httpVersion: nil,
+                        headerFields: nil
+                    )
+                )
+            )
+        }
+
+        _ = try await service.generate(
+            request: "Create independently timed research and writing subtasks, then add a submit checklist step.",
+            instructions: LLMTaskPlanPrompt.defaultInstructions,
+            workspace: AITaskWorkspaceSnapshot(
+                categories: [],
+                tasks: [],
+                checklistItems: []
+            ),
+            endpoint: "https://api.deepseek.com",
+            apiKey: "secret",
+            modelID: "deepseek-v4-flash"
+        )
+
+        let request = try #require(capturedRequest)
+        let envelope = try Self.decodeTaskPlanningRequest(from: request)
+        let system = try #require(
+            envelope.messages.first { $0.role == "system" }?.content
+        )
+        let user = try #require(
+            envelope.messages.first { $0.role == "user" }?.content
+        )
+        let prompt = try JSONDecoder().decode(
+            TaskPlanningPromptEnvelope.self,
+            from: Data(user.utf8)
+        )
+        let createTask = try #require(
+            envelope.tools.first {
+                $0.function.name == "create_task"
+            }
+        )
+        let createChecklist = try #require(
+            envelope.tools.first {
+                $0.function.name == "create_checklist_item"
+            }
+        )
+        let updateTask = try #require(
+            envelope.tools.first {
+                $0.function.name == "update_task"
+            }
+        )
+        let updateChecklist = try #require(
+            envelope.tools.first {
+                $0.function.name == "update_checklist_item"
+            }
+        )
+        let finalize = try #require(
+            envelope.tools.first {
+                $0.function.name == "finalize_plan"
+            }
+        )
+
+        #expect(system.contains("independently timed work unit"))
+        #expect(system.contains("untimed completion step"))
+        #expect(system.contains("Never represent the same work as both"))
+        #expect(
+            createTask.function.description.contains(
+                "useful to time independently"
+            )
+        )
+        #expect(
+            createChecklist.function.description.contains(
+                "cannot be timed independently"
+            )
+        )
+        #expect(
+            updateTask.function.description.contains(
+                "independently timed Task"
+            )
+        )
+        #expect(
+            updateChecklist.function.description.contains(
+                "cannot be timed independently"
+            )
+        )
+        #expect(
+            finalize.function.description.contains(
+                "audit that every Task"
+            )
+        )
+        #expect(prompt.instructions.contains("create_task"))
+        #expect(prompt.instructions.contains("create_checklist_item"))
+        #expect(
+            prompt.instructions.contains(
+                "Never represent the same work as both"
+            )
+        )
+    }
+
     private static func candidate(
         index: Int,
         title: String = "Task",
@@ -304,6 +447,16 @@ struct CoreLLMCompleteRequestTests {
         let body = try #require(request.httpBody)
         return try JSONDecoder().decode(RequestEnvelope.self, from: body)
     }
+
+    private static func decodeTaskPlanningRequest(
+        from request: URLRequest
+    ) throws -> TaskPlanningRequestEnvelope {
+        let body = try #require(request.httpBody)
+        return try JSONDecoder().decode(
+            TaskPlanningRequestEnvelope.self,
+            from: body
+        )
+    }
 }
 
 private struct RequestEnvelope: Decodable {
@@ -341,4 +494,27 @@ private struct ChecklistPromptEnvelope: Decodable {
     let taskTitle: String
     let taskPath: String
     let allowedSymbols: [String]
+}
+
+private struct TaskPlanningRequestEnvelope: Decodable {
+    let messages: [Message]
+    let tools: [Tool]
+
+    struct Message: Decodable {
+        let role: String
+        let content: String?
+    }
+
+    struct Tool: Decodable {
+        let function: Function
+
+        struct Function: Decodable {
+            let name: String
+            let description: String
+        }
+    }
+}
+
+private struct TaskPlanningPromptEnvelope: Decodable {
+    let instructions: String
 }

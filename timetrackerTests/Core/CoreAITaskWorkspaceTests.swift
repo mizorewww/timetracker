@@ -529,6 +529,53 @@ struct CoreAITaskWorkspaceTests {
         #expect(overlay.operations.count == 152)
         #expect(overlay.checklistItem(id: Self.id(10150))?.title == "Chapter 150")
     }
+
+    @Test
+    func invalidModelToolArgumentsReturnARecoverableToolResult() throws {
+        var overlay = AITaskWorkspaceOverlay(
+            snapshot: AITaskWorkspaceSnapshot(
+                categories: [],
+                tasks: [],
+                checklistItems: []
+            )
+        )
+        let call = OpenAIChatToolCall(
+            id: "create-task-invalid-visual",
+            type: "function",
+            function: .init(
+                name: AITaskWorkspaceToolName.createTask.rawValue,
+                arguments: """
+                {
+                  "title": "Draft release notes",
+                  "parentID": null,
+                  "categoryID": null,
+                  "notes": "",
+                  "estimatedMinutes": 90,
+                  "dueAt": null,
+                  "iconName": "invented.invalid.symbol",
+                  "colorHex": "1677FF",
+                  "quantityGoal": null,
+                  "dailyRecurrence": null
+                }
+                """
+            )
+        )
+
+        let result = try LLMTaskWorkspacePlanningService.execute(
+            call,
+            overlay: &overlay,
+            makeID: { Self.id(5000) }
+        )
+        let data = try #require(result.data(using: .utf8))
+        let object = try #require(
+            try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+
+        #expect(object["ok"] as? Bool == false)
+        #expect((object["error"] as? String)?.isEmpty == false)
+        #expect(overlay.snapshot.tasks.isEmpty)
+        #expect(overlay.operations.isEmpty)
+    }
 }
 
 private extension CoreAITaskWorkspaceTests {

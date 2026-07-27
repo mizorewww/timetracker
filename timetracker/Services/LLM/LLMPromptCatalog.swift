@@ -74,11 +74,14 @@ nonisolated enum LLMPromptKind: String, CaseIterable, Identifiable, Sendable {
             ### Choose the smallest useful type
 
             - **Category**: a broad, durable reporting group.
-            - **Task**: work that is useful to time independently.
-            - **Child task**: independently timed work that belongs inside \
-              another task.
-            - **Checklist item**: a concrete completion unit that does not need \
-              its own timer.
+            - **Task**: an independently timed work unit. Use `create_task` for \
+              work that is useful to time independently.
+            - **Child task**: an independently timed work unit that belongs \
+              inside another task. Use `create_task` with that task's exact \
+              UUID as `parentID`.
+            - **Checklist item**: an untimed completion step inside exactly one \
+              task. Use `create_checklist_item`; it cannot be timed \
+              independently and has no estimate, due date, or child work.
             - **Quantity goal**: numeric progress such as pages, repetitions, or \
               glasses. Include a clear target and unit.
             - **Daily recurrence**: work that should produce one occurrence each \
@@ -86,13 +89,19 @@ nonisolated enum LLMPromptKind: String, CaseIterable, Identifiable, Sendable {
 
             ### Keep the result actionable
 
+            Honor an explicit request for tasks, subtasks, child tasks, or \
+            checklist items when it is structurally valid. If the \
+            wording is ambiguous, use a task only when an independent timer is \
+            useful; otherwise use a checklist item. Never represent the same \
+            work as both a Task and a Checklist item.
+
             Use concise titles, avoid duplicate work, and add notes only when \
             they provide useful context. Expand explicitly numbered or named \
             steps completely. For example, reading a ten-chapter book should \
             produce one reading task with **Checklist item** entries for every \
             chapter, not a single sample chapter.
 
-            ### Worked example
+            ### Worked example: checklist steps
 
             **Example input**
 
@@ -114,6 +123,36 @@ nonisolated enum LLMPromptKind: String, CaseIterable, Identifiable, Sendable {
             After all requested changes exist in the overlay, call \
             `finalize_plan` with `{}`. Do not replace the complete sequence \
             with one representative checklist item.
+
+            ### Worked example: child task plus checklist
+
+            **Example input**
+
+            The workspace contains the task `Publish research report` with ID \
+            `33333333-3333-3333-3333-333333333333`. The request is: `Create an \
+            independently timed child task named Draft report, then add the \
+            untimed checklist step Submit to editor inside Draft report`.
+
+            **Example output**
+
+            First call `create_task` with the exact existing parent ID:
+
+            ```json
+            {"title":"Draft report","parentID":"33333333-3333-3333-3333-333333333333","categoryID":null,"notes":"","estimatedMinutes":120,"dueAt":null,"iconName":"doc.text","colorHex":"1677FF","quantityGoal":null,"dailyRecurrence":null}
+            ```
+
+            Suppose that tool call returns Task UUID \
+            `44444444-4444-4444-4444-444444444444`. Use the returned UUID as \
+            `taskID` when calling `create_checklist_item`:
+
+            ```json
+            {"taskID":"44444444-4444-4444-4444-444444444444","title":"Submit to editor","isCompleted":false,"iconName":"paperplane","colorHex":"1677FF"}
+            ```
+
+            The first item is a child Task because it needs its own timer. The \
+            second is a Checklist item because it is only an untimed completion \
+            step. Do not also create a Checklist item named `Draft report` or a \
+            Task named `Submit to editor`.
             """
         }
     }
@@ -342,6 +381,61 @@ nonisolated enum LLMTaskPlanPrompt {
     checklist items as concrete completion steps. Keep titles concise, \
     avoid duplicate work, and add notes only when they provide useful \
     context.
+    """
+
+    /// The exact typed-example default shipped before the Task/Checklist
+    /// contrast was made explicit. Exact stored defaults migrate forward,
+    /// while edited copies remain untouched.
+    static let previousTypedDefaultInstructions = """
+    ## Build the complete useful plan
+
+    Generate all useful work called for by the request. Keep the plan \
+    practical for timing and progress tracking, and do not stop after \
+    one representative item.
+
+    ### Choose the smallest useful type
+
+    - **Category**: a broad, durable reporting group.
+    - **Task**: work that is useful to time independently.
+    - **Child task**: independently timed work that belongs inside \
+      another task.
+    - **Checklist item**: a concrete completion unit that does not need \
+      its own timer.
+    - **Quantity goal**: numeric progress such as pages, repetitions, or \
+      glasses. Include a clear target and unit.
+    - **Daily recurrence**: work that should produce one occurrence each \
+      day. Combine it with a quantity goal when both are useful.
+
+    ### Keep the result actionable
+
+    Use concise titles, avoid duplicate work, and add notes only when \
+    they provide useful context. Expand explicitly numbered or named \
+    steps completely. For example, reading a ten-chapter book should \
+    produce one reading task with **Checklist item** entries for every \
+    chapter, not a single sample chapter.
+
+    ### Worked example
+
+    **Example input**
+
+    The workspace contains the task `Artificial Intelligence: A Modern \
+    Approach` with ID `22222222-2222-2222-2222-222222222222`. The \
+    request is: `Add checklist items for chapters 1 through 3`.
+
+    **Example output**
+
+    Call `create_checklist_item` three times, once for each chapter, \
+    using the exact existing task ID and distinct complete titles:
+
+    ```json
+    {"taskID":"22222222-2222-2222-2222-222222222222","title":"Read chapter 1","isCompleted":false,"iconName":"book","colorHex":"1677FF"}
+    {"taskID":"22222222-2222-2222-2222-222222222222","title":"Read chapter 2","isCompleted":false,"iconName":"book","colorHex":"1677FF"}
+    {"taskID":"22222222-2222-2222-2222-222222222222","title":"Read chapter 3","isCompleted":false,"iconName":"book","colorHex":"1677FF"}
+    ```
+
+    After all requested changes exist in the overlay, call \
+    `finalize_plan` with `{}`. Do not replace the complete sequence \
+    with one representative checklist item.
     """
 
     static let defaultInstructions = LLMPromptKind.taskPlan.defaultInstructions

@@ -4071,6 +4071,14 @@ final class timetrackerUITests: XCTestCase {
                 preview.waitForExistence(timeout: 5),
                 "Every prompt editor must render a Markdown preview."
             )
+            #if !os(macOS)
+            if kind == "taskPlan" {
+                try capture(
+                    "\(screenshotPrefix)-ai-prompt-task-plan-default-preview",
+                    app: app
+                )
+            }
+            #endif
 
             let effectiveRequest = app.descendants(matching: .any)[
                 "settings.llm.prompt.\(kind).effectiveRequest"
@@ -4097,7 +4105,7 @@ final class timetrackerUITests: XCTestCase {
                 "Every prompt editor must expose the allowed symbols and colors."
             )
             #if !os(macOS)
-            if kind == "inboxRouting" {
+            if kind == "inboxRouting" || kind == "taskPlan" {
                 activate(fixedRules)
                 try capture(
                     "\(screenshotPrefix)-ai-prompt-\(kind)-fixed-contract",

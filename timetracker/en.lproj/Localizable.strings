@@ -221,7 +221,7 @@
 "settings.llm.prompt.inboxRouting.title" = "Inbox Routing Instructions";
 "settings.llm.prompt.inboxRouting.edit" = "Edit Inbox Routing Instructions";
 "settings.llm.prompt.inboxRouting.editorTitle" = "Inbox Routing Rules";
-"settings.llm.prompt.inboxRouting.footer" = "Controls how AI matches an inbox item to an existing task, category, or checklist.";
+"settings.llm.prompt.inboxRouting.footer" = "Controls whether AI turns an inbox item into a new root task, a separately timed subtask, or an untimed checklist step.";
 "settings.llm.prompt.checklistVisual.title" = "Checklist Visual Instructions";
 "settings.llm.prompt.checklistVisual.edit" = "Edit Checklist Visual Instructions";
 "settings.llm.prompt.checklistVisual.editorTitle" = "Checklist Visual Rules";
@@ -229,7 +229,7 @@
 "settings.llm.prompt.taskPlan.title" = "Task Planning Instructions";
 "settings.llm.prompt.taskPlan.edit" = "Edit Task Planning Instructions";
 "settings.llm.prompt.taskPlan.editorTitle" = "Task Planning Rules";
-"settings.llm.prompt.taskPlan.footer" = "Controls how AI turns a request into categories, tasks, and checklist items.";
+"settings.llm.prompt.taskPlan.footer" = "Controls how AI organizes a request into categories, independently timed tasks, and untimed checklist steps.";
 "settings.llm.prompt.restoreDefault" = "Restore Default Instructions";
 "settings.llm.prompt.byteCountFormat" = "%lld of %lld bytes";
 "settings.llm.prompt.footer" = "These instructions sync with your app data and are sent to your configured endpoint when the corresponding AI feature runs. Do not include passwords or API keys. Saving an empty editor restores that feature’s default instructions. The fixed response format and validation rules always remain in effect.";

@@ -126,12 +126,59 @@ struct LLMSettingsTests {
 
         #expect(instructions.contains("##"))
         #expect(instructions.contains("**Checklist item**"))
+        #expect(instructions.contains("create_task"))
+        #expect(instructions.contains("create_checklist_item"))
+        #expect(instructions.contains("independently timed work unit"))
+        #expect(instructions.contains("untimed completion step"))
+        #expect(instructions.contains("Never represent the same work as both"))
         #expect(instructions.localizedCaseInsensitiveContains("quantity"))
         #expect(instructions.localizedCaseInsensitiveContains("daily"))
         #expect(
             AppPreferenceValueSanitizer
                 .llmPromptInstructionsStoredByteCount(instructions) <=
                 AppPreferenceValueSanitizer.maximumLLMTaskPlanInstructionsByteCount
+        )
+    }
+
+    @Test
+    func exactPreviousTypedTaskPlanDefaultUpgradesWithoutOverwritingCustomization() throws {
+        let previous = LLMTaskPlanPrompt.previousTypedDefaultInstructions
+        #expect(
+            try AppPreferenceValueSanitizer.llmTaskPlanInstructions(previous) ==
+                LLMTaskPlanPrompt.defaultInstructions
+        )
+
+        let customized = previous + "\n\nKeep my custom hierarchy rule."
+        #expect(
+            try AppPreferenceValueSanitizer.llmTaskPlanInstructions(customized) ==
+                customized
+        )
+    }
+
+    @Test @MainActor
+    func syncedPreviousTypedTaskPlanDefaultIsRewrittenAsTheNewDefault() throws {
+        let preference = SyncedPreference(
+            key: AppPreferenceKey.llmTaskPlanInstructions.rawValue,
+            valueJSON: PreferenceJSON.encode(
+                LLMTaskPlanPrompt.previousTypedDefaultInstructions
+            ),
+            deviceID: "test"
+        )
+        let preferences = AppPreferences(syncedPreferences: [preference])
+
+        #expect(
+            preferences.llmTaskPlanInstructions ==
+                LLMTaskPlanPrompt.defaultInstructions
+        )
+        #expect(
+            preferences.valueJSON(for: .llmTaskPlanInstructions) ==
+                PreferenceJSON.encode(LLMTaskPlanPrompt.defaultInstructions)
+        )
+        #expect(
+            try PreferenceJSON.canonicalValueJSON(
+                for: .llmTaskPlanInstructions,
+                from: preference.valueJSON
+            ) == PreferenceJSON.encode(LLMTaskPlanPrompt.defaultInstructions)
         )
     }
 

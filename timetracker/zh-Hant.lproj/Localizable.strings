@@ -221,7 +221,7 @@
 "settings.llm.prompt.inboxRouting.title" = "收件匣路由指令";
 "settings.llm.prompt.inboxRouting.edit" = "編輯收件匣路由指令";
 "settings.llm.prompt.inboxRouting.editorTitle" = "收件匣路由規則";
-"settings.llm.prompt.inboxRouting.footer" = "控制 AI 如何把收件匣項目配對到現有任務、分類或清單。";
+"settings.llm.prompt.inboxRouting.footer" = "控制 AI 將收件匣項目建立為根任務、可單獨計時的子任務，或不單獨計時的清單步驟。";
 "settings.llm.prompt.checklistVisual.title" = "清單視覺指令";
 "settings.llm.prompt.checklistVisual.edit" = "編輯清單視覺指令";
 "settings.llm.prompt.checklistVisual.editorTitle" = "清單視覺規則";
@@ -229,7 +229,7 @@
 "settings.llm.prompt.taskPlan.title" = "任務規劃指令";
 "settings.llm.prompt.taskPlan.edit" = "編輯任務規劃指令";
 "settings.llm.prompt.taskPlan.editorTitle" = "任務規劃規則";
-"settings.llm.prompt.taskPlan.footer" = "控制 AI 如何把要求轉換成分類、任務和清單項目。";
+"settings.llm.prompt.taskPlan.footer" = "控制 AI 如何把需求組織為分類、可單獨計時的任務和不單獨計時的清單步驟。";
 "settings.llm.prompt.restoreDefault" = "恢復預設指令";
 "settings.llm.prompt.byteCountFormat" = "%lld / %lld 位元組";
 "settings.llm.prompt.footer" = "這些指令會隨 App 資料同步，並在對應 AI 功能執行時傳送到你設定的 endpoint。請勿填寫密碼或 API Key。清空編輯器並儲存後會恢復該功能的預設指令；固定回應格式與驗證規則始終有效。";

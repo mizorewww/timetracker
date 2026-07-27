@@ -221,7 +221,7 @@
 "settings.llm.prompt.inboxRouting.title" = "收件箱路由指令";
 "settings.llm.prompt.inboxRouting.edit" = "编辑收件箱路由指令";
 "settings.llm.prompt.inboxRouting.editorTitle" = "收件箱路由规则";
-"settings.llm.prompt.inboxRouting.footer" = "控制 AI 如何把收件箱条目匹配到现有任务、分类或清单。";
+"settings.llm.prompt.inboxRouting.footer" = "控制 AI 将收件箱项目创建为根任务、可单独计时的子任务，还是不单独计时的清单步骤。";
 "settings.llm.prompt.checklistVisual.title" = "清单视觉指令";
 "settings.llm.prompt.checklistVisual.edit" = "编辑清单视觉指令";
 "settings.llm.prompt.checklistVisual.editorTitle" = "清单视觉规则";
@@ -229,7 +229,7 @@
 "settings.llm.prompt.taskPlan.title" = "任务规划指令";
 "settings.llm.prompt.taskPlan.edit" = "编辑任务规划指令";
 "settings.llm.prompt.taskPlan.editorTitle" = "任务规划规则";
-"settings.llm.prompt.taskPlan.footer" = "控制 AI 如何把请求转换成分类、任务和清单项目。";
+"settings.llm.prompt.taskPlan.footer" = "控制 AI 如何把需求组织为分类、可单独计时的任务和不单独计时的清单步骤。";
 "settings.llm.prompt.restoreDefault" = "恢复默认指令";
 "settings.llm.prompt.byteCountFormat" = "%lld / %lld 字节";
 "settings.llm.prompt.footer" = "这些指令会随应用数据同步，并在对应 AI 功能运行时发送到你配置的 endpoint。请勿填写密码或 API Key。清空编辑器并保存后会恢复该功能的默认指令；固定响应格式与验证规则始终有效。";

@@ -1,6 +1,6 @@
 # 80：直接拖拽排序与冗余排序模式清理实现记忆
 
-状态：2026-07-27 实现中
+状态：2026-07-28 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -22,17 +22,17 @@
 
 ## UI 验收清单（改动前）
 
-- [ ] iPhone 正常字号：Task checklist 与 Inbox 不显示 Sort/Done 模式按钮，直接长按
+- [x] iPhone 正常字号：Task checklist 与 Inbox 不显示 Sort/Done 模式按钮，直接长按
   拖动仍可用，移动后顺序持久化。
-- [ ] macOS 正常字号：Task checklist 不显示 Sort header，保留直接拖动，并让现有
+- [x] macOS 正常字号：Task checklist 不显示 Sort header，保留直接拖动，并让现有
   28 pt 上移/下移按钮常驻作为非拖拽替代。
-- [ ] Checklist 只允许在未完成组或已完成组内部移动；Inbox capture 与 completed
+- [x] Checklist 只允许在未完成组或已完成组内部移动；Inbox capture 与 completed
   section 不进入 open-item 移动作用域。
-- [ ] 独立的 Category 排序 sheet、Cancel/Done、并发 baseline、macOS Task 菜单，以及
+- [x] 独立的 Category 排序 sheet、Cancel/Done、并发 baseline、macOS Task 菜单，以及
   Quick Start 的移动入口保持不变。
-- [ ] Tasks 主树保持不变：它当前没有安全的同级 reorder facade，把扁平树直接接入
+- [x] Tasks 主树保持不变：它当前没有安全的同级 reorder facade，把扁平树直接接入
   `onMove` 会混合同级、父子与展开子树，属于另一个功能而不是本次冗余代码清理。
-- [ ] 删除冗余 UI 后，本地化 key、accessibility identifier、测试与文档同步收口。
+- [x] 删除冗余 UI 后，本地化 key、accessibility identifier、测试与文档同步收口。
 
 ## 测试优先清单
 
@@ -41,14 +41,14 @@
   的直接排序回归。
 - [x] 先补 UI 自动化，确认移除模式前会因 checklist Sort 按钮存在而失败。
 - [x] 删除排序模式后复跑 iPhone/macOS UI 自动化，并保留和目检正常字号截图。
-- [ ] 完整测试、格式/本地化门禁、正常字号截图与 Release 全设备安装通过。
+- [x] 完整测试、格式/本地化门禁、正常字号截图与 Release 全设备安装通过。
 
 ## Checkpoint 编排
 
 - [x] A：完成排序入口、状态、command、测试、平台差异与依赖审计。
 - [x] B：先补失败的行为/交互测试，锁定直接拖拽契约。
 - [x] C：删除冗余模式并完成最小原生交互实现。
-- [~] D：完成定向、全量、截图、Release 全设备安装与收口。
+- [x] D：完成定向、全量、截图、Release 全设备安装与收口。
 
 ## 库策略
 
@@ -90,3 +90,9 @@
   `build/UITestScreenshots/task80-ios-20260727-235203/` 与
   `build/UITestScreenshots/task80-macos-20260727-235722/`。首次 macOS 截图被历史
   WidgetRenderer Problem Reporter 遮挡，已关闭系统报告窗口并重拍干净证据。
+- 2026-07-28：完整 `make test` 通过（1443 tests / 162 suites），`make format-check`
+  通过（0/842），`make localization-check` 通过（9/9、主资源 1282 keys），
+  `make check-hooks` 与 `git diff --check` 通过。
+- 2026-07-28：实现提交 `405065d3`（1.1.283 / 338）完成 Release
+  `make build-install-all`：安装到 iPad Pro M4、iPhone Air，iOS 包包含 Watch
+  companion，并将签名验证通过的 macOS App 复制到 `/Applications/timetracker.app`。

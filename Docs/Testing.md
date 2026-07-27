@@ -2,7 +2,7 @@
 
 Status: current verification policy
 
-Reviewed: 2026-07-26
+Reviewed: 2026-07-28
 
 ## Baseline Commands
 
@@ -198,6 +198,17 @@ The default UI matrix uses normal text sizes and ordinary interaction paths. The
   axes/ranges, and debug details remain compact metadata. A macOS typography change to
   shared views also runs the same seven-page matrix on an owned iPhone and 13-inch iPad
   simulator so established iOS sizes and navigation remain unchanged.
+- Checklist editor row acceptance: `testChecklistRowCentersControlsAndGrowsForLongTitles`
+  launches a UI-test-only long-title fixture at normal text size on iPhone, iPad, and
+  macOS. A one-line row and a title taller than the retired four-line cap must keep
+  completion, symbol, and More controls centered against the complete title frame, while
+  every control preserves the platform minimum target (44 pt touch, 28 pt pointer). The
+  seeded title value must remain complete on every platform; iPhone/iPad additionally
+  replace the full value, continue typing without another tap, and retain the software
+  keyboard. Capture and inspect the platform-prefixed screenshot before keyboard
+  presentation. The `--uitesting-long-checklist` fixture is test-only, uses extra
+  repetition on macOS to account for its wider editor, and must not affect ordinary or
+  Release demo data.
 - Shared task-row and timer-action acceptance: Tasks, Sidebar, hierarchy-picker selection rows, and `TaskIdentityRow` all reuse `TaskSummaryRow`; Today, Quick Start, and every timer-picker Start/Switch/Stop reuse `TaskTimerActionButton`. At normal text size, verify a long title grows to two lines before metadata is compressed; a hierarchical row's second summary line is checklist progress, flexible space, passive timer icon, worked duration, then navigation/accessory, while a standard row may insert its parent path before that metadata line. A passive timer icon must never expose Stop, and Start/Switch/Stop must not be reintroduced as metadata accessories. In the timer picker, each row exposes a separate read-only task summary plus one explicit action; Start, Switch, and Stop use the same fixed icon-only control dimensions and trailing edge (54×54 pt on iOS/iPadOS, satisfying the 44 pt minimum target; 28×28 pt on macOS), while Stop never inherits the whole row's hit frame. Every active task has exactly one Stop target and no duplicate per-row Running badge/text beyond the section context. Run the same UI assertion at normal text size on iPhone and iPad, capture the mixed running/available state, then Stop one task and verify its new Start control retains the same width, height, and trailing position while the picker remains presented. Successful Start/Switch may dismiss; Pomodoro and Inbox single selection must not mutate timer state.
 - Persistent sidebar category acceptance: at normal text size on iPad landscape and macOS, capture the category → root task → child task hierarchy and visually confirm the category title and SF Symbol use a body-sized, matched system font beside the existing destination/task rows. The deterministic UI path must still collapse the whole category branch, leave sibling categories reachable, restore nested expansion, and automatically reveal the current task after navigation. Keep the hierarchy picker's compact presentation and the iPhone tab root unchanged; use stable accessibility identifiers and behavior assertions rather than source-string or pixel-color scans.
 - Command handlers: durable writes such as timer, task, pomodoro, ledger, countdown, checklist, and preference changes must have behavior tests at the command boundary before UI wiring changes.

@@ -208,14 +208,13 @@ struct ChecklistTitleTextField: View {
     @Binding var title: String
     let isCompleted: Bool
     var placeholder: String = AppStrings.localized("editor.checklist.itemPlaceholder")
-    var lineLimit: ClosedRange<Int> = 1 ... 5
+    var boundedLineLimit: ClosedRange<Int>? = 1 ... 5
     var accessibilityIdentifier: String?
     let submit: () -> Void
 
     var body: some View {
-        TextField(placeholder, text: $title, axis: .vertical)
+        lineLimitedTextField
             .textFieldStyle(.plain)
-            .lineLimit(lineLimit)
             .strikethrough(isCompleted)
             .foregroundStyle(isCompleted ? .secondary : .primary)
             .submitLabel(.done)
@@ -230,6 +229,19 @@ struct ChecklistTitleTextField: View {
                 )
                 submit()
             }
+    }
+
+    @ViewBuilder
+    private var lineLimitedTextField: some View {
+        if let boundedLineLimit {
+            baseTextField.lineLimit(boundedLineLimit)
+        } else {
+            baseTextField.lineLimit(nil)
+        }
+    }
+
+    private var baseTextField: some View {
+        TextField(placeholder, text: $title, axis: .vertical)
     }
 }
 

@@ -12,13 +12,12 @@ struct ChecklistEditorRow: View {
     let submit: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .center, spacing: 10) {
             ChecklistCompletionButton(
                 isCompleted: item.isCompleted,
                 colorHex: item.colorHex,
                 action: toggleCompletion
             )
-            .padding(.top, 2)
             .accessibilityLabel(
                 item.title.isEmpty
                     ? AppStrings.localized("editor.checklist.completionControl")
@@ -47,12 +46,15 @@ struct ChecklistEditorRow: View {
             ChecklistTitleTextField(
                 title: $item.title,
                 isCompleted: item.isCompleted,
-                lineLimit: 1 ... 4,
+                boundedLineLimit: nil,
                 accessibilityIdentifier:
                 "task.editor.checklist.title.\(item.id.uuidString)",
                 submit: submit
             )
             .focused(focus, equals: item.id)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(1)
 
             macOSOrderingControls
             actionsMenu
@@ -82,6 +84,11 @@ struct ChecklistEditorRow: View {
                 .foregroundStyle(.secondary)
         }
         .menuIndicator(.hidden)
+        .frame(
+            width: AppLayout.minimumInteractiveTarget,
+            height: AppLayout.minimumInteractiveTarget
+        )
+        .contentShape(Rectangle())
         .accessibilityLabel(AppStrings.localized("common.more"))
         .accessibilityIdentifier(
             "task.editor.checklist.more.\(item.id.uuidString)"

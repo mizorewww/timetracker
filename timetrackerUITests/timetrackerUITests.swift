@@ -2614,6 +2614,187 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testChecklistRowCentersControlsAndGrowsForLongTitles() throws {
+        let app = launchApp(
+            route: "task-detail",
+            contentSizeCategory: "UICTContentSizeCategoryL",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: "Design macOS UI",
+            additionalLaunchArguments: ["--uitesting-long-checklist"],
+            autosaveDelayMilliseconds: 30000
+        )
+        ensureTaskDetailIsReady(named: "Design macOS UI", in: app)
+
+        let completionPrefix = "task.editor.checklist.completion."
+        let completion = app.buttons["Polish timeline"].firstMatch
+        scrollUntilHittable(completion, direction: .up, in: app)
+        XCTAssertTrue(
+            completion.waitForExistence(timeout: 5) && completion.isHittable
+        )
+        let itemID = String(
+            completion.identifier.dropFirst(completionPrefix.count)
+        )
+        let titleField = app.descendants(matching: .any)[
+            "task.editor.checklist.title.\(itemID)"
+        ].firstMatch
+        let symbolPicker = app.descendants(matching: .any)[
+            "symbol.picker.open.checklist.\(itemID)"
+        ].firstMatch
+        let actionsMenu = app.descendants(matching: .any)[
+            "task.editor.checklist.more.\(itemID)"
+        ].firstMatch
+
+        XCTAssertTrue(titleField.waitForExistence(timeout: 5))
+        XCTAssertTrue(symbolPicker.waitForExistence(timeout: 5))
+        XCTAssertTrue(actionsMenu.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            completion.frame.midY,
+            titleField.frame.midY,
+            accuracy: 2,
+            "The completion control and a one-line title must share a visual center."
+        )
+        XCTAssertEqual(
+            symbolPicker.frame.midY,
+            titleField.frame.midY,
+            accuracy: 2,
+            "The checklist symbol and a one-line title must share a visual center."
+        )
+        XCTAssertEqual(
+            actionsMenu.frame.midY,
+            titleField.frame.midY,
+            accuracy: 2,
+            "The checklist actions and a one-line title must share a visual center."
+        )
+
+        #if os(macOS)
+        let minimumTargetSize: CGFloat = 28
+        #else
+        let minimumTargetSize: CGFloat = 44
+        #endif
+        for (name, control) in [
+            ("completion", completion),
+            ("symbol", symbolPicker),
+            ("actions", actionsMenu),
+        ] {
+            XCTAssertGreaterThanOrEqual(
+                control.frame.width,
+                minimumTargetSize - 0.5,
+                "\(name) width must preserve the platform minimum target."
+            )
+            XCTAssertGreaterThanOrEqual(
+                control.frame.height,
+                minimumTargetSize - 0.5,
+                "\(name) height must preserve the platform minimum target."
+            )
+        }
+
+        let shortTitleHeight = titleField.frame.height
+        #if os(macOS)
+        let longTitleRepetitionCount = 18
+        #else
+        let longTitleRepetitionCount = 6
+        #endif
+        let longTitle = Array(
+            repeating:
+            "Review every platform layout and preserve the complete checklist wording",
+            count: longTitleRepetitionCount
+        ).joined(separator: " ")
+        let longCompletion = app.buttons.matching(
+            NSPredicate(format: "label == %@", longTitle)
+        ).firstMatch
+        scrollUntilHittable(longCompletion, direction: .up, in: app)
+        XCTAssertTrue(
+            longCompletion.waitForExistence(timeout: 5) &&
+                longCompletion.isHittable
+        )
+        let longItemID = String(
+            longCompletion.identifier.dropFirst(completionPrefix.count)
+        )
+        let longTitleField = app.descendants(matching: .any)[
+            "task.editor.checklist.title.\(longItemID)"
+        ].firstMatch
+        let longSymbolPicker = app.descendants(matching: .any)[
+            "symbol.picker.open.checklist.\(longItemID)"
+        ].firstMatch
+        let longActionsMenu = app.descendants(matching: .any)[
+            "task.editor.checklist.more.\(longItemID)"
+        ].firstMatch
+        XCTAssertTrue(longTitleField.waitForExistence(timeout: 5))
+        XCTAssertTrue(longSymbolPicker.waitForExistence(timeout: 5))
+        XCTAssertTrue(longActionsMenu.waitForExistence(timeout: 5))
+
+        let longTitleHeight = longTitleField.frame.height
+        XCTAssertGreaterThan(
+            longTitleHeight,
+            shortTitleHeight * 3.5,
+            """
+            A long checklist title must expand beyond the former four-line cap. \
+            Short height: \(shortTitleHeight); long height: \(longTitleHeight).
+            """
+        )
+        XCTAssertEqual(
+            longCompletion.frame.midY,
+            longTitleField.frame.midY,
+            accuracy: 3,
+            "The completion control must remain centered beside a long title."
+        )
+        XCTAssertEqual(
+            longSymbolPicker.frame.midY,
+            longTitleField.frame.midY,
+            accuracy: 3,
+            "The checklist symbol must remain centered beside a long title."
+        )
+        XCTAssertEqual(
+            longActionsMenu.frame.midY,
+            longTitleField.frame.midY,
+            accuracy: 3,
+            "The checklist actions must remain centered beside a long title."
+        )
+        XCTAssertGreaterThanOrEqual(
+            longActionsMenu.frame.width,
+            minimumTargetSize - 0.5
+        )
+        XCTAssertGreaterThanOrEqual(
+            longActionsMenu.frame.height,
+            minimumTargetSize - 0.5
+        )
+
+        try capture(
+            "\(platformScreenshotPrefix(in: app))-checklist-long-title-centered",
+            app: app
+        )
+
+        XCTAssertEqual(
+            longTitleField.value as? String,
+            longTitle,
+            "The seeded long checklist title must remain complete before editing."
+        )
+        #if os(iOS)
+        activate(longTitleField)
+        longTitleField.typeKey("a", modifierFlags: .command)
+        longTitleField.typeText(longTitle + " first")
+        XCTAssertTrue(
+            waitUntil(timeout: 5) {
+                (longTitleField.value as? String) == longTitle + " first"
+            },
+            "A long checklist title must preserve its complete value."
+        )
+        longTitleField.typeText(" final")
+        XCTAssertTrue(
+            waitUntil(timeout: 5) {
+                (longTitleField.value as? String) ==
+                    longTitle + " first final"
+            },
+            "The focused long field must accept continued input without retapping."
+        )
+        XCTAssertTrue(
+            app.keyboards.firstMatch.exists,
+            "Editing a long checklist row must preserve the software keyboard."
+        )
+        #endif
+    }
+
+    @MainActor
     func testTaskDetailMarkdownPreviewExpandsToAutosavingEditor() throws {
         let app = launchApp(
             route: "tasks",

@@ -80,6 +80,11 @@ struct SymbolColorPickerButton: View {
                 Text(.app(titleKey))
             }
         }
+        .frame(
+            minWidth: AppLayout.minimumInteractiveTarget,
+            minHeight: AppLayout.minimumInteractiveTarget
+        )
+        .contentShape(Rectangle())
     }
 }
 

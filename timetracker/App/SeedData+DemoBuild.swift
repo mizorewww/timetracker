@@ -324,10 +324,29 @@ extension SeedData {
         analytics.notes = "All analytics aggregate from TimeSegment records; cached summaries are never the source of truth."
         sync.notes = "SwiftData CloudKit private database with deviceID and clientMutationID kept for conflict handling."
 
+        var macDesignChecklistTitles = [
+            "Polish timeline",
+            "Align task detail",
+            "Tighten sidebar",
+        ]
+        if CommandLine.arguments.contains("--uitesting-long-checklist") {
+            #if os(macOS)
+            let repetitionCount = 18
+            #else
+            let repetitionCount = 6
+            #endif
+            macDesignChecklistTitles.append(
+                Array(
+                    repeating:
+                    "Review every platform layout and preserve the complete checklist wording",
+                    count: repetitionCount
+                ).joined(separator: " ")
+            )
+        }
         addChecklist(
             context: context,
             taskID: macDesign.id,
-            titles: ["Polish timeline", "Align task detail", "Tighten sidebar"],
+            titles: macDesignChecklistTitles,
             completed: 2,
             completionDayOffsets: [0, 0],
             completedIndices: [1, 2]

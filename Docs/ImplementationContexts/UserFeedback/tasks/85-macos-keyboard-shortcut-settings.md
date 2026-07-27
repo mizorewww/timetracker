@@ -35,7 +35,7 @@
 
 ## Checkpoint 编排
 
-- [ ] A：完成现有架构、HIG、库与测试边界审计。
+- [x] A：完成现有架构、HIG、库与测试边界审计。
 - [ ] B：新增先失败的快捷键策略和命令边界测试。
 - [ ] C：实现设置、持久化与动态菜单绑定。
 - [ ] D：完成 UI、全量、截图、Release 全设备安装与关闭。
@@ -48,6 +48,30 @@
   不为录制器、键码映射或菜单同步重复造轮子。
 - 任何新增依赖都记录版本、维护状态、stars、许可证和选择理由。
 
+### 审计结论
+
+- 继续使用 SwiftUI 原生 `Commands` / `keyboardShortcut` 作为应用内触发与菜单可发现性
+  边界，只把录制、键码转换和冲突检查交给成熟库。
+- 纳入五个高频动作：新建任务、添加时间、开始选中任务、开始番茄钟、刷新数据；保留
+  `Command-1...5` 导航与系统 `Command-,` 设置快捷键，不开放标准系统快捷键覆盖。
+- 快捷键属于设备与键盘布局偏好，写入设备本地 `UserDefaults`，不进入 SwiftData /
+  CloudKit 同步模型。
+- 选择 Sindre Sorhus 的 `KeyboardShortcuts 3.0.1`：
+  - GitHub 约 2.7k stars，172 commits，审计时 1 个 issue / 0 个 PR；
+  - MIT 许可证，支持沙盒与 Mac App Store；
+  - 精确锁定 `3.0.1` / `49c3fc04ea827f816df67843bfcc57286b47ff06`；
+  - 提供绑定式 `Recorder`、SwiftUI 快捷键转换、菜单/系统冲突策略和中英文资源。
+- 本项目的应用 target 同时构建 macOS 与 iOS。Xcode 的 framework 平台过滤仍会把远程
+  包放入 iOS 依赖图，因此用本地 `MacKeyboardShortcuts` Swift Package 适配层表达
+  SwiftPM 官方 `.when(platforms: [.macOS])` 条件；适配层不实现录制或键码逻辑。
+
+### 验证边界
+
+- 命令边界测试：默认值、显式清空、覆盖持久化、重置、损坏数据回退、重复冲突。
+- macOS UI 测试：设置分类、录制器、重置、菜单实时显示与动作触发，普通字号截图。
+- 多平台回归：macOS 与 iOS 签名构建；任务关闭前跑完整 `make test` 与
+  `make build-install-all`。
+
 ## 子代理编排
 
 - 主代理负责范围、活动记忆、集成、测试、设备安装和提交。
@@ -56,3 +80,6 @@
 ## 进度记录
 
 - 2026-07-28：按反馈顺序认领任务，建立 `~85` 活动实现记忆并进入 Checkpoint A。
+- 2026-07-28：完成 HIG、SwiftUI、现有命令/设置/偏好架构和第三方库审计；精确锁定
+  `KeyboardShortcuts 3.0.1`。直接链接时 iOS 构建按预期失败，加入仅声明平台条件的
+  本地 Swift Package 适配层后，`make build-ios` 与 `make build-macos` 均成功。

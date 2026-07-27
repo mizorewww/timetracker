@@ -41,6 +41,7 @@ enum AppLocalPreferenceKey {
     static let appleHealthTimelineEnabled = "AppleHealthTimelineEnabled"
     static let appleHealthTaskCatalogClearRecoveryTaskIDs =
         "AppleHealthTaskCatalogClearRecoveryIDs"
+    static let macKeyboardShortcutOverrides = "MacKeyboardShortcutOverrides"
 }
 
 struct AppPreferences: Equatable {

@@ -1,6 +1,6 @@
 # 79：AI 子任务与 Checklist 语义区分实现记忆
 
-状态：2026-07-27 实现中
+状态：2026-07-27 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -26,14 +26,14 @@
 - [x] 结构化 workspace 计划明确编码两种语义，并拒绝/纠正明显混淆的输出。
 - [x] 现有 DeepSeek harness 覆盖同时需要子任务与 checklist 的代表性请求。
 - [x] 三套 AI 提示词公开预览、用户自定义指令与本地化文案保持一致且不泄露密钥。
-- [ ] 完整测试、格式/本地化门禁、适当截图与 Release 全设备安装通过。
+- [x] 完整测试、格式/本地化门禁、适当截图与 Release 全设备安装通过。
 
 ## Checkpoint 编排
 
 - [x] A：完成架构、提示词、schema、harness、依赖与官方参考审计。
 - [x] B：先补失败的行为/harness 测试，锁定子任务与 checklist 的可观察契约。
 - [x] C：实现最小 prompt/schema/validation 改动，并补必要 UI 文案。
-- [~] D：完成定向、全量、截图、Release 全设备安装与收口。
+- [x] D：完成定向、全量、截图、Release 全设备安装与收口。
 
 ## 库策略
 
@@ -80,3 +80,7 @@
   一次 iOS 27 Beta AX daemon 启动超时发生在 App 测试代码前，专用模拟器清理后重试
   通过。最终截图保存在
   `build/UITestScreenshots/task79-iOS-20260727-231156/`。
+- 2026-07-27：实现 checkpoint `b89b3468` 已提交（版本 1.1.280 / 335）。
+  `make build-install-all` Release 自动签名构建通过，安装至 iPad Pro M4、iPhone Air，
+  iOS 包含 Watch companion，并把经签名验证的 macOS App 安装到
+  `/Applications/timetracker.app`；任务完成。

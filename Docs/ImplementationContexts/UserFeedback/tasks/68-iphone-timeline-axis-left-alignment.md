@@ -1,6 +1,6 @@
 # 68：iPhone Timeline 时间标注左对齐 实现记忆
 
-状态：2026-07-27 进行中
+状态：2026-07-27 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -29,7 +29,7 @@
 - [x] A：领取反馈并建立活动实现记忆。
 - [x] B：并行审计时间刻度定位、gap 避让与稳定测试探针。
 - [x] C：先补失败的几何测试，再实现最小共享布局修复并更新文档。
-- [~] D：完成单测、iPhone XCUITest/截图、回归检查、Release 全设备安装与收口。
+- [x] D：完成单测、iPhone XCUITest/截图、回归检查、Release 全设备安装与收口。
 
 ## 子 Agent 分工
 
@@ -50,3 +50,4 @@
 - 2026-07-27：将 compact 纵向时间文字改为语义 `.leading`，并补充 UI/代码/测试约束文档；未引入新库。
 - 2026-07-27：目标 iPhone XCUITest 转绿；4 个可见 tick 共用 chart leading edge，2 个 skipped 胶囊互不覆盖且不与 tick 相交。截图 `iOS-20260727-152213-attachments/7D71C533-5A6F-4033-9707-EE274E769BC3.png` 人工检查通过。
 - 2026-07-27：验证通过：SwiftFormat 830/830、localization 9/9、Timeline 纯布局 38/38、iPhone short/dense overlap、iPad Pro 11" M4 双方向 gap、macOS gap，以及全量 `make test` 1419 tests / 157 suites。
+- 2026-07-27：`make build-install-all` 通过；Release 1.1.237 (292) 已安装到 iPad Pro M4 与 iPhone Air，内嵌 Watch companion，并复制到 `/Applications/timetracker.app`；macOS 深度严格签名校验通过。

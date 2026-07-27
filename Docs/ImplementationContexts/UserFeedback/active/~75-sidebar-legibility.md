@@ -1,1 +1,0 @@
-../tasks/75-sidebar-legibility.md

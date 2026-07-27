@@ -1,6 +1,6 @@
 # 75：侧边栏分类图标与文字可读性 实现记忆
 
-状态：2026-07-27 实现中
+状态：2026-07-27 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -36,7 +36,7 @@
 - [x] A：领取反馈、建立活动实现记忆并定位侧边栏 row owner。
 - [x] B：先记录可读性基线，并确认现有行为 UI 契约覆盖侧边栏层级。
 - [x] C：实现最小共享组件修复并更新相关文档。
-- [ ] D：完成格式、跨平台截图、全量测试、Release 全设备安装与收口。
+- [x] D：完成格式、跨平台截图、全量测试、Release 全设备安装与收口。
 
 ## 库策略
 
@@ -71,3 +71,13 @@
 - 2026-07-27：`make format-check`、`make localization-check`、
   `make check-hooks`、`git diff --check` 均通过；默认 `make test` 的
   1422 tests / 158 suites 全部通过。
+- 2026-07-27：实现 checkpoint `835df7d2`（`Improve sidebar category
+  legibility`）由 hook 升版至 1.1.258 (313)。Release
+  `make build-install-all` 成功：iPad Pro M4 实际安装并由 `devicectl`
+  回读为 1.1.258 (313)，嵌入 Watch companion 的 bundle ID 为
+  `me.mezorewww.timetracker.watchkitapp` 且同为 1.1.258 (313)；
+  `/Applications/timetracker.app` 同版，`AppBuildInfo.plist` 指向
+  `835df7d27a88` 且 `GitDirty=false`。iPhone Air 当时由 CoreDevice
+  报告 `unavailable`，因此没有把它误报为已安装。
+- 2026-07-27：第 75 项完成；没有新增第三方库，使用 SwiftUI 动态系统文字样式
+  与 SF Symbols，并按 Apple HIG 的 sidebar、typography 和 symbol 配对规则验收。

@@ -90,7 +90,7 @@ struct SidebarView: View {
     ) -> some View {
         TaskCategorySectionHeader(
             section: section,
-            compact: true,
+            style: .sidebar,
             showsBottomDivider: true
         )
         .accessibilityIdentifier(

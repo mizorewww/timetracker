@@ -105,6 +105,14 @@ The macOS Settings category list uses native sidebar styling and reads `sidebarR
 
 Let `NavigationSplitView` own sidebar visibility; do not duplicate the system sidebar toggle. Task Detail is the single canonical selected-task surface; do not add a second inspector that diverges from it without a product need. Sidebar task rows are simple navigation rows, not mini task editors. Acceptance: collapsing the sidebar always leaves a native way to reopen it; collapsing and restoring preserves the current detail; selecting a task makes the detail destination clear.
 
+Persistent iPad and macOS task-category headers use the platform `body` text style with
+semibold weight, and their colored SF Symbol inherits that same font so icon and label
+remain legible beside body-sized destination and task rows. The header's grouping position,
+disclosure, and semantic color communicate hierarchy; do not demote its identity to
+`caption`, hard-code point sizes, or enlarge every sidebar row. Compact hierarchy pickers
+keep their denser caption treatment because they are transient selection surfaces, not the
+persistent app sidebar.
+
 ## Terminology
 
 Use product language, not internal implementation language.

@@ -1,8 +1,14 @@
 import SwiftUI
 
+enum TaskCategorySectionHeaderStyle {
+    case standard
+    case compact
+    case sidebar
+}
+
 struct TaskCategorySectionHeader: View {
     let section: TaskTreeVisibleSectionModel
-    var compact = false
+    var style: TaskCategorySectionHeaderStyle = .standard
     var showsBottomDivider = false
     var addTask: (() -> Void)?
     var editCategory: (() -> Void)?
@@ -31,7 +37,7 @@ struct TaskCategorySectionHeader: View {
     @ViewBuilder
     private var headerContent: some View {
         #if os(iOS)
-        if dynamicTypeSize.isAccessibilitySize, !compact {
+        if dynamicTypeSize.isAccessibilitySize, style == .standard {
             accessibilityHeader
         } else {
             standardHeader
@@ -158,7 +164,7 @@ struct TaskCategorySectionHeader: View {
 
     private var categorySymbol: some View {
         Image(systemName: section.iconName)
-            .font((compact ? Font.caption : Font.subheadline).weight(.semibold))
+            .font(categorySymbolFont)
             .foregroundStyle(Color(hex: section.colorHex) ?? .secondary)
             .frame(minWidth: 18, alignment: .center)
             .accessibilityHidden(true)
@@ -166,10 +172,32 @@ struct TaskCategorySectionHeader: View {
 
     private var categoryTitle: some View {
         Text(section.title)
-            .font(compact ? .caption : .subheadline.weight(.semibold))
+            .font(categoryTitleFont)
             .textCase(nil)
             .lineLimit(nil)
             .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var categorySymbolFont: Font {
+        switch style {
+        case .standard:
+            .subheadline.weight(.semibold)
+        case .compact:
+            .caption.weight(.semibold)
+        case .sidebar:
+            .body.weight(.semibold)
+        }
+    }
+
+    private var categoryTitleFont: Font {
+        switch style {
+        case .standard:
+            .subheadline.weight(.semibold)
+        case .compact:
+            .caption
+        case .sidebar:
+            .body.weight(.semibold)
+        }
     }
 
     private var hasInteractiveControls: Bool {
@@ -181,7 +209,9 @@ struct TaskCategorySectionHeader: View {
 
     @ViewBuilder
     private var categoryActionsMenu: some View {
-        if !compact, addTask != nil || editCategory != nil || deleteCategory != nil {
+        if style != .compact,
+           addTask != nil || editCategory != nil || deleteCategory != nil
+        {
             Menu {
                 if let addTask {
                     Button(action: addTask) {

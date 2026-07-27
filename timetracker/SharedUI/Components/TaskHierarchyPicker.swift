@@ -152,7 +152,7 @@ struct TaskHierarchyPicker: View {
         case .hierarchy:
             TaskCategorySectionHeader(
                 section: section.taskTreeSectionModel,
-                compact: true
+                style: .compact
             )
         case .searchResults:
             Text(section.title)

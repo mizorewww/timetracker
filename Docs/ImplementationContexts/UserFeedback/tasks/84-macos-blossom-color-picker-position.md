@@ -70,5 +70,14 @@
   通过。
 - 2026-07-28：`make format-check` 通过（843 个 Swift 文件 0 问题），
   `make localization-check` 通过（9/9 资源），`make check-hooks` 通过；
-  付费签名 `make test` 以 1447 tests / 162 suites 全绿。剩余两次 checkpoint、
+  付费签名 `make test` 以 1447 tests / 162 suites 全绿。
+- 2026-07-28：首轮 `make build-install-all` 已完成 Release 签名构建；iOS+Watch
+  companion 安装到 iPad Pro M4 与 iPhone Air，macOS app 已复制到
+  `/Applications/timetracker.app`。当前没有可见的独立实体 Apple Watch，Watch app
+  仍随配对 iPhone 的 companion 安装策略交付。
+- 2026-07-28：Release 构建发现 presenter 的两个 block-based
+  `NotificationCenter` observer 产生 Swift 6 actor isolation 告警；改用
+  `NSObject` selector observer 后，Release macOS 构建只保留仓库既有告警。随后
+  macOS 定向 UI 再次 1/1 通过且 `runtimeWarnings` 为空，格式、本地化和
+  1447 tests / 162 suites 全量门禁再次通过。剩余告警修复 checkpoint、最终
   全设备安装和资源收口。

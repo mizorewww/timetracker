@@ -4,13 +4,11 @@ import BlossomColorPickerCore
 import SwiftUI
 
 @MainActor
-final class MacBlossomColorPresenter {
+final class MacBlossomColorPresenter: NSObject {
     private weak var ownerWindow: NSWindow?
     private var window: NSWindow?
     private var model: BlossomColorPickerModel?
     private var localEventMonitor: Any?
-    private var appDeactivateObserver: NSObjectProtocol?
-    private var ownerCloseObserver: NSObjectProtocol?
     private var dismissTask: Task<Void, Never>?
 
     func show(
@@ -119,25 +117,18 @@ final class MacBlossomColorPresenter {
             return event
         }
 
-        appDeactivateObserver = NotificationCenter.default.addObserver(
-            forName: NSApplication.didResignActiveNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                self?.model?.collapse()
-            }
-        }
-
-        ownerCloseObserver = NotificationCenter.default.addObserver(
-            forName: NSWindow.willCloseNotification,
-            object: ownerWindow,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                self?.dismissImmediately()
-            }
-        }
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidResignActive),
+            name: NSApplication.didResignActiveNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(ownerWillClose),
+            name: NSWindow.willCloseNotification,
+            object: ownerWindow
+        )
     }
 
     private func removeDismissObservers() {
@@ -145,14 +136,24 @@ final class MacBlossomColorPresenter {
             NSEvent.removeMonitor(localEventMonitor)
             self.localEventMonitor = nil
         }
-        if let appDeactivateObserver {
-            NotificationCenter.default.removeObserver(appDeactivateObserver)
-            self.appDeactivateObserver = nil
-        }
-        if let ownerCloseObserver {
-            NotificationCenter.default.removeObserver(ownerCloseObserver)
-            self.ownerCloseObserver = nil
-        }
+        NotificationCenter.default.removeObserver(
+            self,
+            name: NSApplication.didResignActiveNotification,
+            object: nil
+        )
+        NotificationCenter.default.removeObserver(
+            self,
+            name: NSWindow.willCloseNotification,
+            object: ownerWindow
+        )
+    }
+
+    @objc private func appDidResignActive() {
+        model?.collapse()
+    }
+
+    @objc private func ownerWillClose() {
+        dismissImmediately()
     }
 
     private static func pickerFrame(

@@ -136,7 +136,7 @@ private struct AnalyticsHomeSectionHeader: View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
             Text(subtitle)
-                .font(.footnote)
+                .font(subtitleFont)
                 .foregroundStyle(.secondary)
                 .textCase(nil)
                 .fixedSize(horizontal: false, vertical: true)
@@ -144,5 +144,13 @@ private struct AnalyticsHomeSectionHeader: View {
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isHeader)
         .accessibilityIdentifier(identifier)
+    }
+
+    private var subtitleFont: Font {
+        #if os(macOS)
+        .callout
+        #else
+        .footnote
+        #endif
     }
 }

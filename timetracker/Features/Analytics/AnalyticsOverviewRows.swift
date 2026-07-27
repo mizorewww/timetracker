@@ -35,7 +35,7 @@ struct AnalyticsHomeSummaryRow: View {
                     .font(.headline)
 
                     Text(AppStrings.localized("analytics.summary.emptyMessage"))
-                        .font(.subheadline)
+                        .font(emptyMessageFont)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -45,6 +45,14 @@ struct AnalyticsHomeSummaryRow: View {
         .padding(.vertical, 6)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("analytics.summary")
+    }
+
+    private var emptyMessageFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
     }
 
     @ViewBuilder
@@ -71,7 +79,7 @@ struct AnalyticsHomeSummaryRow: View {
                 .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
                 .minimumScaleFactor(0.72)
             Text(AppStrings.localized("analytics.summary.grossLabel"))
-                .font(.subheadline)
+                .font(primaryMetricLabelFont)
                 .foregroundStyle(.secondary)
         }
     }
@@ -83,9 +91,25 @@ struct AnalyticsHomeSummaryRow: View {
                 .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
                 .minimumScaleFactor(0.72)
             Text(AppStrings.localized("analytics.summary.wallLabel"))
-                .font(.caption)
+                .font(secondaryMetricLabelFont)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    private var primaryMetricLabelFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
+    }
+
+    private var secondaryMetricLabelFont: Font {
+        #if os(macOS)
+        .callout
+        #else
+        .caption
+        #endif
     }
 
     @ViewBuilder
@@ -112,7 +136,7 @@ private struct AnalyticsSummaryMiniMetric: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value)
-                .font(.subheadline.weight(.semibold).monospacedDigit())
+                .font(valueFont)
                 .foregroundStyle(.primary)
             Text(label)
                 .font(.caption2)
@@ -120,6 +144,14 @@ private struct AnalyticsSummaryMiniMetric: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var valueFont: Font {
+        #if os(macOS)
+        .body.weight(.semibold).monospacedDigit()
+        #else
+        .subheadline.weight(.semibold).monospacedDigit()
+        #endif
     }
 }
 
@@ -135,11 +167,11 @@ struct AnalyticsCategoryRow: View {
                 Text(category.questionTitle)
                     .font(.body.weight(.medium))
                 Text(category.answerPreview(from: snapshot))
-                    .font(.subheadline)
+                    .font(answerFont)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(category.openLabel)
-                    .font(.caption.weight(.medium))
+                    .font(actionFont)
                     .foregroundStyle(.tint)
             }
 
@@ -147,5 +179,21 @@ struct AnalyticsCategoryRow: View {
         }
         .padding(.vertical, 6)
         .accessibilityElement(children: .combine)
+    }
+
+    private var answerFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
+    }
+
+    private var actionFont: Font {
+        #if os(macOS)
+        .body.weight(.medium)
+        #else
+        .caption.weight(.medium)
+        #endif
     }
 }

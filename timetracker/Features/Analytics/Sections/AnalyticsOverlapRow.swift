@@ -36,7 +36,7 @@ struct AnalyticsOverlapRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(participantText)
-                    .font(.subheadline.weight(.medium))
+                    .font(primaryFont.weight(.medium))
                     .fixedSize(horizontal: false, vertical: true)
                 Text(timeRangeText)
                     .font(.caption.monospacedDigit())
@@ -56,8 +56,16 @@ struct AnalyticsOverlapRow: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             Text(AnalyticsOverlapFormatting.duration(overlap.excessDurationSeconds, locale: locale))
-                .font(.subheadline.monospacedDigit())
+                .font(primaryFont.monospacedDigit())
         }
+    }
+
+    private var primaryFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
     }
 
     private var participantText: String {

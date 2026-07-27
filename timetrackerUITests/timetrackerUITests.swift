@@ -5283,34 +5283,47 @@ final class timetrackerUITests: XCTestCase {
         ].firstMatch
         XCTAssertTrue(detail.waitForExistence(timeout: 8))
 
-        let definitions = [
-            app.descendants(matching: .any)["analytics.definition.gross"].firstMatch,
-            app.descendants(matching: .any)["analytics.definition.wall"].firstMatch,
-            app.descendants(matching: .any)["analytics.definition.overlap"].firstMatch,
-            app.descendants(matching: .any)["analytics.definition.example"].firstMatch,
+        let definitions: [(element: XCUIElement, expectedFragments: [String])] = [
+            (
+                app.descendants(matching: .any)["analytics.definition.gross"].firstMatch,
+                ["every task timer"]
+            ),
+            (
+                app.descendants(matching: .any)["analytics.definition.wall"].firstMatch,
+                ["Overlapping intervals count once"]
+            ),
+            (
+                app.descendants(matching: .any)["analytics.definition.overlap"].firstMatch,
+                ["Gross Time − Wall Time"]
+            ),
+            (
+                app.descendants(matching: .any)["analytics.definition.example"].firstMatch,
+                ["Gross Time is 1h", "Wall Time is 30m", "Overlap Excess is 30m"]
+            ),
         ]
         for definition in definitions {
-            scrollUntilHittable(definition, direction: .up, in: app)
+            scrollUntilHittable(definition.element, direction: .up, in: app)
             XCTAssertTrue(
                 waitForElement(
-                    definition,
+                    definition.element,
                     timeout: 5,
                     diagnosticName: "analytics-definition",
                     in: app
                 )
             )
+            #if os(iOS)
+            for fragment in definition.expectedFragments {
+                let text = app.staticTexts.matching(
+                    NSPredicate(format: "label CONTAINS %@", fragment)
+                ).firstMatch
+                XCTAssertTrue(
+                    text.waitForExistence(timeout: 3),
+                    "Analytics definition must visibly contain: \(fragment)"
+                )
+            }
+            #endif
         }
 
-        let gross = definitions[0]
-        let wall = definitions[1]
-        let overlap = definitions[2]
-        let example = definitions[3]
-        XCTAssertTrue(gross.label.contains("every task timer"))
-        XCTAssertTrue(wall.label.contains("Overlapping intervals count once"))
-        XCTAssertTrue(overlap.label.contains("Gross Time − Wall Time"))
-        XCTAssertTrue(example.label.contains("Gross Time is 1h"))
-        XCTAssertTrue(example.label.contains("Wall Time is 30m"))
-        XCTAssertTrue(example.label.contains("Overlap Excess is 30m"))
         try capture("analytics-detailed-definitions", app: app)
     }
 

@@ -107,7 +107,7 @@ private struct AnalyticsGroupBreakdownRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.title)
-                    .font(.subheadline.weight(.medium))
+                    .font(primaryFont.weight(.medium))
                     .fixedSize(horizontal: false, vertical: true)
                 Text(item.subtitle)
                     .font(.caption)
@@ -123,7 +123,7 @@ private struct AnalyticsGroupBreakdownRow: View {
             spacing: 2
         ) {
             Text(DurationFormatter.compact(item.grossSeconds))
-                .font(.subheadline.monospacedDigit())
+                .font(primaryFont.monospacedDigit())
             Text("\(percentage)%")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -132,5 +132,13 @@ private struct AnalyticsGroupBreakdownRow: View {
 
     private var percentage: Int {
         Int((Double(item.grossSeconds) / Double(max(totalSeconds, 1)) * 100).rounded())
+    }
+
+    private var primaryFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
     }
 }

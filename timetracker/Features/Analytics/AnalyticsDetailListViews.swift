@@ -4,7 +4,7 @@ struct AnalyticsGlossaryList: View {
     var body: some View {
         VStack(spacing: 0) {
             Text(.app("analytics.glossary.subtitle"))
-                .font(.subheadline)
+                .font(introductionFont)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -41,6 +41,14 @@ struct AnalyticsGlossaryList: View {
             AnalyticsGlossaryExample()
         }
     }
+
+    private var introductionFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
+    }
 }
 
 private struct AnalyticsGlossaryRow: View {
@@ -52,12 +60,12 @@ private struct AnalyticsGlossaryRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(title)
-                .font(.subheadline.weight(.semibold))
+                .font(titleFont)
             Text(bodyText)
-                .font(.subheadline)
+                .font(bodyFont)
                 .fixedSize(horizontal: false, vertical: true)
             Text(calculationText)
-                .font(.caption)
+                .font(calculationFont)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -66,21 +74,64 @@ private struct AnalyticsGlossaryRow: View {
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(identifier)
     }
+
+    private var titleFont: Font {
+        #if os(macOS)
+        .body.weight(.semibold)
+        #else
+        .subheadline.weight(.semibold)
+        #endif
+    }
+
+    private var bodyFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
+    }
+
+    private var calculationFont: Font {
+        #if os(macOS)
+        .callout
+        #else
+        .caption
+        #endif
+    }
 }
 
 private struct AnalyticsGlossaryExample: View {
+    private let title = AppStrings.localized("analytics.glossary.example.title")
+    private let bodyText = AppStrings.localized("analytics.glossary.example.body")
+
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(.app("analytics.glossary.example.title"))
-                .font(.subheadline.weight(.semibold))
-            Text(.app("analytics.glossary.example.body"))
-                .font(.subheadline)
+            Text(title)
+                .font(titleFont)
+            Text(bodyText)
+                .font(bodyFont)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("analytics.definition.example")
+    }
+
+    private var titleFont: Font {
+        #if os(macOS)
+        .body.weight(.semibold)
+        #else
+        .subheadline.weight(.semibold)
+        #endif
+    }
+
+    private var bodyFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
     }
 }
 
@@ -121,12 +172,12 @@ private struct AnalyticsInsightRow: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(insight.title)
-                    .font(.subheadline.weight(.medium))
+                    .font(titleFont)
                 Text(insight.value)
                     .font(.headline.monospacedDigit())
                     .fixedSize(horizontal: false, vertical: true)
                 Text(insight.body)
-                    .font(.caption)
+                    .font(bodyFont)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -135,6 +186,22 @@ private struct AnalyticsInsightRow: View {
         }
         .padding(.vertical, 10)
         .accessibilityElement(children: .combine)
+    }
+
+    private var titleFont: Font {
+        #if os(macOS)
+        .body.weight(.medium)
+        #else
+        .subheadline.weight(.medium)
+        #endif
+    }
+
+    private var bodyFont: Font {
+        #if os(macOS)
+        .callout
+        #else
+        .caption
+        #endif
     }
 
     private var iconName: String {

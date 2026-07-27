@@ -44,7 +44,7 @@ private struct ForecastAnalyticsRow: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(task.title)
-                        .font(.subheadline.weight(.medium))
+                        .font(primaryFont.weight(.medium))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
                     ProgressView(value: rollup.completionFraction)
@@ -55,7 +55,7 @@ private struct ForecastAnalyticsRow: View {
 
                 VStack(alignment: .trailing, spacing: 3) {
                     Text(rollup.remainingDisplayText)
-                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                        .font(primaryFont.weight(.semibold).monospacedDigit())
                         .foregroundStyle(.primary)
                     Text(daysText)
                         .font(.caption)
@@ -67,6 +67,14 @@ private struct ForecastAnalyticsRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityHint(AppStrings.localized("tasks.openDetail"))
+    }
+
+    private var primaryFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
     }
 
     private var daysText: String {

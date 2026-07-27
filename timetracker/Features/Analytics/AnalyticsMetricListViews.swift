@@ -26,7 +26,7 @@ struct AnalyticsDetailSection<Content: View>: View {
             VStack(alignment: .leading, spacing: 12) {
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.caption)
+                        .font(subtitleFont)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -44,6 +44,14 @@ struct AnalyticsDetailSection<Content: View>: View {
                 Text(title)
             }
         }
+    }
+
+    private var subtitleFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .caption
+        #endif
     }
 }
 
@@ -164,7 +172,7 @@ private struct AnalyticsMetricListRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.subheadline.weight(.medium))
+                    .font(titleFont)
                 Text(footnote)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -178,5 +186,13 @@ private struct AnalyticsMetricListRow: View {
             .font(.title3.weight(.semibold).monospacedDigit())
             .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
             .minimumScaleFactor(0.72)
+    }
+
+    private var titleFont: Font {
+        #if os(macOS)
+        .body.weight(.medium)
+        #else
+        .subheadline.weight(.medium)
+        #endif
     }
 }

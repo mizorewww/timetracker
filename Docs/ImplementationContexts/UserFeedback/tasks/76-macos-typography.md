@@ -107,3 +107,13 @@
   确认采用局部系统语义字体修正而非全局缩放。
 - 2026-07-27：确定性 macOS 七页字体截图矩阵通过（1 test / 7 screenshots），
   checkpoint B 完成。
+- 2026-07-27：完成 Analytics 第一层实现：详情 subtitle、glossary/insight 正文、
+  overview answer/action、metric label/value 与 breakdown/overlap/forecast 主行均在
+  macOS 回到原生 `body/callout`，同时保留 footnote、百分比、时间范围、图表标识等
+  metadata 的原紧凑层级；iOS 原字号不变。
+- 2026-07-27：Analytics 首页 range-switch UI test 与 definition detail UI test
+  通过，结果分别为
+  `build/UITestResults/task76-analytics-home/macOS-20260727-192634.xcresult` 和
+  `build/UITestResults/task76-analytics-detail-final/macOS-20260727-193446.xcresult`。
+  macOS 27 的 SwiftUI glossary 组合 row 会暴露空 AX label，因此 macOS 验证稳定
+  identifier、可见性与截图；iOS 继续逐句验证可见文本。

@@ -56,6 +56,18 @@ extension SeedData {
                     deviceID: "demo"
                 )
             )
+            if CommandLine.arguments.contains(
+                "--uitesting-first-health-timeline"
+            ) {
+                try addFirstHealthTimelineUITestFixture(
+                    context: context,
+                    taskRepository: taskRepository,
+                    categoryID: workCategory.id,
+                    startOfToday: startOfToday
+                )
+                try context.saveAfterMutationStep()
+                return
+            }
             if CommandLine.arguments.contains("--uitesting-short-timeline") {
                 try addShortTimelineUITestFixture(
                     context: context,
@@ -572,6 +584,32 @@ extension SeedData {
                 note: "Task 24 overlapping short mark \(index + 1)"
             )
         }
+    }
+
+    private static func addFirstHealthTimelineUITestFixture(
+        context: ModelContext,
+        taskRepository: SwiftDataTaskRepository,
+        categoryID: UUID,
+        startOfToday: Date
+    ) throws {
+        let trackedTask = try taskRepository.createTask(
+            proposedID: UUID(
+                uuidString: "D0700000-0000-4000-8000-000000000002"
+            )!,
+            title: "Timeline Shared Record",
+            parentID: nil,
+            categoryID: categoryID,
+            colorHex: "1677FF",
+            iconName: "clock.badge.checkmark"
+        )
+        try addSegment(
+            context: context,
+            taskID: trackedTask.id,
+            source: .manual,
+            start: startOfToday.addingTimeInterval(14 * 60 * 60),
+            duration: 30 * 60,
+            note: "Task 67 shared Timeline row"
+        )
     }
 
     private static func addGapLabelCollisionTimelineUITestFixture(

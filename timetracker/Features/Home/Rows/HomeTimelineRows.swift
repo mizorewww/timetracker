@@ -6,9 +6,6 @@ struct TimelineRow: View {
     let segment: TimeSegment
     var openTaskDetail: ((UUID) -> Void)?
     @Environment(AppPresentationRouter.self) private var presentationRouter
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @Environment(\.layoutShell) private var layoutShell
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var pendingDeletionRequest: SegmentEditorDraftBaseline?
 
     init(
@@ -21,13 +18,6 @@ struct TimelineRow: View {
         self.entry = entry
         self.segment = segment
         self.openTaskDetail = openTaskDetail
-    }
-
-    private var isCompact: Bool {
-        SizeClassLayoutPolicy(
-            horizontalSizeClass: horizontalSizeClass,
-            shell: layoutShell
-        ).isCompact
     }
 
     private var tag: String {
@@ -82,9 +72,7 @@ struct TimelineRow: View {
         } message: {
             Text(pendingDeletionImpact.confirmationMessage)
         }
-        .padding(.leading, 14)
-        .padding(.trailing, isCompact ? 0 : 14)
-        .padding(.vertical, isCompact ? 11 : 10)
+        .modifier(TodayTimelineRecordInsets())
     }
 
     private func taskButton(at now: Date) -> some View {
@@ -102,59 +90,31 @@ struct TimelineRow: View {
             endedAt: endedAt,
             now: displayNow
         )
+        let presentation = TodayTimelineRecordPresentation(
+            id: entry?.id ?? .trackedSegment(segment.id),
+            visual: taskVisual,
+            title: displayTitle,
+            sourceLabel: tag,
+            sourceTint: tagColor,
+            startedAt: display.start,
+            endedAt: display.end,
+            usesCurrentEndLabel: display.usesCurrentEndLabel,
+            duration: .live(
+                startedAt: startedAt,
+                endedAt: endedAt
+            )
+        )
 
         return Button(action: openTask) {
-            Group {
-                if dynamicTypeSize.isAccessibilitySize {
-                    accessibilityContent(display: display)
-                } else if isCompact {
-                    compactContent(display: display)
-                } else {
-                    ViewThatFits(in: .horizontal) {
-                        regularContent(display: display)
-                        compactContent(display: display)
-                    }
-                }
-            }
-            .contentShape(Rectangle())
+            TodayTimelineRecordContent(presentation: presentation)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(
             "timeline.record.\(taskVisual.symbolName).\(segment.id.uuidString)"
         )
-        .accessibilityValue(timeRangeText(display: display))
+        .accessibilityValue(presentation.timeRangeText)
         .accessibilityHint(AppStrings.localized("tasks.openDetail"))
-    }
-
-    private func accessibilityContent(display: TrackedTimeDisplaySnapshot) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            TaskIcon(visual: taskVisual, size: 24)
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text(displayTitle)
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(timeRangeText(display: display))
-                    .font(.footnote.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 10) {
-                        tagBadge
-                        Spacer(minLength: 8)
-                        durationText
-                    }
-                    VStack(alignment: .leading, spacing: 6) {
-                        tagBadge
-                        durationText
-                    }
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -201,81 +161,8 @@ struct TimelineRow: View {
         }
     }
 
-    private func regularContent(display: TrackedTimeDisplaySnapshot) -> some View {
-        HStack(spacing: 12) {
-            TaskIcon(visual: taskVisual, size: 24)
-
-            Text(timeRangeText(display: display))
-                .font(.subheadline.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .frame(width: isCompact ? 82 : 120, alignment: .leading)
-
-            Text(displayTitle)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            tagBadge
-                .frame(width: 96, alignment: .center)
-
-            durationText
-                .frame(width: 56, alignment: .trailing)
-        }
-    }
-
-    private func compactContent(display: TrackedTimeDisplaySnapshot) -> some View {
-        HStack(alignment: .center, spacing: 10) {
-            TaskIcon(visual: taskVisual, size: 24)
-
-            VStack(alignment: .leading, spacing: 7) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(timeRangeText(display: display))
-                        .font(.footnote.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    Spacer()
-                    durationText
-                }
-
-                HStack(alignment: .center, spacing: 10) {
-                    Text(displayTitle)
-                        .font(.subheadline.weight(.medium))
-                        .lineLimit(1)
-                    Spacer(minLength: 8)
-                    tagBadge
-                }
-            }
-        }
-    }
-
-    private var tagBadge: some View {
-        Text(tag)
-            .font(.caption.weight(.medium))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .foregroundStyle(tagColor)
-            .background(tagColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-            .lineLimit(1)
-    }
-
-    private var durationText: some View {
-        DurationLabel(
-            startedAt: entry?.startedAt ?? segment.startedAt,
-            endedAt: entry.map {
-                $0.usesCurrentEndLabel ? nil : $0.endedAt
-            } ?? segment.endedAt
-        )
-        .font(.subheadline.monospacedDigit())
-        .foregroundStyle(usesCurrentEndLabel ? Color.blue : Color.secondary)
-        .lineLimit(1)
-        .minimumScaleFactor(0.82)
-    }
-
     private var displayTitle: String {
         entry?.title ?? store.displayTitle(for: segment)
-    }
-
-    private var usesCurrentEndLabel: Bool {
-        entry?.usesCurrentEndLabel ?? (segment.endedAt == nil)
     }
 
     private var tagColor: Color {
@@ -286,19 +173,215 @@ struct TimelineRow: View {
         }
     }
 
-    private func timeRangeText(display: TrackedTimeDisplaySnapshot) -> String {
-        let start = TimeDisplayFormatter.hourMinute(display.start)
-        let end = display.usesCurrentEndLabel
-            ? AppStrings.localized("common.now")
-            : TimeDisplayFormatter.hourMinute(display.end)
-        return "\(start) - \(end)"
-    }
-
     private func openTask() {
         if let openTaskDetail {
             openTaskDetail(segment.taskID)
         } else {
             store.openTaskDetail(segment.taskID)
         }
+    }
+}
+
+enum TodayTimelineRecordDuration {
+    case live(startedAt: Date, endedAt: Date?)
+    case fixed(seconds: Int)
+}
+
+struct TodayTimelineRecordPresentation {
+    let id: TimelineEntryID
+    let visual: TaskVisualPresentation
+    let title: String
+    let sourceLabel: String
+    let sourceTint: Color
+    let startedAt: Date
+    let endedAt: Date
+    let usesCurrentEndLabel: Bool
+    let duration: TodayTimelineRecordDuration
+
+    var timeRangeText: String {
+        let start = TimeDisplayFormatter.hourMinute(startedAt)
+        let end = usesCurrentEndLabel
+            ? AppStrings.localized("common.now")
+            : TimeDisplayFormatter.hourMinute(endedAt)
+        return "\(start) - \(end)"
+    }
+
+    var accessibilityPrefix: String {
+        "home.timeline.entry.\(id.namespacedKey)"
+    }
+}
+
+struct TodayTimelineRecordContent: View {
+    let presentation: TodayTimelineRecordPresentation
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.layoutShell) private var layoutShell
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var isCompact: Bool {
+        SizeClassLayoutPolicy(
+            horizontalSizeClass: horizontalSizeClass,
+            shell: layoutShell
+        ).isCompact
+    }
+
+    var body: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                accessibilityContent
+            } else if isCompact {
+                compactContent
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    regularContent
+                    compactContent
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var accessibilityContent: some View {
+        HStack(alignment: .top, spacing: 10) {
+            TaskIcon(visual: presentation.visual, size: 24)
+
+            VStack(alignment: .leading, spacing: 8) {
+                titleText
+                    .font(.headline)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                timeRangeText
+                    .font(.footnote.monospacedDigit())
+                    .fixedSize(horizontal: false, vertical: true)
+
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) {
+                        sourceBadge
+                        Spacer(minLength: 8)
+                        durationText
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        sourceBadge
+                        durationText
+                    }
+                }
+            }
+        }
+    }
+
+    private var regularContent: some View {
+        HStack(spacing: 12) {
+            TaskIcon(visual: presentation.visual, size: 24)
+
+            timeRangeText
+                .font(.subheadline.monospacedDigit())
+                .frame(width: 120, alignment: .leading)
+
+            titleText
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            sourceBadge
+                .frame(width: 96, alignment: .center)
+
+            durationText
+                .frame(width: 56, alignment: .trailing)
+        }
+    }
+
+    private var compactContent: some View {
+        HStack(alignment: .center, spacing: 10) {
+            TaskIcon(visual: presentation.visual, size: 24)
+
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    timeRangeText
+                        .font(.footnote.monospacedDigit())
+                        .lineLimit(1)
+                    Spacer()
+                    durationText
+                }
+
+                HStack(alignment: .center, spacing: 10) {
+                    titleText
+                        .font(.subheadline.weight(.medium))
+                        .lineLimit(1)
+                    Spacer(minLength: 8)
+                    sourceBadge
+                }
+            }
+        }
+    }
+
+    private var titleText: some View {
+        Text(presentation.title)
+            .foregroundStyle(.primary)
+            .accessibilityIdentifier(
+                "\(presentation.accessibilityPrefix).title"
+            )
+    }
+
+    private var timeRangeText: some View {
+        Text(presentation.timeRangeText)
+            .foregroundStyle(.secondary)
+            .accessibilityIdentifier(
+                "\(presentation.accessibilityPrefix).timeRange"
+            )
+    }
+
+    private var sourceBadge: some View {
+        Text(presentation.sourceLabel)
+            .font(.caption.weight(.medium))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .foregroundStyle(presentation.sourceTint)
+            .background(
+                presentation.sourceTint.opacity(0.12),
+                in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+            )
+            .lineLimit(1)
+            .accessibilityIdentifier(
+                "\(presentation.accessibilityPrefix).source"
+            )
+    }
+
+    private var durationText: some View {
+        Group {
+            switch presentation.duration {
+            case let .live(startedAt, endedAt):
+                DurationLabel(
+                    startedAt: startedAt,
+                    endedAt: endedAt
+                )
+            case let .fixed(seconds):
+                Text(DurationFormatter.compact(seconds))
+            }
+        }
+        .font(.subheadline.monospacedDigit())
+        .foregroundStyle(presentation.usesCurrentEndLabel ? Color.blue : Color.secondary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.82)
+        .accessibilityIdentifier(
+            "\(presentation.accessibilityPrefix).duration"
+        )
+    }
+}
+
+struct TodayTimelineRecordInsets: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.layoutShell) private var layoutShell
+
+    private var isCompact: Bool {
+        SizeClassLayoutPolicy(
+            horizontalSizeClass: horizontalSizeClass,
+            shell: layoutShell
+        ).isCompact
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.leading, 14)
+            .padding(.trailing, isCompact ? 0 : 14)
+            .padding(.vertical, isCompact ? 11 : 10)
     }
 }

@@ -81,7 +81,6 @@ struct TimelineSection: View {
                             store: store,
                             entry: entry,
                             segmentByID: segmentByID,
-                            style: .card,
                             showsDivider: entry.id != lastEntryID,
                             openTaskDetail: openTask
                         )
@@ -120,13 +119,18 @@ struct TodayTimelineChart: View {
             compactHeight: compactHeight,
             exposesUITestingMarks: exposesUITestingMarks
         )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("home.timeline.chart")
     }
 
     private var exposesUITestingMarks: Bool {
         #if DEBUG
         CommandLine.arguments.contains("--uitesting-short-timeline") ||
             CommandLine.arguments.contains("--uitesting-overlap-timeline") ||
-            CommandLine.arguments.contains("--uitesting-gap-label-collision")
+            CommandLine.arguments.contains("--uitesting-gap-label-collision") ||
+            CommandLine.arguments.contains(
+                "--uitesting-first-health-timeline"
+            )
         #else
         false
         #endif
@@ -152,7 +156,8 @@ func runHomeTimelineReferenceClock(
 var homeTimelineUsesFixedUITestReferenceDate: Bool {
     #if DEBUG
     CommandLine.arguments.contains("--uitesting-overlap-timeline") ||
-        CommandLine.arguments.contains("--uitesting-gap-label-collision")
+        CommandLine.arguments.contains("--uitesting-gap-label-collision") ||
+        CommandLine.arguments.contains("--uitesting-first-health-timeline")
     #else
     false
     #endif

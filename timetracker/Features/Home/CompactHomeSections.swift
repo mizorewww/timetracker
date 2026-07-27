@@ -150,7 +150,6 @@ struct CompactTimelineSection: View {
                         store: store,
                         entry: entry,
                         segmentByID: segmentByID,
-                        style: .list,
                         showsDivider: false,
                         openTaskDetail: openTask
                     )

@@ -1,16 +1,9 @@
-import Foundation
 import SwiftUI
-
-enum TodayTimelineEntryRowStyle: Equatable {
-    case list
-    case card
-}
 
 struct TodayTimelineEntryRow: View {
     let store: TimeTrackerStore
     let entry: AnalyticsTimelineEntry
     let segmentByID: [UUID: TimeSegment]
-    let style: TodayTimelineEntryRowStyle
     let showsDivider: Bool
     let openTaskDetail: (UUID) -> Void
 
@@ -23,6 +16,10 @@ struct TodayTimelineEntryRow: View {
                     .padding(.leading, 18)
             }
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(
+            "home.timeline.entry.\(entry.id.namespacedKey)"
+        )
     }
 
     @ViewBuilder
@@ -48,23 +45,35 @@ struct TodayTimelineEntryRow: View {
             Button {
                 openTaskDetail(taskID)
             } label: {
-                appleHealthLegend
+                appleHealthContent
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityHint(AppStrings.localized("tasks.openDetail"))
         } else {
-            appleHealthLegend
+            appleHealthContent
         }
     }
 
-    @ViewBuilder
-    private var appleHealthLegend: some View {
-        if style == .card {
-            TimelineLegendRow(entry: entry)
-                .padding(.horizontal, 18)
-        } else {
-            TimelineLegendRow(entry: entry)
-        }
+    private var appleHealthContent: some View {
+        TodayTimelineRecordContent(
+            presentation: TodayTimelineRecordPresentation(
+                id: entry.id,
+                visual: TaskVisualPresentation(
+                    iconName: entry.iconName,
+                    colorHex: entry.colorHex
+                ),
+                title: entry.title,
+                sourceLabel: AppStrings.localized(
+                    "health.timeline.source"
+                ),
+                sourceTint: Color(hex: entry.colorHex) ?? .red,
+                startedAt: entry.startedAt,
+                endedAt: entry.endedAt,
+                usesCurrentEndLabel: false,
+                duration: .fixed(seconds: entry.durationSeconds)
+            )
+        )
+        .modifier(TodayTimelineRecordInsets())
     }
 }

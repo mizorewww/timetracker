@@ -5633,6 +5633,212 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testFirstAppleHealthTimelineRowUsesSharedRecordLayout() throws {
+        #if os(iOS)
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+        #endif
+
+        let app = launchApp(
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: [
+                "--uitesting-first-health-timeline",
+            ]
+        )
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: app)
+        #endif
+        XCTAssertTrue(homeIsReady(in: app))
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+        #if os(iOS)
+        let usesStableLeafGeometry = screenshotPrefix != "ipad"
+        #endif
+
+        let healthKey =
+            "appleHealthWorkout.D0700000-0000-4000-8000-000000000001"
+        let chart = app.descendants(matching: .any)[
+            "home.timeline.chart"
+        ].firstMatch
+        let healthRow = app.descendants(matching: .any)[
+            "home.timeline.entry.\(healthKey)"
+        ].firstMatch
+        let healthRange = app.descendants(matching: .any)[
+            "home.timeline.entry.\(healthKey).timeRange"
+        ].firstMatch
+        let healthTitle = app.staticTexts[
+            "home.timeline.entry.\(healthKey).title"
+        ].firstMatch
+        #if os(macOS)
+        let trackedRows = app.groups.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "home.timeline.entry.trackedSegment."
+            )
+        )
+        #else
+        let trackedRows = app.otherElements.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "home.timeline.entry.trackedSegment."
+            )
+        )
+        #endif
+        let trackedRanges = app.staticTexts.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ AND identifier ENDSWITH %@",
+                "home.timeline.entry.trackedSegment.",
+                ".timeRange"
+            )
+        )
+        let trackedTitles = app.staticTexts.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@ AND identifier ENDSWITH %@",
+                "home.timeline.entry.trackedSegment.",
+                ".title"
+            )
+        )
+        let trackedMenus = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "timeline.more.manual."
+            )
+        )
+        let trackedRow = trackedRows.firstMatch
+
+        for _ in 0 ..< 12 where !healthRow.exists {
+            scroll(direction: .up, toward: healthRow, in: app)
+        }
+        XCTAssertTrue(
+            healthRow.waitForExistence(timeout: 8),
+            "The deterministic Health-first fixture must load into the Timeline."
+        )
+        scrollUntilFrameFullyVisibleAboveSystemChrome(healthRow, in: app)
+        #if os(macOS)
+        scroll(direction: .up, toward: healthRow, in: app)
+        #else
+        scrollUntilFrameFullyVisibleAboveSystemChrome(trackedRow, in: app)
+        #endif
+        XCTAssertTrue(chart.waitForExistence(timeout: 5))
+        XCTAssertTrue(healthRow.waitForExistence(timeout: 5))
+        #if os(iOS)
+        XCTAssertTrue(healthRange.waitForExistence(timeout: 5))
+        #endif
+        XCTAssertEqual(trackedRows.count, 1)
+        #if os(iOS)
+        XCTAssertEqual(trackedRanges.count, 1)
+        XCTAssertEqual(trackedTitles.count, 1)
+        #endif
+        XCTAssertEqual(trackedMenus.count, 1)
+
+        #if os(iOS)
+        let trackedRange = trackedRanges.firstMatch
+        let trackedTitle = trackedTitles.firstMatch
+        #endif
+        scrollUntilFrameFullyVisibleAboveSystemChrome(trackedRow, in: app)
+
+        let chartFrame = try validVisibleFrame(
+            for: chart,
+            in: app,
+            requiresFullVisibility: false
+        )
+        let healthRowFrame = try validVisibleFrame(
+            for: healthRow,
+            in: app
+        )
+        let trackedRowFrame = try validVisibleFrame(
+            for: trackedRow,
+            in: app
+        )
+        #if os(iOS)
+        let leafFrames: (
+            healthRange: CGRect,
+            trackedRange: CGRect,
+            healthTitle: CGRect,
+            trackedTitle: CGRect
+        )? = if usesStableLeafGeometry {
+            try (
+                validVisibleFrame(for: healthRange, in: app),
+                validVisibleFrame(for: trackedRange, in: app),
+                validVisibleFrame(for: healthTitle, in: app),
+                validVisibleFrame(for: trackedTitle, in: app)
+            )
+        } else {
+            nil
+        }
+        #endif
+
+        XCTAssertLessThan(healthRowFrame.minY, trackedRowFrame.minY)
+        #if os(iOS)
+        if let leafFrames {
+            XCTAssertFalse(
+                leafFrames.healthRange.intersects(chartFrame),
+                "The first Health time range must remain below the chart."
+            )
+            XCTAssertLessThanOrEqual(
+                abs(leafFrames.healthRange.minX - leafFrames.trackedRange.minX),
+                2,
+                "Health and tracked records must reuse the same time column."
+            )
+            XCTAssertLessThanOrEqual(
+                abs(leafFrames.healthTitle.minX - leafFrames.trackedTitle.minX),
+                2,
+                "Health and tracked records must share the title leading edge."
+            )
+        } else {
+            XCTAssertFalse(
+                healthRowFrame.intersects(chartFrame),
+                "The first Health record must remain below the chart."
+            )
+        }
+        #else
+        XCTAssertFalse(
+            healthRowFrame.intersects(chartFrame),
+            "The first Health record must remain below the chart."
+        )
+        XCTAssertTrue(
+            healthRow.descendants(matching: .any).matching(
+                NSPredicate(
+                    format: "label CONTAINS[c] %@",
+                    "Apple Health"
+                )
+            ).firstMatch.waitForExistence(timeout: 3),
+            "The macOS shared renderer must preserve the Health source."
+        )
+        #endif
+        XCTAssertLessThanOrEqual(
+            healthRowFrame.maxY,
+            trackedRowFrame.minY + 1,
+            "Adjacent Timeline records must not overlap."
+        )
+        XCTAssertEqual(
+            healthRow.buttons.matching(
+                NSPredicate(
+                    format: "identifier BEGINSWITH %@",
+                    "timeline.more."
+                )
+            ).count,
+            0,
+            "Apple Health records must stay read-only."
+        )
+
+        #if os(iOS)
+        if screenshotPrefix != "ipad" {
+            waitForScreenshotTransition()
+            try capture(
+                "\(screenshotPrefix)-home-first-health-shared-row",
+                app: app
+            )
+        }
+        #else
+        waitForScreenshotTransition()
+        try capture(
+            "\(screenshotPrefix)-home-first-health-shared-row",
+            app: app
+        )
+        #endif
+    }
+
+    @MainActor
     func testAppleHealthTasksStayOutOfQuickStartAndUseAnalyticsOnlyDetail()
         throws
     {
@@ -9149,7 +9355,9 @@ final class timetrackerUITests: XCTestCase {
             ] = String(autosaveDelayMilliseconds)
         }
         app.launch()
-        app.activate()
+        if app.state != .runningForeground {
+            app.activate()
+        }
         if additionalLaunchArguments.contains(where: {
             $0.hasPrefix("--uitesting-apple-health")
         }) {
@@ -10552,7 +10760,7 @@ final class timetrackerUITests: XCTestCase {
             #if os(macOS)
             scroll(direction: .up, toward: element, in: app)
             #else
-            home.swipeUp()
+            dragContentUp(by: app.frame.height * 0.25, in: app)
             #endif
         }
     }
@@ -10630,6 +10838,44 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    private func scrollUntilFrameFullyVisibleAboveSystemChrome(
+        _ element: XCUIElement,
+        in app: XCUIApplication
+    ) {
+        for _ in 0 ..< 12 where
+            !isFrameFullyVisibleAboveSystemChrome(element, in: app)
+        {
+            #if os(macOS)
+            let windowFrame = app.windows.firstMatch.frame
+            let direction: ScrollDirection = element.exists &&
+                element.frame.minY < windowFrame.minY
+                ? .down
+                : .up
+            scroll(direction: direction, toward: element, in: app)
+            #else
+            let unobscuredBottom = systemChromeTop(in: app)
+            let frame = element.frame
+
+            if element.exists, frame.minY < app.frame.minY + 8 {
+                dragContentDown(
+                    by: app.frame.minY + 28 - frame.minY,
+                    in: app
+                )
+            } else if element.exists,
+                      frame.maxY > unobscuredBottom - 8
+            {
+                dragContentUp(
+                    by: frame.maxY - unobscuredBottom + 20,
+                    in: app
+                )
+            } else {
+                dragContentUp(by: 80, in: app)
+            }
+            #endif
+        }
+    }
+
+    @MainActor
     private func scrollUntilFullyVisibleBelowNavigationBar(
         _ element: XCUIElement,
         navigationBarTitle: String,
@@ -10695,6 +10941,71 @@ final class timetrackerUITests: XCTestCase {
         return element.frame.minY >= app.frame.minY
             && element.frame.maxY <= unobscuredBottom - 8
         #endif
+    }
+
+    @MainActor
+    private func validVisibleFrame(
+        for element: XCUIElement,
+        in app: XCUIApplication,
+        requiresFullVisibility: Bool = true,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws -> CGRect {
+        XCTAssertTrue(
+            element.waitForExistence(timeout: 5),
+            "Expected geometry probe to exist.",
+            file: file,
+            line: line
+        )
+        let frame = element.frame
+        let values = [
+            frame.minX,
+            frame.minY,
+            frame.width,
+            frame.height,
+        ]
+        XCTAssertTrue(
+            values.allSatisfy(\.isFinite),
+            "Geometry probe must expose a finite frame: \(frame)",
+            file: file,
+            line: line
+        )
+        XCTAssertGreaterThan(
+            frame.width,
+            0,
+            "Geometry probe must have positive width.",
+            file: file,
+            line: line
+        )
+        XCTAssertGreaterThan(
+            frame.height,
+            0,
+            "Geometry probe must have positive height.",
+            file: file,
+            line: line
+        )
+        #if os(macOS)
+        let applicationFrame = app.windows.firstMatch.frame
+        #else
+        let applicationFrame = app.frame
+        #endif
+        XCTAssertTrue(
+            applicationFrame
+                .insetBy(dx: -2, dy: -2)
+                .contains(frame),
+            "Geometry probe must remain inside the app window: \(frame)",
+            file: file,
+            line: line
+        )
+        if requiresFullVisibility {
+            XCTAssertTrue(
+                isFrameFullyVisibleAboveSystemChrome(element, in: app),
+                "Geometry probe must be fully visible: \(frame)",
+                file: file,
+                line: line
+            )
+        }
+        return frame
     }
 
     @MainActor

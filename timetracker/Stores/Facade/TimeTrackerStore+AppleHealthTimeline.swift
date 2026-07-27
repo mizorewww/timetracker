@@ -41,6 +41,14 @@ extension TimeTrackerStore {
             clearRecoveryTaskIDs: appleHealthTimelinePreferenceStore
                 .taskCatalogClearRecoveryTaskIDs
         )
+        #if DEBUG
+        if applyFirstHealthTimelineFixtureIfRequested(
+            now: now,
+            calendar: calendar
+        ) {
+            return
+        }
+        #endif
         guard isAppleHealthTimelineEnabled else { return }
         await refreshAppleHealthTimeline(
             now: now,

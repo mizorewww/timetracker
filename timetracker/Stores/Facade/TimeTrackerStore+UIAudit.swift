@@ -2,6 +2,47 @@
 import Foundation
 
 extension TimeTrackerStore {
+    @discardableResult
+    func applyFirstHealthTimelineFixtureIfRequested(
+        arguments: [String] = CommandLine.arguments,
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> Bool {
+        guard AppRuntimeEnvironment.isTestHost,
+              arguments.contains("--uitesting-first-health-timeline")
+        else {
+            return false
+        }
+
+        let startOfDay = calendar.startOfDay(for: now)
+        let interval = DateInterval(
+            start: startOfDay.addingTimeInterval(16 * 60 * 60),
+            duration: 45 * 60
+        )
+        isAppleHealthTimelineEnabled = true
+        appleHealthTimelineItems = [
+            AppleHealthTimelineItem(
+                id: .appleHealthWorkout(
+                    UUID(
+                        uuidString:
+                        "D0700000-0000-4000-8000-000000000001"
+                    )!
+                ),
+                subject: .appleHealthWorkout(.running),
+                interval: interval
+            ),
+        ]
+        appleHealthTimelineState = .content(
+            interval: DateInterval(
+                start: startOfDay,
+                duration: 24 * 60 * 60
+            ),
+            refreshedAt: now,
+            itemCount: 1
+        )
+        return true
+    }
+
     func applyLiveLLMConfigurationIfRequested(
         arguments: [String] = CommandLine.arguments,
         environment: [String: String] = ProcessInfo.processInfo.environment

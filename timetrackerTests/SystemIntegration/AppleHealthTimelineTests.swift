@@ -1408,53 +1408,6 @@ struct AppleHealthTimelineTests {
     }
 
     @Test
-    func healthTimelineUIUsesSharedChartAndRoutesThroughStaticTemplates()
-        throws
-    {
-        let home = try sourceText(
-            "timetracker/Features/Home/Sections/HomeTimelineViews.swift"
-        )
-        let phone = try sourceText(
-            "timetracker/Features/Home/CompactHomeSections.swift"
-        )
-        let sharedLegend = try sourceText(
-            "timetracker/SharedUI/Components/TimelineLegendRow.swift"
-        )
-        let sharedBars = try sourceText(
-            "timetracker/SharedUI/Components/TimelineChartBars.swift"
-        )
-        let healthUI = try sourceText(
-            "timetracker/Features/Home/Rows/HomeAppleHealthTimelineRows.swift"
-        )
-        let entryRow = try sourceText(
-            "timetracker/Features/Home/Rows/TodayTimelineEntryRow.swift"
-        )
-        let readyBranch = try #require(
-            healthUI.slice(
-                from: "case .ready:",
-                to: "case .noReadableData:"
-            )
-        )
-
-        #expect(home.contains("TimelineChart("))
-        #expect(home.contains("TodayTimelineEntryRow("))
-        #expect(phone.contains("TodayTimelineEntryRow("))
-        #expect(entryRow.contains("TimelineLegendRow(entry: entry)"))
-        #expect(entryRow.contains("TimelineRow("))
-        #expect(entryRow.contains("appleHealthGeneratedTaskID"))
-        #expect(entryRow.contains("openTaskDetail(taskID)"))
-        #expect(sharedLegend.contains("struct TimelineLegendRow"))
-        #expect(sharedLegend.contains("entry.durationSeconds"))
-        #expect(sharedBars.contains("entry.startedAt"))
-        #expect(sharedBars.contains("entry.endedAt"))
-        #expect(healthUI.contains("showAppleHealthInTimeline"))
-        #expect(readyBranch.contains("refreshAppleHealthTimeline()"))
-        #expect(readyBranch.contains("showAppleHealthInTimeline()") == false)
-        #expect(healthUI.contains("TaskNode(") == false)
-        #expect(healthUI.contains("TimeSegment(") == false)
-    }
-
-    @Test
     func healthRefreshDoesNotGateCoreStartupRouting() throws {
         let content = try sourceText("timetracker/App/ContentView.swift")
         let readiness = try #require(

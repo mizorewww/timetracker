@@ -120,6 +120,8 @@ The Today analytics timeline clips cross-day segments to today's bounds, then di
 
 Bars should show only time position, duration, color, and the task symbol. Task title, parent path, and exact time range belong in rows below the chart. The timeline runs vertically in the compact shell and horizontally in the regular shell — a width decision, not a platform one, so an iPad in Split View and a narrow Mac window get the vertical axis for the same reason iPhone does.
 
+紧凑纵向 Timeline 的 start、interior、end 时间文字统一从图表内容 leading edge 起排；lane 数量、gap 数量和本地化 `skipped` 胶囊宽度不得改变这条基准线。动态 gutter 仍负责完整容纳胶囊并把 plot 推到右侧；与胶囊纵向冲突的 interior tick 可以省略，但剩余时间文字不能横向移动或重新居中。
+
 Today Timeline 的普通记录与 Apple Health 记录必须复用同一个响应式 record renderer：紧凑宽度都按时间、身份、来源/时长纵向重排，常规宽度都使用相同的时间列、标题列、来源 badge 和时长列。Apple Health 只在来源、已计数时长、只读动作包装上保留差异；不得按数据类型或“第一行”增加专属 padding、offset 或另一套 row。
 
 Adjacent tasks with no visible gap should use different lanes so their bars remain distinguishable. The layout should still minimize lane count: if task A overlaps B and B overlaps C, but A does not overlap C, A and C can reuse the same lane.

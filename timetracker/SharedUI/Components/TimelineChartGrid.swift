@@ -90,21 +90,11 @@ extension TimelineChart {
             ) { tick in
                 let ratio = axisCompression.ratio(for: tick.date)
                 let y = axisLength * CGFloat(ratio)
-                Text(hourLabel(tick.date))
-                    .font(
-                        .footnote
-                            .weight(tick.role.isBoundary ? .semibold : .regular)
-                            .monospacedDigit()
-                    )
-                    .foregroundStyle(
-                        tick.role.isBoundary ? Color.primary : Color.secondary
-                    )
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.92)
+                verticalHourLabel(tick)
                     .frame(
                         width: max(0, width - 12),
                         height: 16,
-                        alignment: .trailing
+                        alignment: .leading
                     )
                     .offset(
                         y: TimelineChartLayout.axisLabelOrigin(
@@ -116,6 +106,52 @@ extension TimelineChart {
                     )
             }
         }
+    }
+
+    @ViewBuilder
+    private func verticalHourLabel(
+        _ tick: TimelineChartAxisTick
+    ) -> some View {
+        let text = hourLabel(tick.date)
+        let label = Text(text)
+            .font(
+                .footnote
+                    .weight(tick.role.isBoundary ? .semibold : .regular)
+                    .monospacedDigit()
+            )
+            .foregroundStyle(
+                tick.role.isBoundary ? Color.primary : Color.secondary
+            )
+            .lineLimit(1)
+            .minimumScaleFactor(0.92)
+
+        if exposesUITestingMarks {
+            label
+                .fixedSize(horizontal: true, vertical: false)
+                .overlay {
+                    timelineGeometryProbe(
+                        identifier: verticalAxisLabelIdentifier(tick),
+                        label: text
+                    )
+                }
+        } else {
+            label
+        }
+    }
+
+    private func verticalAxisLabelIdentifier(
+        _ tick: TimelineChartAxisTick
+    ) -> String {
+        let role = switch tick.role {
+        case .start:
+            "start"
+        case .interior:
+            "interior"
+        case .end:
+            "end"
+        }
+        let timestamp = Int(tick.date.timeIntervalSinceReferenceDate.rounded())
+        return "timeline.axisLabel.vertical.\(role).\(timestamp)"
     }
 
     func horizontalGapLine(
@@ -171,7 +207,7 @@ extension TimelineChart {
         if exposesUITestingMarks {
             label
                 .overlay {
-                    gapGeometryProbe(
+                    timelineGeometryProbe(
                         identifier: "timeline.gapCapsule.\(gap.id)",
                         label: text
                     )
@@ -204,7 +240,7 @@ extension TimelineChart {
         if exposesUITestingMarks {
             label
                 .overlay {
-                    gapGeometryProbe(
+                    timelineGeometryProbe(
                         identifier: "timeline.gapText.\(gap.id)",
                         label: text
                     )
@@ -228,7 +264,7 @@ extension TimelineChart {
                 .fixedSize(horizontal: true, vertical: true)
                 .hidden()
 
-            gapGeometryProbe(
+            timelineGeometryProbe(
                 identifier: "timeline.gapIntrinsicText.\(gap.id)",
                 label: text
             )
@@ -246,7 +282,7 @@ extension TimelineChart {
             .fixedSize(horizontal: true, vertical: true)
     }
 
-    private func gapGeometryProbe(
+    private func timelineGeometryProbe(
         identifier: String,
         label: String
     ) -> some View {

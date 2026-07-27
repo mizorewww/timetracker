@@ -5513,6 +5513,43 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testPhoneTimelineAxisLabelsStayLeadingAlignedAroundSkippedGaps() throws {
+        #if os(macOS)
+        throw XCTSkip("The compact vertical Timeline is verified on iPhone.")
+        #else
+        XCUIDevice.shared.orientation = .portrait
+        defer { XCUIDevice.shared.orientation = .portrait }
+
+        let app = launchApp(
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: ["--uitesting-gap-label-collision"]
+        )
+        XCTAssertTrue(homeIsReady(in: app))
+
+        if app.descendants(matching: .any)["ipad.splitNavigation"]
+            .waitForExistence(timeout: 1)
+        {
+            throw XCTSkip("The compact vertical Timeline is verified on iPhone.")
+        }
+
+        let chart = app.descendants(matching: .any)[
+            "home.timeline.chart"
+        ].firstMatch
+        scrollTodayUntilHittable(chart, in: app)
+        XCTAssertTrue(chart.waitForExistence(timeout: 5) && chart.isHittable)
+        scrollUntilFullyVisibleAboveSystemChrome(chart, in: app)
+        XCTAssertTrue(isFullyVisibleAboveSystemChrome(chart, in: app))
+
+        try assertPhoneTimelineAxisLabelsStayLeadingAligned(in: app)
+        waitForScreenshotTransition()
+        try capture(
+            "iphone-home-timeline-leading-axis-around-skipped-gaps",
+            app: app
+        )
+        #endif
+    }
+
+    @MainActor
     func testAppleHealthTimelineControlsStayVisibleAndContextual() throws {
         #if os(macOS)
         throw XCTSkip("Apple Health timeline controls require an iOS simulator.")
@@ -9890,6 +9927,86 @@ final class timetrackerUITests: XCTestCase {
                 "Same-row gap labels must retain the four-point design spacing after pixel rounding."
             )
         }
+    }
+
+    @MainActor
+    private func assertPhoneTimelineAxisLabelsStayLeadingAligned(
+        in app: XCUIApplication
+    ) throws {
+        let axisLabelPrefix = "timeline.axisLabel.vertical."
+        let gapCapsulePrefix = "timeline.gapCapsule."
+        let chart = app.descendants(matching: .any)[
+            "home.timeline.chart"
+        ].firstMatch
+        let axisLabels = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                axisLabelPrefix
+            )
+        )
+        let gapCapsules = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                gapCapsulePrefix
+            )
+        )
+
+        XCTAssertTrue(
+            waitUntil(timeout: 5) {
+                axisLabels.count >= 2 && gapCapsules.count == 2
+            },
+            """
+            The compact Timeline must expose at least two time labels and two \
+            skipped-gap capsules; labels=\(axisLabels.count), \
+            capsules=\(gapCapsules.count).
+            """
+        )
+
+        let chartFrame = try validVisibleFrame(for: chart, in: app)
+        let axisFrames = try axisLabels.allElementsBoundByIndex.map {
+            try validVisibleFrame(for: $0, in: app)
+        }
+        let capsuleFrames = try gapCapsules.allElementsBoundByIndex.map {
+            try validVisibleFrame(for: $0, in: app)
+        }
+        let pixelTolerance: CGFloat = 2
+
+        XCTAssertGreaterThanOrEqual(axisFrames.count, 2)
+        XCTAssertEqual(capsuleFrames.count, 2)
+        for frame in axisFrames {
+            XCTAssertEqual(
+                frame.minX,
+                chartFrame.minX,
+                accuracy: pixelTolerance,
+                "Every compact time label must share the chart leading edge."
+            )
+            XCTAssertTrue(
+                chartFrame
+                    .insetBy(dx: -pixelTolerance, dy: -pixelTolerance)
+                    .contains(frame),
+                "Every compact time label must remain inside the Timeline chart."
+            )
+            for capsuleFrame in capsuleFrames {
+                XCTAssertFalse(
+                    frame.intersects(capsuleFrame),
+                    "Time labels must continue yielding vertically to skipped gaps."
+                )
+            }
+        }
+
+        let leadingEdges = axisFrames.map(\.minX)
+        let minimumLeadingEdge = try XCTUnwrap(leadingEdges.min())
+        let maximumLeadingEdge = try XCTUnwrap(leadingEdges.max())
+        XCTAssertLessThanOrEqual(
+            maximumLeadingEdge - minimumLeadingEdge,
+            pixelTolerance,
+            "Start, interior, and end time labels must use one leading anchor."
+        )
+
+        XCTAssertFalse(
+            capsuleFrames[0].intersects(capsuleFrames[1]),
+            "Skipped-gap capsules must remain collision-free."
+        )
     }
 
     @MainActor

@@ -1,6 +1,6 @@
 # 67：Today 首行 Apple Health 时间标签重叠 实现记忆
 
-状态：2026-07-27 进行中
+状态：2026-07-27 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目及其复用
@@ -33,7 +33,7 @@
 - [x] A：领取反馈并建立活动实现记忆。
 - [x] B：审计 Timeline 普通/Health 行的 read model、布局分支、fixture 与 HIG 约束。
 - [x] C：先补会失败的几何/行为测试，再实现共享布局并更新当前文档。
-- [~] D：完成单测、三平台 XCUITest/截图、Release 全设备安装与收口。
+- [x] D：完成单测、三平台 XCUITest/截图、Release 全设备安装与收口。
 
 ## 子 Agent 分工
 
@@ -60,5 +60,9 @@
   iPadOS 27 beta 的 AX 叶节点滚动坐标与截图服务不稳定，因此 iPad 使用稳定的整行
   几何断言，截图证据由 iPhone/macOS 承担。
 - 2026-07-27：`make format-check`、`make localization-check`、Apple Health Timeline
-  定向单测 30 项及 `make test` 全量 1419 项均通过；等待实现提交与
-  `make build-install-all` 后关闭任务。
+  定向单测 30 项及 `make test` 全量 1419 项均通过。
+- 2026-07-27：实现与验证以 `bc65c439`（`Unify Today timeline record rows`）
+  提交；版本钩子推进到 1.1.234 (289)。`make build-install-all` Release 全设备
+  安装通过：iPad Pro M4、iPhone Air、内嵌 Watch companion 均构建/安装成功，
+  macOS app 已复制到 `/Applications/timetracker.app` 并通过签名验证。反馈与子
+  Note 标记 `[x]`，移除 `~67` 活动链接。

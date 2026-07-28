@@ -175,7 +175,7 @@
   in-flight Task，三个 surface lane 只读一次，并在缓存、发布前后校验 container
   revision，替换容器会丢弃旧 DTO 而不取消已经开始的读。Widget JSON/App Group 写入由
   专用 actor 串行执行，WidgetKit reload 才回到 MainActor。scheduler/driver 新增独立
-  forced-system-sink 语义，空事件 Watch 终态不会伪造 `.fullSync`，但可在无 history
+  forced-system-sink 语义，空事件的 iPhone-handled Watch outcome 不会伪造 `.fullSync`，但可在无 history
   或仅有 Watch 无关 history 时发布一次当前状态，effect 成功后才推进 cursor；merge、
   retry、512 项有界 backlog 都保留 force 标记。worker 14 项、scheduler 12 项、
   persistent-history driver 16 项聚焦测试通过；完整门禁结果见本检查点提交。未新增
@@ -183,7 +183,8 @@
 - 2026-07-28：完成调用方统一与恢复检查点。普通 Scene 在当前读模型刷新后只广播并
   enqueue；App Intent 在 durable command 后立即广播并 enqueue；Watch 的实际 mutation
   把精确 events 与 forced Watch 放在同一 receipt，duplicate/missing/invalid/failed
-  等无 history 终态只强制 Watch current-state。启动、前台、remote import 与显式冲突
+  等无 history 的 iPhone outcome 只强制 Watch current-state；Watch 本机 timeout 不进入
+  iPhone scheduler。启动、前台、remote import 与显式冲突
   解决触发 history-backed catch-up；启动额外强制 Watch，保证进程退出打断的 forced-only
   终态可在下次启动补发。sync snapshot 成功后发布 prompt 变化，Scene 通过单一
   serialized reader、single-flight + 一次 trailing refresh、100/300 ms 有界退避与

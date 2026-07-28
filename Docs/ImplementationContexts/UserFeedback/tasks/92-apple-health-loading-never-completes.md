@@ -1,6 +1,6 @@
 # 92：Apple Health 加载不结束实现记忆
 
-状态：2026-07-28 已完成
+状态：2026-07-28 用户复验失败，已重新认领
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的状态条目。
@@ -35,6 +35,12 @@
 
 ## 进度记录
 
+- 2026-07-28：用户真机复验仍然无限加载，重新打开任务。已确认第二条独立根因：
+  Task Detail 把 `appleHealthReplicaRevision` 放入 `.task(id:)`；首次 HealthKit 增量读取
+  写入本地 replica 后 revision 自增，SwiftUI 随即取消尚未提交 UI 终态的加载任务，
+  下一轮又因 `loadedRequest == nil` 重新授权、标记同步并写入新 generation，形成自激
+  取消循环。当前修复边界缩减为“HealthKit 首次读取并写本地；UI 从本地副本完成一次
+  加载”，observer 只负责后续变更通知。
 - 2026-07-28：认领用户新增的无限加载 bug，建立活动实现记忆；下一步先写失败测试并
   追踪 refresh 终止路径。
 - 2026-07-28：子代理只读审计与行为红测共同确认，首次授权后同步等待

@@ -939,7 +939,9 @@
 "analytics.question.pomodoro" = "我完成了多少轮专注？";
 "analytics.question.decisions" = "什么值得我关注？";
 "analytics.question.quality" = "这些统计可以直接参考吗？";
+"analytics.question.heatmaps" = "我跟踪的任务有多活跃？";
 "analytics.question.openFormat" = "查看详情：%@";
+"analytics.question.answer.heatmaps" = "按“设置”中保存的热力图范围查看每个所选任务。";
 "analytics.question.answer.noRecordedTime" = "本时段没有记录时间";
 "analytics.question.answer.totalFormat" = "%@，各任务计时相加";
 "analytics.question.answer.peakFormat" = "最集中在 %02d:00 · 记录 %@";
@@ -968,6 +970,8 @@
 "analytics.category.decisions.subtitle" = "查看此范围内的变化；选择当前周期时还会显示当前任务预测。";
 "analytics.category.quality.title" = "计时检查";
 "analytics.category.quality.subtitle" = "参考统计前，检查重叠、切换和短记录。";
+"analytics.heatmaps.empty.title" = "尚未选择热力图任务";
+"analytics.heatmaps.empty.description" = "前往“通用”设置选择要跟踪的任务，即可在此查看活跃度。";
 "task.detail.title" = "任务详情";
 "task.detail.editor" = "任务信息";
 "task.detail.editor.expand" = "编辑";

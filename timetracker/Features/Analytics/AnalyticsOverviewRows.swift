@@ -197,3 +197,45 @@ struct AnalyticsCategoryRow: View {
         #endif
     }
 }
+
+struct AnalyticsStandalonePageRow: View {
+    let page: AnalyticsStandalonePage
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            SettingsRowIcon(systemImage: page.systemImage, tint: page.tint)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(page.questionTitle)
+                    .font(.body.weight(.medium))
+                Text(page.answerPreview)
+                    .font(answerFont)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(page.openLabel)
+                    .font(actionFont)
+                    .foregroundStyle(.tint)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var answerFont: Font {
+        #if os(macOS)
+        .body
+        #else
+        .subheadline
+        #endif
+    }
+
+    private var actionFont: Font {
+        #if os(macOS)
+        .body.weight(.medium)
+        #else
+        .caption.weight(.medium)
+        #endif
+    }
+}

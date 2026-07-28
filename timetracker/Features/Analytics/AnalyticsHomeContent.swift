@@ -3,7 +3,6 @@ import SwiftUI
 struct AnalyticsContent: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    let store: TimeTrackerStore
     /// `nil` only during the first uncached load. Later period changes keep
     /// the last section shells mounted with redacted, non-interactive content.
     let snapshot: AnalyticsSnapshot?
@@ -33,13 +32,9 @@ struct AnalyticsContent: View {
                     .accessibilityIdentifier("analytics.initialLoading")
             }
 
-            // The tracked-task heatmaps have their own data chain and period,
-            // independent of the analytics range, so they stay mounted while
-            // a newly selected period loads.
-            HomeActivityHeatmapSection(
-                store: store,
-                container: .listSection
-            )
+            Section {
+                standalonePageLinks(AnalyticsStandalonePage.homePages)
+            }
         }
         #if os(iOS)
         .listStyle(.insetGrouped)
@@ -110,6 +105,17 @@ struct AnalyticsContent: View {
             }
             .accessibilityIdentifier("analytics.category.\(category.rawValue)")
             .analyticsLoadingPlaceholder(contentIsPlaceholder)
+        }
+    }
+
+    private func standalonePageLinks(
+        _ pages: [AnalyticsStandalonePage]
+    ) -> some View {
+        ForEach(pages) { page in
+            NavigationLink(value: page) {
+                AnalyticsStandalonePageRow(page: page)
+            }
+            .accessibilityIdentifier(page.accessibilityIdentifier)
         }
     }
 }

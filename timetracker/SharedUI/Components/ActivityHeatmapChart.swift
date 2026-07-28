@@ -128,10 +128,6 @@ struct ActivityHeatmapChart: View {
                         )
                 }
             }
-            // Per-cell accessibility elements cost a formatted date string
-            // and an AX node for every one of the 371 marks; the card-level
-            // summary already describes the whole heatmap.
-            .accessibilityHidden(true)
         }
         .chartLegend(.hidden)
         .chartXScale(
@@ -187,6 +183,10 @@ struct ActivityHeatmapChart: View {
             width: layoutPolicy.chartWidth,
             height: layoutPolicy.chartHeight
         )
+        // Collapse the chart to one AX node after Charts has built its marks.
+        // Hiding every mark individually prevents those marks from rendering
+        // on current OS releases; the surrounding grid owns the spoken summary.
+        .accessibilityElement(children: .ignore)
         .accessibilityIdentifier(
             "home.heatmap.chart.\(snapshot.taskID.uuidString)"
         )

@@ -55,7 +55,6 @@ struct AnalyticsView: View {
         )
 
         AnalyticsContent(
-            store: store,
             snapshot: displayedPresentation?.snapshot,
             contentIsPlaceholder: presentationPhase.obscuresLoadedMetrics,
             range: $range,
@@ -107,6 +106,12 @@ struct AnalyticsView: View {
                 liveNow: liveNow,
                 monthNavigationAnchor: $monthNavigationAnchor
             )
+        }
+        .navigationDestination(for: AnalyticsStandalonePage.self) { page in
+            switch page {
+            case .heatmaps:
+                AnalyticsHeatmapView(store: store)
+            }
         }
         .navigationTitle(AppStrings.analytics)
         #if os(iOS)

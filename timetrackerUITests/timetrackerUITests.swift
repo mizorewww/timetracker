@@ -5481,7 +5481,9 @@ final class timetrackerUITests: XCTestCase {
         let app = launchApp(route: "analytics")
 
         XCTAssertTrue(analyticsIsReady(in: app))
-        let finalCategory = app.descendants(matching: .any)["analytics.category.overview"].firstMatch
+        let finalCategory = app.descendants(matching: .any)[
+            "analytics.standalone.heatmaps"
+        ].firstMatch
         scrollUntilHittable(finalCategory, direction: .up, in: app)
         XCTAssertTrue(
             waitForElement(
@@ -5501,9 +5503,10 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testAnalyticsHomeShowsTrackedTaskHeatmaps() throws {
+    func testAnalyticsHeatmapsOpenAsStandalonePage() throws {
         let app = launchApp(
             route: "analytics",
+            contentSizeCategory: "UICTContentSizeCategoryL",
             replacesDemoDataOnLaunch: true,
             additionalLaunchArguments: [
                 "--uitesting-today-heatmap",
@@ -5512,6 +5515,35 @@ final class timetrackerUITests: XCTestCase {
         )
         XCTAssertTrue(analyticsIsReady(in: app))
 
+        let destination = app.descendants(matching: .any)[
+            "analytics.standalone.heatmaps"
+        ].firstMatch
+        scrollUntilHittable(destination, direction: .up, in: app)
+        XCTAssertTrue(
+            destination.waitForExistence(timeout: 8) && destination.isHittable,
+            "Analysis must offer a discoverable Activity Heatmaps destination."
+        )
+        XCTAssertFalse(
+            app.descendants(matching: .any)["analytics.heatmaps.view"].exists
+        )
+        XCTAssertFalse(
+            app.descendants(matching: .any)["home.heatmaps.header"].exists,
+            "Analysis home must not expand the full Heatmap content."
+        )
+
+        scrollUntilFullyVisibleAboveSystemChrome(destination, in: app)
+        let prefix = platformScreenshotPrefix(in: app)
+        try capture("\(prefix)-analytics-heatmaps-entry", app: app)
+        activate(destination)
+
+        let heatmapsView = app.descendants(matching: .any)[
+            "analytics.heatmaps.view"
+        ].firstMatch
+        XCTAssertTrue(heatmapsView.waitForExistence(timeout: 8))
+        XCTAssertFalse(
+            app.descendants(matching: .any)["analytics.periodFilter"].exists,
+            "The standalone Heatmap page must keep its Settings range instead of the Analysis date filter."
+        )
         let heatmapsHeader = app.descendants(matching: .any)[
             "home.heatmaps.header"
         ].firstMatch
@@ -5528,11 +5560,66 @@ final class timetrackerUITests: XCTestCase {
         ).firstMatch
         scrollUntilHittable(grid, direction: .up, in: app)
         XCTAssertTrue(grid.waitForExistence(timeout: 8))
+        XCTAssertGreaterThan(grid.frame.width, 0)
+        XCTAssertGreaterThan(grid.frame.height, 0)
+        let gridIdentifierPrefix = "home.heatmap.grid."
+        XCTAssertTrue(grid.identifier.hasPrefix(gridIdentifierPrefix))
+        let taskID = String(
+            grid.identifier.dropFirst(gridIdentifierPrefix.count)
+        )
+        let chart = app.descendants(matching: .any)[
+            "home.heatmap.chart.\(taskID)"
+        ].firstMatch
+        let scroller = app.descendants(matching: .any)[
+            "home.heatmap.scroller.\(taskID)"
+        ].firstMatch
+        XCTAssertTrue(chart.waitForExistence(timeout: 5))
+        XCTAssertTrue(scroller.waitForExistence(timeout: 5))
+        XCTAssertTrue(scroller.frame.intersects(chart.frame))
+        RunLoop.current.run(until: Date().addingTimeInterval(1))
 
-        let prefix = platformScreenshotPrefix(in: app)
-        #if !os(macOS)
-        try capture("\(prefix)-analytics-task-heatmaps", app: app)
+        try capture("\(prefix)-analytics-heatmaps-page", app: app)
+
+        #if os(macOS)
+        let back = app.buttons["Back"].firstMatch
+        #else
+        let back = app.navigationBars.buttons.element(boundBy: 0)
         #endif
+        XCTAssertTrue(back.waitForExistence(timeout: 3) && back.isHittable)
+        activate(back)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["analytics.view"]
+                .waitForExistence(timeout: 8)
+        )
+        XCTAssertFalse(heatmapsView.exists)
+    }
+
+    @MainActor
+    func testAnalyticsHeatmapsShowConfigurationEmptyState() {
+        let app = launchApp(
+            route: "analytics",
+            contentSizeCategory: "UICTContentSizeCategoryL",
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: [
+                "--uitesting-reset-demo-preferences",
+            ]
+        )
+        XCTAssertTrue(analyticsIsReady(in: app))
+
+        let destination = app.descendants(matching: .any)[
+            "analytics.standalone.heatmaps"
+        ].firstMatch
+        scrollUntilHittable(destination, direction: .up, in: app)
+        XCTAssertTrue(destination.waitForExistence(timeout: 8) && destination.isHittable)
+        activate(destination)
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["analytics.heatmaps.empty"]
+                .waitForExistence(timeout: 8)
+        )
+        XCTAssertFalse(
+            app.descendants(matching: .any)["home.heatmaps.header"].exists
+        )
     }
 
     @MainActor

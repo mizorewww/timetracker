@@ -939,7 +939,9 @@
 "analytics.question.pomodoro" = "我完成了多少輪專注？";
 "analytics.question.decisions" = "什麼值得我關注？";
 "analytics.question.quality" = "這些統計可以直接參考嗎？";
+"analytics.question.heatmaps" = "我追蹤的任務有多活躍？";
 "analytics.question.openFormat" = "查看詳情：%@";
+"analytics.question.answer.heatmaps" = "按「設定」中儲存的熱力圖範圍查看每個所選任務。";
 "analytics.question.answer.noRecordedTime" = "本時段沒有記錄時間";
 "analytics.question.answer.totalFormat" = "%@，各任務計時相加";
 "analytics.question.answer.peakFormat" = "最集中在 %02d:00 · 記錄 %@";
@@ -968,6 +970,8 @@
 "analytics.category.decisions.subtitle" = "查看此範圍內的變化；選擇目前週期時還會顯示目前任務預測。";
 "analytics.category.quality.title" = "計時檢查";
 "analytics.category.quality.subtitle" = "參考統計前，檢查重疊、切換和短記錄。";
+"analytics.heatmaps.empty.title" = "尚未選擇熱力圖任務";
+"analytics.heatmaps.empty.description" = "前往「一般」設定選擇要追蹤的任務，即可在此查看活躍度。";
 "task.detail.title" = "任務詳情";
 "task.detail.editor" = "任務資訊";
 "task.detail.editor.expand" = "編輯";

@@ -214,6 +214,8 @@ Task-category create, update, delete, and task-draft assignment also share that 
 
 Analytics presentation keeps the loaded snapshot and its request as one atomic value. An exact evaluation-cache hit may render synchronously. Once any snapshot has displayed, a cold range/interval switch preserves the landing/detail section shells while redacting, disabling, and accessibility-hiding the old data content; only the first load may replace data content with a loading row. Same-period revision or live refresh may keep the real snapshot visible. The refresh indicator has a fixed layout slot, and request cancellation is checked before the single presentation publish.
 
+Activity Heatmaps are an Analytics standalone destination, not an `AnalyticsCategory`. The landing page owns only a typed navigation entry; `AnalyticsHeatmapView` reuses the Today Heatmap projection and its Settings-owned range directly. It therefore does not load an unrelated `AnalyticsSnapshot` or show the Analytics Day/Week/Month controls, and native navigation preserves the landing state on return.
+
 Analytics ranking and single-value selections are deterministic. Task ties resolve by gross time, wall time, localized title, then UUID; peak-hour ties choose the earliest local hour. Deleted-task titles use the latest valid session snapshot by start time, update time, and UUID, shared by task breakdown and overlap participants. Collection input order and dictionary iteration order are never product semantics.
 
 ## Ledger Query Strategy

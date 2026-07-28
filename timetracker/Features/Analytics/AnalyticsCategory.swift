@@ -1,5 +1,61 @@
 import SwiftUI
 
+enum AnalyticsStandalonePage: String, CaseIterable, Hashable, Identifiable {
+    case heatmaps
+
+    static let homePages: [AnalyticsStandalonePage] = [.heatmaps]
+
+    var id: String {
+        rawValue
+    }
+
+    var destinationTitle: String {
+        switch self {
+        case .heatmaps:
+            AppStrings.localized("home.heatmap.title")
+        }
+    }
+
+    var questionTitle: String {
+        switch self {
+        case .heatmaps:
+            AppStrings.localized("analytics.question.heatmaps")
+        }
+    }
+
+    var answerPreview: String {
+        switch self {
+        case .heatmaps:
+            AppStrings.localized("analytics.question.answer.heatmaps")
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .heatmaps:
+            "square.grid.3x3.fill"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .heatmaps:
+            .indigo
+        }
+    }
+
+    var accessibilityIdentifier: String {
+        "analytics.standalone.\(rawValue)"
+    }
+
+    var openLabel: String {
+        String(
+            format: AppStrings.localized("analytics.question.openFormat"),
+            destinationTitle
+        )
+    }
+}
+
 enum AnalyticsCategory: String, CaseIterable, Hashable, Identifiable {
     case overview
     case time

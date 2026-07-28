@@ -21,6 +21,20 @@ struct AnalyticsCategoryPresentationTests {
     }
 
     @Test @MainActor
+    func homeOffersHeatmapsAsOneStableStandaloneDestination() {
+        #expect(AnalyticsStandalonePage.homePages == [.heatmaps])
+        #expect(AnalyticsStandalonePage.heatmaps.id == "heatmaps")
+        #expect(
+            AnalyticsStandalonePage.heatmaps.destinationTitle ==
+                AppStrings.localized("home.heatmap.title")
+        )
+        #expect(
+            AnalyticsStandalonePage.heatmaps.accessibilityIdentifier ==
+                "analytics.standalone.heatmaps"
+        )
+    }
+
+    @Test @MainActor
     func everyQuestionUsesTheSameNoRecordedTimeAnswerForAnEmptyRange() {
         let snapshot = makeSnapshot()
         let expected = AppStrings.localized("analytics.question.answer.noRecordedTime")

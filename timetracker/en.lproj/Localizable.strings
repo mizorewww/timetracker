@@ -939,7 +939,9 @@
 "analytics.question.pomodoro" = "How many focus rounds did I finish?";
 "analytics.question.decisions" = "What deserves attention?";
 "analytics.question.quality" = "Can I rely on these totals?";
+"analytics.question.heatmaps" = "How active have my tracked tasks been?";
 "analytics.question.openFormat" = "View details: %@";
+"analytics.question.answer.heatmaps" = "View each selected task using the Heatmap range from Settings.";
 "analytics.question.answer.noRecordedTime" = "No tracked time in this range";
 "analytics.question.answer.totalFormat" = "%@ across all task timers";
 "analytics.question.answer.peakFormat" = "Busiest at %02d:00 · %@ tracked";
@@ -968,6 +970,8 @@
 "analytics.category.decisions.subtitle" = "Review changes in this range. Current periods also show current task forecasts.";
 "analytics.category.quality.title" = "Tracking Checks";
 "analytics.category.quality.subtitle" = "Check overlap, switches, and short records before using totals.";
+"analytics.heatmaps.empty.title" = "No Heatmap Tasks Selected";
+"analytics.heatmaps.empty.description" = "Choose tracked tasks in General settings to show their activity here.";
 "task.detail.title" = "Task Detail";
 "task.detail.editor" = "Task Info";
 "task.detail.editor.expand" = "Edit";

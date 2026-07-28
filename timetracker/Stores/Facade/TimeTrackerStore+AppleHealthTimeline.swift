@@ -187,7 +187,7 @@ extension TimeTrackerStore {
 
             appleHealthTimelineState = .requesting
             try await appleHealthDataReader.requestReadAuthorization()
-            await startAppleHealthReplicaObservationIfNeeded()
+            startAppleHealthReplicaObservationIfNeeded()
         } catch is CancellationError {
             guard isCurrentAppleHealthTimelineRequest(requestID),
                   isAppleHealthTimelineEnabled
@@ -327,22 +327,43 @@ extension TimeTrackerStore {
         ).samples
     }
 
-    func startAppleHealthReplicaObservationIfNeeded() async {
+    func startAppleHealthReplicaObservationIfNeeded() {
         guard isAppleHealthReplicaObservationActive == false,
+              appleHealthReplicaObservationSetupTask == nil,
               let observer =
               appleHealthDataReader
                   as? any AppleHealthReplicaChangeObserving
         else {
             return
         }
+
+        let setupID = UUID()
+        appleHealthReplicaObservationSetupID = setupID
         isAppleHealthReplicaObservationActive = true
-        do {
-            try await observer.startObservingReplicaChanges {
-                [weak self] in
-                await self?.handleObservedAppleHealthReplicaChange()
+
+        appleHealthReplicaObservationSetupTask = Task {
+            @MainActor [weak self, observer] in
+            do {
+                try await observer.startObservingReplicaChanges {
+                    [weak self] in
+                    await self?.handleObservedAppleHealthReplicaChange()
+                }
+                guard let self,
+                      appleHealthReplicaObservationSetupID == setupID
+                else {
+                    return
+                }
+                appleHealthReplicaObservationSetupTask = nil
+            } catch {
+                guard let self,
+                      appleHealthReplicaObservationSetupID == setupID
+                else {
+                    return
+                }
+                observer.stopObservingReplicaChanges()
+                appleHealthReplicaObservationSetupTask = nil
+                isAppleHealthReplicaObservationActive = false
             }
-        } catch {
-            isAppleHealthReplicaObservationActive = false
         }
     }
 

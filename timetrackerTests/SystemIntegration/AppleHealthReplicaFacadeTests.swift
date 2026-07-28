@@ -5,6 +5,46 @@ import Testing
 @Suite(.serialized)
 struct AppleHealthReplicaFacadeTests {
     @Test @MainActor
+    func suspendedObservationSetupDoesNotBlockInitialTimelineLoad()
+        async throws
+    {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let reader = SuspendedObservationReplicaFacadeAppleHealthReader()
+        let repository = try makeAppleHealthReplicaTestRepository()
+        let store = TimeTrackerStore(
+            appleHealthDataReader: reader,
+            appleHealthReplicaRepository: repository,
+            appleHealthTimelinePreferenceStore:
+            TestAppleHealthTimelinePreferenceStore(),
+            writeAuthorization: .isolatedTestHarness
+        )
+
+        let showTask = Task { @MainActor in
+            await store.showAppleHealthInTimeline(
+                now: now,
+                calendar: calendar
+            )
+        }
+        #expect(await Self.eventually {
+            reader.observationStartCount == 1
+        })
+        #expect(await Self.eventually {
+            reader.receivedReplicaAnchors == [.empty]
+        })
+
+        let day = try #require(calendar.dateInterval(of: .day, for: now))
+        #expect(store.appleHealthTimelineState == .noReadableData(
+            interval: DateInterval(start: day.start, end: now),
+            refreshedAt: now
+        ))
+
+        reader.finishObservationSetup()
+        await showTask.value
+    }
+
+    @Test @MainActor
     func observedChangeIncrementallyRefreshesReplicaAndVisibleTimeline()
         async throws
     {
@@ -270,6 +310,22 @@ struct AppleHealthReplicaFacadeTests {
             .appleHealthWorkout(workoutID),
         ])
     }
+
+    @MainActor
+    private static func eventually(
+        timeout: Duration = .seconds(2),
+        condition: @escaping () async -> Bool
+    ) async -> Bool {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: timeout)
+        while clock.now < deadline {
+            if await condition() {
+                return true
+            }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        return await condition()
+    }
 }
 
 @MainActor
@@ -359,5 +415,64 @@ private final class ObservingReplicaFacadeAppleHealthReader:
 
     func emitObservedChange() async {
         await observationHandler?()
+    }
+}
+
+@MainActor
+private final class SuspendedObservationReplicaFacadeAppleHealthReader:
+    AppleHealthDataReading,
+    AppleHealthReplicaChangeReading,
+    AppleHealthReplicaChangeObserving
+{
+    let isHealthDataAvailable = true
+    var receivedReplicaAnchors: [AppleHealthReplicaAnchors] = []
+    var observationStartCount = 0
+    private var observationSetupContinuation:
+        CheckedContinuation<Void, Never>?
+
+    func authorizationRequestStatus() async throws
+        -> AppleHealthAuthorizationRequestStatus
+    {
+        .unnecessary
+    }
+
+    func requestReadAuthorization() async throws {}
+
+    func samples(
+        overlapping _: DateInterval
+    ) async throws -> AppleHealthSampleBatch {
+        .empty
+    }
+
+    func replicaChanges(
+        after anchors: AppleHealthReplicaAnchors
+    ) async throws -> AppleHealthReplicaChangeBatch {
+        receivedReplicaAnchors.append(anchors)
+        return AppleHealthReplicaChangeBatch(
+            workouts: [],
+            deletedWorkoutIDs: [],
+            workoutAnchor: Data("workout-empty".utf8),
+            sleep: [],
+            deletedSleepIDs: [],
+            sleepAnchor: Data("sleep-empty".utf8)
+        )
+    }
+
+    func startObservingReplicaChanges(
+        _: @escaping @MainActor @Sendable () async -> Void
+    ) async throws {
+        observationStartCount += 1
+        await withCheckedContinuation { continuation in
+            observationSetupContinuation = continuation
+        }
+    }
+
+    func stopObservingReplicaChanges() {
+        finishObservationSetup()
+    }
+
+    func finishObservationSetup() {
+        observationSetupContinuation?.resume()
+        observationSetupContinuation = nil
     }
 }

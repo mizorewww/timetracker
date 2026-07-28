@@ -141,6 +141,14 @@ final class TimeTrackerStore {
         scheduledSyncRefreshTask?.cancel()
         syncConflictPromptRefreshTask?.cancel()
         appleHealthTimelineLoadTask?.cancel()
+        appleHealthReplicaObservationSetupTask?.cancel()
+        if let observer =
+            appleHealthDataReader as? any AppleHealthReplicaChangeObserving
+        {
+            Task { @MainActor in
+                observer.stopObservingReplicaChanges()
+            }
+        }
         for request in inboxSuggestionTasksByItemID.values {
             request.task.cancel()
         }
@@ -243,6 +251,9 @@ final class TimeTrackerStore {
     var appleHealthReplicaRevision = 0
     var appleHealthTaskCatalogErrorMessage: String?
     @ObservationIgnored var isAppleHealthReplicaObservationActive = false
+    @ObservationIgnored var appleHealthReplicaObservationSetupID = UUID()
+    @ObservationIgnored var appleHealthReplicaObservationSetupTask:
+        Task<Void, Never>?
     @ObservationIgnored var appleHealthTimelineRequestID = UUID()
     @ObservationIgnored var appleHealthTimelineLoadTask:
         Task<AppleHealthSampleBatch, Error>?

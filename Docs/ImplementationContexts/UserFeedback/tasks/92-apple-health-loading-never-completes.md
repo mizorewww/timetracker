@@ -13,9 +13,9 @@
 
 ## 验收条件
 
-- [ ] 先建立能复现无限加载的行为测试，并定位缺失的终止状态。
-- [ ] 授权、无数据、增量成功、失败、取消和不可用状态都能确定结束加载。
-- [ ] 增量 anchor 与 replica durable write 仍保持事务安全，不丢失重试机会。
+- [x] 先建立能复现无限加载的行为测试，并定位缺失的终止状态。
+- [x] 授权、无数据、增量成功、失败、取消和不可用状态都能确定结束加载。
+- [x] 增量 anchor 与 replica durable write 仍保持事务安全，不丢失重试机会。
 - [ ] 正常字号 UI/状态文案验收通过；需要时保存 Apple Health 设置/任务详情截图。
 - [ ] `make test`、格式、本地化门禁通过，实现提交后完成 `make build-install-all`。
 
@@ -37,3 +37,12 @@
 
 - 2026-07-28：认领用户新增的无限加载 bug，建立活动实现记忆；下一步先写失败测试并
   追踪 refresh 终止路径。
+- 2026-07-28：子代理只读审计与行为红测共同确认，首次授权后同步等待
+  `enableBackgroundDelivery` 会让 timeline 永久停在 `.requesting`，并阻止任何 replica
+  query。新增的 suspended-observation 测试在旧实现稳定失败。
+- 2026-07-28：checkpoint A 实现完成。Observer setup 改为 Store 持有、token 隔离的幂等
+  Swift Concurrency task；首次 timeline/Health task analytics 在授权后立即开始 anchored
+  sync，不等待后台投递注册。setup 失败恢复为可重试，Store 释放时取消 setup 并停止
+  observer。聚焦 replica facade 5/5 测试通过；完整 `make test` 通过 1568 tests /
+  176 suites，SwiftFormat、diff、三语言本地化与 hook 门禁通过。实现未改变视觉布局，
+  采用状态机行为测试验收，不创建无信息增益的截图；待 checkpoint 提交与设备安装。

@@ -28,7 +28,7 @@
 
 - [ ] 固定命令在系统投影被挂起时仍可完成可见读模型刷新并返回。
 - [ ] 固定 projection failure 不反转 durable mutation outcome，并按投影分类保留状态。
-- [ ] 覆盖 generation 合并、精确事件并集、重复调度去重和失败后的重试。
+- [x] 覆盖 generation 合并、精确事件并集、重复调度去重和失败后的重试。
 - [ ] 覆盖启动/前台恢复 pending work，且完成后不会重复执行旧 generation。
 - [ ] 覆盖普通 scene、App Intent 与 Watch 的既有 post-commit 语义和多 scene 防循环。
 - [ ] 运行聚焦测试、`make test`、性能预算、格式/本地化与签名构建。
@@ -36,9 +36,9 @@
 
 ## Checkpoint 编排
 
-- [~] A：审计现有 mutation → read model → sync snapshot/system surface 调用链，补齐
+- [x] A：审计现有 mutation → read model → sync snapshot/system surface 调用链，补齐
   可独立阻塞/失败的测试 seam 与性能 signpost。
-- [ ] B：实现可恢复、可合并的 post-commit scheduler，先迁移普通 scene path。
+- [~] B：实现可恢复、可合并的 post-commit scheduler，先迁移普通 scene path。
 - [ ] C：统一 App Intent 与 Watch 调用方，保留精确 outcome 与多 scene 收敛语义。
 - [ ] D：更新架构、代码、测试与工程地图；完成全量验证和性能证据。
 - [ ] E：全设备安装、标记 `[x]`、移除 active link并提交关闭 checkpoint。
@@ -62,3 +62,8 @@
 
 - 2026-07-28：认领性能审查第 1 项，建立 `~87` 活动实现记忆；三个子代理开始并行
   只读审计，主代理完成 HIG、SwiftUI 并发/性能与项目架构/测试/隐私约束阅读。
+- 2026-07-28：完成未接线的 system projection scheduler core。Widget、Watch 与 Live
+  Activity 各自维护 pending/in-flight/ack/failure；四个 continuation 驱动的行为测试
+  覆盖 receipt 去重、generation 合并、旧完成隔离、单 sink 失败及显式/后续提交重试。
+  新增 async performance-signpost seam，并把 refresh event/plan 标为值语义 `Sendable`。
+  未新增第三方依赖。

@@ -1,6 +1,6 @@
 import Foundation
 
-enum StoreRefreshScope: Hashable, CaseIterable {
+nonisolated enum StoreRefreshScope: Hashable, CaseIterable, Sendable {
     case tasks
     case ledgerVisible
     case ledgerHistory
@@ -16,7 +16,7 @@ enum StoreRefreshScope: Hashable, CaseIterable {
     static let full: Set<StoreRefreshScope> = Set(allCases)
 }
 
-struct StoreInvalidationRange: Hashable {
+nonisolated struct StoreInvalidationRange: Hashable, Sendable {
     let start: Date
     let end: Date
 
@@ -33,7 +33,7 @@ struct StoreInvalidationRange: Hashable {
     }
 }
 
-enum StoreDomainEvent: Hashable {
+nonisolated enum StoreDomainEvent: Hashable, Sendable {
     case taskChanged(taskID: UUID?, affectedAncestorIDs: Set<UUID>)
     case checklistChanged(taskID: UUID?, affectedAncestorIDs: Set<UUID>)
     case ledgerChanged(taskID: UUID?, dateInterval: StoreInvalidationRange?, isVisible: Bool)
@@ -135,7 +135,7 @@ enum StoreDomainEvent: Hashable {
     }
 }
 
-struct StoreRefreshPlan: Equatable {
+nonisolated struct StoreRefreshPlan: Equatable, Sendable {
     let scopes: Set<StoreRefreshScope>
     let affectedTaskIDs: Set<UUID>
     let directlyAffectedTaskIDs: Set<UUID>
@@ -206,7 +206,7 @@ struct StoreRefreshPlan: Equatable {
     }
 }
 
-struct StoreRefreshPlanner {
+nonisolated struct StoreRefreshPlanner: Sendable {
     func plan(after events: Set<StoreDomainEvent>) -> StoreRefreshPlan {
         StoreRefreshPlan(
             scopes: scopes(after: events),

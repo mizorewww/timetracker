@@ -12,4 +12,13 @@ nonisolated enum PerformanceSignpost {
         defer { signposter.endInterval(name, state) }
         return try operation()
     }
+
+    nonisolated static func interval<T>(
+        _ name: StaticString,
+        _ operation: () async throws -> T
+    ) async rethrows -> T {
+        let state = signposter.beginInterval(name)
+        defer { signposter.endInterval(name, state) }
+        return try await operation()
+    }
 }

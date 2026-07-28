@@ -1,9 +1,9 @@
 # 87：提交后系统投影调度器 实现记忆
 
-状态：2026-07-28 实现中
+状态：2026-07-28 完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
-> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
+> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[x]` 条目。
 
 ## 认领的反馈条目
 
@@ -31,8 +31,8 @@
 - [x] 覆盖 generation 合并、精确事件并集、重复调度去重和失败后的重试。
 - [x] 覆盖启动/前台恢复 pending work，且完成后不会重复执行旧 generation。
 - [x] 覆盖普通 scene、App Intent 与 Watch 的既有 post-commit 语义和多 scene 防循环。
-- [ ] 运行聚焦测试、`make test`、性能预算、格式/本地化与签名构建。
-- [ ] 运行 `make build-install-all` 并清理所有 owned 进程、设备与临时产物。
+- [x] 运行聚焦测试、`make test`、性能预算、格式/本地化与签名构建。
+- [x] 运行 `make build-install-all` 并清理所有 owned 进程、设备与临时产物。
 
 ## Checkpoint 编排
 
@@ -44,8 +44,8 @@
   materialization/Widget I/O 移出 MainActor 交互路径。
 - [x] C：统一普通 Scene、App Intent 与 Watch 调用方，保留精确 outcome 与多 scene
   收敛语义。
-- [~] D：更新架构、代码、测试与工程地图；完成全量验证和性能证据。
-- [ ] E：全设备安装、标记 `[x]`、移除 active link并提交关闭 checkpoint。
+- [x] D：更新架构、代码、测试与工程地图；完成全量验证和性能证据。
+- [x] E：全设备安装、标记 `[x]`、移除 active link并提交关闭 checkpoint。
 
 ## 库策略
 
@@ -214,3 +214,29 @@
   UI、文案、布局、accessibility、extension DTO 或可见设计变化；静态截图无法验证
   caller latency、失败隔离或 persistent-history 重放，故截图不适用，改以行为/性能预算、
   Release 安装和真实系统表面收敛验收。
+- 2026-07-28：在源码提交 `6adbeb3e` 上完成最终冻结验收。`make test` 的 176 个 suite、
+  1557/1557 项测试全部通过，包含 11/11 项 `CorePerformanceBudgetTests`；SwiftFormat
+  检查 873 个文件零差异，本地化 9/9 资源一致，Git hook 与 `git diff --check` 通过。
+  定向 macOS UI 用例
+  `testStoppingTodayTimerImmediatelyClosesMatchingTimelineRow` 在进入产品断言前因 XCTest
+  启用 automation mode 超时而不确定，证据保存在
+  `build/UITestResults/macOS-20260728-141945.xcresult`，未伪报为通过。Release macOS
+  Time Profiler 证据位于
+  `build/PerformanceTraces/task87-final-release-macos-interaction.trace`（13 MB，
+  24.29 秒）；TOC 确认目标收到 `--uitesting`，应用的 UI-test container 工厂据此
+  使用内存 SwiftData 并禁用 CloudKit。
+  trace 只有一项 503.36 ms 启动 potential hang，采样栈位于 dyld/AppKit 窗口初始化，
+  `hang-risks` 表为空；没有用这份启动 trace 冒充交互前后量化基线。截图工具因同
+  bundle 的多份 app 另起普通实例，只做只读状态检查后即精确终止，没有点击或写入
+  用户数据，也没有保存或提交包含用户数据的截图；本任务没有可见 UI 变化，故以行为
+  测试、性能预算和真实安装代替静态截图。
+- 2026-07-28：原样 `make build-install-all` 以 Release、Automatic Signing、团队
+  `LT98S43NKA` 成功退出。iPad Pro M4
+  (`748D0137-ADC3-58AF-855C-1E98B3125F93`) 与 iPhone Air
+  (`FBA36694-D841-56D4-8ED6-21942873B21B`) 均完成安装；iPad 启动成功，iPhone
+  首次因锁屏拒绝，解锁后用同一已安装 bundle 重试启动成功；macOS app 已签名并复制到
+  `/Applications/timetracker.app`。嵌入的 Watch companion 通过签名验证，但没有可见
+  物理 Apple Watch，未声称 Watch 真机安装。验收后精确终止 iPhone/iPad app 与本次
+  唤起的 Widget/Live Activity extension，终止两份 macOS trace/test app；最终无
+  `xcodebuild`、`xctest`、UI runner、`xctrace`、timetracker app/extension 或 Booted
+  simulator 残留。仅完成第一个 P1；后续 foreground delta 与 Ledger P1 未开始。

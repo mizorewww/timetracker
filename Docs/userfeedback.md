@@ -924,7 +924,7 @@ InboxItems:      5,000
 
 按收益、风险和依赖关系排序：
 
-1. [~] **P1：把 sync snapshot、Widget、Watch、Live Activity 从同步提交后路径移出。**
+1. [x] **P1：把 sync snapshot、Widget、Watch、Live Activity 从同步提交后路径移出。**
 2. [ ] **P1：foreground/remote import 使用 persistent-history delta，避免无条件 full refresh。**
 3.  [ ]**P1：将 Ledger 多记录更新改为 batch merge，消除最坏 `O(kN)`。**
 4.  [ ]**P2：Analytics 使用完整的 Sendable value pipeline 和后台 Actor。**

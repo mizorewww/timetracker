@@ -24,7 +24,8 @@ struct PersistentHistoryProjectionDriverTests {
                     PersistentHistoryProjectionInvocation(
                         lane: .widget,
                         kind: .fullReconciliation,
-                        transactionCount: 0
+                        transactionCount: 0,
+                        events: [.fullSync]
                     ),
                 ]
             )
@@ -43,6 +44,14 @@ struct PersistentHistoryProjectionDriverTests {
             )
             #expect(
                 await probe.invocations().last?.transactionCount == 1
+            )
+            #expect(
+                await probe.invocations().last?.events == [
+                    .taskChanged(
+                        taskID: nil,
+                        affectedAncestorIDs: []
+                    ),
+                ]
             )
         }
     }
@@ -131,6 +140,101 @@ struct PersistentHistoryProjectionDriverTests {
                 .incremental,
             ])
             #expect(invocations.last?.transactionCount == 2)
+            #expect(
+                invocations.last?.events == [
+                    .taskChanged(
+                        taskID: nil,
+                        affectedAncestorIDs: []
+                    ),
+                ]
+            )
+        }
+    }
+
+    @Test
+    func modelEntityNamesMapToConservativeDomainEventsAndLaneTargets() {
+        let taskEvent = StoreDomainEvent.taskChanged(
+            taskID: nil,
+            affectedAncestorIDs: []
+        )
+        let ledgerEvent = StoreDomainEvent.ledgerChanged(
+            taskID: nil,
+            dateInterval: nil,
+            isVisible: true
+        )
+
+        #expect(
+            PersistentHistoryProjectionImpact.events(
+                forEntityNames: [
+                    "TaskNode",
+                    "TaskCategory",
+                    "TaskRecurrenceRule",
+                ]
+            ) == [taskEvent]
+        )
+        #expect(
+            PersistentHistoryProjectionImpact.events(
+                forEntityNames: [
+                    "TimeSession",
+                    "TimeSegment",
+                    "PomodoroRun",
+                    "SyncedPreference",
+                    "CountdownEvent",
+                    "ChecklistItem",
+                    "InboxItem",
+                ]
+            ) == [
+                ledgerEvent,
+                .pomodoroChanged(
+                    runID: nil,
+                    sessionID: nil,
+                    taskID: nil
+                ),
+                .preferenceChanged(key: nil),
+                .countdownChanged,
+                .checklistChanged(
+                    taskID: nil,
+                    affectedAncestorIDs: []
+                ),
+                .inboxChanged(itemIDs: []),
+            ]
+        )
+        #expect(
+            PersistentHistoryProjectionImpact.events(
+                forEntityNames: ["FutureModel"]
+            ) == [.fullSync]
+        )
+        #expect(
+            PersistentHistoryProjectionImpact.affects(
+                lane: .widget,
+                events: [.inboxChanged(itemIDs: [])]
+            ) == false
+        )
+        #expect(
+            PersistentHistoryProjectionImpact.affects(
+                lane: .watch,
+                events: [.preferenceChanged(key: nil)]
+            )
+        )
+        #expect(
+            PersistentHistoryProjectionImpact.affects(
+                lane: .syncSnapshot,
+                events: [.countdownChanged]
+            )
+        )
+    }
+
+    @Test @MainActor
+    func everyCurrentStoreEntityHasAnExplicitProjectionImpact() {
+        for entityName in TimeTrackerModelRegistry
+            .cloudSyncedUserModelNames
+        {
+            #expect(
+                PersistentHistoryProjectionImpact.events(
+                    forEntityNames: [entityName]
+                ) != [.fullSync],
+                "Missing projection impact for \(entityName)"
+            )
         }
     }
 
@@ -386,7 +490,13 @@ struct PersistentHistoryProjectionDriverTests {
                     PersistentHistoryProjectionInvocation(
                         lane: .widget,
                         kind: .incremental,
-                        transactionCount: 1
+                        transactionCount: 1,
+                        events: [
+                            .taskChanged(
+                                taskID: nil,
+                                affectedAncestorIDs: []
+                            ),
+                        ]
                     ),
                 ]
             )
@@ -414,7 +524,8 @@ struct PersistentHistoryProjectionDriverTests {
                     PersistentHistoryProjectionInvocation(
                         lane: .watch,
                         kind: .fullReconciliation,
-                        transactionCount: 1
+                        transactionCount: 1,
+                        events: [.fullSync]
                     ),
                 ]
             )

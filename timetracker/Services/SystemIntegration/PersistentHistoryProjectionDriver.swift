@@ -17,6 +17,7 @@ nonisolated struct PersistentHistoryProjectionInvocation:
     let lane: PersistentHistoryProjectionLane
     let kind: PersistentHistoryProjectionInvocationKind
     let transactionCount: Int
+    let events: Set<StoreDomainEvent>
 }
 
 nonisolated enum PersistentHistoryProjectionDriverError:
@@ -86,7 +87,8 @@ private nonisolated struct PersistentHistoryProjectionHistorySummary:
 {
     let lastToken: DefaultHistoryToken?
     let transactionCount: Int
-    let containsLocalMutation: Bool
+    let allEvents: Set<StoreDomainEvent>
+    let localMutationEvents: Set<StoreDomainEvent>
 }
 
 @ModelActor
@@ -99,7 +101,8 @@ private actor PersistentHistoryProjectionHistoryReader {
     ) throws -> PersistentHistoryProjectionHistorySummary {
         var lastToken = acknowledgedToken
         var transactionCount = 0
-        var containsLocalMutation = false
+        var allEvents: Set<StoreDomainEvent> = []
+        var localMutationEvents: Set<StoreDomainEvent> = []
 
         while true {
             var descriptor: HistoryDescriptor<DefaultHistoryTransaction> = if let lastToken {
@@ -132,10 +135,25 @@ private actor PersistentHistoryProjectionHistoryReader {
                     transactionCount,
                     1
                 )
-                containsLocalMutation =
-                    containsLocalMutation
-                        || transaction.author
-                        == TimeTrackerHistoryAuthor.localMutation.rawValue
+                let transactionEvents =
+                    PersistentHistoryProjectionImpact.events(
+                        forEntityNames: Set(transaction.changes.map {
+                            $0.changedPersistentIdentifier.entityName
+                        })
+                    )
+                allEvents = StoreDomainEventBatchLimiter.bounded(
+                    allEvents.union(transactionEvents)
+                )
+                if transaction.author
+                    == TimeTrackerHistoryAuthor.localMutation.rawValue
+                {
+                    localMutationEvents =
+                        StoreDomainEventBatchLimiter.bounded(
+                            localMutationEvents.union(
+                                transactionEvents
+                            )
+                        )
+                }
             }
 
             guard let candidateToken =
@@ -154,7 +172,8 @@ private actor PersistentHistoryProjectionHistoryReader {
         return PersistentHistoryProjectionHistorySummary(
             lastToken: lastToken,
             transactionCount: transactionCount,
-            containsLocalMutation: containsLocalMutation
+            allEvents: allEvents,
+            localMutationEvents: localMutationEvents
         )
     }
 
@@ -272,7 +291,8 @@ actor PersistentHistoryProjectionDriver {
             try await effect(PersistentHistoryProjectionInvocation(
                 lane: lane,
                 kind: .fullReconciliation,
-                transactionCount: summary.transactionCount
+                transactionCount: summary.transactionCount,
+                events: [.fullSync]
             ))
             volatileCursors[lane] = .ready(summary.lastToken)
             return
@@ -292,7 +312,11 @@ actor PersistentHistoryProjectionDriver {
             try await effect(PersistentHistoryProjectionInvocation(
                 lane: lane,
                 kind: .incremental,
-                transactionCount: summary.transactionCount
+                transactionCount: summary.transactionCount,
+                events: Self.events(
+                    for: lane,
+                    summary: summary
+                )
             ))
         }
         volatileCursors[lane] = .ready(candidateToken)
@@ -317,7 +341,8 @@ actor PersistentHistoryProjectionDriver {
         try await effect(PersistentHistoryProjectionInvocation(
             lane: lane,
             kind: .fullReconciliation,
-            transactionCount: summary.transactionCount
+            transactionCount: summary.transactionCount,
+            events: [.fullSync]
         ))
         guard try cursorStore.establishAfterFullReconciliation(
             summary.lastToken,
@@ -349,7 +374,11 @@ actor PersistentHistoryProjectionDriver {
             try await effect(PersistentHistoryProjectionInvocation(
                 lane: lane,
                 kind: .incremental,
-                transactionCount: summary.transactionCount
+                transactionCount: summary.transactionCount,
+                events: Self.events(
+                    for: lane,
+                    summary: summary
+                )
             ))
         }
         switch try cursorStore.advanceIncrementally(
@@ -423,11 +452,21 @@ actor PersistentHistoryProjectionDriver {
         lane: PersistentHistoryProjectionLane,
         summary: PersistentHistoryProjectionHistorySummary
     ) -> Bool {
+        PersistentHistoryProjectionImpact.affects(
+            lane: lane,
+            events: events(for: lane, summary: summary)
+        )
+    }
+
+    private static func events(
+        for lane: PersistentHistoryProjectionLane,
+        summary: PersistentHistoryProjectionHistorySummary
+    ) -> Set<StoreDomainEvent> {
         switch lane {
         case .syncSnapshot:
-            summary.containsLocalMutation
+            summary.localMutationEvents
         case .widget, .watch, .liveActivity:
-            summary.transactionCount > 0
+            summary.allEvents
         }
     }
 }

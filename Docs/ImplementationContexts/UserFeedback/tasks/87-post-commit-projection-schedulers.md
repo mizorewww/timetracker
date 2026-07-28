@@ -128,3 +128,9 @@
   短生命周期创建，或在 container 更新时显式替换，不能让 `@ModelActor` 强引用破坏
   现有 weak-container registry 的清理语义。未新增第三方依赖；使用 SwiftData、
   Core Data metadata、Foundation、Structured Concurrency 与既有 `DurableLocalFile`。
+- 2026-07-28：在 driver 接线前补齐 persistent-history impact 映射。每笔 history
+  change 的 entity name 被折叠成不携带陈旧 ID/range 的保守 `StoreDomainEvent`；
+  sync lane 只合并 `localMutation` 的领域，三个系统表面合并所有 author 的领域，
+  未知未来实体安全降级为 `.fullSync`。因此一次 history scan 即使跨过多个并发
+  receipt，也不会用首个 receipt 的局部领域错误确认更远 frontier；当前 V14 的
+  17 个实体都有显式映射。driver 聚焦测试现为 13 项。未新增第三方依赖。

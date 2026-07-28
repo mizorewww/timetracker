@@ -140,3 +140,14 @@
   共用一次 committed-fact materialization，materialization 失败只等待实际表面 lane
   都观察后释放缓存供显式重试。scheduler 9 项、worker 10 项聚焦测试通过。未新增
   第三方依赖；使用 Swift Structured Concurrency、SwiftData 与既有同步服务。
+- 2026-07-28：将 store-scoped scheduler 的每条 work 接到短生命周期
+  `PersistentHistoryProjectionDriver`。真实持久库首次触发为四 lane 建立 full
+  baseline，之后无新 transaction 不再重复 effect；本地 author 驱动四 lane，远端
+  reconciliation 只驱动三个系统表面但仍推进 sync cursor；单 lane 失败不确认自身
+  frontier，siblings 独立推进，显式 retry 只重放失败 lane；registry 重建后复用 durable
+  cursor。driver 不被 registry 长期持有，继续保持 weak-container 清理语义；effect
+  前后以 container revision fence 拒绝替换期间的陈旧确认；同 store URL 双容器竞态
+  验证被替换且阻塞中的四条旧 lane 均不能确认 generation/frontier，retry 改由新容器
+  完成。5 项真实 SQLite 集成测试通过；该检查点的隔离 worktree 全量门禁为
+  1525/1525。未新增第三方依赖；复用 SwiftData persistent history、Structured
+  Concurrency 与既有 `DurableLocalFile`。

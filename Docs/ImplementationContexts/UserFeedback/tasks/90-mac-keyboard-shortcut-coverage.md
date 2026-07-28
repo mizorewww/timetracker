@@ -1,6 +1,6 @@
 # 90：Mac 快捷键覆盖 实现记忆
 
-状态：2026-07-28 进行中
+状态：2026-07-28 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -17,7 +17,7 @@
 - [x] 新快捷键可在设置中发现、修改、禁用和恢复，且冲突/无效输入不破坏现有配置。
 - [x] 快捷键与菜单/按钮调用同一命令边界，不绕过验证、持久化或反馈。
 - [x] 行为测试、macOS 普通字号 XCUITest 与截图、`make test`、格式和本地化门禁通过。
-- [ ] 实现提交后完成 `make build-install-all`。
+- [x] 实现提交后完成 `make build-install-all`。
 
 ## 子代理编排
 
@@ -64,3 +64,6 @@
   本地化 parity、hook 检查通过；macOS XCUITest 验证 16 个录制项、默认
   `Shift-Command-M` 实际触发补录、Task 菜单 9 个动作，4 张普通字号截图人工检查
   通过。最终结果包：`build/UITestResults/macOS-20260728-193118.xcresult`。
+- 2026-07-28：实现提交 `44901a77`；`make build-install-all` 成功构建 Release
+  1.1.333 (388)，安装到 iPad Pro M4、iPhone Air（内嵌 Watch companion），并将
+  已签名 macOS App 复制到 `/Applications/timetracker.app`。任务关闭。

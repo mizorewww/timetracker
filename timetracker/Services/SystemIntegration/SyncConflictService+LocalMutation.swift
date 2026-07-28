@@ -39,6 +39,7 @@ extension SyncConflictService {
         guard isCloudActive || shouldStageForCloudRecovery || hasPendingUploadRecovery else {
             return prompt(from: state)
         }
+        let stateBeforeRecording = state
         let previousLocalFingerprint = state.localFingerprint
         let baseline: SyncDataSnapshot? = if state.pendingConflictID != nil {
             state.pendingConflictWorkingSnapshot ??
@@ -72,6 +73,9 @@ extension SyncConflictService {
             if state.pendingLocalIntent == .explicitlyReplaceCloud {
                 state.pendingForcedUploadSnapshot = snapshot
             }
+            guard state != stateBeforeRecording else {
+                return prompt(from: state)
+            }
             state.advanceLocalGeneration()
             try saveState(state)
             return prompt(from: state)
@@ -83,11 +87,14 @@ extension SyncConflictService {
             }
             state.localSnapshot = snapshot
             state.localFingerprint = try snapshot.fingerprint()
-            state.advanceLocalGeneration()
             state.pendingForcedUploadSnapshot = snapshot
             if state.pendingLocalIntent != .explicitlyReplaceCloud {
                 state.pendingLocalIntent = .reconcileWithCloud
             }
+            guard state != stateBeforeRecording else {
+                return prompt(from: state)
+            }
+            state.advanceLocalGeneration()
             try saveState(state)
             if shouldStageForCloudRecovery, !hasPendingUploadRecovery {
                 AppCloudSync.requestCloudReconciliationReset()

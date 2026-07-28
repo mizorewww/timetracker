@@ -104,7 +104,7 @@ struct CloudRecoveryImportSession: Codable, Equatable {
     }
 }
 
-struct SyncConflictState: Codable {
+struct SyncConflictState: Codable, Equatable {
     var baseFingerprint: String?
     var localSnapshot: SyncDataSnapshot?
     var localFingerprint: String?

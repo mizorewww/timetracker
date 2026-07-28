@@ -96,3 +96,10 @@
   持久库/回滚行为测试及完整 `make test` 1487 项通过；测试临时 store 在 context 和
   container 释放后删除，无遗留 SQLite 句柄告警。未新增第三方依赖；采用 SwiftData
   persistent history 官方 author API。
+- 2026-07-28：完成 B2 的同步快照幂等前置检查点。`recordLocalMutation` 在既有
+  store/state 锁序内比较完整 postcondition；相同 snapshot 的 at-least-once 重放仍
+  返回 `.recorded`，但不再推进 generation 或重写 manifest/slot。完整 state 比较保留
+  pending conflict working branch 与 protected local branch 的区别，不能只看
+  fingerprint。三个行为测试先证明旧实现会重复推进/写盘，再覆盖跨 service Cloud
+  重放、pending conflict identity 稳定，以及关闭同步且无 recovery 时零读写。未新增
+  第三方依赖；继续复用 SwiftData、Foundation 与现有 `DurableLocalFile`。

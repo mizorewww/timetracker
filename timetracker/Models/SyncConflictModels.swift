@@ -1,6 +1,10 @@
 import Foundation
 
-struct SyncConflictPrompt: Identifiable, Equatable {
+nonisolated struct SyncConflictPrompt:
+    Identifiable,
+    Equatable,
+    Sendable
+{
     let id: UUID
     let detectedAt: Date
     let localSummary: String

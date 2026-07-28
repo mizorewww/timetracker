@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 
+@MainActor
 extension SyncDataSnapshot {
     func restoreTaskRecurrenceRules(
         context: ModelContext,

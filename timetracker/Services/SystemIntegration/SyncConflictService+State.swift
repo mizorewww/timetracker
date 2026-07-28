@@ -10,18 +10,23 @@ extension SyncConflictService {
         64 * 1024 * 1024
     }
 
-    private static let stateLogger = Logger(
+    private nonisolated static let stateLogger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
         category: "SyncConflictState"
     )
 
     func loadState() throws -> SyncConflictState {
         try withExclusiveStateAccess {
-            try loadStateWithoutLock()
+            try loadStateWithLockedState(
+                recoveryMirrorIntent:
+                inferredPendingLocalIntentForRecoveryMirror()
+            )
         }
     }
 
-    private func loadStateWithoutLock() throws -> SyncConflictState {
+    nonisolated func loadStateWithLockedState(
+        recoveryMirrorIntent: SyncPendingLocalIntent
+    ) throws -> SyncConflictState {
         let url = try stateURL()
         guard FileManager.default.fileExists(atPath: url.path) else {
             var recoveredState = SyncConflictState()
@@ -34,7 +39,7 @@ extension SyncConflictService {
                 // The mirror is consulted only when authoritative state is
                 // absent; a valid state with nil pending data suppresses it.
                 recoveredState.pendingForcedUploadSnapshot = backup
-                recoveredState.pendingLocalIntent = inferredPendingLocalIntentForRecoveryMirror()
+                recoveredState.pendingLocalIntent = recoveryMirrorIntent
                 try saveStateWithoutLock(recoveredState)
             }
             return recoveredState
@@ -117,11 +122,16 @@ extension SyncConflictService {
 
     func loadPendingForcedUploadSnapshot() throws -> SyncDataSnapshot? {
         try withExclusiveStateAccess {
-            try loadStateWithoutLock().pendingForcedUploadSnapshot
+            try loadStateWithLockedState(
+                recoveryMirrorIntent:
+                inferredPendingLocalIntentForRecoveryMirror()
+            ).pendingForcedUploadSnapshot
         }
     }
 
-    private func loadPendingForcedUploadSnapshotWithoutLock() throws -> SyncDataSnapshot? {
+    private nonisolated func loadPendingForcedUploadSnapshotWithoutLock()
+        throws -> SyncDataSnapshot?
+    {
         let url = try pendingForcedUploadSnapshotURL()
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
         let data: Data
@@ -185,7 +195,7 @@ extension SyncConflictService {
         return data
     }
 
-    func quarantineCorruptFile(
+    nonisolated func quarantineCorruptFile(
         at url: URL,
         prefix: String
     ) throws -> URL? {
@@ -196,7 +206,10 @@ extension SyncConflictService {
         )
     }
 
-    private func logCorruptStateQuarantine(_ url: URL?, message: String) {
+    private nonisolated func logCorruptStateQuarantine(
+        _ url: URL?,
+        message: String
+    ) {
         if let url {
             Self.stateLogger.error(
                 "Quarantined \(message, privacy: .public) at \(url.path, privacy: .public)"

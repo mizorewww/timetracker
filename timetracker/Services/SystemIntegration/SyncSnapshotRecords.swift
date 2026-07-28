@@ -1,16 +1,16 @@
 import Foundation
 
-protocol SyncSnapshotRecord {
+nonisolated protocol SyncSnapshotRecord: Sendable {
     var id: UUID { get }
 }
 
-extension Array where Element: SyncSnapshotRecord {
+nonisolated extension Array where Element: SyncSnapshotRecord {
     func sortedByID() -> [Element] {
         sorted { $0.id.uuidString < $1.id.uuidString }
     }
 }
 
-extension Array where Element: SyncSnapshotRecord & Equatable {
+nonisolated extension Array where Element: SyncSnapshotRecord & Equatable {
     mutating func applyChanges(from baseline: [Element], to updated: [Element]) {
         var resultByID = recordsByID()
         let baselineByID = baseline.recordsByID()
@@ -37,7 +37,7 @@ extension Array where Element: SyncSnapshotRecord & Equatable {
     }
 }
 
-struct TaskRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct TaskRecord: Codable, Equatable, SyncSnapshotRecord {
     let id: UUID
     let title: String
     let kindRaw: String
@@ -77,7 +77,7 @@ struct TaskRecord: Codable, Equatable, SyncSnapshotRecord {
     }
 }
 
-struct TaskCategoryRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct TaskCategoryRecord: Codable, Equatable, SyncSnapshotRecord {
     let id: UUID
     let title: String
     let colorHex: String?
@@ -101,7 +101,11 @@ struct TaskCategoryRecord: Codable, Equatable, SyncSnapshotRecord {
     }
 }
 
-struct TaskCategoryAssignmentRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct TaskCategoryAssignmentRecord:
+    Codable,
+    Equatable,
+    SyncSnapshotRecord
+{
     let id: UUID
     let taskID: UUID
     let categoryID: UUID

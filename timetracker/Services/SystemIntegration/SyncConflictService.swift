@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-enum SyncSnapshotDomain: CaseIterable, Hashable {
+nonisolated enum SyncSnapshotDomain: CaseIterable, Hashable, Sendable {
     case tasks
     case ledger
     case pomodoro
@@ -22,7 +22,7 @@ struct SyncConflictService {
     nonisolated let localStateByteLimits: SyncConflictLocalStateByteLimits
     nonisolated let localStateFile: DurableLocalFile
 
-    init(
+    nonisolated init(
         stateURL: URL? = nil,
         localStateByteLimits: SyncConflictLocalStateByteLimits = .production,
         localStateFile: DurableLocalFile = DurableLocalFile()
@@ -176,7 +176,9 @@ struct SyncConflictService {
         }
     }
 
-    func prompt(from state: SyncConflictState) -> SyncConflictPrompt? {
+    nonisolated func prompt(
+        from state: SyncConflictState
+    ) -> SyncConflictPrompt? {
         guard let id = state.pendingConflictID,
               let detectedAt = state.pendingDetectedAt,
               let localSnapshot = state.localSnapshot,

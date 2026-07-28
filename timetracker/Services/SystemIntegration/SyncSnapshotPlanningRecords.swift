@@ -1,6 +1,10 @@
 import Foundation
 
-struct CountdownEventRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct CountdownEventRecord:
+    Codable,
+    Equatable,
+    SyncSnapshotRecord
+{
     let id: UUID
     let title: String
     let date: Date
@@ -18,7 +22,11 @@ struct CountdownEventRecord: Codable, Equatable, SyncSnapshotRecord {
     }
 }
 
-struct SyncedPreferenceRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct SyncedPreferenceRecord:
+    Codable,
+    Equatable,
+    SyncSnapshotRecord
+{
     let id: UUID
     let key: String
     let valueJSON: String

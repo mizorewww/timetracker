@@ -1,6 +1,10 @@
 import Foundation
 
-struct ChecklistItemRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct ChecklistItemRecord:
+    Codable,
+    Equatable,
+    SyncSnapshotRecord
+{
     let id: UUID
     let taskID: UUID
     let title: String
@@ -24,7 +28,11 @@ struct ChecklistItemRecord: Codable, Equatable, SyncSnapshotRecord {
     }
 }
 
-struct ChecklistItemVisualRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct ChecklistItemVisualRecord:
+    Codable,
+    Equatable,
+    SyncSnapshotRecord
+{
     let id: UUID
     let checklistItemID: UUID
     let iconName: String

@@ -1,6 +1,6 @@
 import Foundation
 
-protocol PersistentUUIDModel {
+nonisolated protocol PersistentUUIDModel {
     var id: UUID { get }
     var createdAt: Date { get }
     var updatedAt: Date { get }
@@ -8,13 +8,16 @@ protocol PersistentUUIDModel {
     var deviceID: String { get }
 }
 
-protocol SoftDeletablePersistentUUIDModel: AnyObject, PersistentUUIDModel {
+nonisolated protocol SoftDeletablePersistentUUIDModel:
+    AnyObject,
+    PersistentUUIDModel
+{
     var updatedAt: Date { get set }
     var deletedAt: Date? { get set }
     var deviceID: String { get set }
 }
 
-protocol ClientMutationTrackedModel: AnyObject {
+nonisolated protocol ClientMutationTrackedModel: AnyObject {
     var clientMutationID: UUID { get set }
 }
 
@@ -42,7 +45,7 @@ nonisolated enum PersistentLWWMutationDate {
     }
 }
 
-extension Sequence where Element: PersistentUUIDModel {
+nonisolated extension Sequence where Element: PersistentUUIDModel {
     func deduplicatedByID() -> [Element] {
         var indexesByID: [UUID: Int] = [:]
         var result: [Element] = []
@@ -74,7 +77,9 @@ extension Sequence where Element: PersistentUUIDModel {
     }
 }
 
-extension Sequence where Element: SoftDeletablePersistentUUIDModel {
+nonisolated extension Sequence
+    where Element: SoftDeletablePersistentUUIDModel
+{
     func latestByIDMarkingDuplicatesDeleted(now: Date, deviceID: String) -> [UUID: Element] {
         var indexesByID: [UUID: Int] = [:]
         var result: [Element] = []
@@ -110,7 +115,7 @@ extension Sequence where Element: SoftDeletablePersistentUUIDModel {
     }
 }
 
-private extension PersistentUUIDModel {
+private nonisolated extension PersistentUUIDModel {
     func isPreferred(over other: Self) -> Bool {
         if updatedAt != other.updatedAt {
             return updatedAt > other.updatedAt
@@ -140,7 +145,7 @@ private extension PersistentUUIDModel {
     }
 }
 
-private extension TimeSegment {
+private nonisolated extension TimeSegment {
     var deterministicConflictKey: String {
         [
             sessionID.uuidString,
@@ -153,7 +158,7 @@ private extension TimeSegment {
     }
 }
 
-private extension SoftDeletablePersistentUUIDModel {
+private nonisolated extension SoftDeletablePersistentUUIDModel {
     func markDuplicateDeleted(now: Date, deviceID: String) {
         guard deletedAt == nil else { return }
         deletedAt = now

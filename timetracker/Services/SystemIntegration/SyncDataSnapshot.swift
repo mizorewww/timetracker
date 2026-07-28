@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 
-struct SyncDataSnapshot: Codable, Equatable {
+nonisolated struct SyncDataSnapshot: Codable, Equatable, Sendable {
     var tasks: [TaskRecord] = []
     var taskCategories: [TaskCategoryRecord] = []
     var taskCategoryAssignments: [TaskCategoryAssignmentRecord] = []

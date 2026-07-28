@@ -1,6 +1,12 @@
 import Foundation
 
-nonisolated enum SyncConflictSnapshotStorageSlot: String, Codable, CaseIterable, Hashable {
+nonisolated enum SyncConflictSnapshotStorageSlot:
+    String,
+    Codable,
+    CaseIterable,
+    Hashable,
+    Sendable
+{
     case local
     case pendingForcedUpload
     case pendingCloud
@@ -20,7 +26,12 @@ nonisolated enum SyncConflictSnapshotStorageSlot: String, Codable, CaseIterable,
     }
 }
 
-nonisolated struct SyncConflictSnapshotReference: Codable, Equatable, Hashable {
+nonisolated struct SyncConflictSnapshotReference:
+    Codable,
+    Equatable,
+    Hashable,
+    Sendable
+{
     let slot: SyncConflictSnapshotStorageSlot
     let generation: Int
     let byteCount: Int
@@ -78,7 +89,7 @@ nonisolated struct SyncConflictSnapshotReference: Codable, Equatable, Hashable {
 /// The on-disk authority is deliberately a small manifest. Runtime callers
 /// continue to use `SyncConflictState`, whose snapshots are materialized from
 /// bounded A/B slot files after this manifest has been validated.
-nonisolated struct SyncConflictStateManifest: Codable {
+nonisolated struct SyncConflictStateManifest: Codable, Sendable {
     static let currentFormatVersion = 1
 
     let formatVersion: Int

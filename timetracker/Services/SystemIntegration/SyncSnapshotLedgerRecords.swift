@@ -1,6 +1,10 @@
 import Foundation
 
-struct TimeSessionRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct TimeSessionRecord:
+    Codable,
+    Equatable,
+    SyncSnapshotRecord
+{
     let id: UUID
     let taskID: UUID
     let titleSnapshot: String?
@@ -26,7 +30,11 @@ struct TimeSessionRecord: Codable, Equatable, SyncSnapshotRecord {
     }
 }
 
-struct TimeSegmentRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct TimeSegmentRecord:
+    Codable,
+    Equatable,
+    SyncSnapshotRecord
+{
     let id: UUID
     let sessionID: UUID
     let taskID: UUID
@@ -50,7 +58,11 @@ struct TimeSegmentRecord: Codable, Equatable, SyncSnapshotRecord {
     }
 }
 
-struct PomodoroRunRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct PomodoroRunRecord:
+    Codable,
+    Equatable,
+    SyncSnapshotRecord
+{
     let id: UUID
     let taskID: UUID
     let sessionID: UUID?

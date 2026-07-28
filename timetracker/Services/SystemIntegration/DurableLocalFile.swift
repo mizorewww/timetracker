@@ -23,26 +23,46 @@ nonisolated enum DurableLocalFileError: Error, Equatable, Sendable {
     case quarantineEntryMetadataUnavailable
 }
 
-nonisolated struct DurableLocalFile {
+/// `FileManager` documents its shared, delegate-free operations as thread-safe
+/// but does not declare `Sendable` in Foundation.
+private final nonisolated class DurableLocalFileManagerReference:
+    @unchecked Sendable
+{
+    let value: FileManager
+
+    init(_ value: FileManager) {
+        self.value = value
+    }
+}
+
+nonisolated struct DurableLocalFile: Sendable {
     static let lockFileName = ".TimeTrackerDurable.lock"
 
-    typealias FaultInjector = (DurableLocalFileFaultPoint) throws -> Void
-    typealias DirectorySynchronizer = (URL) throws -> Void
+    typealias FaultInjector =
+        @Sendable (DurableLocalFileFaultPoint) throws -> Void
+    typealias DirectorySynchronizer =
+        @Sendable (URL) throws -> Void
 
-    let fileManager: FileManager
+    private let fileManagerReference:
+        DurableLocalFileManagerReference
     let quarantinePolicy: DurableLocalFileQuarantinePolicy
-    let dateProvider: () -> Date
+    let dateProvider: @Sendable () -> Date
     let directorySynchronizer: DirectorySynchronizer?
     let injectFault: FaultInjector
+
+    var fileManager: FileManager {
+        fileManagerReference.value
+    }
 
     init(
         fileManager: FileManager = .default,
         quarantinePolicy: DurableLocalFileQuarantinePolicy = .production,
-        dateProvider: @escaping () -> Date = Date.init,
+        dateProvider: @escaping @Sendable () -> Date = Date.init,
         directorySynchronizer: DirectorySynchronizer? = nil,
         injectFault: @escaping FaultInjector = { _ in }
     ) {
-        self.fileManager = fileManager
+        fileManagerReference =
+            DurableLocalFileManagerReference(fileManager)
         self.quarantinePolicy = quarantinePolicy
         self.dateProvider = dateProvider
         self.directorySynchronizer = directorySynchronizer

@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 
+@MainActor
 extension SyncDataSnapshot {
     func restoreTasks(context: ModelContext, now: Date, deviceID: String) throws {
         var existing = try context.fetch(FetchDescriptor<TaskNode>())

@@ -1,6 +1,10 @@
 import Foundation
 
-struct TaskRecurrenceRuleRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct TaskRecurrenceRuleRecord:
+    Codable,
+    Equatable,
+    SyncSnapshotRecord
+{
     let id: UUID
     let templateTaskID: UUID
     let cadenceRaw: String
@@ -24,7 +28,11 @@ struct TaskRecurrenceRuleRecord: Codable, Equatable, SyncSnapshotRecord {
     }
 }
 
-struct TaskRecurrenceOccurrenceRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct TaskRecurrenceOccurrenceRecord:
+    Codable,
+    Equatable,
+    SyncSnapshotRecord
+{
     let id: UUID
     let ruleID: UUID
     let templateTaskID: UUID
@@ -48,7 +56,11 @@ struct TaskRecurrenceOccurrenceRecord: Codable, Equatable, SyncSnapshotRecord {
     }
 }
 
-struct TaskQuantityGoalRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct TaskQuantityGoalRecord:
+    Codable,
+    Equatable,
+    SyncSnapshotRecord
+{
     let id: UUID
     let taskID: UUID
     let targetAmount: Int
@@ -68,7 +80,11 @@ struct TaskQuantityGoalRecord: Codable, Equatable, SyncSnapshotRecord {
     }
 }
 
-struct TaskQuantityEntryRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct TaskQuantityEntryRecord:
+    Codable,
+    Equatable,
+    SyncSnapshotRecord
+{
     let id: UUID
     let taskID: UUID
     let quantityGoalID: UUID

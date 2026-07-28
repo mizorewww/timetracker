@@ -5,7 +5,7 @@ nonisolated struct InboxSuggestionIdentity: Hashable, Sendable {
     let revisionID: UUID
 }
 
-extension InboxItem {
+nonisolated extension InboxItem {
     var effectiveSuggestionContextID: UUID {
         suggestionContextID ?? id
     }
@@ -35,7 +35,7 @@ extension InboxItem {
     }
 }
 
-extension InboxSuggestion {
+nonisolated extension InboxSuggestion {
     var explicitInboxItemIdentity: InboxSuggestionIdentity? {
         guard let inboxItemContextID, let inboxItemRevisionID else { return nil }
         return InboxSuggestionIdentity(
@@ -52,7 +52,7 @@ extension InboxSuggestion {
     }
 }
 
-struct InboxItemMergeResolution {
+nonisolated struct InboxItemMergeResolution {
     let winner: InboxItem
     let dismissedIdentities: Set<InboxSuggestionIdentity>
 
@@ -74,7 +74,7 @@ struct InboxItemMergeResolution {
 ///
 /// Keeping merged fields in this value prevents a read-only refresh from
 /// changing the SwiftData winner merely to present the resolved UI state.
-struct InboxItemReadModel {
+nonisolated struct InboxItemReadModel {
     let item: InboxItem
     let dismissedSuggestionRevisionID: UUID?
 
@@ -83,7 +83,7 @@ struct InboxItemReadModel {
     }
 }
 
-struct InboxSuggestionIdentityService {
+nonisolated struct InboxSuggestionIdentityService {
     func visibleLogicalItems<S: Sequence>(from items: S) -> [InboxItem]
         where S.Element == InboxItem
     {

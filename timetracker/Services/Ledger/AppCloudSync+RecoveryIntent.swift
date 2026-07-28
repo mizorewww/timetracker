@@ -33,13 +33,33 @@ extension AppCloudSync {
 
     static func requestCloudReconciliationReset() {
         let defaults = AppDefaults.shared
-        defaults.set(true, forKey: pendingCloudUploadResetKey)
+        // Publish the reconciliation discriminator first. Background readers
+        // must never observe the upload marker alone and infer that this is an
+        // explicit replace-cloud recovery.
         defaults.set(true, forKey: queuedCloudReconciliationKey)
+        defaults.set(true, forKey: pendingCloudUploadResetKey)
         defaults.removeObject(forKey: pendingCloudDownloadResetKey)
         defaults.removeObject(forKey: activeCloudReconciliationKey)
         defaults.removeObject(forKey: activeCloudDownloadRecoveryKey)
         requestCloudRetryAfterRecovery()
         logger.warning("Queued CloudKit reconciliation reset")
+    }
+
+    @discardableResult
+    static func requestCloudReconciliationReset(
+        ifCurrentPolicyMatches expectedPolicy:
+        SyncLocalMutationRecordingPolicy
+    ) -> Bool {
+        let currentPolicy =
+            SyncLocalMutationRecordingPolicy.current()
+        guard currentPolicy == expectedPolicy,
+              currentPolicy
+              .shouldRequestCloudReconciliationReset
+        else {
+            return false
+        }
+        requestCloudReconciliationReset()
+        return true
     }
 
     /// Reconstructs a missing defaults marker from the separately persisted

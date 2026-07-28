@@ -31,25 +31,42 @@ enum SyncConflictError: LocalizedError {
     }
 }
 
-struct SyncCloudExportCheckpoint: Codable, Equatable {
+nonisolated struct SyncCloudExportCheckpoint:
+    Codable,
+    Equatable,
+    Sendable
+{
     let epoch: UInt64
     let generation: UInt64
     let fingerprint: String
     let startedAt: Date
 }
 
-enum SyncPendingLocalIntent: String, Codable, Equatable {
+nonisolated enum SyncPendingLocalIntent:
+    String,
+    Codable,
+    Equatable,
+    Sendable
+{
     case reconcileWithCloud
     case explicitlyReplaceCloud
 }
 
-enum CloudRecoveryImportKind: String, Codable, Equatable {
+nonisolated enum CloudRecoveryImportKind:
+    String,
+    Codable,
+    Equatable,
+    Sendable
+{
     case reconcileWithCloud
     case downloadCloud
 }
 
-struct CloudRecoveryContainerEventReceipt: Equatable {
-    enum EventKind: Equatable {
+nonisolated struct CloudRecoveryContainerEventReceipt:
+    Equatable,
+    Sendable
+{
+    nonisolated enum EventKind: Equatable, Sendable {
         case setup
         case `import`
         case export
@@ -62,7 +79,11 @@ struct CloudRecoveryContainerEventReceipt: Equatable {
     let succeeded: Bool
 }
 
-struct CloudRecoveryImportSession: Codable, Equatable {
+nonisolated struct CloudRecoveryImportSession:
+    Codable,
+    Equatable,
+    Sendable
+{
     let id: UUID
     let kind: CloudRecoveryImportKind
     let startedAt: Date
@@ -104,7 +125,7 @@ struct CloudRecoveryImportSession: Codable, Equatable {
     }
 }
 
-struct SyncConflictState: Codable, Equatable {
+nonisolated struct SyncConflictState: Codable, Equatable, Sendable {
     var baseFingerprint: String?
     var localSnapshot: SyncDataSnapshot?
     var localFingerprint: String?

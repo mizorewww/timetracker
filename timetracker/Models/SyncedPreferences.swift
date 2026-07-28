@@ -15,7 +15,7 @@ nonisolated enum LLMReasoningEffort:
     }
 }
 
-enum AppPreferenceKey: String, CaseIterable {
+nonisolated enum AppPreferenceKey: String, CaseIterable {
     case preferredColorScheme = "PreferredColorScheme"
     case pomodoroDefaultMode = "PomodoroDefaultMode"
     case defaultFocusMinutes = "DefaultFocusMinutes"
@@ -254,23 +254,27 @@ struct AppPreferences: Equatable {
 }
 
 enum SyncedPreferenceService {
-    static let migrationKey = "SyncedPreferencesMigratedToSwiftDataV1"
-    static let legacyLLMAPIKey = "LLMAPIKey"
-    static let legacyCloudSyncEnabledKey = AppCloudSync.enabledKey
+    nonisolated static let migrationKey =
+        "SyncedPreferencesMigratedToSwiftDataV1"
+    nonisolated static let legacyLLMAPIKey = "LLMAPIKey"
+    nonisolated static let legacyCloudSyncEnabledKey =
+        AppCloudSync.enabledKey
 
-    static func isSensitiveKey(_ key: String) -> Bool {
+    nonisolated static func isSensitiveKey(_ key: String) -> Bool {
         key == legacyLLMAPIKey
     }
 
-    static func isDeviceLocalKey(_ key: String) -> Bool {
+    nonisolated static func isDeviceLocalKey(_ key: String) -> Bool {
         key == legacyCloudSyncEnabledKey
     }
 
-    static func shouldSyncKey(_ key: String) -> Bool {
+    nonisolated static func shouldSyncKey(_ key: String) -> Bool {
         !isSensitiveKey(key) && !isDeviceLocalKey(key)
     }
 
-    static func latestByKey(_ preferences: [SyncedPreference]) -> [String: SyncedPreference] {
+    nonisolated static func latestByKey(
+        _ preferences: [SyncedPreference]
+    ) -> [String: SyncedPreference] {
         preferences
             .reduce(into: [String: SyncedPreference]()) { result, preference in
                 guard let existing = result[preference.key] else {

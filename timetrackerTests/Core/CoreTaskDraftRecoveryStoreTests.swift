@@ -929,11 +929,20 @@ struct CoreTaskDraftRecoveryStoreTests {
     private struct InjectedReadFailure: Error {}
     private struct InjectedRemovalFailure: Error {}
 
-    private final class RemovalDirectorySyncProbe {
-        private(set) var paths: [URL] = []
+    private final class RemovalDirectorySyncProbe:
+        @unchecked Sendable
+    {
+        private let lock = NSLock()
+        private var storage: [URL] = []
+
+        var paths: [URL] {
+            lock.withLock { storage }
+        }
 
         func synchronize(_ url: URL) {
-            paths.append(url)
+            lock.withLock {
+                storage.append(url)
+            }
         }
     }
 

@@ -11,7 +11,7 @@ import Foundation
 ///
 /// Everything that would otherwise write into those shared locations routes
 /// through this type so a test host gets its own namespace instead.
-enum AppRuntimeEnvironment {
+nonisolated enum AppRuntimeEnvironment {
     /// Launch argument passed by every XCUITest target.
     static let uiTestingArgument = "--uitesting"
 
@@ -53,11 +53,14 @@ enum AppRuntimeEnvironment {
 /// Production returns `.standard`. A test host returns a private suite that is
 /// wiped when it is first resolved, so no test can arm a recovery flag, a demo
 /// data override, or a persistence-mode marker in the installed app's domain.
-enum AppDefaults {
+nonisolated enum AppDefaults {
     /// Suite backing every test-host read and write.
     static let testSuiteName = "me.mezorewww.timetracker.testhost"
 
-    static let shared: UserDefaults = resolveShared()
+    /// Foundation documents UserDefaults reads and writes as thread-safe even
+    /// though the reference type does not yet conform to Sendable.
+    nonisolated(unsafe) static let shared: UserDefaults =
+        resolveShared()
 
     private static func resolveShared() -> UserDefaults {
         guard AppRuntimeEnvironment.isTestHost else { return .standard }

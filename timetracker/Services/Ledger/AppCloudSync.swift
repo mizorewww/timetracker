@@ -8,7 +8,7 @@ enum AppCloudSync {
     )
 
     static let containerIdentifier = "iCloud.me.mezorewww.timetracker"
-    static let enabledKey = "TimeTrackerCloudSyncEnabled"
+    nonisolated static let enabledKey = "TimeTrackerCloudSyncEnabled"
     static let modeKey = "TimeTrackerPersistenceMode"
     static let errorKey = "TimeTrackerPersistenceError"
     static let accountStatusKey = "TimeTrackerCloudAccountStatus"

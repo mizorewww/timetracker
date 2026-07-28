@@ -151,3 +151,13 @@
   完成。5 项真实 SQLite 集成测试通过；该检查点的隔离 worktree 全量门禁为
   1525/1525。未新增第三方依赖；复用 SwiftData persistent history、Structured
   Concurrency 与既有 `DurableLocalFile`。
+- 2026-07-28：完成 sync snapshot 后台 worker 检查点。专用 actor 在 store
+  mutation lock 内创建 fresh `ModelContext`，再进入既有 state lock 捕获与持久化
+  snapshot；每次持久写入前后都重新读取实时同步策略，策略在锁等待、写入前或 durable
+  write 期间变化时均拒绝确认 history，后续重放依靠完整 postcondition 幂等收敛。
+  Cloud reconciliation reset 先写 queued intent 再写 pending upload，state mirror
+  也在同一 state lock 内推导，避免把 torn state 误判为显式 replace。关闭同步且无
+  recovery 时保持零 store/sidecar 读取，reset hook 延迟期间仍不阻塞 MainActor。
+  9 个 worker、3 个 replay 聚焦测试通过；隔离 worktree 完整 `make test` 为
+  1535/1535。未新增第三方依赖；复用 SwiftData、Foundation、Structured
+  Concurrency 与现有 `DurableLocalFile`。

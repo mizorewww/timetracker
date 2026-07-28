@@ -1,6 +1,10 @@
 import Foundation
 
-struct InboxItemRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct InboxItemRecord:
+    Codable,
+    Equatable,
+    SyncSnapshotRecord
+{
     let id: UUID
     let suggestionContextID: UUID?
     let suggestionRevisionID: UUID?
@@ -71,7 +75,11 @@ extension InboxItemRecord {
     }
 }
 
-struct InboxCaptureReceiptRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct InboxCaptureReceiptRecord:
+    Codable,
+    Equatable,
+    SyncSnapshotRecord
+{
     let id: UUID
     let commandKey: String
     let payloadFingerprint: String
@@ -91,7 +99,11 @@ struct InboxCaptureReceiptRecord: Codable, Equatable, SyncSnapshotRecord {
     }
 }
 
-struct InboxSuggestionRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct InboxSuggestionRecord:
+    Codable,
+    Equatable,
+    SyncSnapshotRecord
+{
     let id: UUID
     let inboxItemID: UUID
     let inboxItemContextID: UUID?

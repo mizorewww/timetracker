@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 
+@MainActor
 extension SyncDataSnapshot {
     /// Restores through an already store-locked fresh context. The restore is
     /// atomic inside that lock; production callers must not pass a long-lived

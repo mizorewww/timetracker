@@ -40,7 +40,9 @@ extension SyncConflictService {
         }
     }
 
-    func existingManifestForWrite() throws -> SyncConflictStateManifest? {
+    nonisolated func existingManifestForWrite()
+        throws -> SyncConflictStateManifest?
+    {
         let url = try stateURL()
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
         let data = try Self.boundedData(
@@ -50,7 +52,7 @@ extension SyncConflictService {
         return try? JSONDecoder().decode(SyncConflictStateManifest.self, from: data)
     }
 
-    func nextSnapshotReference(
+    nonisolated func nextSnapshotReference(
         preferredSlot: SyncConflictSnapshotStorageSlot,
         byteCount: Int,
         sha256: String,

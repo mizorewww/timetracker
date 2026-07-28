@@ -5,8 +5,7 @@ extension SyncDataSnapshot {
     /// call this only with the fresh context supplied by
     /// `withLockedFreshStoreContext`; direct calls are intended for isolated
     /// migrations and tests.
-    @MainActor
-    static func capture(context: ModelContext) throws -> SyncDataSnapshot {
+    nonisolated static func capture(context: ModelContext) throws -> SyncDataSnapshot {
         try capture(
             context: context,
             updating: nil,
@@ -16,8 +15,7 @@ extension SyncDataSnapshot {
 
     /// Incremental variant with the same store-lock precondition as the full
     /// capture entrypoint.
-    @MainActor
-    static func capture(
+    nonisolated static func capture(
         context: ModelContext,
         updating baseline: SyncDataSnapshot?,
         domains: Set<SyncSnapshotDomain>
@@ -89,8 +87,7 @@ extension SyncDataSnapshot {
         return snapshot
     }
 
-    @MainActor
-    private static func captureAllDomains(context: ModelContext) throws -> SyncDataSnapshot {
+    private nonisolated static func captureAllDomains(context: ModelContext) throws -> SyncDataSnapshot {
         try SyncDataSnapshot(
             tasks: context.fetch(FetchDescriptor<TaskNode>()).deduplicatedByID().map(TaskRecord.init).sortedByID(),
             taskCategories: context.fetch(FetchDescriptor<TaskCategory>()).deduplicatedByID().map(TaskCategoryRecord.init).sortedByID(),

@@ -23,7 +23,11 @@ nonisolated struct SyncConflictLocalStateByteLimits: Equatable, Sendable {
     }
 }
 
-enum SyncConflictLocalStateWriteError: Error, Equatable {
+nonisolated enum SyncConflictLocalStateWriteError:
+    Error,
+    Equatable,
+    Sendable
+{
     case stateExceedsMaximumByteCount(actualByteCount: Int, maximumByteCount: Int)
     case recoverySnapshotExceedsMaximumByteCount(
         actualByteCount: Int,
@@ -31,12 +35,12 @@ enum SyncConflictLocalStateWriteError: Error, Equatable {
     )
 }
 
-private enum PendingForcedUploadMirrorMutation {
+private nonisolated enum PendingForcedUploadMirrorMutation {
     case save(Data)
     case remove
 }
 
-extension SyncConflictService {
+nonisolated extension SyncConflictService {
     func saveState(_ state: SyncConflictState) throws {
         try withExclusiveStateAccess {
             try saveStateWithoutLock(state)

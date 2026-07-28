@@ -1,17 +1,17 @@
 import Foundation
 
-struct PreparedSyncConflictSnapshotSlot {
+nonisolated struct PreparedSyncConflictSnapshotSlot: Sendable {
     let reference: SyncConflictSnapshotReference
     let data: Data
 }
 
-struct PreparedSyncConflictStateManifestWrite {
+nonisolated struct PreparedSyncConflictStateManifestWrite: Sendable {
     let data: Data
     let manifest: SyncConflictStateManifest
     let snapshotSlots: [PreparedSyncConflictSnapshotSlot]
 }
 
-extension SyncConflictService {
+nonisolated extension SyncConflictService {
     func prepareManifestWrite(
         for state: SyncConflictState
     ) throws -> PreparedSyncConflictStateManifestWrite {

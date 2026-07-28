@@ -1,6 +1,6 @@
 # 92：Apple Health 加载不结束实现记忆
 
-状态：2026-07-28 用户复验失败，已重新认领
+状态：2026-07-28 用户复验失败后的第二轮修复已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的状态条目。
@@ -52,6 +52,11 @@
 - 2026-07-28：实现 checkpoint 完整 `make test` 通过 1571 tests / 176 suites
   （49.864 秒）；SwiftFormat 与聚焦 replica facade 5/5 均通过。下一步提交实现后运行
   `make build-install-all`，再关闭任务。
+- 2026-07-28：实现提交为 `77b9828c`。Release `make build-install-all` 成功，版本
+  1.1.345 (400) 已安装到 iPad Pro M4、iPhone Air，并将 universal macOS App 复制、
+  验签到 `/Applications/timetracker.app`；iOS App 内含签名的 Watch companion。当前没有
+  可见实体 Apple Watch，因此不声称独立 Watch 真机覆盖。所有临时 UI 模拟器已关闭并
+  删除，未遗留 `xcodebuild`、`xctest`、UI runner 或 Booted simulator。
 - 2026-07-28：用户真机复验仍然无限加载，重新打开任务。已确认第二条独立根因：
   Task Detail 把 `appleHealthReplicaRevision` 放入 `.task(id:)`；首次 HealthKit 增量读取
   写入本地 replica 后 revision 自增，SwiftUI 随即取消尚未提交 UI 终态的加载任务，
@@ -76,6 +81,9 @@
 
 ## 完成边界
 
+- 第二轮修复删除了导致自激取消的 revision 任务身份，保留最直接的数据链路：
+  HealthKit anchored query → SwiftData 本地 replica durable write → 同一加载从 replica
+  投影 UI。没有新增抽象层、轮询或第三方库。
 - 本任务修复异步生命周期与加载终态，没有修改 UI 布局或用户文案；HIG 验收由明确的
   requesting/loading/empty/content/failure 状态行为测试完成，不重复生成外观完全相同的截图。
 - 未引入第三方依赖；继续使用 Apple HealthKit、Swift Concurrency、SwiftData replica 与

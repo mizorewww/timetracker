@@ -1,6 +1,6 @@
 # 91：按宽度收敛平台 UI 实现记忆
 
-状态：2026-07-28 进行中
+状态：2026-07-28 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -18,7 +18,7 @@
 - [x] iPhone 风格由实际可用宽度决定，不读取设备型号/屏幕宽度，也不因窗口折叠丢失导航状态。
 - [x] 删除能被共享 SwiftUI/宽度策略替代的平台分支，保留分支只封装真实平台能力。
 - [x] 先建立布局策略/行为测试，再修改 root 与受影响 UI；普通字号设备矩阵与截图通过。
-- [ ] `make test`、格式、本地化门禁通过，实现提交后完成 `make build-install-all`。
+- [x] `make test`、格式、本地化门禁通过，实现提交后完成 `make build-install-all`。
 
 ## 子代理编排
 
@@ -66,5 +66,8 @@
   macOS 3/3、iPhone 2/2、iPad 2/2；普通字号截图矩阵：
   macOS/iPhone/iPad 各 7 张。主代理抽查代表性截图，子代理逐张复核 21/21，
   未发现文字重叠、意外裁切、控件碰撞或图表轴标签不清。
-- 2026-07-28：待当前实现提交后运行 `make build-install-all`；安装通过前保持任务
-  `[~]` 和 active link。
+- 2026-07-28：实现提交 `b660e3b3` 后，`make build-install-all` 以 Release 和
+  Automatic Signing 构建成功；iPad Pro M4、iPhone Air 安装成功，macOS 签名验证
+  后复制到 `/Applications/timetracker.app`。Watch companion 已嵌入 iOS App；
+  当前没有可见实体 Apple Watch，由配对 iPhone 的 Automatic App Install 接续。
+- 2026-07-28：Task91 验收完成，反馈项改为 `[x]`，移除 active link。

@@ -22,25 +22,24 @@
 - UI 只在出现需要用户处理的失败时给出清晰反馈；普通合法样本不应反复产生启动或
   刷新警报。
 
-## 首轮根因假设
+## 已确认根因
 
-- `AppleHealthReplicaRecordDraft` 或 persisted model 的安全校验范围比 HealthKit
-  真实样本域更窄，例如睡眠阶段、workout activity raw value、source bundle/product
-  type、日期上下界或极短/零时长样本。
-- HealthKit reader 可能把合法的“删除/修改/未知新枚举”投影成当前 V1 无法表达的
-  draft，导致每次 anchored replay 都在同一条记录上失败且 anchor 永不推进。
-- 旧 replica 可能包含现行读取器无法解码的记录；读取失败被误报成新 HealthKit
-  样本无法保存。
-- 同一 sample UUID 跨 workout/sleep kind、分页内重复或 source 字段边界可能触发
-  repository 的 fail-closed 检查。
+- Apple 的 `HKSample` 合同允许 `startDate == endDate`，真实 workout/sleep 中可以出现
+  这种 point sample。
+- `SwiftDataAppleHealthReplicaRepository.validate` 错误地要求
+  `startedAt < endedAt`。point sample 因而抛出 `.invalidSample`，records 与双 anchor
+  一起回滚；下一次刷新仍从旧 anchor 读取同一条记录，于是提示永久重现。
+- 既有 Timeline 与 Sleep projection 已安全忽略零宽区间。正确边界是把 point
+  sample 作为 HealthKit 来源事实保存并推进 anchor，仅拒绝反向区间。
+- 这是校验策略修正，不改变任何字段或持久格式；V1 旧库无需 migration。升级后旧
+  anchor 会重放该记录并自行收敛。
 
 ## 测试优先清单
 
-- [ ] 用最小 command/repository/sync 行为测试复现真实边界样本的稳定失败。
-- [ ] 覆盖首次 anchored import、重放、修改、显式删除和双 anchor 原子推进。
-- [ ] 覆盖非法记录、重复 UUID、未知枚举、日期/时长和有界文本输入。
-- [ ] 覆盖旧磁盘 replica 重开与读取，确认不是 schema 兼容问题。
-- [ ] 验证 Timeline 与 Apple Health Task Detail 不再重复显示该错误。
+- [x] repository 测试在旧实现上复现 point sample 稳定失败。
+- [x] 覆盖 point sample 保存、双 anchor 推进及下一轮不从空 anchor 重放。
+- [x] 覆盖反向区间整批回滚，确保旧 records 与双 anchor 不变。
+- [x] 验证 Timeline facade 不再进入 `.failed`，而是正常得到无正时长数据状态。
 - [ ] 运行聚焦测试、`make test`、格式/本地化、签名 iOS/macOS 构建及相关正常字号
   UI 截图。
 - [ ] 运行 `make build-install-all`，核验 iPhone、iPad、嵌入 Watch companion 与
@@ -48,10 +47,10 @@
 
 ## Checkpoint 编排
 
-- [~] A：审计 HealthKit reader → draft → repository → sync → facade/UI 错误链，
+- [x] A：审计 HealthKit reader → draft → repository → sync → facade/UI 错误链，
   先固定可复现行为测试。
-- [ ] B：实现最小数据安全修复，保留 replica/anchor 原子边界。
-- [ ] C：更新当前架构、隐私、代码与测试文档；完成视觉/行为验收。
+- [x] B：实现最小数据安全修复，保留 replica/anchor 原子边界。
+- [~] C：更新当前架构、隐私、代码与测试文档；完成视觉/行为验收。
 - [ ] D：全量验证、全设备安装、标记 `[x]` 并移除 active link。
 
 ## 库策略
@@ -72,3 +71,7 @@
 ## 进度记录
 
 - 2026-07-28：认领最后一条反馈，建立 `~86` 活动实现记忆并开始并行只读审计。
+- 2026-07-28：确认 HealthKit point sample 合法域；旧实现的 repository 聚焦测试
+  仅在新增 point sample 用例失败（`invalidSample`）。
+- 2026-07-28：把 repository 时间边界从严格小于修正为小于或等于；repository
+  7 tests、sync service 4 tests、facade 3 tests 全绿。未增加第三方依赖。

@@ -75,6 +75,62 @@ struct AppleHealthReplicaSyncServiceTests {
     }
 
     @Test @MainActor
+    func healthKitPointSampleAdvancesAnchorInsteadOfReplayingForever()
+        async throws
+    {
+        let repository = try makeAppleHealthReplicaTestRepository()
+        let first = AppleHealthReplicaChangeBatch(
+            workouts: [
+                appleHealthWorkout(
+                    id: UUID(),
+                    start: 100,
+                    end: 100
+                ),
+            ],
+            deletedWorkoutIDs: [],
+            workoutAnchor: Data("workout-point".utf8),
+            sleep: [],
+            deletedSleepIDs: [],
+            sleepAnchor: Data("sleep-point".utf8)
+        )
+        let second = AppleHealthReplicaChangeBatch(
+            workouts: [],
+            deletedWorkoutIDs: [],
+            workoutAnchor: Data("workout-next".utf8),
+            sleep: [],
+            deletedSleepIDs: [],
+            sleepAnchor: Data("sleep-next".utf8)
+        )
+        let reader = ScriptedAppleHealthReplicaChangeReader(
+            results: [.success(first), .success(second)]
+        )
+        let service = AppleHealthReplicaSyncService(
+            reader: reader,
+            repository: repository
+        )
+
+        _ = try await service.synchronize(
+            at: Date(timeIntervalSince1970: 500)
+        )
+        _ = try await service.synchronize(
+            at: Date(timeIntervalSince1970: 600)
+        )
+
+        #expect(reader.receivedAnchors == [
+            .empty,
+            AppleHealthReplicaAnchors(
+                workout: Data("workout-point".utf8),
+                sleep: Data("sleep-point".utf8)
+            ),
+        ])
+        #expect(try repository.allSamples().recordCount == 1)
+        #expect(try repository.anchors() == AppleHealthReplicaAnchors(
+            workout: Data("workout-next".utf8),
+            sleep: Data("sleep-next".utf8)
+        ))
+    }
+
+    @Test @MainActor
     func queryFailureKeepsRowsAndAnchorsAtLastCommittedGeneration()
         async throws
     {

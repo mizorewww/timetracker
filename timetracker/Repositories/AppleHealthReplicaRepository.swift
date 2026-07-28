@@ -393,7 +393,7 @@ final class SwiftDataAppleHealthReplicaRepository:
         sourceBundleIdentifier: String,
         sourceProductType: String?
     ) throws {
-        guard startedAt < endedAt,
+        guard startedAt <= endedAt,
               sourceBundleIdentifier.isEmpty == false,
               sourceBundleIdentifier.utf8.count <= 512,
               (sourceProductType?.utf8.count ?? 0) <= 256

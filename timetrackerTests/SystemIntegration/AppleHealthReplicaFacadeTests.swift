@@ -61,6 +61,58 @@ struct AppleHealthReplicaFacadeTests {
     }
 
     @Test @MainActor
+    func pointSampleCommitsWithoutTurningTimelineIntoFailure() async throws {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let pointSampleID = UUID()
+        let reader = ReplicaFacadeAppleHealthReader(
+            changes: AppleHealthReplicaChangeBatch(
+                workouts: [
+                    AppleHealthWorkoutSample(
+                        id: pointSampleID,
+                        kind: .walking,
+                        startedAt: now.addingTimeInterval(-1200),
+                        endedAt: now.addingTimeInterval(-1200),
+                        sourceBundleIdentifier: "test.health"
+                    ),
+                ],
+                deletedWorkoutIDs: [],
+                workoutAnchor: Data("workout-point".utf8),
+                sleep: [],
+                deletedSleepIDs: [],
+                sleepAnchor: Data("sleep-point".utf8)
+            )
+        )
+        let repository = try makeAppleHealthReplicaTestRepository()
+        let store = TimeTrackerStore(
+            appleHealthDataReader: reader,
+            appleHealthReplicaRepository: repository,
+            appleHealthTimelinePreferenceStore:
+            TestAppleHealthTimelinePreferenceStore(),
+            writeAuthorization: .isolatedTestHarness
+        )
+
+        await store.showAppleHealthInTimeline(
+            now: now,
+            calendar: calendar
+        )
+
+        let day = try #require(calendar.dateInterval(of: .day, for: now))
+        #expect(store.appleHealthTimelineState == .noReadableData(
+            interval: DateInterval(start: day.start, end: now),
+            refreshedAt: now
+        ))
+        #expect(store.appleHealthTimelineItems.isEmpty)
+        #expect(try repository.allSamples().samples.workouts.map(\.id) ==
+            [pointSampleID])
+        #expect(try repository.anchors() == AppleHealthReplicaAnchors(
+            workout: Data("workout-point".utf8),
+            sleep: Data("sleep-point".utf8)
+        ))
+    }
+
+    @Test @MainActor
     func healthTaskAnalyticsSynchronizesThenReadsReplica() async throws {
         let now = Date(timeIntervalSince1970: 36 * 3600)
         var calendar = Calendar(identifier: .gregorian)

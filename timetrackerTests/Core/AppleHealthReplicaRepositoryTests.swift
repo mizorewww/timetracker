@@ -86,6 +86,95 @@ struct AppleHealthReplicaRepositoryTests {
     }
 
     @Test @MainActor
+    func applyPreservesHealthKitPointSamplesAndAdvancesBothAnchors() throws {
+        let repository = try makeAppleHealthReplicaTestRepository()
+        let workout = appleHealthWorkout(
+            id: UUID(),
+            start: 100,
+            end: 100
+        )
+        let sleep = appleHealthSleep(
+            id: UUID(),
+            start: 200,
+            end: 200
+        )
+        let syncedAt = Date(timeIntervalSince1970: 500)
+
+        try repository.apply(
+            AppleHealthReplicaChangeBatch(
+                workouts: [workout],
+                deletedWorkoutIDs: [],
+                workoutAnchor: Data("workout-point".utf8),
+                sleep: [sleep],
+                deletedSleepIDs: [],
+                sleepAnchor: Data("sleep-point".utf8)
+            ),
+            syncedAt: syncedAt
+        )
+
+        let snapshot = try repository.allSamples()
+        #expect(snapshot.samples.workouts == [workout])
+        #expect(snapshot.samples.sleep == [sleep])
+        #expect(snapshot.recordCount == 2)
+        #expect(snapshot.lastSuccessfulSyncAt == syncedAt)
+        #expect(try repository.anchors() == AppleHealthReplicaAnchors(
+            workout: Data("workout-point".utf8),
+            sleep: Data("sleep-point".utf8)
+        ))
+    }
+
+    @Test @MainActor
+    func reverseIntervalRejectsTheWholeBatchWithoutAdvancingAnchors() throws {
+        let repository = try makeAppleHealthReplicaTestRepository()
+        let original = AppleHealthReplicaChangeBatch(
+            workouts: [
+                appleHealthWorkout(
+                    id: UUID(),
+                    start: 100,
+                    end: 200
+                ),
+            ],
+            deletedWorkoutIDs: [],
+            workoutAnchor: Data("workout-1".utf8),
+            sleep: [],
+            deletedSleepIDs: [],
+            sleepAnchor: Data("sleep-1".utf8)
+        )
+        try repository.apply(
+            original,
+            syncedAt: Date(timeIntervalSince1970: 300)
+        )
+
+        #expect(throws: AppleHealthReplicaRepositoryError.invalidSample) {
+            try repository.apply(
+                AppleHealthReplicaChangeBatch(
+                    workouts: [
+                        appleHealthWorkout(
+                            id: UUID(),
+                            start: 500,
+                            end: 400
+                        ),
+                    ],
+                    deletedWorkoutIDs: [],
+                    workoutAnchor: Data("workout-2".utf8),
+                    sleep: [],
+                    deletedSleepIDs: [],
+                    sleepAnchor: Data("sleep-2".utf8)
+                ),
+                syncedAt: Date(timeIntervalSince1970: 600)
+            )
+        }
+
+        #expect(try repository.allSamples().samples.workouts ==
+            original.workouts)
+        #expect(try repository.allSamples().recordCount == 1)
+        #expect(try repository.anchors() == AppleHealthReplicaAnchors(
+            workout: Data("workout-1".utf8),
+            sleep: Data("sleep-1".utf8)
+        ))
+    }
+
+    @Test @MainActor
     func applyConvergesHealthKitModificationAndExplicitDeletion() throws {
         let repository = try makeAppleHealthReplicaTestRepository()
         let workoutID = UUID()

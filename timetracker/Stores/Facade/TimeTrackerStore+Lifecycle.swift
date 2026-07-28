@@ -158,7 +158,10 @@ extension TimeTrackerStore {
         try PerformanceSignpost.interval("mutation.transaction") {
             try writeAuthorization.requireUserWritesAllowed()
             if let modelContext {
-                return try modelContext.performAtomicMutation(action)
+                return try modelContext.performAtomicMutation(
+                    author: .localMutation,
+                    action
+                )
             }
             return try action()
         }

@@ -52,10 +52,11 @@ struct StoreScopedTimerMutationTransaction {
     }
 
     func withFreshContext<Result>(
+        author: TimeTrackerHistoryAuthor,
         _ operation: (ModelContext) throws -> Result
     ) throws -> Result {
         try withFreshReadContext { context in
-            try context.performAtomicMutation {
+            try context.performAtomicMutation(author: author) {
                 try operation(context)
             }
         }

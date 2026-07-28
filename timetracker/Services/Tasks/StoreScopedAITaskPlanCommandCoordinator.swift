@@ -30,7 +30,7 @@ struct StoreScopedAITaskPlanCommandCoordinator {
             scope: TimerStoreScope(container: container),
             container: container
         )
-        return try transaction.withFreshContext { context in
+        return try transaction.withFreshContext(author: .localMutation) { context in
             let persistedCategoryIDs = try Set(
                 context.fetch(FetchDescriptor<TaskCategory>()).map(\.id)
             )

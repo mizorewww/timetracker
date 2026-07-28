@@ -77,7 +77,7 @@ extension StoreScopedTaskRecurrenceCommandCoordinator {
         return try StoreScopedTimerMutationTransaction(
             scope: TimerStoreScope(container: container),
             container: container
-        ).withFreshContext { context in
+        ).withFreshContext(author: .localMutation) { context in
             var state = try TaskRecurrencePersistenceState(context: context)
             return try operation(context, &state)
         }

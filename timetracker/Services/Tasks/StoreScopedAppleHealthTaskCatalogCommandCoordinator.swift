@@ -51,7 +51,7 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinator {
             container: container
         )
 
-        return try transaction.withFreshContext { context in
+        return try transaction.withFreshContext(author: .localMutation) { context in
             let repository = SwiftDataTaskRepository(
                 context: context,
                 deviceID: deviceID ?? DeviceIdentity.current

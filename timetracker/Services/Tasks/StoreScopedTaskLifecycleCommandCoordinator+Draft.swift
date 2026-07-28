@@ -22,7 +22,7 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
             container: container
         )
 
-        return try transaction.withFreshContext { context in
+        return try transaction.withFreshContext(author: .localMutation) { context in
             let resolvedDeviceID = deviceID ?? DeviceIdentity.current
             let taskRepository = SwiftDataTaskRepository(
                 context: context,

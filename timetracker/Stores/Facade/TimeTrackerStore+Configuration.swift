@@ -58,25 +58,33 @@ extension TimeTrackerStore {
 
         var startupErrors: [Error] = []
         do {
-            try SyncedPreferenceService.migrateSensitivePreferences(
-                context: context,
-                credentialStore: llmCredentialStore
-            )
+            try context.withHistoryAuthor(.bootstrapMaintenance) {
+                try SyncedPreferenceService.migrateSensitivePreferences(
+                    context: context,
+                    credentialStore: llmCredentialStore
+                )
+            }
         } catch {
             startupErrors.append(error)
         }
         do {
-            try SyncedPreferenceService.migrateLegacyPreferencesIfNeeded(context: context)
+            try context.withHistoryAuthor(.bootstrapMaintenance) {
+                try SyncedPreferenceService.migrateLegacyPreferencesIfNeeded(context: context)
+            }
         } catch {
             startupErrors.append(error)
         }
         do {
-            try migrateLegacyCountdownEventsIfNeeded(context: context)
+            try context.withHistoryAuthor(.bootstrapMaintenance) {
+                try migrateLegacyCountdownEventsIfNeeded(context: context)
+            }
         } catch {
             startupErrors.append(error)
         }
         do {
-            try SeedData.ensureSeeded(context: context)
+            try context.withHistoryAuthor(.bootstrapMaintenance) {
+                try SeedData.ensureSeeded(context: context)
+            }
         } catch {
             startupErrors.append(error)
         }

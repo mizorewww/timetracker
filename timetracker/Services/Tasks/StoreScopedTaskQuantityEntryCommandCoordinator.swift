@@ -63,7 +63,7 @@ struct StoreScopedTaskQuantityEntryCommandCoordinator {
         return try StoreScopedTimerMutationTransaction(
             scope: TimerStoreScope(container: container),
             container: container
-        ).withFreshContext { context in
+        ).withFreshContext(author: .localMutation) { context in
             try operation(
                 context,
                 TaskQuantityEntryPersistenceState(context: context)

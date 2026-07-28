@@ -166,7 +166,7 @@ struct StoreScopedTimerCommandCoordinator {
             container: container
         )
 
-        return try transaction.withFreshContext { context in
+        return try transaction.withFreshContext(author: .localMutation) { context in
             let mutationDate = nowProvider()
             let taskRepository = SwiftDataTaskRepository(
                 context: context,
@@ -276,7 +276,7 @@ struct StoreScopedTimerCommandCoordinator {
             container: container
         )
 
-        return try transaction.withFreshContext { context in
+        return try transaction.withFreshContext(author: .localMutation) { context in
             let mutationDate = nowProvider()
             guard segmentID == nil || taskID == nil else {
                 return Self.noOpOutcome

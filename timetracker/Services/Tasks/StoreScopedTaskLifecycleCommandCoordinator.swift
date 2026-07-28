@@ -33,7 +33,7 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
             container: container
         )
 
-        return try transaction.withFreshContext { context in
+        return try transaction.withFreshContext(author: .localMutation) { context in
             let taskRepository = SwiftDataTaskRepository(
                 context: context,
                 deviceID: deviceID
@@ -98,7 +98,7 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
             container: container
         )
 
-        return try transaction.withFreshContext { context in
+        return try transaction.withFreshContext(author: .localMutation) { context in
             let taskRepository = SwiftDataTaskRepository(
                 context: context,
                 deviceID: deviceID

@@ -167,7 +167,7 @@ struct StoreScopedChecklistCommandCoordinator {
             scope: scope,
             container: container
         )
-        return try transaction.withFreshContext { context in
+        return try transaction.withFreshContext(author: .localMutation) { context in
             let tasks = try SwiftDataTaskRepository(
                 context: context,
                 deviceID: deviceID

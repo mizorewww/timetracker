@@ -63,6 +63,6 @@ struct StoreScopedPreferenceCommandCoordinator {
             scope: scope,
             container: container
         )
-        try transaction.withFreshContext(operation)
+        try transaction.withFreshContext(author: .localMutation, operation)
     }
 }

@@ -165,10 +165,14 @@ struct StoreScopedTimerMutationLockTests {
         )
         var retainedContexts: [ModelContext] = []
 
-        try transaction.withFreshContext { retainedContexts.append($0) }
+        try transaction.withFreshContext(author: .localMutation) {
+            retainedContexts.append($0)
+        }
         #expect(competingEntry.wait(timeout: .now() + 2) == .success)
         #expect(competingFinished.wait(timeout: .now() + 2) == .success)
-        try transaction.withFreshContext { retainedContexts.append($0) }
+        try transaction.withFreshContext(author: .localMutation) {
+            retainedContexts.append($0)
+        }
 
         #expect(competitorWasBlocked.value)
         #expect(retainedContexts.count == 2)
@@ -186,19 +190,19 @@ struct StoreScopedTimerMutationLockTests {
             container: container
         )
 
-        try transaction.withFreshContext { context in
+        try transaction.withFreshContext(author: .localMutation) { context in
             context.insert(
                 TaskNode(title: "Committed", parentID: nil, deviceID: "test")
             )
         }
         #expect(
-            try transaction.withFreshContext { context in
+            try transaction.withFreshContext(author: .localMutation) { context in
                 try context.fetch(FetchDescriptor<TaskNode>()).map(\.title)
             } == ["Committed"]
         )
 
         #expect(throws: InjectedFailure.self) {
-            try transaction.withFreshContext { context in
+            try transaction.withFreshContext(author: .localMutation) { context in
                 context.insert(
                     TaskNode(title: "Rolled back", parentID: nil, deviceID: "test")
                 )
@@ -206,7 +210,7 @@ struct StoreScopedTimerMutationLockTests {
             }
         }
         #expect(
-            try transaction.withFreshContext { context in
+            try transaction.withFreshContext(author: .localMutation) { context in
                 try context.fetch(FetchDescriptor<TaskNode>()).map(\.title)
             } == ["Committed"]
         )

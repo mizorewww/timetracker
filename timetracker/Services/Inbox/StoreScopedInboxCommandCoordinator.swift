@@ -183,7 +183,7 @@ struct StoreScopedInboxCommandCoordinator {
         return try StoreScopedTimerMutationTransaction(
             scope: scope,
             container: container
-        ).withFreshContext(operation)
+        ).withFreshContext(author: .localMutation, operation)
     }
 
     private func mutateItem(

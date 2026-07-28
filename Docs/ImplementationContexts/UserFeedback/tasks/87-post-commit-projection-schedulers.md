@@ -87,3 +87,12 @@
   receipt、1000 次突发广播、单个超大广播，以及通知回调重入发布不递归、不丢失、
   不遗留。scheduler 9 项、mutation boundary 4 项及完整 `make test` 1482 项通过。
   未新增第三方依赖；Foundation、Swift Structured Concurrency 与现有事件模型已足够。
+- 2026-07-28：完成 B2 的 persistent-history provenance 检查点。新增稳定的
+  `localMutation`、`syncReconciliation`、`bootstrapMaintenance` author；普通 scene
+  outer transaction 与 21 个 fresh coordinator 写入口显式标记本地写，sync restore
+  在 primitive 内标记 reconciliation，四个独立启动 migration/seed 步骤在不改变其
+  best-effort 事务语义的前提下标记 maintenance。author scope 在成功和抛错时都恢复
+  调用方原值，内部 command/repository atomic primitive 只继承外层分类。5 个真实
+  持久库/回滚行为测试及完整 `make test` 1487 项通过；测试临时 store 在 context 和
+  container 释放后删除，无遗留 SQLite 句柄告警。未新增第三方依赖；采用 SwiftData
+  persistent history 官方 author API。

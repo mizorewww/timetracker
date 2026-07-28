@@ -42,7 +42,7 @@ struct StoreScopedPomodoroCommandCoordinator {
             container: container
         )
 
-        return try transaction.withFreshContext { context in
+        return try transaction.withFreshContext(author: .localMutation) { context in
             let now = nowProvider()
             let resolvedDeviceID = deviceID ?? DeviceIdentity.current
             let taskRepository = SwiftDataTaskRepository(
@@ -135,7 +135,7 @@ struct StoreScopedPomodoroCommandCoordinator {
             container: container
         )
 
-        return try transaction.withFreshContext { context in
+        return try transaction.withFreshContext(author: .localMutation) { context in
             let now = nowProvider()
             let resolvedDeviceID = deviceID ?? DeviceIdentity.current
             let timeRepository = SwiftDataTimeTrackingRepository(

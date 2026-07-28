@@ -8,7 +8,7 @@ extension SyncDataSnapshot {
     func restoreAsLocalWinner(context: ModelContext, now: Date = Date()) throws {
         try validateForRestore()
         let deviceID = DeviceIdentity.current
-        try context.performAtomicMutation {
+        try context.performAtomicMutation(author: .syncReconciliation) {
             try restoreTasks(context: context, now: now, deviceID: deviceID)
             try restoreTaskCategories(context: context, now: now, deviceID: deviceID)
             try restoreTaskCategoryAssignments(context: context, now: now, deviceID: deviceID)

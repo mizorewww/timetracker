@@ -46,7 +46,7 @@ struct StoreScopedAITaskAtomicMutationCoordinator {
         return try StoreScopedTimerMutationTransaction(
             scope: scope,
             container: container
-        ).withFreshContext { context in
+        ).withFreshContext(author: .localMutation) { context in
             let current = try Self.captureBaseline(in: context)
             guard current == plan.baseline else {
                 throw AITaskAtomicMutationError.workspaceChanged

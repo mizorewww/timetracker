@@ -55,7 +55,7 @@ struct StoreScopedCountdownCommandCoordinator {
             scope: scope,
             container: container
         )
-        try transaction.withFreshContext { context in
+        try transaction.withFreshContext(author: .localMutation) { context in
             _ = try CountdownCommandHandler().add(
                 context: context,
                 deviceID: deviceID
@@ -101,7 +101,7 @@ struct StoreScopedCountdownCommandCoordinator {
             scope: scope,
             container: container
         )
-        try transaction.withFreshContext { context in
+        try transaction.withFreshContext(author: .localMutation) { context in
             let eventID = baseline.eventID
             let descriptor = FetchDescriptor<CountdownEvent>(
                 predicate: #Predicate { $0.id == eventID }

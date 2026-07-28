@@ -157,7 +157,7 @@ struct StoreScopedTaskCategoryCommandCoordinator {
         return try StoreScopedTimerMutationTransaction(
             scope: scope,
             container: container
-        ).withFreshContext { context in
+        ).withFreshContext(author: .localMutation) { context in
             try operation(
                 SwiftDataTaskRepository(context: context, deviceID: deviceID)
             )

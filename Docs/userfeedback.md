@@ -131,3 +131,804 @@ Note: `[~]` 表示 Codex 当前正在处理；本文件是任务内容和状态�
 - [x] UI/Bug: Mac上的Blossom Color Picker 出现在意外的位置
 - [x] feature: Mac 在设置里加上快捷键设置,适当绑定快捷键
 - [x] Bug: 总是提示 apple health returned a record that could not be stored safely
+
+
+
+
+
+
+# 一、性能审查
+
+## 1. P1：提交后的同步主线程管线过长
+
+当前关键写路径为：
+
+```text
+用户命令
+  → SwiftData 原子事务并提交
+  → StoreRefreshPlanner
+  → StoreRefreshCoordinator
+  → 各领域读模型刷新
+  → Live Activity / Widget / Watch 投影
+  → 同步冲突快照捕获、fingerprint、状态文件保存
+  → NotificationCenter 广播
+  → 方法返回
+```
+
+`TimeTrackerStore` 是 `@MainActor @Observable`；`perform` 在事务完成后直接调用 `finishCommittedMutation`。后者依次执行刷新、`recordLocalSyncSnapshotIfNeeded` 和广播。`StoreRefreshCoordinator` 本身也是 `@MainActor`，会串行刷新任务、账本、番茄钟、偏好、清单、Inbox、Rollup，再执行系统投影。
+
+同步快照路径还会：
+
+* 获取新的 store context；
+* 获取独占状态访问；
+* 按领域捕获快照；
+* 计算 fingerprint；
+* 递增 generation；
+* 保存同步状态文件。([GitHub][2])
+
+### 影响
+
+第一，用户点击 Start、Stop、编辑记录等操作的同步尾延迟，不只包含数据库提交，还包含刷新和同步保护工作。
+
+第二，系统投影失败和业务提交失败没有真正隔离。当前设计正确地不会把“提交后刷新失败”误报成业务写入失败，但数据已经提交、同步 sidecar 快照尚未成功时，这条路径只设置 `errorMessage`。我没有在该路径看到一个与提交对应、可持久恢复的 pending-work 标记，因此不能证明失败一定会被后续事件补偿。
+
+第三，所有刷新阶段在同一个 Actor 上串行化，局部 CPU 峰值会直接转化为 UI hitch。
+
+### 建议
+
+将提交后工作分成三层：
+
+```text
+A. 事务内
+   数据写入 + 产生 MutationReceipt
+
+B. UI 关键路径
+   只更新当前可见的最小投影，例如 active/today/task row
+
+C. 可恢复异步投影
+   sync snapshot / analytics / widget / watch / live activity
+```
+
+`MutationReceipt` 至少应包含：
+
+```swift
+struct MutationReceipt: Sendable {
+    let events: Set<DomainEventRecord>
+    let affectedIDs: Set<UUID>
+    let affectedRanges: [DateInterval]
+    let generation: UInt64
+}
+```
+
+可优先利用项目已经使用的 persistent history transaction/token 作为持久工作来源。后台投影处理器必须是幂等的，并在启动时恢复未处理 generation。只有当前可见读模型需要阻塞用户命令返回。
+
+**相关但容易遗漏：** `StoreMutationBroadcaster` 使用进程内通知广播 mutation。多 Scene 环境下应检查接收方是否会在通知回调内立即同步刷新；否则一次用户操作可能叠加多个 Scene 的刷新成本。([GitHub][3])
+
+---
+
+## 2. P1：前台激活和远端导入仍走全量历史刷新
+
+`refreshForForeground()` 首先调用 `refreshQuietly()`，后者调用无参数 `refresh()`；而无参数 `refresh()` 固定生成 `.fullSync` 计划。`.remoteImportCompleted` 同样直接映射为完整 refresh scope。([GitHub][4])
+
+全量 Ledger refresh 会：
+
+1. 查询 active segments；
+2. 查询今天的 segments；
+3. 调用 `allSegments()`；
+4. 对所有 segment 排序；
+5. 重建 ID、snapshot、array index、day、task、session 等索引；
+6. 全量查询 sessions；
+7. 触发 Rollup 全量重建。
+
+远端变化虽然做了 350 ms 合并，但合并后仍发出 `.remoteImportCompleted`，所以它降低的是频率，不是单次成本。([GitHub][5])
+
+### 静态复杂度
+
+令：
+
+* `S` 为历史 TimeSegment 数；
+* `T` 为任务数；
+* `C` 为清单项数。
+
+一次 full refresh 至少包含：
+
+```text
+allSegments 去重、过滤、排序：O(S log S)
+Ledger 多索引构建：          O(S)
+Rollup 历史重建：            O(S + T + C)
+内存：                       O(S + T + C)，但常数较高
+```
+
+内存常数较高是因为同一 segment 同时存在于：
+
+* SwiftData model 数组；
+* `segmentByID`；
+* `segmentSnapshotByID`；
+* `segmentArrayIndexByID`；
+* day/task/session ID 集合；
+* Rollup 的另一份 snapshot/index 结构。
+
+这不一定在 50,000 条记录时立即出问题，但它会使前台恢复和 Cloud import 的峰值 CPU、分配量及内存带宽成为尾延迟上限。
+
+### 测试覆盖的边界
+
+仓库确实有 50,000 条记录性能测试，但文档明确说明，当前 `<0.25s` 的预算针对的是**单记录增量刷新**，只是测试环境中的回归告警，不是真机 SLA；文档也明确要求 Release 真机 Instruments 才能证明流畅性。它不能证明 foreground full refresh 或 remote full import 的性能。([GitHub][6])
+
+### 建议
+
+前台恢复改成三级决策：
+
+```text
+没有持久化 transaction 变化
+  → 跳过持久层刷新，只推进时钟敏感状态
+
+有可识别 transaction / affected IDs / affected ranges
+  → scoped refresh
+
+token 丢失、schema/calendar/topology 不可安全判定
+  → full refresh
+```
+
+启动也应分阶段：
+
+```text
+第一阶段：active + today + 当前任务树，立即恢复交互
+第二阶段：历史索引和 Rollup 在后台 actor 构建
+第三阶段：Analytics、Widget、Watch 和同步保护投影
+```
+
+对于首次历史索引完成前的查询，可以直接回退到 repository range query，而不是阻塞整个 UI 等待历史全量 materialization。
+
+**相关但容易遗漏：** 日历、时区变化确实可能要求重建 day index，但这应是独立 invalidation 原因，不应该和普通 foreground activation 使用同一个 `.fullSync` 入口。
+
+---
+
+## 3. P1：Ledger 增量数组更新最坏为 `O(kN)`
+
+`replaceSegments` 对受影响 ID 逐个调用 `updateFlatSegment`。当记录被删除或 `startedAt` 变化时，后者会：
+
+1. 从 `allSegments` 中删除；
+2. 对删除位置之后的所有元素重新写 `segmentArrayIndexByID`；
+3. 二分查找新位置；
+4. 插入；
+5. 再次重建插入位置之后的数组索引。([GitHub][7])
+
+数组的二分搜索是 `O(log N)`，但删除、插入和后缀 reindex 均是 `O(N)`。如果一次远端导入或 range refresh 修改 `k` 条历史记录，最坏复杂度是：
+
+```text
+O(kN)
+```
+
+尤其是修改较早的历史记录时，几乎整个数组后缀都会被反复移动和重编号。
+
+### 建议
+
+为 `replaceSegments` 增加 batch 策略：
+
+```text
+少量变更且位置靠近尾部
+  → 维持当前逐条更新
+
+变更数超过阈值，或最早受影响位置较前
+  → 一次性：
+     1. 删除旧 ID
+     2. 将新记录排序
+     3. 与保留数组做线性 merge
+     4. 一次重建 segmentArrayIndexByID
+```
+
+复杂度可从最坏 `O(kN)` 降到：
+
+```text
+O(N + k log k)
+```
+
+更进一步，可以让 `[UUID: SegmentRecord]` 成为主要事实索引，排序结构只保存 ID，避免同时在多个地方持有 SwiftData 对象引用。
+
+---
+
+## 4. P2：Analytics 的后台化不完整
+
+项目已经意识到 SwiftData 对象不能跨 Actor，并为 Today visual snapshot 构造了值类型输入；这是正确方向。但只有 `.today` 的 visual 部分使用异步纯值计算。之后 `analyticsDomainStore.refreshSnapshot` 仍回到主 Store，继续执行 snapshot 构建。Week/Month 路径甚至没有对应的后台 visual 计算。([GitHub][8])
+
+Analytics snapshot 会执行多轮：
+
+* segment 去重；
+* 时间范围过滤；
+* daily breakdown；
+* Pomodoro focus round 扫描；
+* overview；
+* task breakdown；
+* previous-period comparison；
+* rhythm；
+* quality；
+* root/category breakdown；
+* overlap/insight 计算。
+
+其中 comparison 和 Pomodoro round 还接收全部历史 segments。([GitHub][9])
+
+缓存失效也较粗：一次 Analytics invalidation 会清空所有 range snapshots 和 task snapshots，只有 ledger day bucket 支持按区间失效。([GitHub][10])
+
+此外，Ledger 的 day index 只索引最多 366 天；更长的区间会直接扫描全部 snapshot。([GitHub][11])
+
+### 建议
+
+建立完整的 `AnalyticsActor`：
+
+```text
+MainActor:
+  从 LedgerStore 捕获 Sendable LedgerRecord / TaskRecord
+
+AnalyticsActor:
+  计算 Today / Week / Month / Task snapshots
+  管理缓存和 revision
+
+MainActor:
+  只发布最终 immutable snapshot
+```
+
+缓存键不应只依赖全局 `analyticsRevision`，而应包含 revision vector：
+
+```text
+ledgerRevisionByDay
+taskMetadataRevision
+categoryRevision
+pomodoroRevision
+checklistRevisionByTask
+calendarRevision
+```
+
+例如，修改 2024 年的一条记录不应使当前 Today snapshot 和所有无关 task snapshot 失效。
+
+**相关但容易遗漏：** 超过 366 天的查询退化不是一定要删除的设计；可以保留 fallback，但应给“全历史 comparison”准备按月或按日的持久/内存聚合桶，避免每次冷缓存都扫描全部事实。
+
+---
+
+## 5. P2：部分“scoped refresh”实际上仍有全量读取
+
+`TaskStore.refreshTaskScoped` 虽然只按 ID 获取任务，但仍然每次全量获取 categories 和 category assignments。更重要的是，quantity goal/entry 因为可能存在 malformed relational graph，明确选择了全量读取。([GitHub][12])
+
+`refreshInboxDomain` 无论 affected inbox IDs 是否已知，都会先全量获取所有 Inbox item read model，并重建完整 dictionary 和 suggestion indexes；只有 suggestion 查询本身是 scoped 的。([GitHub][13])
+
+这与项目自身的 Repository guardrail 存在偏差：文档要求普通用户操作不得执行 broad `all` 查询，除非 full sync 或没有可用范围的 history invalidation。([GitHub][14])
+
+### 建议
+
+**Quantity graph：**
+
+* 写入和迁移时维护完整性状态；
+* 将“发现 malformed graph”变成显式 dirty flag；
+* graph clean 时执行 task-scoped query；
+* 只有 dirty 时才走全量校验和 repair；
+* repair 后清除 dirty flag。
+
+不能让理论上的历史脏数据永久迫使所有正常任务更新全量扫描。
+
+**Category：**
+
+* 将 category 和 assignment 分成独立 revision；
+* 普通标题或估时修改不重新查询 category；
+* 只有 category ID 或根节点拓扑变化时更新 assignment projection。
+
+**Inbox：**
+
+* 为 item read model 增加按 ID fetch；
+* 更新 `inboxItemReadModelByItemID` 的 affected bucket；
+* 仅当排序字段或全局筛选条件改变时重建列表。
+
+---
+
+# 二、架构设计审查
+
+## 1. 当前整体架构是合理的
+
+项目不是“SwiftUI View 直接查 SwiftData”的简单结构。真实写路径已经形成：
+
+```text
+View
+  → TimeTrackerStore facade
+  → Command Handler
+  → Repository
+  → StoreDomainEvent
+  → RefreshPlanner
+  → RefreshCoordinator
+  → Domain Stores
+  → SwiftUI
+```
+
+读路径也有 Repository、domain snapshot 和 pure service 的分工；`TimeSegment` 是 canonical fact，统计、预测、图表和汇总都是可重建投影。
+
+几个设计尤其值得保留：
+
+* `StoreDomainEvent` 表达“发生了什么”，而不是直接耦合到某个 View。
+* `StoreRefreshPlanner` 让 invalidation 策略可测试。
+* `ModelContext.performAtomicMutation` 确保多步骤命令只保存一次，并在失败时整体 rollback。
+* `TimerAdmissionPolicy` 是 `nonisolated`、纯值、确定性的策略对象，持久化和 side effect 被留给 coordinator。
+* Rollup 已经有按变更记录、层级深度和 90 天窗口工作的增量索引。([GitHub][15])
+
+这说明问题不是“需要重新设计整个应用”，而是继续把已有边界贯彻到底。
+
+---
+
+## 2. `TimeTrackerStore` 已成为状态、依赖和流程的集中枢纽
+
+`TimeTrackerStore` 同时持有：
+
+* 各种 repository；
+* command handler 和 services；
+* tasks、segments、sessions、checklist、inbox、preferences；
+* Apple Health 状态；
+* AI request 状态；
+* sync/recovery 状态；
+* navigation/selection 状态；
+* analytics 和 rollup store；
+* 多组手工索引与任务句柄。
+
+维护者自己的重构文档也把 lifecycle 和 sync observer 的职责集中列为现存风险。
+
+需要区分两件事：
+
+* `@Observable` 具有按属性访问跟踪，因此不能仅凭对象大就断言每次修改都会重绘所有 View。
+* 真正的问题是所有权、Actor 隔离和依赖方向：任何新功能很容易继续把状态或流程塞回 façade，最终形成单一刷新总线和单一故障域。
+
+### 建议目标
+
+保留 `TimeTrackerStore` 作为兼容 façade，但将其降为组合和路由层：
+
+```text
+TimeTrackerStore @MainActor
+├── TodayFeatureStore
+├── TaskFeatureStore
+├── LedgerFeatureStore
+├── AnalyticsFeatureStore
+├── SyncPresentationStore
+└── NavigationStore
+```
+
+同时把依赖装配移到独立 composition root：
+
+```text
+AppComposition
+  ├── repositories
+  ├── command coordinators
+  ├── projection schedulers
+  └── system surface adapters
+```
+
+这样 façade 可以继续提供旧 API，但不再直接拥有所有持久化和系统集成细节。
+
+---
+
+## 3. RefreshCoordinator 同时承担读模型刷新和外部系统投影
+
+`StoreRefreshCoordinator.refresh` 把以下内容放在同一个同步 interval 内：
+
+* primary domains；
+* Rollup、Analytics invalidation；
+* selection validation；
+* Live Activity；
+* Widget；
+* Watch；
+* 自动 AI suggestion 调度。
+
+这使“保证 UI 一致”与“让所有外部投影最终一致”成为同一个事务后的同步阶段。
+
+### 建议拆分
+
+```text
+ReadModelRefreshCoordinator
+  只负责本 Scene 的 UI projection
+
+SystemProjectionScheduler
+  Live Activity / Widget / Watch
+
+SuggestionScheduler
+  Inbox / Checklist AI jobs
+
+SyncProtectionScheduler
+  conflict snapshot / fingerprint / state
+```
+
+不同 scheduler 共享同一个 `MutationReceipt`，但拥有独立重试、去重和错误状态。一个 Widget 写入失败不应延迟或污染当前 Scene 的任务状态。
+
+---
+
+## 4. Event 类型已经结构化，但语义仍然偏粗
+
+当前映射包括：
+
+* 任意 `taskChanged` 都刷新 tasks、rollups、analytics、live activities；
+* 任意历史 ledger edit 都同步 live activities；
+* 任意 checklist change 都使 Analytics snapshot 全失效。([GitHub][16])
+
+部分行为是正确性所需，例如 checklist 会影响预测；但不是所有 task metadata 都会影响 Analytics 或 Live Activity。
+
+### 建议
+
+将事件扩展为 mutation fact，而不是继续增加 refresh scope：
+
+```swift
+struct TaskMutationFact {
+    let taskID: UUID
+    let changedFields: TaskChangedFields
+    let affectedAncestorIDs: Set<UUID>
+}
+
+struct LedgerMutationFact {
+    let segmentIDs: Set<UUID>
+    let oldRanges: [DateInterval]
+    let newRanges: [DateInterval]
+    let affectsActiveSet: Bool
+}
+```
+
+Planner 再根据字段依赖构造不同 projection 的计划：
+
+```text
+task.title       → tasks + widget/watch identity
+task.parentID    → tasks + rollup topology + analytics grouping
+task.estimate    → tasks + forecast
+segment.note     → ledger row only
+segment.interval → ledger + rollup + analytics
+```
+
+这会比继续扩大 `StoreRefreshScope` 更可控。
+
+**相关但容易遗漏：** 主 target 配置了默认 `MainActor` 隔离，同时仍是 Swift 5 language mode。它降低了一部分并发错误风险，但也容易使未显式标注的纯计算默认落到主 Actor。建议先启用更严格的并发警告，再逐步将纯算法标为 `nonisolated` 或移入专用 Actor，而不是直接进行一次性 Swift 6 迁移。
+
+---
+
+# 三、代码抽象审查
+
+## 1. Repository 协议过宽，违反能力隔离
+
+`TaskRepository` 同时包含：
+
+* hierarchy repair；
+* task 查询；
+* category 查询与写入；
+* recurrence 查询；
+* quantity 查询；
+* task/category mutation。
+
+`TimeTrackingRepository` 也同时承担查询和命令写入。([GitHub][17])
+
+这会导致：
+
+* 测试 fake 必须模拟大量无关能力；
+* 调用方难以表达只读依赖；
+* 新实现可以在不知情的情况下使用高成本默认路径；
+* repository 逐渐变成领域 API 总表。
+
+### 建议拆分
+
+```swift
+protocol TaskQuerying {
+    func tasks(ids: Set<UUID>) throws -> [TaskRecord]
+}
+
+protocol TaskHierarchyQuerying {
+    func children(of parentID: UUID?) throws -> [TaskRecord]
+}
+
+protocol TaskMutating {
+    func execute(_ command: TaskCommand) throws -> TaskMutationResult
+}
+
+protocol RecurrenceQuerying { ... }
+protocol QuantityProgressQuerying { ... }
+
+protocol LedgerQuerying { ... }
+protocol LedgerMutating { ... }
+```
+
+Command Handler 依赖 mutation capability，Domain Store 只依赖 query capability。
+
+---
+
+## 2. 默认空实现和全量 fallback 会隐藏错误
+
+协议扩展中：
+
+* recurrence/quantity 默认返回空数组；
+* `repairInvalidHierarchy` 默认什么也不做；
+* `segments(ids:)` 默认调用 `allSegments()` 后在内存过滤；
+* scoped recurrence/quantity 默认先调用全量方法再过滤。([GitHub][17])
+
+这些默认实现对简单 fake 很方便，但对生产抽象有两个问题。
+
+### 正确性风险
+
+一个新的 Repository 实现可以在完全编译通过的情况下，静默“不支持” recurrence 或 quantity，调用方看到的只是空数据，而不是 capability missing。
+
+### 性能风险
+
+调用者看到的是 `segments(ids:)`，可能以为复杂度与 ID 数量相关，实际却可能是全表 materialization。
+
+### 建议
+
+* 删除业务能力的默认空实现。
+* 测试 fake 显式实现它需要支持的协议。
+* 如确需可选能力，使用独立 capability 协议或明确的 `.unsupported` error。
+* 禁止在协议默认实现中做 broad query fallback。
+* 为 query 增加复杂度语义，例如 `fetchSegments(ids:)` 必须有后端 predicate。
+
+---
+
+## 3. Repository 直接暴露 SwiftData 模型
+
+Repository 返回 `[TaskNode]`、`[TimeSegment]`、`[TimeSession]` 等持久化模型。Analytics 代码本身已经明确指出，SwiftData 对象不能跨越 main-actor boundary，因此需要手工构造值输入。([GitHub][17])
+
+这意味着：
+
+* domain/read model 被 SwiftData 生命周期和 Actor 约束污染；
+* 后台计算必须临时复制；
+* 单元测试更依赖持久层对象；
+* Repository 很难被其他存储实现替换；
+* 对象引用相同性等 SwiftData 特性会渗透到索引代码中。
+
+### 建议
+
+读取侧返回 immutable、`Sendable` 的 record：
+
+```swift
+struct LedgerRecord: Sendable, Hashable {
+    let id: UUID
+    let taskID: UUID
+    let sessionID: UUID
+    let startedAt: Date
+    let endedAt: Date?
+    let deletedAt: Date?
+}
+```
+
+SwiftData model 只存在于：
+
+```text
+SwiftData Repository / Actor-owned ModelContext
+```
+
+UI、Analytics、Rollup、Watch/Widget projection 使用值类型。这会同时解决代码抽象、并发边界和一部分内存不可控问题。
+
+---
+
+## 4. 原子事务实现正确，但依赖隐藏的 ambient state
+
+`performAtomicMutation` 使用一个以 `ObjectIdentifier(ModelContext)` 为 key 的全局静态 dictionary 记录嵌套深度。Repository 调用 `saveAfterMutationStep()` 时，会读取这个隐藏状态来决定是否延迟 save。([GitHub][15])
+
+优点是现有命令无需大规模修改，就能实现 outer transaction save-once。
+
+缺点是：
+
+* 事务状态不在类型系统中；
+* Repository 是否正确遵守事务取决于它是否调用指定 helper；
+* 新写入路径直接调用 `context.save()` 就能绕过该机制；
+* 代码阅读时无法从方法签名判断自己处于事务内；
+* 全局状态目前依赖 MainActor 串行性。
+
+### 建议
+
+逐步改成显式 Unit of Work：
+
+```swift
+protocol MutationUnitOfWork {
+    func execute<Result>(
+        _ operation: (MutationContext) throws -> Result
+    ) throws -> Result
+}
+```
+
+Repository mutation 接收 `MutationContext`，只有 Unit of Work 能最终 commit。短期至少可以增加测试或静态规则，禁止 Repository 直接调用 `ModelContext.save()`。
+
+---
+
+## 5. 错误层次存在轻微反向依赖
+
+`TaskRepositoryError` 直接通过 `AppStrings.localized(...)` 生成用户文案。([GitHub][17])
+
+这使 infrastructure/domain 层依赖 presentation localization。更清晰的方式是：
+
+```text
+RepositoryError.invalidMove
+  → PresentationErrorMapper
+  → localized string
+```
+
+这不是高优先级问题，但在未来增加日志、遥测、App Intent 或 Watch 错误表现时，会减少重复判断。
+
+**相关但容易遗漏：** `TimerAdmissionPolicy` 是本项目中较好的抽象范例：纯值输入、确定性输出、无持久化、无 UI 文案、显式 `nonisolated`。新的业务规则应尽量按这个形态设计，而不是继续扩展 façade helper。([GitHub][18])
+
+---
+
+# 四、测试、可观测性与交付门禁
+
+## 优点
+
+测试文档覆盖面很强，包括：
+
+* DST、未来时间和半开区间；
+* 增量结果与全量重建一致；
+* task cycle 和 hierarchy repair；
+* recurrence/quantity graph；
+* sync LWW、tombstone、快照恢复、损坏文件隔离；
+* 原子写入；
+* Widget/Watch payload 限制；
+* UI、Dynamic Type 和 accessibility；
+* 50,000 条 ledger 性能告警；
+* Release Instruments 与真机验证。
+
+源码中也已经广泛使用 `PerformanceSignpost.interval`，因此具备继续做调用链归因的基础。
+
+## 缺口
+
+Makefile 提供了 macOS 单元测试、iOS/macOS build、格式化、本地化和真实 LLM 测试入口，但默认 `make test` 只运行 macOS `timetrackerTests`，没有一个公开可见的单一 mandatory verification target。([GitHub][19])
+
+公开的 GitHub Actions 页面只显示“开始使用 Actions”的介绍内容，仓库根目录也没有 `.github/workflows`。因此，当前公开仓库没有可见的 GitHub Actions CI。不能排除维护者使用其他私有或外部 CI，但它未在仓库中形成可审计的合并门禁。([GitHub][20])
+
+### 建议的 CI 分层
+
+每次提交：
+
+```text
+format-check
+localization-check
+macOS unit tests
+generic iOS build
+generic macOS build
+```
+
+PR 或主分支：
+
+```text
+CorePerformanceBudgetTests
+migration/snapshot suites
+sync failure-injection suites
+```
+
+定时或 release：
+
+```text
+UI tests
+real-provider LLM tests
+signed archive
+real-device profiling/manual acceptance
+```
+
+需要把前两层设为 branch protection required checks。真实 LLM 和真机测试不适合每次提交执行，但其最后一次证据应绑定到具体 commit。
+
+---
+
+# 五、推荐的改造顺序
+
+## 第一阶段：建立可量化基线，工作量 S
+
+先不要立即重写架构。补充以下 signpost：
+
+```text
+mutation.transaction
+mutation.visibleProjection
+mutation.syncSnapshot
+mutation.systemProjections
+foreground.changeDetection
+foreground.visibleRefresh
+foreground.historyRefresh
+ledger.batchIndexUpdate
+analytics.valueCapture
+analytics.compute
+analytics.publish
+```
+
+同时增加公开 CI，确保后续重构有可重复回归门禁。
+
+验收重点：能把一次 Start/Stop 的数据库提交、可见状态更新、同步快照、Widget/Watch 各阶段单独量出来。
+
+## 第二阶段：缩短提交后关键路径，工作量 M
+
+* `finishCommittedMutation` 只同步执行可见读模型刷新。
+* Sync、Widget、Watch、Live Activity 进入独立 scheduler。
+* 每个 scheduler 支持 generation、去重、取消和重试。
+* 失败状态按 projection 分类，不再全部写入一个 `errorMessage`。
+
+这是收益最大、风险相对可控的一步。
+
+## 第三阶段：修复 Ledger batch update 和 foreground full refresh，工作量 M/L
+
+* 为 `replaceSegments` 增加 batch merge。
+* 使用 persistent history token 检测 foreground 是否真的有变化。
+* 远端导入尽可能携带实体 ID/range，而不是无条件 `.remoteImportCompleted → full`。
+* 启动只同步加载 active/today，历史索引延迟完成。
+
+## 第四阶段：建立 Sendable DTO 和后台计算边界，工作量 L
+
+优先迁移：
+
+1. Ledger Analytics 输入；
+2. Rollup segment snapshot；
+3. Task/category read model；
+4. Inbox read model。
+
+不必一次性改掉所有 Repository；可以从新的 `LedgerQueryingV2` 开始，旧 façade 做适配。
+
+## 第五阶段：收紧协议和缓存失效，工作量 M
+
+* 拆分 Repository capabilities。
+* 删除默认空实现和全量 fallback。
+* 引入 revision vector。
+* 将 category、quantity、inbox 的 scoped refresh 做到真正 scoped。
+* 最后再缩减 `TimeTrackerStore` 属性和依赖。
+
+---
+
+# 六、可复现的性能验证方案
+
+先执行仓库现有基线：
+
+```bash
+make format-check
+make localization-check
+make test
+CONFIGURATION=Release make build-ios
+CONFIGURATION=Release make build-macos
+```
+
+这些命令来自仓库的 Makefile 和 Testing policy。
+
+随后建立以下数据集：
+
+```text
+Tasks:           5,000
+Segments:       50,000
+Sessions:       25,000
+ChecklistItems: 20,000
+InboxItems:      5,000
+```
+
+重点场景：
+
+| 场景                             | 检查目标                                    |
+| ------------------------------ | --------------------------------------- |
+| 无数据库变化时 foreground             | 应跳过历史重建                                 |
+| 只新增今天一条记录后 foreground          | 只更新 visible/range projection            |
+| 编辑最早的一条历史记录                    | 暴露数组后缀 reindex 成本                       |
+| 一次导入 100、1,000 条历史记录           | 验证 `O(kN)` 是否出现                         |
+| 开启 iCloud 后 Start/Stop         | 分离 commit、snapshot、system projection 延迟 |
+| 同时打开 3 个 Scene                 | 检查广播是否引发重复刷新                            |
+| 冷打开 Today/Week/Month Analytics | 检查主线程 CPU 和缓存失效                         |
+| 查询 365 天与 367 天                | 验证 day-index fallback 的性能断点             |
+| 时区切换与系统时间回拨                    | 保证优化不破坏正确性                              |
+
+建议把以下数字作为**拟定验收目标**，而不是当前性能结论：
+
+```text
+命令提交到可见状态 p95：      < 100 ms
+单段连续 MainActor CPU：      尽量 < 8–16 ms
+无变化 foreground：           < 20 ms 且不读取全历史
+任何主线程阻塞：              不出现 > 50 ms 长任务
+后台历史/系统投影：            不阻塞交互，可取消且可恢复
+增量结果：                    必须与 fresh full rebuild 完全一致
+```
+
+真机至少使用：
+
+* Time Profiler；
+* Animation Hitches 或 Core Animation；
+* Allocations；
+* SwiftUI Instrument；
+* 现有 `PerformanceSignpost` points of interest。
+
+仓库测试文档也明确要求在 Release 和真实 iPhone/iPad/macOS 上验证，单元性能测试不能替代设备 SLA。([GitHub][6])
+
+---
+
+# 最终优先级
+
+按收益、风险和依赖关系排序：
+
+1. [~] **P1：把 sync snapshot、Widget、Watch、Live Activity 从同步提交后路径移出。**
+2. [ ] **P1：foreground/remote import 使用 persistent-history delta，避免无条件 full refresh。**
+3.  [ ]**P1：将 Ledger 多记录更新改为 batch merge，消除最坏 `O(kN)`。**
+4.  [ ]**P2：Analytics 使用完整的 Sendable value pipeline 和后台 Actor。**
+5.  [ ]**P2：拆分 Repository capability，删除空实现和全量 fallback。**
+6. [ ] **P2：修正 Task quantity、category、Inbox 的伪 scoped refresh。**
+7. [ ] **P2：增加公开 CI 和 required checks。**
+8.  [ ] **P3：将 ambient transaction state 逐步替换为显式 Unit of Work。**

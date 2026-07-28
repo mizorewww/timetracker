@@ -1,6 +1,6 @@
 # 88：Apple Health 事件驱动增量刷新 实现记忆
 
-状态：2026-07-28 进行中
+状态：2026-07-28 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -18,8 +18,8 @@
 - [x] 没有计时器驱动的 HealthKit 轮询。
 - [x] 首次需要数据时刷新一次；后续由明确的生命周期/用户动作或 HealthKit 变更事件触发。
 - [x] 并发或短时间重复触发合并为一次增量同步，旧请求不能覆盖新结果。
-- [ ] 锚点、修改、删除、失败回滚与 JSON 导出行为测试继续通过。
-- [ ] 完成性能相关测试、`make test`、格式检查和全设备安装。
+- [x] 锚点、修改、删除、失败回滚与 JSON 导出行为测试继续通过。
+- [x] 完成性能相关测试、`make test`、格式检查和全设备安装。
 
 ## 子代理编排
 
@@ -54,3 +54,16 @@
   条件下推给 SwiftData，不再全表 materialize 后过滤。apply/snapshot 增加原生 OS signpost。
   新的边界行为测试先证明旧实现会解码区间外损坏行，并覆盖 825 项跨 chunk 收敛；优化后
   Repository 9/9、CorePerformanceBudget 11/11 通过。
+- 2026-07-28：checkpoint C 已提交为 `ab0675f8`。任务级 `make test` 通过 1563 tests /
+  176 suites；格式和三语言本地化门禁通过。Release `make build-install-all` 已把带嵌入
+  Watch companion 的 iOS App 安装到 iPhone Air 与 iPad Pro M4，并把 universal macOS App
+  安装到 `/Applications/timetracker.app`；当前没有可见的实体 Apple Watch，因此没有声称
+  独立 Watch 真机覆盖。
+
+## 完成边界
+
+- 本任务没有视觉布局变化，使用行为测试、签名 entitlement 检查和全设备安装验收，不创建
+  无信息增益的截图。
+- App 自有 Health replica 继续保持 `cloudKitDatabase: .none`，不会违反 Apple 健康数据
+  不得存入 iCloud 的开发者协议边界。跨设备健康事实由 Apple Health 自身的系统同步提供，
+  每台设备以 anchor 重建本机 replica；App 的版本化 JSON 导出继续包含当前设备 replica。

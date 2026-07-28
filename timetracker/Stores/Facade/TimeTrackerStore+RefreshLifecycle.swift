@@ -20,6 +20,7 @@ extension TimeTrackerStore {
         enqueueCommittedMutationSystemProjections(
             events: [.fullSync]
         )
+        appleHealthReplicaSyncService?.markNeedsSynchronization()
         await refreshAppleHealthTimelineIfEnabled()
         await refreshCloudAccountStatus(
             client: cloudAccountStatusClient

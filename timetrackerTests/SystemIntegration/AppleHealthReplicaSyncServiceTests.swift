@@ -5,6 +5,158 @@ import Testing
 @Suite(.serialized)
 struct AppleHealthReplicaSyncServiceTests {
     @Test @MainActor
+    func cleanReplicaServesCachedSnapshotUntilExplicitlyInvalidated()
+        async throws
+    {
+        let repository = try makeAppleHealthReplicaTestRepository()
+        let first = AppleHealthReplicaChangeBatch(
+            workouts: [
+                appleHealthWorkout(
+                    id: UUID(),
+                    start: 100,
+                    end: 200
+                ),
+            ],
+            deletedWorkoutIDs: [],
+            workoutAnchor: Data("workout-1".utf8),
+            sleep: [],
+            deletedSleepIDs: [],
+            sleepAnchor: Data("sleep-1".utf8)
+        )
+        let second = AppleHealthReplicaChangeBatch(
+            workouts: [],
+            deletedWorkoutIDs: [],
+            workoutAnchor: Data("workout-2".utf8),
+            sleep: [],
+            deletedSleepIDs: [],
+            sleepAnchor: Data("sleep-2".utf8)
+        )
+        let reader = ScriptedAppleHealthReplicaChangeReader(
+            results: [.success(first), .success(second)]
+        )
+        let service = AppleHealthReplicaSyncService(
+            reader: reader,
+            repository: repository
+        )
+
+        try await service.synchronizeIfNeeded(
+            at: Date(timeIntervalSince1970: 500)
+        )
+        try await service.synchronizeIfNeeded(
+            at: Date(timeIntervalSince1970: 600)
+        )
+
+        #expect(reader.requestCount == 1)
+        #expect(try repository.allSamples().recordCount == 1)
+
+        service.markNeedsSynchronization()
+        try await service.synchronizeIfNeeded(
+            at: Date(timeIntervalSince1970: 700)
+        )
+
+        #expect(reader.requestCount == 2)
+        #expect(try repository.anchors() == AppleHealthReplicaAnchors(
+            workout: Data("workout-2".utf8),
+            sleep: Data("sleep-2".utf8)
+        ))
+    }
+
+    @Test @MainActor
+    func concurrentCachedRefreshesShareOneIncrementalQuery() async throws {
+        let repository = try makeAppleHealthReplicaTestRepository()
+        let changes = AppleHealthReplicaChangeBatch(
+            workouts: [],
+            deletedWorkoutIDs: [],
+            workoutAnchor: Data("workout-1".utf8),
+            sleep: [],
+            deletedSleepIDs: [],
+            sleepAnchor: Data("sleep-1".utf8)
+        )
+        let reader = ScriptedAppleHealthReplicaChangeReader(
+            results: [.success(changes)],
+            suspends: true
+        )
+        let service = AppleHealthReplicaSyncService(
+            reader: reader,
+            repository: repository
+        )
+
+        let first = Task {
+            try await service.synchronizeIfNeeded(
+                at: Date(timeIntervalSince1970: 500)
+            )
+        }
+        while reader.requestCount == 0 {
+            await Task.yield()
+        }
+        let second = Task {
+            try await service.synchronizeIfNeeded(
+                at: Date(timeIntervalSince1970: 500)
+            )
+        }
+        await Task.yield()
+
+        #expect(reader.requestCount == 1)
+        reader.suspends = false
+        try await first.value
+        try await second.value
+        #expect(reader.requestCount == 1)
+    }
+
+    @Test @MainActor
+    func cancellingOneWaiterKeepsSharedIncrementalQueryAlive()
+        async throws
+    {
+        let repository = try makeAppleHealthReplicaTestRepository()
+        let changes = AppleHealthReplicaChangeBatch(
+            workouts: [],
+            deletedWorkoutIDs: [],
+            workoutAnchor: Data("workout-1".utf8),
+            sleep: [],
+            deletedSleepIDs: [],
+            sleepAnchor: Data("sleep-1".utf8)
+        )
+        let reader = ScriptedAppleHealthReplicaChangeReader(
+            results: [.success(changes)],
+            suspends: true
+        )
+        let service = AppleHealthReplicaSyncService(
+            reader: reader,
+            repository: repository
+        )
+
+        let cancelledWaiter = Task {
+            try await service.synchronizeIfNeeded(
+                at: Date(timeIntervalSince1970: 500)
+            )
+        }
+        while reader.requestCount == 0 {
+            await Task.yield()
+        }
+        let remainingWaiter = Task {
+            try await service.synchronizeIfNeeded(
+                at: Date(timeIntervalSince1970: 500)
+            )
+        }
+        await Task.yield()
+
+        cancelledWaiter.cancel()
+        await Task.yield()
+        #expect(reader.requestCount == 1)
+
+        reader.suspends = false
+        await #expect(throws: CancellationError.self) {
+            try await cancelledWaiter.value
+        }
+        try await remainingWaiter.value
+        #expect(reader.requestCount == 1)
+        #expect(try repository.anchors() == AppleHealthReplicaAnchors(
+            workout: Data("workout-1".utf8),
+            sleep: Data("sleep-1".utf8)
+        ))
+    }
+
+    @Test @MainActor
     func firstSyncCommitsRowsThenReusesPersistedAnchors() async throws {
         let repository = try makeAppleHealthReplicaTestRepository()
         let workoutID = UUID()

@@ -17,6 +17,7 @@ extension TimeTrackerStore {
 
         appleHealthTimelinePreferenceStore.isTimelineEnabled = true
         isAppleHealthTimelineEnabled = true
+        appleHealthReplicaSyncService?.markNeedsSynchronization()
         let requestID = beginAppleHealthTimelineRequest()
         materializeAppleHealthTaskCatalog(
             clearRecoveryTaskIDs: appleHealthTimelinePreferenceStore
@@ -61,6 +62,7 @@ extension TimeTrackerStore {
         now: Date = Date(),
         calendar: Calendar = .current
     ) async {
+        appleHealthReplicaSyncService?.markNeedsSynchronization()
         await refreshAppleHealthTimeline(
             now: now,
             calendar: calendar,
@@ -310,7 +312,7 @@ extension TimeTrackerStore {
                 overlapping: interval
             )
         }
-        _ = try await appleHealthReplicaSyncService.synchronize()
+        try await appleHealthReplicaSyncService.synchronizeIfNeeded()
         try Task.checkCancellation()
         return try appleHealthReplicaRepository.snapshot(
             overlapping: interval

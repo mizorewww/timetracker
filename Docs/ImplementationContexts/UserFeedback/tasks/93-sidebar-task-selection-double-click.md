@@ -1,6 +1,6 @@
 # 93：侧边栏任务切换需要二次点击 实现记忆
 
-状态：2026-07-28 进行中
+状态：2026-07-28 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的状态条目。
@@ -17,7 +17,7 @@
 - [x] 一次点击同时更新高亮和详情，不暴露中间 Tasks 根页。
 - [x] 脏草稿仍需确认；取消确认时保持 A，确认后才原子切到 B。
 - [x] iPad 与 macOS 正常字号侧边栏行为、选中态和截图验收通过。
-- [ ] `make test`、格式、本地化门禁通过，实现提交后完成 `make build-install-all`。
+- [x] `make test`、格式、本地化门禁通过，实现提交后完成 `make build-install-all`。
 
 ## 子代理编排
 
@@ -51,3 +51,15 @@
   `make format-check` 0/875 待格式化，`make localization-check` 9/9，
   `make check-hooks` 确认 `.githooks` 已启用。下一 checkpoint 是实现提交，
   然后执行全设备构建安装。
+- 2026-07-28：实现 checkpoint `a5f81423` 已提交；hook 自动推进版本为
+  `1.1.342 (397)`。`make build-install-all` 的 iOS/iPadOS 与 macOS
+  Release 均 `BUILD SUCCEEDED`，App 与内嵌 Watch companion 验签通过；
+  该版本已只读核验安装到实体 iPad Pro M4
+  `748D0137-ADC3-58AF-855C-1E98B3125F93`、iPhone Air
+  `FBA36694-D841-56D4-8ED6-21942873B21B`，macOS universal app
+  （arm64 + x86_64）已复制并验签到 `/Applications/timetracker.app`。
+  当前没有可见实体 Apple Watch，内嵌 companion 由配对 iPhone 的
+  Automatic App Install 管理。
+- 2026-07-28：收尾资源审计无 Booted/owned TimeTracker simulator，
+  无残留 `xcodebuild`、`xctest` 或 UI test runner；反馈条目已勾选，
+  active `~93` 链接已移除。

@@ -1,6 +1,6 @@
 # 94：统一主页计时选择入口 实现记忆
 
-状态：2026-07-28 实现中
+状态：2026-07-28 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的状态条目。
@@ -22,7 +22,7 @@
 - [x] 空闲状态显示“开始计时”，并行状态显示“再开始一个计时”，禁用并行时显示
   “切换计时”；三者使用“再开始一个计时”当前的原生整行样式。
 - [x] 正常字号 iPhone、iPad 和 macOS 的按钮标题、图标、44 pt 触控尺寸及截图验收通过。
-- [ ] `make test`、格式、本地化门禁通过，实现提交后完成 `make build-install-all`。
+- [x] `make test`、格式、本地化门禁通过，实现提交后完成 `make build-install-all`。
 
 ## 子代理编排
 
@@ -61,3 +61,6 @@
   `macOS-20260728-230258.xcresult`。
 - 2026-07-28：实现 checkpoint 门禁通过：SwiftFormat 0/875、本地化资源 9/9、
   `make test` 1572 tests / 176 suites。等待提交后执行全设备安装。
+- 2026-07-28：实现提交 `c2c25bf0` 后，`make build-install-all` 成功构建并签名
+  Release 1.1.349 (404)，安装到 iPad Pro M4、iPhone Air，复制到
+  `/Applications/timetracker.app`；iOS 包确认内嵌 Watch companion。任务完成并关闭。

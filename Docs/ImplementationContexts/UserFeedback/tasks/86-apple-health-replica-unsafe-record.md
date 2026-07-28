@@ -1,9 +1,9 @@
 # 86：Apple Health 记录无法安全保存 实现记忆
 
-状态：2026-07-28 实现中
+状态：2026-07-28 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
-> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
+> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[x]` 条目。
 
 ## 认领的反馈条目
 
@@ -41,7 +41,7 @@
 - [x] 覆盖反向区间整批回滚，确保旧 records 与双 anchor 不变。
 - [x] 验证 Timeline facade 不再进入 `.failed`，而是正常得到无正时长数据状态。
 - [x] 运行聚焦测试、`make test`、格式/本地化及相关正常字号 UI 截图。
-- [ ] 运行 `make build-install-all`，核验 iPhone、iPad、嵌入 Watch companion 与
+- [x] 运行 `make build-install-all`，核验可用 iOS/iPadOS 设备、嵌入 Watch companion 与
   `/Applications/timetracker.app`。
 
 ## Checkpoint 编排
@@ -50,7 +50,7 @@
   先固定可复现行为测试。
 - [x] B：实现最小数据安全修复，保留 replica/anchor 原子边界。
 - [x] C：更新当前架构、隐私、代码与测试文档；完成视觉/行为验收。
-- [~] D：全量验证、全设备安装、标记 `[x]` 并移除 active link。
+- [x] D：全量验证、全设备安装、标记 `[x]` 并移除 active link。
 
 ## 库策略
 
@@ -83,3 +83,8 @@
   保持可读，没有 unsafe-record 失败状态。临时模拟器
   `C9D32760-97EB-48F5-9AB8-8EB2F225C0C1` 已由 Make target 关闭并删除，结果保存在
   `build/UITestResults/iOS-20260728-093053.xcresult`。
+- 2026-07-28：Release `make build-install-all` 成功。版本 `1.1.305 (360)` 安装到
+  当前 connected 的 iPad Pro M4；iOS App 已确认嵌入签名 Watch companion；
+  `/Applications/timetracker.app` 已替换并通过 designated-requirement 校验。iPhone
+  Air 当时由 CoreDevice 报告为 `unavailable`，未被 Make target 视为可安装设备。
+  关闭任务提交后再次运行同一 target，保证最终 HEAD 在所有当时可用设备上安装。

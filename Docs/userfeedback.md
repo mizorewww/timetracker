@@ -130,4 +130,4 @@ Note: `[~]` 表示 Codex 当前正在处理；本文件是任务内容和状态�
 - [x] UI: 任务checklist 的图标没有居中,并且不支持超长checklist,并且checklist文本显示应该从中间
 - [x] UI/Bug: Mac上的Blossom Color Picker 出现在意外的位置
 - [x] feature: Mac 在设置里加上快捷键设置,适当绑定快捷键
-- [~] Bug: 总是提示 apple health returned a record that could not be stored safely
+- [x] Bug: 总是提示 apple health returned a record that could not be stored safely

@@ -45,13 +45,15 @@ such as paths, timestamps, badges, counts, chart axes, ranges, provider IDs, and
 details. A forecast reason, insight explanation, sync/error message, or empty-state
 instruction can affect the next user decision and therefore is not metadata.
 
-Cross-platform components may map the same product role to a platform-local semantic
-style so a macOS correction does not enlarge the established iPhone/iPad hierarchy.
-Keep that mapping beside the component or feature that owns the text. Do not apply a
-root font environment, fixed point-size override, global scale, `minimumScaleFactor`
-compression, or third-party typography framework to compensate for a local semantic
-mistake. SF Symbols that identify the same row or header inherit its semantic font;
-charts and dense transient pickers retain their deliberately compact metadata styles.
+Cross-platform components use the same semantic style for the same product role.
+Platform identity is not a typography role: use `body`/`callout` for decision-relevant
+content everywhere, and keep only genuine metadata compact. Density differences belong
+to an explicit component style or the compact/regular layout shell, not an `os(...)`
+font branch. Do not apply a root font environment, fixed point-size override, global
+scale, `minimumScaleFactor` compression, or third-party typography framework to
+compensate for a local semantic mistake. SF Symbols that identify the same row or
+header inherit its semantic font; charts and dense transient pickers retain their
+deliberately compact metadata styles.
 
 ## Native-First Rules
 
@@ -199,8 +201,8 @@ Before merging UI work, verify:
 
 1. Is there a native component that already does this?
 2. The affected iPhone portrait screens at the normal system text size, including their primary action, navigation, empty/error state, keyboard path, and localized copy — no clipping on the smallest iPhone width.
-3. iPad landscape Today and Task Detail with the sidebar both visible and collapsed; split view keeps its destination/detail state across window widths.
-4. macOS narrow minimum window and full-screen window.
+3. iPad Today and Task Detail above and below the 720 pt root breakpoint; the shell follows width while destination/detail state survives the switch.
+4. macOS below-720 pt compact window and wide regular window; both retain native Settings and menu behavior.
 5. Long task names, localized strings, and dynamic timer text wrap or truncate intentionally and do not overlap.
 6. All tappable targets are at least 44 pt on touch platforms.
 7. Row identities are stable during scrolling and animation.

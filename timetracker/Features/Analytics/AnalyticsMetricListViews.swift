@@ -47,11 +47,7 @@ struct AnalyticsDetailSection<Content: View>: View {
     }
 
     private var subtitleFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .caption
-        #endif
     }
 }
 
@@ -189,10 +185,6 @@ private struct AnalyticsMetricListRow: View {
     }
 
     private var titleFont: Font {
-        #if os(macOS)
         .body.weight(.medium)
-        #else
-        .subheadline.weight(.medium)
-        #endif
     }
 }

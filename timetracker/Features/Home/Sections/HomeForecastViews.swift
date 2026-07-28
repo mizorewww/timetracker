@@ -201,19 +201,11 @@ struct ForecastSummaryRow: View {
     }
 
     private var primaryFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 
     private var reasonFont: Font {
-        #if os(macOS)
         .callout
-        #else
-        .caption2.weight(.medium)
-        #endif
     }
 
     private var daysText: String {

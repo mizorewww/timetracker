@@ -43,11 +43,7 @@ struct AnalyticsGlossaryList: View {
     }
 
     private var introductionFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 }
 
@@ -76,27 +72,15 @@ private struct AnalyticsGlossaryRow: View {
     }
 
     private var titleFont: Font {
-        #if os(macOS)
         .body.weight(.semibold)
-        #else
-        .subheadline.weight(.semibold)
-        #endif
     }
 
     private var bodyFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 
     private var calculationFont: Font {
-        #if os(macOS)
         .callout
-        #else
-        .caption
-        #endif
     }
 }
 
@@ -119,19 +103,11 @@ private struct AnalyticsGlossaryExample: View {
     }
 
     private var titleFont: Font {
-        #if os(macOS)
         .body.weight(.semibold)
-        #else
-        .subheadline.weight(.semibold)
-        #endif
     }
 
     private var bodyFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 }
 
@@ -189,19 +165,11 @@ private struct AnalyticsInsightRow: View {
     }
 
     private var titleFont: Font {
-        #if os(macOS)
         .body.weight(.medium)
-        #else
-        .subheadline.weight(.medium)
-        #endif
     }
 
     private var bodyFont: Font {
-        #if os(macOS)
         .callout
-        #else
-        .caption
-        #endif
     }
 
     private var iconName: String {

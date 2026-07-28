@@ -9,8 +9,13 @@ import SwiftUI
 struct AppRootView<SyncConflictContent: View>: View {
     let store: TimeTrackerStore
     let syncConflictContent: SyncConflictContent
+    @Environment(AppPresentationRouter.self) private var presentationRouter
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #if os(macOS)
+    @Environment(\.openSettings) private var openSettings
+    #endif
     @State private var measuredWidth: CGFloat?
+    @State private var lastContentDestination: TimeTrackerStore.DesktopDestination = .today
 
     init(
         store: TimeTrackerStore,
@@ -35,7 +40,8 @@ struct AppRootView<SyncConflictContent: View>: View {
             case .compact:
                 CompactShellRootView(
                     store: store,
-                    syncConflictContent: syncConflictContent
+                    syncConflictContent: syncConflictContent,
+                    requestOpenSettings: presentSettings
                 )
             case .regular:
                 RegularShellRootView(store: store)
@@ -48,17 +54,58 @@ struct AppRootView<SyncConflictContent: View>: View {
         // Nested views adapt from this instead of re-measuring or, worse,
         // asking what device they are running on.
         .environment(\.layoutShell, shell)
-        .onGeometryChange(for: CGFloat.self) { proxy in
-            proxy.size.width
-        } action: { width in
-            guard let measuredWidth else {
-                measuredWidth = width
-                return
+        #if os(macOS)
+            .focusedSceneValue(\.timeTrackerStore, store)
+            .focusedSceneValue(\.appPresentationRouter, presentationRouter)
+        #endif
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.size.width
+            } action: { width in
+                guard let measuredWidth else {
+                    measuredWidth = width
+                    return
+                }
+                let proposedShell = RootLayoutPolicy(
+                    measuredWidth: width,
+                    horizontalSizeClass: horizontalSizeClass
+                ).shell
+                // Ignore sub-point jitter unless it crosses the shell boundary.
+                guard proposedShell != shell || abs(measuredWidth - width) > 0.5 else {
+                    return
+                }
+                self.measuredWidth = width
             }
-            // Ignore sub-point jitter so a resize does not thrash the shell.
-            guard abs(measuredWidth - width) > 0.5 else { return }
-            self.measuredWidth = width
+            .onAppear {
+                routeSettingsDestination(store.desktopDestination)
+            }
+            .onChange(of: store.desktopDestination) { _, destination in
+                routeSettingsDestination(destination)
+            }
+            .onChange(of: presentationRouter.sheet?.id) { _, presentationID in
+                guard presentationID == nil,
+                      store.desktopDestination == .settings else { return }
+                routeSettingsDestination(.settings)
+            }
+    }
+
+    private func routeSettingsDestination(
+        _ destination: TimeTrackerStore.DesktopDestination
+    ) {
+        guard destination == .settings else {
+            lastContentDestination = destination
+            return
         }
+        guard presentSettings() else { return }
+        store.desktopDestination = lastContentDestination
+    }
+
+    private func presentSettings() -> Bool {
+        #if os(macOS)
+        openSettings()
+        return true
+        #else
+        return presentationRouter.presentSettings()
+        #endif
     }
 }
 
@@ -69,13 +116,8 @@ struct AppRootView<SyncConflictContent: View>: View {
 /// blocks are scene plumbing that has no iOS equivalent, not layout.
 struct RegularShellRootView: View {
     let store: TimeTrackerStore
-    @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
     @State private var preferredCompactColumn: NavigationSplitViewColumn = .detail
-    #if os(macOS)
-    @Environment(\.openSettings) private var openSettings
-    @State private var lastContentDestination: TimeTrackerStore.DesktopDestination = .today
-    #endif
     private let layout = SplitColumnLayoutPolicy.standard
 
     var body: some View {
@@ -104,29 +146,5 @@ struct RegularShellRootView: View {
         .onChange(of: store.desktopDestination) { _, _ in
             preferredCompactColumn = .detail
         }
-        #if os(macOS)
-        .focusedSceneValue(\.timeTrackerStore, store)
-        .focusedSceneValue(\.appPresentationRouter, presentationRouter)
-        .onAppear {
-            routeSettingsDestination(store.desktopDestination)
-        }
-        .onChange(of: store.desktopDestination) { _, destination in
-            routeSettingsDestination(destination)
-        }
-        #endif
     }
-
-    #if os(macOS)
-    /// macOS shows Settings in its own scene, so the sidebar destination has to
-    /// bounce back to whatever content was showing before.
-    private func routeSettingsDestination(_ destination: TimeTrackerStore.DesktopDestination) {
-        guard destination == .settings else {
-            lastContentDestination = destination
-            return
-        }
-
-        openSettings()
-        store.desktopDestination = lastContentDestination
-    }
-    #endif
 }

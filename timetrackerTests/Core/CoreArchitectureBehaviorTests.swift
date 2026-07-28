@@ -27,6 +27,14 @@ struct CoreArchitectureBehaviorTests {
             RootLayoutPolicy(measuredWidth: breakpoint, horizontalSizeClass: .regular)
                 .shell == .regular
         )
+        #expect(
+            RootLayoutPolicy(measuredWidth: breakpoint - 0.1, horizontalSizeClass: .regular)
+                .shell == .compact
+        )
+        #expect(
+            RootLayoutPolicy(measuredWidth: breakpoint + 0.1, horizontalSizeClass: .regular)
+                .shell == .regular
+        )
 
         // An iPad at half width is below the breakpoint and must not try to
         // keep both split-view columns.
@@ -114,9 +122,13 @@ struct CoreArchitectureBehaviorTests {
                 SplitColumnLayoutPolicy.standard.detail.min <=
                 RootLayoutPolicy.regularShellMinimumWidth
         )
-        #expect(PomodoroLayoutPolicy(horizontalSizeClass: .compact).setupCardPadding == 18)
-        #expect(PomodoroLayoutPolicy(horizontalSizeClass: .compact).setupSectionSpacing == 20)
-        #expect(PomodoroLayoutPolicy(horizontalSizeClass: .regular).setupCardPadding == 24)
+        #expect(PomodoroLayoutPolicy(shell: .compact).setupCardPadding == 18)
+        #expect(PomodoroLayoutPolicy(shell: .compact).setupSectionSpacing == 20)
+        #expect(PomodoroLayoutPolicy(shell: .regular).setupCardPadding == 24)
+        #expect(DailyTimeSeriesChartLayoutPolicy(availableWidth: 390).maximumLabelCount == 5)
+        #expect(DailyTimeSeriesChartLayoutPolicy(availableWidth: 390).trailingAxisClearance == 8)
+        #expect(DailyTimeSeriesChartLayoutPolicy(availableWidth: 680).maximumLabelCount == 8)
+        #expect(DailyTimeSeriesChartLayoutPolicy(availableWidth: 680).trailingAxisClearance == 48)
         #expect(PomodoroPageLayoutPolicy(viewportWidth: 390, prefersSingleColumn: false).verticalPadding == 16)
         #expect(PomodoroPageLayoutPolicy(viewportWidth: 900, prefersSingleColumn: false).verticalPadding == 24)
     }

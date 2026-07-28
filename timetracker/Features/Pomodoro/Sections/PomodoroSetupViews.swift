@@ -7,7 +7,6 @@ struct PomodoroSetupCard: View {
     @Binding var selectedPlanID: UUID?
     @Binding var focusTaskID: UUID?
     let selectFocusTask: () -> Void
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.layoutShell) private var layoutShell
 
     private var selectedTask: TaskNode? {
@@ -24,10 +23,7 @@ struct PomodoroSetupCard: View {
     }
 
     var body: some View {
-        let layout = PomodoroLayoutPolicy(
-            horizontalSizeClass: horizontalSizeClass,
-            shell: layoutShell
-        )
+        let layout = PomodoroLayoutPolicy(shell: layoutShell)
         PomodoroPageLayout {
             VStack(alignment: .leading, spacing: layout.setupSectionSpacing) {
                 setupHeader
@@ -67,10 +63,6 @@ struct PomodoroSetupCard: View {
     }
 
     private var subtitleFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 }

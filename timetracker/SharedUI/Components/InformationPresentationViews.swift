@@ -66,18 +66,10 @@ struct InformationGuideRow: View {
     }
 
     private var titleFont: Font {
-        #if os(macOS)
         .body.weight(.semibold)
-        #else
-        .subheadline.weight(.semibold)
-        #endif
     }
 
     private var bodyFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .caption
-        #endif
     }
 }

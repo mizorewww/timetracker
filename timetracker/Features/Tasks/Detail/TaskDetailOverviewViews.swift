@@ -152,19 +152,11 @@ struct TaskDetailForecastSection: View {
     }
 
     private var childExplanationFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 
     private var reasonFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .caption
-        #endif
     }
 }
 

@@ -237,19 +237,11 @@ struct TaskDetailAnalysisSection: View {
     }
 
     private var emptyTitleFont: Font {
-        #if os(macOS)
         .body.weight(.medium)
-        #else
-        .subheadline.weight(.medium)
-        #endif
     }
 
     private var emptyMessageFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .caption
-        #endif
     }
 }
 
@@ -275,19 +267,11 @@ private struct TaskDetailAppleHealthInlineStatusView: View {
     }
 
     private var titleFont: Font {
-        #if os(macOS)
         .body.weight(.medium)
-        #else
-        .subheadline.weight(.medium)
-        #endif
     }
 
     private var messageFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .caption
-        #endif
     }
 
     private var title: String {
@@ -452,10 +436,6 @@ private struct AnalyticsGroupBreakdownRowForTask: View {
     }
 
     private var primaryFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 }

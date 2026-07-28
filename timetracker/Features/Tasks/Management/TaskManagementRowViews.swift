@@ -10,9 +10,7 @@ struct TaskManagementFlatRow: View {
     var toggleExpansion: (() -> Void)?
     var identityContext: TaskIdentityPresentation.Context = .hierarchical
     let openTaskDetail: (TaskNode) -> Void
-    #if os(iOS)
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    #endif
 
     var body: some View {
         let rollup = store.rollup(for: task.id)
@@ -41,7 +39,7 @@ struct TaskManagementFlatRow: View {
             Button(action: openTask) {
                 TaskManagementRowContent(
                     presentation: presentation,
-                    showsNavigationChevron: showsNavigationChevron
+                    showsNavigationChevron: true
                 )
                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                 .contentShape(Rectangle())
@@ -71,19 +69,7 @@ struct TaskManagementFlatRow: View {
     }
 
     private var rowAlignment: VerticalAlignment {
-        #if os(iOS)
         dynamicTypeSize.isAccessibilitySize ? .top : .center
-        #else
-        .center
-        #endif
-    }
-
-    private var showsNavigationChevron: Bool {
-        #if os(iOS)
-        true
-        #else
-        false
-        #endif
     }
 
     @ViewBuilder

@@ -312,11 +312,7 @@ private struct TaskDetailAppleHealthFailureSection: View {
 
 private enum TaskDetailAppleHealthTypography {
     static var message: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 }
 

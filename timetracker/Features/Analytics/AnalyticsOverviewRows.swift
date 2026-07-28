@@ -48,11 +48,7 @@ struct AnalyticsHomeSummaryRow: View {
     }
 
     private var emptyMessageFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 
     @ViewBuilder
@@ -97,19 +93,11 @@ struct AnalyticsHomeSummaryRow: View {
     }
 
     private var primaryMetricLabelFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 
     private var secondaryMetricLabelFont: Font {
-        #if os(macOS)
         .callout
-        #else
-        .caption
-        #endif
     }
 
     @ViewBuilder
@@ -147,11 +135,7 @@ private struct AnalyticsSummaryMiniMetric: View {
     }
 
     private var valueFont: Font {
-        #if os(macOS)
         .body.weight(.semibold).monospacedDigit()
-        #else
-        .subheadline.weight(.semibold).monospacedDigit()
-        #endif
     }
 }
 
@@ -182,19 +166,11 @@ struct AnalyticsCategoryRow: View {
     }
 
     private var answerFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 
     private var actionFont: Font {
-        #if os(macOS)
         .body.weight(.medium)
-        #else
-        .caption.weight(.medium)
-        #endif
     }
 }
 
@@ -224,18 +200,10 @@ struct AnalyticsStandalonePageRow: View {
     }
 
     private var answerFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 
     private var actionFont: Font {
-        #if os(macOS)
         .body.weight(.medium)
-        #else
-        .caption.weight(.medium)
-        #endif
     }
 }

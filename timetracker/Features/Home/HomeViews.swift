@@ -4,7 +4,6 @@ struct DesktopMainView: View {
     let store: TimeTrackerStore
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var viewportWidth: CGFloat = 720
-    @State private var todayTaskRoute: TasksRoute?
 
     var body: some View {
         let layout = HomeLayoutPolicy(width: viewportWidth)
@@ -33,7 +32,7 @@ struct DesktopMainView: View {
         .navigationTitle(AppStrings.today)
         .todayTaskNavigationDestination(
             store: store,
-            route: $todayTaskRoute
+            route: todayTaskRoute
         )
         #if os(iOS)
         .navigationBarTitleDisplayMode(.large)
@@ -41,7 +40,14 @@ struct DesktopMainView: View {
     }
 
     private func openTask(_ taskID: UUID) {
-        todayTaskRoute = store.prepareTaskDetailRoute(taskID)
+        store.openTodayTaskDetail(taskID)
+    }
+
+    private var todayTaskRoute: Binding<TasksRoute?> {
+        Binding(
+            get: { store.todayTaskRoute },
+            set: { store.todayTaskRoute = $0 }
+        )
     }
 }
 

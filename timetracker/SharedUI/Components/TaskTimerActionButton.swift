@@ -190,11 +190,7 @@ struct TaskTimerActionButton: View {
     }
 
     private var labeledActionFont: Font {
-        #if os(macOS)
         .body.weight(.semibold)
-        #else
-        .callout.weight(.semibold)
-        #endif
     }
 
     private var platformControlSize: ControlSize {

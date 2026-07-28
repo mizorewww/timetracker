@@ -157,11 +157,7 @@ private struct TaskDetailRecentRecordRow: View {
     }
 
     private var primaryFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 
     private func timeRangeText(display: TrackedTimeDisplaySnapshot) -> String {

@@ -47,11 +47,7 @@ struct ArchivedTasksSettingsSection: View {
     }
 
     private var emptyDescriptionFont: Font {
-        #if os(macOS)
         .callout
-        #else
-        .caption
-        #endif
     }
 }
 

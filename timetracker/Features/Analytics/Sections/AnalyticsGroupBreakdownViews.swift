@@ -135,10 +135,6 @@ private struct AnalyticsGroupBreakdownRow: View {
     }
 
     private var primaryFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 }

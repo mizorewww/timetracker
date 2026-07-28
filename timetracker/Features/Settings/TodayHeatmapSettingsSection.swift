@@ -168,11 +168,7 @@ private struct TodayHeatmapTaskSelectionView: View {
     }
 
     private var hiddenSelectionFont: Font {
-        #if os(macOS)
         .callout
-        #else
-        .footnote
-        #endif
     }
 
     private func toggleSelection(_ taskID: UUID) {

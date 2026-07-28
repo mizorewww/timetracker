@@ -8,7 +8,6 @@ struct InboxView: View {
     @State private var completionPresentationRevision = 0
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.layoutShell) private var layoutShell
 
     private var openItems: [InboxItem] {
@@ -23,7 +22,7 @@ struct InboxView: View {
     /// buttons or as full labelled rows. Previously false on macOS at any
     /// width, which left a narrow Mac window trying to fit both labels.
     private var isCompact: Bool {
-        horizontalSizeClass == .compact || layoutShell == .compact
+        layoutShell == .compact
     }
 
     var body: some View {

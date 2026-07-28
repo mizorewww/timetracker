@@ -73,11 +73,7 @@ private struct PomodoroRunRow: View {
     }
 
     private var taskIdentityFont: Font {
-        #if os(macOS)
         .body.weight(.medium)
-        #else
-        .subheadline.weight(.medium)
-        #endif
     }
 
     private var taskIdentity: String {

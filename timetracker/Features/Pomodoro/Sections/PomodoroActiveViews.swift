@@ -61,11 +61,7 @@ struct ActivePomodoroCard: View {
     }
 
     private var roundDescriptionFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 
     private var stopButton: some View {

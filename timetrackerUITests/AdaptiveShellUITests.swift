@@ -18,7 +18,7 @@ final class AdaptiveShellUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    private func launchApp() -> XCUIApplication {
+    private func launchApp(windowWidth: CGFloat? = nil) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
             "--uitesting",
@@ -29,9 +29,20 @@ final class AdaptiveShellUITests: XCTestCase {
             "-TimeTrackerAutomaticDemoSeedingDisabled", "NO",
         ]
         app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
+        #if os(macOS)
+        if let windowWidth {
+            app.launchEnvironment["TIMETRACKER_UI_TEST_WINDOW_WIDTH"] = "\(windowWidth)"
+            app.launchEnvironment["TIMETRACKER_UI_TEST_WINDOW_HEIGHT"] = "820"
+        }
+        #endif
         app.launch()
+        #if os(macOS)
+        let readyElement = app.descendants(matching: .any)["home.view"]
+        #else
+        let readyElement = app.otherElements["app.initialConfiguration.ready"]
+        #endif
         XCTAssertTrue(
-            app.otherElements["app.initialConfiguration.ready"].waitForExistence(timeout: 90),
+            readyElement.waitForExistence(timeout: 90),
             "The app never finished initial configuration."
         )
         return app
@@ -95,6 +106,33 @@ final class AdaptiveShellUITests: XCTestCase {
 
         attachScreenshot(app, named: isCompactShell ? "shell-compact" : "shell-regular")
     }
+
+    #if os(macOS)
+    /// A narrow Mac uses the shared compact product shell, but Settings remains
+    /// a native macOS scene rather than falling back to an in-window sheet.
+    func testNarrowMacKeepsNativeSettingsCapability() {
+        let app = launchApp(windowWidth: 680)
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["home.view"].waitForExistence(timeout: 15)
+        )
+        let settingsButton = compactSettingsButton(in: app)
+        XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
+        XCTAssertLessThan(app.windows.firstMatch.frame.width, Self.shellBreakpoint)
+
+        settingsButton.click()
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["settings.view"].waitForExistence(timeout: 10),
+            "The compact Mac shell did not route Settings through its native scene."
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["home.view"].exists,
+            "Opening the native Settings scene replaced the main compact workspace."
+        )
+        attachScreenshot(app, named: "mac-compact-native-settings")
+    }
+    #endif
 
     /// Mirrors `RootLayoutPolicy.regularShellMinimumWidth`.
     private static let shellBreakpoint: CGFloat = 720

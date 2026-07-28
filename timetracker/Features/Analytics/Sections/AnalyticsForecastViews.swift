@@ -70,11 +70,7 @@ private struct ForecastAnalyticsRow: View {
     }
 
     private var primaryFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 
     private var daysText: String {

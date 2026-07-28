@@ -57,19 +57,11 @@ struct HomeWeeklyGrossTimeChart: View {
     }
 
     private var emptyTitleFont: Font {
-        #if os(macOS)
         .body.weight(.medium)
-        #else
-        .subheadline.weight(.medium)
-        #endif
     }
 
     private var emptyMessageFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .caption
-        #endif
     }
 
     private var chartDomain: ClosedRange<Date>? {

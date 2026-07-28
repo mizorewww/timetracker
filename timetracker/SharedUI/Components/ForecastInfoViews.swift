@@ -30,19 +30,11 @@ struct ForecastExplanationCallout: View {
     }
 
     private var titleFont: Font {
-        #if os(macOS)
         .body.weight(.semibold)
-        #else
-        .caption.weight(.semibold)
-        #endif
     }
 
     private var bodyFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .caption
-        #endif
     }
 }
 
@@ -128,10 +120,6 @@ struct ForecastInfoView: View {
     }
 
     private var exampleFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 }

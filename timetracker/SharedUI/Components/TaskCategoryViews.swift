@@ -17,9 +17,7 @@ struct TaskCategorySectionHeader: View {
     var toggleExpansion: (() -> Void)?
     var disclosureAccessibilityIdentifier: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    #if os(iOS)
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    #endif
 
     var body: some View {
         VStack(spacing: 5) {
@@ -36,15 +34,11 @@ struct TaskCategorySectionHeader: View {
 
     @ViewBuilder
     private var headerContent: some View {
-        #if os(iOS)
         if dynamicTypeSize.isAccessibilitySize, style == .standard {
             accessibilityHeader
         } else {
             standardHeader
         }
-        #else
-        standardHeader
-        #endif
     }
 
     private var standardHeader: some View {
@@ -181,11 +175,7 @@ struct TaskCategorySectionHeader: View {
     private var categorySymbolFont: Font {
         switch style {
         case .standard:
-            #if os(macOS)
             .body.weight(.semibold)
-            #else
-            .subheadline.weight(.semibold)
-            #endif
         case .compact:
             .caption.weight(.semibold)
         case .sidebar:
@@ -196,11 +186,7 @@ struct TaskCategorySectionHeader: View {
     private var categoryTitleFont: Font {
         switch style {
         case .standard:
-            #if os(macOS)
             .body.weight(.semibold)
-            #else
-            .subheadline.weight(.semibold)
-            #endif
         case .compact:
             .caption
         case .sidebar:

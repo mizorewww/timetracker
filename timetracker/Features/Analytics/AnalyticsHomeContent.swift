@@ -153,10 +153,6 @@ private struct AnalyticsHomeSectionHeader: View {
     }
 
     private var subtitleFont: Font {
-        #if os(macOS)
         .callout
-        #else
-        .footnote
-        #endif
     }
 }

@@ -213,15 +213,11 @@ struct TodayTimelineRecordPresentation {
 
 struct TodayTimelineRecordContent: View {
     let presentation: TodayTimelineRecordPresentation
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.layoutShell) private var layoutShell
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var isCompact: Bool {
-        SizeClassLayoutPolicy(
-            horizontalSizeClass: horizontalSizeClass,
-            shell: layoutShell
-        ).isCompact
+        layoutShell == .compact
     }
 
     var body: some View {
@@ -368,14 +364,10 @@ struct TodayTimelineRecordContent: View {
 }
 
 struct TodayTimelineRecordInsets: ViewModifier {
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.layoutShell) private var layoutShell
 
     private var isCompact: Bool {
-        SizeClassLayoutPolicy(
-            horizontalSizeClass: horizontalSizeClass,
-            shell: layoutShell
-        ).isCompact
+        layoutShell == .compact
     }
 
     func body(content: Content) -> some View {

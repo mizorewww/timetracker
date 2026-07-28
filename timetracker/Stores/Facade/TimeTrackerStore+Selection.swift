@@ -9,6 +9,7 @@ extension TimeTrackerStore {
         selectedTaskID = taskID
         if revealInToday {
             tasksRoute = nil
+            todayTaskRoute = nil
             desktopDestination = .today
         }
         selectedTaskPulseID = taskID
@@ -19,6 +20,12 @@ extension TimeTrackerStore {
         guard let route = prepareTaskDetailRoute(taskID) else { return }
         tasksRoute = route
         desktopDestination = .tasks
+    }
+
+    func openTodayTaskDetail(_ taskID: UUID) {
+        guard let route = prepareTaskDetailRoute(taskID) else { return }
+        todayTaskRoute = route
+        desktopDestination = .today
     }
 
     func prepareTaskDetailRoute(_ taskID: UUID) -> TasksRoute? {

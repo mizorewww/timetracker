@@ -9,7 +9,6 @@ struct TimelineChart: View {
     let timeline: AnalyticsTimelineSnapshot
     var compactHeight: CGFloat = 360
     var exposesUITestingMarks = false
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.layoutShell) private var layoutShell
 
     var body: some View {
@@ -52,13 +51,11 @@ struct TimelineChart: View {
     /// Time runs down the screen when the chart is in a narrow column and
     /// across it when there is room.
     ///
-    /// Keyed off the shell, not the platform: a narrow Mac window and an iPad
-    /// in Split View get the vertical timeline for the same reason iPhone does
-    /// — a horizontal axis has nowhere to go. `horizontalSizeClass` is still
-    /// consulted because it is the finer signal where the platform provides
-    /// one; macOS always reports `.regular`, which is why the shell is needed.
+    /// Keyed off the root shell, not the platform: a narrow Mac window and an
+    /// iPad in Split View get the vertical timeline for the same reason iPhone
+    /// does — a horizontal axis has nowhere to go.
     private var usesVerticalLayout: Bool {
-        horizontalSizeClass == .compact || layoutShell == .compact
+        layoutShell == .compact
     }
 }
 

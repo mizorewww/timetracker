@@ -14,10 +14,10 @@
 
 ## 验收条件
 
-- [ ] 形成逐项可追踪的 UI 平台分支清单，区分删除、共享、保留及理由。
-- [ ] iPhone 风格由实际可用宽度决定，不读取设备型号/屏幕宽度，也不因窗口折叠丢失导航状态。
-- [ ] 删除能被共享 SwiftUI/宽度策略替代的平台分支，保留分支只封装真实平台能力。
-- [ ] 先建立布局策略/行为测试，再修改 root 与受影响 UI；普通字号设备矩阵与截图通过。
+- [x] 形成逐项可追踪的 UI 平台分支清单，区分删除、共享、保留及理由。
+- [x] iPhone 风格由实际可用宽度决定，不读取设备型号/屏幕宽度，也不因窗口折叠丢失导航状态。
+- [x] 删除能被共享 SwiftUI/宽度策略替代的平台分支，保留分支只封装真实平台能力。
+- [x] 先建立布局策略/行为测试，再修改 root 与受影响 UI；普通字号设备矩阵与截图通过。
 - [ ] `make test`、格式、本地化门禁通过，实现提交后完成 `make build-install-all`。
 
 ## 子代理编排
@@ -39,3 +39,32 @@
 ## 进度记录
 
 - 2026-07-28：认领任务，建立活动实现记忆；下一步仅审计生产 UI 分支与对应测试。
+- 2026-07-28：三个只读子代理完成分支清单、根布局/测试缺口和 capability
+  边界复核。确认生产代码没有 `UIDevice`、`UIScreen` 或设备 idiom 布局读取；需要
+  修改的重复布局集中在 root 状态所有权、图表 size class、feature 内重复 shell
+  判断和跨平台字体映射。
+- 2026-07-28：先让 Today route 行为测试因缺少 store-owned route 编译失败，再把
+  Today task route、当前根目的地和 scene router 保持在 compact/regular 分支之上。
+  `CoreTasksRouteTests` 11/11、`CoreArchitectureBehaviorTests` 4/4 通过。
+- 2026-07-28：删除同一信息角色的跨平台字体条件分支；Timeline、Inbox、
+  Pomodoro、Home rows 和 Task category 改为只消费根发布的 `layoutShell`；
+  Daily time-series chart 改为测量自己的有限宽度。
+- 2026-07-28：保留的条件编译仅限框架/API 不存在、macOS Settings/window/menu
+  plumbing、系统 list/presentation chrome、输入方式与 HealthKit/Watch/ActivityKit
+  capability。窄 Mac 的 focused scene 值上移到 root，并新增原生 Settings scene
+  端到端回归。
+- 2026-07-28：审计收口后，生产 App 中只有 `AppRootView` 读取系统 size class，
+  没有 `UIDevice`、`userInterfaceIdiom`、`UIScreen.main` 或 `NSScreen.main`
+  产品布局读取。删除项为重复平台字体、重复 compact 判断和平台化滚动指示器；
+  共享项为 root shell、Today route、Timeline/Inbox/Pomodoro/Home/Task rows 与
+  Daily time-series 容器测量；保留项为系统 scene/chrome、输入和框架 capability。
+- 2026-07-28：本任务没有新增第三方依赖。继续使用 SwiftUI 自带的
+  `NavigationSplitView`、`TabView`、环境值和 `onGeometryChange`；为单个布局判断
+  引入第三方库会增加依赖与平台漂移，系统容器已经完整表达需求。
+- 2026-07-28：验证通过：`make test` 176 suites / 1567 tests；`make format-check`
+  0/875；9/9 本地化资源 parity；hooks 和 `git diff --check`。Adaptive shell：
+  macOS 3/3、iPhone 2/2、iPad 2/2；普通字号截图矩阵：
+  macOS/iPhone/iPad 各 7 张。主代理抽查代表性截图，子代理逐张复核 21/21，
+  未发现文字重叠、意外裁切、控件碰撞或图表轴标签不清。
+- 2026-07-28：待当前实现提交后运行 `make build-install-all`；安装通过前保持任务
+  `[~]` 和 active link。

@@ -260,6 +260,7 @@ final class TimeTrackerStore {
     var errorMessage: String?
     var desktopDestination: DesktopDestination = .today
     var tasksRoute: TasksRoute?
+    var todayTaskRoute: TasksRoute?
     @ObservationIgnored let taskDetailNavigationGuard = TaskDetailNavigationGuard()
     var selectedTaskPulseID: UUID?
     var selectedTaskPulseToken = UUID()

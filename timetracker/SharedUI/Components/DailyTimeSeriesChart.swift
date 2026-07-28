@@ -22,6 +22,23 @@ nonisolated enum DailyTimeSeriesXAxisPolicy {
     }
 }
 
+nonisolated struct DailyTimeSeriesChartLayoutPolicy: Equatable {
+    static let roomyWidth: CGFloat = 520
+    let availableWidth: CGFloat
+
+    var isCompact: Bool {
+        availableWidth < Self.roomyWidth
+    }
+
+    var trailingAxisClearance: CGFloat {
+        isCompact ? 8 : 48
+    }
+
+    var maximumLabelCount: Int {
+        isCompact ? 5 : 8
+    }
+}
+
 struct DailyTimeSeriesChart: View {
     let points: [DailyAnalyticsPoint]
     let mode: DailyTimeSeriesChartMode
@@ -29,17 +46,26 @@ struct DailyTimeSeriesChart: View {
     var accessibilitySummary: String?
     var dateDomain: ClosedRange<Date>?
 
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.locale) private var locale
+    @State private var availableWidth: CGFloat = 0
 
     var body: some View {
-        switch mode {
-        case .grossBars:
-            grossChart
-        case .grossAndWallBars:
-            grossAndWallChart
-        case .wallBarsAndGrossLine:
-            comparisonChart
+        Group {
+            switch mode {
+            case .grossBars:
+                grossChart
+            case .grossAndWallBars:
+                grossAndWallChart
+            case .wallBarsAndGrossLine:
+                comparisonChart
+            }
+        }
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.width
+        } action: { width in
+            guard width.isFinite,
+                  abs(width - availableWidth) > 0.5 else { return }
+            availableWidth = max(0, width)
         }
     }
 
@@ -282,15 +308,19 @@ struct DailyTimeSeriesChart: View {
     }
 
     private var trailingAxisClearance: CGFloat {
-        horizontalSizeClass == .compact ? 8 : 48
+        layoutPolicy.trailingAxisClearance
     }
 
     private var comparisonXAxisDates: [Date] {
         DailyTimeSeriesXAxisPolicy.labelIndices(
             pointCount: points.count,
-            maximumLabelCount: horizontalSizeClass == .compact ? 5 : 8
+            maximumLabelCount: layoutPolicy.maximumLabelCount
         )
         .map { points[$0].date }
+    }
+
+    private var layoutPolicy: DailyTimeSeriesChartLayoutPolicy {
+        DailyTimeSeriesChartLayoutPolicy(availableWidth: availableWidth)
     }
 
     private func comparisonXAxisLabel(for date: Date) -> String {

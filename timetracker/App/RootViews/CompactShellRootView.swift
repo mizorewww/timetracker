@@ -6,9 +6,7 @@ import SwiftUI
 struct CompactShellRootView<SyncConflictContent: View>: View {
     let store: TimeTrackerStore
     let syncConflictContent: SyncConflictContent
-    @Environment(AppPresentationRouter.self) private var presentationRouter
-    @State private var selectedDestination: TimeTrackerStore.DesktopDestination = .today
-    @State private var todayTaskRoute: TasksRoute?
+    let requestOpenSettings: () -> Bool
     @State private var isTabDiscardConfirmationPresented = false
     @State private var tabNavigationConfirmationRequestID: UUID?
 
@@ -23,7 +21,7 @@ struct CompactShellRootView<SyncConflictContent: View>: View {
                     )
                     .todayTaskNavigationDestination(
                         store: store,
-                        route: $todayTaskRoute
+                        route: todayTaskRoute
                     )
                 }
             } label: {
@@ -79,30 +77,18 @@ struct CompactShellRootView<SyncConflictContent: View>: View {
         }
         // Kept verbatim: this is the identifier the existing XCUITests select on.
         .accessibilityIdentifier("phone.tabView")
-        .onAppear {
-            synchronize(with: store.desktopDestination)
-        }
-        .onChange(of: store.desktopDestination) { _, destination in
-            synchronize(with: destination)
-        }
-        .onChange(of: presentationRouter.sheet?.id) { _, presentationID in
-            guard presentationID == nil,
-                  store.desktopDestination == .settings else { return }
-            synchronize(with: .settings)
-        }
     }
 
     private var selectedDestinationBinding: Binding<TimeTrackerStore.DesktopDestination> {
         Binding(
-            get: { selectedDestination },
+            get: { store.desktopDestination },
             set: { destination in
                 guard destination != .settings,
-                      destination != selectedDestination else { return }
+                      destination != store.desktopDestination else { return }
                 let requestID = store.taskDetailNavigationGuard.requestNavigation(
                     presentingConfirmationInSource: false,
                     dismissPresentedConfirmation: dismissTabNavigationConfirmation
                 ) {
-                    selectedDestination = destination
                     store.desktopDestination = destination
                 }
                 if let requestID {
@@ -120,27 +106,17 @@ struct CompactShellRootView<SyncConflictContent: View>: View {
     }
 
     private func openSettings() {
-        guard presentationRouter.presentSettings() else { return }
-        restoreContentDestinationAfterPresentingSettings()
+        _ = requestOpenSettings()
     }
 
     private func openTask(_ taskID: UUID) {
-        todayTaskRoute = store.prepareTaskDetailRoute(taskID)
+        store.openTodayTaskDetail(taskID)
     }
 
-    private func synchronize(with destination: TimeTrackerStore.DesktopDestination) {
-        switch destination {
-        case .settings:
-            openSettings()
-        case .today, .inbox, .tasks, .pomodoro, .analytics:
-            if selectedDestination != destination {
-                selectedDestination = destination
-            }
-        }
-    }
-
-    private func restoreContentDestinationAfterPresentingSettings() {
-        guard store.desktopDestination == .settings else { return }
-        store.desktopDestination = selectedDestination == .settings ? .today : selectedDestination
+    private var todayTaskRoute: Binding<TasksRoute?> {
+        Binding(
+            get: { store.todayTaskRoute },
+            set: { store.todayTaskRoute = $0 }
+        )
     }
 }

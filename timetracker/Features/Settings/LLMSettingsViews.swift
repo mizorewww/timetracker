@@ -161,11 +161,7 @@ struct LLMConfigurationEditor: View {
     }
 
     private var connectionFeedbackFont: Font {
-        #if os(macOS)
         .callout
-        #else
-        .footnote
-        #endif
     }
 
     private var credentialsAreValid: Bool {

@@ -642,13 +642,13 @@
 
 ## AD-049：iOS 根导航由稳定设备 idiom 选择
 
-状态：Accepted
+状态：Superseded by AD-139
 
 背景：旧 `iOSRootView` 把 `horizontalSizeClass == .regular` 当成 iPad，其他宽度当成 iPhone。iPad 进入分屏、Stage Manager 窄窗口或中间宽度时会变为 compact，于是整个 `NavigationSplitView` 被替换成五标签 `TabView`；sidebar selection、detail navigation 和各根容器内部状态都可能被重建。大屏 iPhone 横屏也可以出现 regular width，size class 并不是设备类型。
 
-决策：`RootLayoutPolicy` 只将稳定 interface idiom 映射为 `.phone` 或 `.pad` shell。iOS 根视图在初始化时从 `UIDevice.current.userInterfaceIdiom` 构造策略，iPhone 始终使用五标签根导航，iPad 始终使用同一个 `NavigationSplitView`。宽度变化仍可以驱动页面内容重排和 split view 的系统列折叠，但不得改变根 shell 身份。未支持 idiom 在 iOS target 安全回落到 phone shell，不假设其具有 iPad 导航语义。
+历史决策：`RootLayoutPolicy` 曾将 interface idiom 映射为 `.phone` 或 `.pad` shell，并要求根 shell 不随宽度改变。AD-139 已删除这条设备身份规则；本段只保留演进背景，不再约束当前实现。
 
-后果：iPad 在全屏、Split View 和 Stage Manager 间调整尺寸时保留 sidebar/detail 上下文；`NavigationSplitView` 依旧使用 `preferredCompactColumn` 和系统 Show Sidebar 操作适配窄宽。功能内局部布局可继续使用 size class，但新的设备级根分支必须使用 idiom 或显式平台信号。
+后果：本决策不再授权读取设备 idiom 或按设备固定根导航。当前宽度驱动 shell、状态所有权和平台 capability 边界以 AD-139 为准。
 
 验证：纯策略测试覆盖 phone、pad 和 unsupported 映射；源码契约确认 `iOSRootView` 使用 `UIDevice.current.userInterfaceIdiom`、不再读取 `horizontalSizeClass`。付费开发者签名的 macOS 策略/契约套件 31/31 通过，截图基础设施调整后的最终契约套件 8/8 通过。iPad Pro 11-inch 的串行 UI 用例使用系统 Show Sidebar，选择合并语义后的 task row，再在同一 scene 中竖屏→横屏→竖屏；三次都保留 `ipad.splitNavigation`、同一 task detail 和只读状态，三张屏幕级截图目视通过。Stage Manager 紧凑窗口仍保留在最终人工矩阵，不以旋转测试替代。所有专用模拟器都已终止、关闭并删除，最终进程与 Booted 设备审计为空。
 ## AD-050：辅助字号保留主动作文字与任务行完整事实
@@ -1881,6 +1881,26 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：用户可以为大部分稳定 Mac 工作流自行建立键盘路径，同时默认安装不会新增低频按键占用或扩大 destructive 操作面。菜单与设置增加动作数量和分组维护成本；任何新增动作必须同时定义分组、默认/排除理由、菜单可用条件、三语文案、命令边界测试和普通字号 UI 验收。实现继续使用锁定的 `KeyboardShortcuts 3.0.1`，不新增依赖或自制录制器。
 
 验证：表驱动行为测试验证 16 项注册表、五组完整性、默认唯一性、default-nil 的分配/清空、损坏与语义非法 payload 只读回退、重复/保留拒绝和 revision 稳定。macOS XCUITest 在真实 Settings scene 中确认 16 个 recorder 与默认组合，验证默认 Add Time 组合触发同一 focused-scene 动作、Task 菜单持续暴露九个主要动作，并保存分组设置与展开菜单截图。完整签名单元、格式、本地化和全设备 Release 安装仍是任务关闭门禁。
+
+## AD-139：主界面按窗口宽度选择共享 shell，平台分支只封装真实能力
+
+状态：Accepted
+
+替代关系：本决策完整替代 AD-049 的设备 idiom 根导航规则；其它关于 durable write、scene-owned presentation、系统表面和输入方式的决策继续有效。
+
+背景：设备身份不能可靠描述窗口可用空间。iPad 分屏与 Stage Manager 会产生手机级宽度，macOS 窗口也可以收窄；反过来，按 `os(...)` 分叉相同内容的字号和布局会让共享界面逐步漂移。仓库曾删除设备 idiom 读取并建立宽度 shell，但绑定决策和平台字体映射没有同步收口，后续实现仍可能把产品语义误写成平台差异。
+
+决策：
+
+- `AppRootView` 是根 shell 的唯一选择者。`RootLayoutPolicy` 以实际测得的窗口宽度和系统 compact size class 选择 compact 或 regular：低于 720 pt 或系统明确 compact 时使用单列 `TabView` shell，其余使用共享的 `NavigationSplitView` shell。
+- 业务 Store、scene presentation/feedback router 和 durable navigation identity 位于 shell 分支之上。子视图只消费根发布的 `layoutShell` 或自己的有限容器宽度；不得读取 `UIDevice.current.userInterfaceIdiom`、`UIScreen`/`NSScreen` 来决定产品布局，也不得用平台编译条件复制同一页面。
+- `#if os(...)` 只用于目标上不存在的框架/API、原生 scene/menu/window plumbing、系统 presentation/list chrome、键盘与指针/触控输入差异、HealthKit/Watch/ActivityKit 等真实 capability。平台分支不得只为同一用户信息选择不同字号、间距、卡片或内容顺序。
+- 用户身份、答案、说明、状态、警告与有文字的操作使用同一跨平台系统语义字体；path、timestamp、badge、count、chart axis/range 等 metadata 也按信息角色共享紧凑语义。需要不同密度时由 compact/regular shell、容器宽度或明确的组件 style 决定，而不是操作系统名称。
+- 新增平台 UI 分支必须在当前工程文档说明 capability 理由和验证表面；若共享 SwiftUI、宽度策略或系统容器能表达同一行为，则删除分支。
+
+后果：iPhone、iPad 分屏和窄 Mac 窗口在相同宽度下获得相同的信息架构；宽 iPad 与宽 Mac 共享 sidebar/detail shell。真正的平台能力仍保持原生，触控目标与指针控件可按输入方式不同。字体和内容语义不再因为 target 漂移，平台条件编译的审查范围也更明确。
+
+验证：`RootLayoutPolicy` 行为测试覆盖 compact size class、719/720 pt 边界和首次测量；`AdaptiveShellUITests` 从可见 Tab Bar/Sidebar 判断实际 shell，并在普通字号的紧凑/常规宽度保存截图。代码审查逐项分类生产 UI 的平台分支，确认没有设备/屏幕身份布局读取；格式、本地化、完整签名测试和全设备安装仍是关闭门禁。
 
 ## 2. Agent 工作清单
 

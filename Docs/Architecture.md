@@ -312,6 +312,17 @@ Persistent deduplication and synced preferences use deterministic last-write-win
 
 ## UI Structure
 
+`AppRootView` is the only root-shell decision boundary. It measures the actual scene
+width and combines it with the system horizontal size class: below 720 pt or when the
+system reports compact, it renders the shared tab-based compact shell; otherwise it
+renders the shared sidebar/detail regular shell. The app-level Store and scene-owned
+presentation/feedback routers remain above that branch. Feature views consume
+`layoutShell` or their own finite container width and never read device idiom, screen
+model, or platform identity to choose product layout. Conditional compilation in UI is
+limited to unavailable platform APIs, native scene/menu/window plumbing, system chrome,
+input modality, and framework capabilities; equal product roles share semantic
+typography across platforms.
+
 Application data is app-scoped, while presentation and transient feedback are scene-scoped. Each visible scene owns one `AppPresentationRouter`/`AppPresentationHost` pair for typed sheets and one `AppSceneFeedbackRouter`/`AppSceneFeedbackHost` pair for alerts. The feedback router is FIFO and dismisses only the matching feedback UUID, so a stale callback cannot clear a later message. Settings export, database maintenance, and sync recovery use throwing boundaries: successes stay inline and failures enter only the initiating scene. `ContentView` bridges the remaining shared Store error slot into its own queue only for legacy callers; new work must not expand that bridge.
 
 Task-editor conflict recovery is typed and session-local. A stale draft never retries against its old mutation baseline. The editor may retain the user's current draft or, after explicit confirmation, replace it with a freshly projected task/checklist/category baseline and rebuilt parent candidates; that replacement also becomes the new discard baseline. Ordinary save failures continue through scene feedback and never silently mutate the editor draft.

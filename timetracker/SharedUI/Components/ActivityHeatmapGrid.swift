@@ -18,22 +18,18 @@ struct ActivityHeatmapGrid: View {
             }
             .id(snapshot.interval.start)
             .scrollDisabled(!layoutPolicy.overflowsAvailableWidth)
-            #if os(macOS)
-                .scrollIndicators(.automatic)
-            #else
-                .scrollIndicators(.hidden)
-            #endif
-                .defaultScrollAnchor(.trailing, for: .initialOffset)
-                .defaultScrollAnchor(.leading, for: .alignment)
-                .onGeometryChange(for: CGFloat.self) { proxy in
-                    proxy.size.width
-                } action: { width in
-                    guard abs(viewportWidth - width) > 0.5 else { return }
-                    viewportWidth = width
-                }
-                .accessibilityIdentifier(
-                    "home.heatmap.scroller.\(snapshot.taskID.uuidString)"
-                )
+            .scrollIndicators(.automatic)
+            .defaultScrollAnchor(.trailing, for: .initialOffset)
+            .defaultScrollAnchor(.leading, for: .alignment)
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.size.width
+            } action: { width in
+                guard abs(viewportWidth - width) > 0.5 else { return }
+                viewportWidth = width
+            }
+            .accessibilityIdentifier(
+                "home.heatmap.scroller.\(snapshot.taskID.uuidString)"
+            )
 
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {

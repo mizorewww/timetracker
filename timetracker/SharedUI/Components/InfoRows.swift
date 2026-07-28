@@ -24,11 +24,7 @@ struct InfoRow: View {
     }
 
     private var rowFont: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 
     private var titleText: some View {

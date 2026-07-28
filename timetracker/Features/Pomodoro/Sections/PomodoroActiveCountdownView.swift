@@ -61,11 +61,7 @@ struct PomodoroActiveCountdownView: View {
     }
 
     private var unavailableMessageFont: Font {
-        #if os(macOS)
         .callout
-        #else
-        .footnote
-        #endif
     }
 
     private func resumeButton(remaining: Int) -> some View {

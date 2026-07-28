@@ -99,5 +99,10 @@ extension TimeTrackerStore {
         {
             tasksRoute = nil
         }
+        if let detailTaskID = todayTaskRoute?.taskID,
+           shouldRetainTaskDetailRoute(detailTaskID) == false
+        {
+            todayTaskRoute = nil
+        }
     }
 }

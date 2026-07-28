@@ -62,7 +62,7 @@ struct CoreTasksRouteTests {
     }
 
     @Test @MainActor
-    func preparingTodayDetailSelectsTheTaskWithoutChangingItsNavigationSource() throws {
+    func openingTodayDetailKeepsItsRouteAboveAdaptiveShells() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try repository.createTask(
@@ -75,9 +75,9 @@ struct CoreTasksRouteTests {
         store.configureIfNeeded(context: context)
         store.desktopDestination = .today
 
-        let route = store.prepareTaskDetailRoute(task.id)
+        store.openTodayTaskDetail(task.id)
 
-        #expect(route == .detail(taskID: task.id))
+        #expect(store.todayTaskRoute == .detail(taskID: task.id))
         #expect(store.selectedTaskID == task.id)
         #expect(store.tasksRoute == nil)
         #expect(store.desktopDestination == .today)

@@ -50,11 +50,7 @@ struct SettingsStatusRow: View {
     }
 
     private var messageFont: Font {
-        #if os(macOS)
         .callout
-        #else
-        .caption
-        #endif
     }
 
     @ViewBuilder

@@ -8,6 +8,7 @@ extension TimeTrackerStore {
         }
         if didReplace {
             tasksRoute = nil
+            todayTaskRoute = nil
         }
     }
 
@@ -65,6 +66,7 @@ extension TimeTrackerStore {
         if didClear {
             selectedTaskID = nil
             tasksRoute = nil
+            todayTaskRoute = nil
             hideAppleHealthFromTimeline()
         }
     }
@@ -74,6 +76,9 @@ extension TimeTrackerStore {
             tasks.first { $0.id == selectedID && $0.deviceID == "demo" }?.id
         }
         let routedDemoTaskID = (tasksRoute?.taskID).flatMap { routedID in
+            tasks.first { $0.id == routedID && $0.deviceID == "demo" }?.id
+        }
+        let todayRoutedDemoTaskID = (todayTaskRoute?.taskID).flatMap { routedID in
             tasks.first { $0.id == routedID && $0.deviceID == "demo" }?.id
         }
         let replacementSelectionID = activeSegments.first(where: {
@@ -90,6 +95,9 @@ extension TimeTrackerStore {
         }
         if didClear, routedDemoTaskID != nil {
             tasksRoute = nil
+        }
+        if didClear, todayRoutedDemoTaskID != nil {
+            todayTaskRoute = nil
         }
     }
 

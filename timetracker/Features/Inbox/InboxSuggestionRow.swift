@@ -280,10 +280,6 @@ struct InboxSuggestionFailureBar: View {
 
 private enum InboxSuggestionTypography {
     static var primary: Font {
-        #if os(macOS)
         .body
-        #else
-        .subheadline
-        #endif
     }
 }

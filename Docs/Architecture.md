@@ -323,6 +323,14 @@ limited to unavailable platform APIs, native scene/menu/window plumbing, system 
 input modality, and framework capabilities; equal product roles share semantic
 typography across platforms.
 
+Task navigation has one store-owned route. In the regular sidebar/detail shell, that
+route directly chooses the detail column content; replacing task A with task B must not
+clear the route through the Tasks root first. The compact shell mirrors the same route
+into a typed `NavigationStack` path so system Back can request a guarded route close.
+Every detail dismissal is fenced by the task identity that created it, preventing a
+stale disappearing workspace from clearing a newer replacement route. Unsaved editor
+confirmation completes before either a replacement or a close mutates the route.
+
 Application data is app-scoped, while presentation and transient feedback are scene-scoped. Each visible scene owns one `AppPresentationRouter`/`AppPresentationHost` pair for typed sheets and one `AppSceneFeedbackRouter`/`AppSceneFeedbackHost` pair for alerts. The feedback router is FIFO and dismisses only the matching feedback UUID, so a stale callback cannot clear a later message. Settings export, database maintenance, and sync recovery use throwing boundaries: successes stay inline and failures enter only the initiating scene. `ContentView` bridges the remaining shared Store error slot into its own queue only for legacy callers; new work must not expand that bridge.
 
 Task-editor conflict recovery is typed and session-local. A stale draft never retries against its old mutation baseline. The editor may retain the user's current draft or, after explicit confirmation, replace it with a freshly projected task/checklist/category baseline and rebuilt parent candidates; that replacement also becomes the new discard baseline. Ordinary save failures continue through scene feedback and never silently mutate the editor draft.

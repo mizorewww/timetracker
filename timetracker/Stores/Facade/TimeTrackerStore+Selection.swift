@@ -38,6 +38,11 @@ extension TimeTrackerStore {
         tasksRoute = nil
     }
 
+    func closeTaskDetailNavigation(ifMatching taskID: UUID) {
+        guard tasksRoute?.taskID == taskID else { return }
+        tasksRoute = nil
+    }
+
     func archiveTaskProtectingUnsavedChanges(_ taskID: UUID) {
         let activeTaskID = taskDetailNavigationGuard.activeTaskID
         let archiveInvalidatesActiveDetail = activeTaskID.map {

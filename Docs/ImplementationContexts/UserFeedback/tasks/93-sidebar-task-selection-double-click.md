@@ -13,10 +13,10 @@
 
 ## 验收条件
 
-- [ ] 先建立 A → B 单击切换的失败行为测试或 UI acceptance。
-- [ ] 一次点击同时更新高亮和详情，不暴露中间 Tasks 根页。
-- [ ] 脏草稿仍需确认；取消确认时保持 A，确认后才原子切到 B。
-- [ ] iPad 与 macOS 正常字号侧边栏行为、选中态和截图验收通过。
+- [x] 先建立 A → B 单击切换的失败行为测试或 UI acceptance。
+- [x] 一次点击同时更新高亮和详情，不暴露中间 Tasks 根页。
+- [x] 脏草稿仍需确认；取消确认时保持 A，确认后才原子切到 B。
+- [x] iPad 与 macOS 正常字号侧边栏行为、选中态和截图验收通过。
 - [ ] `make test`、格式、本地化门禁通过，实现提交后完成 `make build-install-all`。
 
 ## 子代理编排
@@ -34,3 +34,20 @@
 ## 进度记录
 
 - 2026-07-28：认领侧边栏双击切换 bug；下一步先锁定 A → B 的中间状态写回来源。
+- 2026-07-28：三个只读审计确认 sidebar 对所有 selection 都先 dismiss
+  detail，导致 task replacement 把 route 清回 Tasks；测试缺口是没有覆盖
+  “已有详情时点另一个 sidebar task”。
+- 2026-07-28：task selection 改为受草稿保护的原位 replacement，destination
+  selection 继续关闭详情；compact path 与 regular detail 分别遵守系统
+  `NavigationStack` / `NavigationSplitView` 语义，旧详情 dismiss 按 task ID
+  fencing，detail loader 按 task identity 重建草稿。
+- 2026-07-28：`CoreTasksRouteTests` 定向 14/14 通过；iPad landscape 与
+  macOS XCUITest 均 1/1 通过，并分别生成
+  `ipad-sidebar-single-click-task-replacement` 与
+  `mac-sidebar-single-click-task-replacement` 截图。两张截图已由主代理检查：
+  SwiftData Docs 同时成为 Sidebar 唯一选中项和可见详情，未出现 Tasks 根页、
+  空白详情、裁切或重叠。
+- 2026-07-28：提交前门禁通过：`make test` 1571/1571，
+  `make format-check` 0/875 待格式化，`make localization-check` 9/9，
+  `make check-hooks` 确认 `.githooks` 已启用。下一 checkpoint 是实现提交，
+  然后执行全设备构建安装。

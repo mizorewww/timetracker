@@ -27,6 +27,149 @@ struct CoreTasksRouteTests {
     }
 
     @Test @MainActor
+    func sidebarTaskSelectionReplacesTheActiveDetailWithoutClosingItFirst() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let current = try repository.createTask(
+            title: "Current",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let next = try repository.createTask(
+            title: "Next",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        store.openTaskDetail(current.id)
+        let registrationID = UUID()
+        var dismissCount = 0
+        store.taskDetailNavigationGuard.register(
+            id: registrationID,
+            taskID: current.id,
+            hasUnsavedChanges: { false },
+            requestDiscardConfirmation: { _ in },
+            dismissDetail: {
+                dismissCount += 1
+                store.closeTaskDetailNavigation()
+            }
+        )
+
+        SidebarSelection.task(next.id).navigate(in: store)
+
+        #expect(dismissCount == 0)
+        #expect(store.tasksRoute == .detail(taskID: next.id))
+        #expect(store.selectedTaskID == next.id)
+        #expect(store.desktopDestination == .tasks)
+    }
+
+    @Test @MainActor
+    func sidebarTaskSelectionKeepsDirtyDetailOnCancelAndAtomicallyReplacesItOnDiscard() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let current = try repository.createTask(
+            title: "Current draft",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let next = try repository.createTask(
+            title: "Next detail",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        store.openTaskDetail(current.id)
+        let registrationID = UUID()
+        var isDirty = true
+        var dismissCount = 0
+        var confirmationRequestID: UUID?
+        store.taskDetailNavigationGuard.register(
+            id: registrationID,
+            taskID: current.id,
+            hasUnsavedChanges: { isDirty },
+            discardChanges: {
+                isDirty = false
+                return true
+            },
+            requestDiscardConfirmation: { requestID in
+                confirmationRequestID = requestID
+            },
+            dismissDetail: {
+                dismissCount += 1
+                store.closeTaskDetailNavigation()
+            }
+        )
+
+        SidebarSelection.task(next.id).navigate(in: store)
+
+        let cancelledRequestID = try #require(confirmationRequestID)
+        #expect(store.tasksRoute == .detail(taskID: current.id))
+        #expect(store.selectedTaskID == current.id)
+        store.taskDetailNavigationGuard.cancelPendingNavigation(
+            requestID: cancelledRequestID
+        )
+        #expect(store.tasksRoute == .detail(taskID: current.id))
+        #expect(store.selectedTaskID == current.id)
+        #expect(dismissCount == 0)
+        #expect(store.taskDetailNavigationGuard.hasPendingNavigation == false)
+
+        confirmationRequestID = nil
+        SidebarSelection.task(next.id).navigate(in: store)
+        let acceptedRequestID = try #require(confirmationRequestID)
+        #expect(
+            store.taskDetailNavigationGuard
+                .discardChangesAndCompletePendingNavigation(
+                    requestID: acceptedRequestID
+                )
+        )
+
+        #expect(isDirty == false)
+        #expect(dismissCount == 0)
+        #expect(store.taskDetailNavigationGuard.hasPendingNavigation == false)
+        #expect(store.tasksRoute == .detail(taskID: next.id))
+        #expect(store.selectedTaskID == next.id)
+    }
+
+    @Test @MainActor
+    func staleDetailDismissalCannotCloseAReplacementRoute() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        )
+        let staleTask = try repository.createTask(
+            title: "Stale detail",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let replacementTask = try repository.createTask(
+            title: "Replacement detail",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let store = makeTestStore()
+        store.configureIfNeeded(context: context)
+        store.openTaskDetail(staleTask.id)
+        store.openTaskDetail(replacementTask.id)
+
+        store.closeTaskDetailNavigation(ifMatching: staleTask.id)
+
+        #expect(
+            store.tasksRoute == .detail(taskID: replacementTask.id)
+        )
+        #expect(store.selectedTaskID == replacementTask.id)
+        #expect(store.desktopDestination == .tasks)
+    }
+
+    @Test @MainActor
     func openingAnUnavailableTaskLeavesTheCurrentRouteUntouched() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")

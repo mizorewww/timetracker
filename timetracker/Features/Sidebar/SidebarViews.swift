@@ -3,6 +3,32 @@ import SwiftUI
 enum SidebarSelection: Hashable {
     case destination(TimeTrackerStore.DesktopDestination)
     case task(UUID)
+
+    @MainActor
+    func navigate(
+        in store: TimeTrackerStore,
+        onNavigate: @escaping () -> Void = {}
+    ) {
+        let dismissesActiveDetail = switch self {
+        case .destination:
+            true
+        case .task:
+            false
+        }
+
+        store.taskDetailNavigationGuard.requestNavigation(
+            dismissingActiveDetail: dismissesActiveDetail
+        ) {
+            switch self {
+            case let .destination(destination):
+                store.closeTaskDetailNavigation()
+                store.desktopDestination = destination
+            case let .task(taskID):
+                store.openTaskDetail(taskID)
+            }
+            onNavigate()
+        }
+    }
 }
 
 struct SidebarView: View {
@@ -116,18 +142,7 @@ struct SidebarView: View {
             selectionFromStore
         } set: { newValue in
             guard let newValue, newValue != selectionFromStore else { return }
-            store.taskDetailNavigationGuard.requestNavigation(
-                dismissingActiveDetail: true
-            ) {
-                switch newValue {
-                case let .destination(destination):
-                    store.closeTaskDetailNavigation()
-                    store.desktopDestination = destination
-                case let .task(taskID):
-                    store.openTaskDetail(taskID)
-                }
-                onNavigate()
-            }
+            newValue.navigate(in: store, onNavigate: onNavigate)
         }
     }
 

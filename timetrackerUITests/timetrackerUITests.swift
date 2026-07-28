@@ -3212,6 +3212,95 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testSidebarSingleActivationReplacesSelectedTaskDetail() throws {
+        #if os(iOS)
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        #endif
+
+        let currentTitle = "Read Apple HIG"
+        let nextTitle = "SwiftData Docs"
+        let app = launchApp(
+            route: "task-detail",
+            replacesDemoDataOnLaunch: true,
+            taskTitle: currentTitle
+        )
+        #if os(iOS)
+        XCTAssertTrue(
+            initialConfigurationIsReady(in: app),
+            "The deterministic task fixture must finish before Sidebar assertions begin."
+        )
+        #endif
+        ensureTaskDetailIsReady(named: currentTitle, in: app)
+        #if os(macOS)
+        try placeMainWindowOnPrimaryScreen(in: app)
+        #endif
+
+        let currentTask = sidebarTaskRow(named: currentTitle, in: app)
+        let nextTask = sidebarTaskRow(named: nextTitle, in: app)
+        #if os(iOS)
+        if currentTask.waitForExistence(timeout: 2) == false {
+            let identifiedToggle = app.descendants(matching: .any)[
+                "sidebar.show"
+            ].firstMatch
+            let systemToggle = app.buttons["Show Sidebar"].firstMatch
+            if identifiedToggle.waitForExistence(timeout: 2),
+               identifiedToggle.isHittable
+            {
+                activate(identifiedToggle)
+            } else if systemToggle.waitForExistence(timeout: 2),
+                      systemToggle.isHittable
+            {
+                activate(systemToggle)
+            }
+        }
+        guard currentTask.waitForExistence(timeout: 5) else {
+            throw XCTSkip("Persistent Sidebar selection is verified on iPad and macOS.")
+        }
+        #endif
+        XCTAssertTrue(
+            currentTask.waitForExistence(timeout: 5),
+            "The current task must remain visible in the automatically expanded Sidebar branch."
+        )
+        scrollUntilHittable(nextTask, direction: .up, in: app)
+        XCTAssertTrue(
+            nextTask.waitForExistence(timeout: 5) && nextTask.isHittable,
+            "The sibling task must be available for one direct Sidebar activation."
+        )
+        XCTAssertTrue(
+            waitUntil(timeout: 3) {
+                self.sidebarTaskIsSelected(currentTask, in: app)
+            },
+            "The Sidebar must highlight the detail task before replacement."
+        )
+
+        activate(nextTask)
+
+        let titleField = app.descendants(matching: .any)[
+            "task.editor.title.field"
+        ].firstMatch
+        XCTAssertTrue(
+            waitUntil(timeout: 5) {
+                let title = titleField.value as? String ?? titleField.label
+                return title == nextTitle
+            },
+            "One activation must replace the current detail with the selected sibling."
+        )
+        XCTAssertTrue(app.descendants(matching: .any)["task.detail"].firstMatch.exists)
+        XCTAssertTrue(
+            waitUntil(timeout: 3) {
+                self.sidebarTaskIsSelected(nextTask, in: app) &&
+                    self.sidebarTaskIsSelected(currentTask, in: app) == false
+            },
+            "The Sidebar highlight must move from A to B without falling back to Tasks."
+        )
+        try capture(
+            "\(platformScreenshotPrefix(in: app))-sidebar-single-click-task-replacement",
+            app: app
+        )
+    }
+
+    @MainActor
     func testTaskDetailPhoneTabNavigationKeepsAutosavedChanges() throws {
         #if os(macOS)
         throw XCTSkip("Phone tab navigation is available on iPhone.")
@@ -11367,6 +11456,37 @@ final class timetrackerUITests: XCTestCase {
                 title
             ))
             .firstMatch
+    }
+
+    private func sidebarTaskRow(
+        named title: String,
+        in app: XCUIApplication
+    ) -> XCUIElement {
+        app.descendants(matching: .any)
+            .matching(NSPredicate(
+                format: "identifier BEGINSWITH %@ AND label == %@",
+                "sidebar.task.",
+                title
+            ))
+            .firstMatch
+    }
+
+    private func sidebarTaskIsSelected(
+        _ task: XCUIElement,
+        in app: XCUIApplication
+    ) -> Bool {
+        if task.isSelected {
+            return true
+        }
+        #if os(macOS)
+        return app.outlines.cells
+            .containing(.any, identifier: task.identifier)
+            .firstMatch.isSelected
+        #else
+        return app.cells
+            .containing(.any, identifier: task.identifier)
+            .firstMatch.isSelected
+        #endif
     }
 
     private func shortcutPresentation(of element: XCUIElement) -> String {

@@ -255,7 +255,10 @@ final class CommittedMutationSystemProjectionWorker {
             let worker = try PersistentHistorySyncSnapshotWorker(
                 container: container
             )
-            _ = try await worker.record(events: events)
+            let result = try await worker.record(events: events)
+            if case .recorded = result {
+                SyncConflictPromptChangeBroadcaster.publish()
+            }
         }
         materializer = { _ in
             guard let container = containerProvider.currentContainer() else {

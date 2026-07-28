@@ -12,7 +12,7 @@ nonisolated enum SyncSnapshotDomain: CaseIterable, Hashable, Sendable {
 }
 
 @MainActor
-struct SyncConflictService {
+struct SyncConflictService: Sendable {
     nonisolated static let stateFileName = "SyncConflictState.json"
     nonisolated static let pendingForcedUploadSnapshotFileName = "PendingForcedUploadSnapshot.json"
     nonisolated static let stateDirectoryName = "TimeTrackerSync"
@@ -112,7 +112,7 @@ struct SyncConflictService {
         return nil
     }
 
-    func prompt() throws -> SyncConflictPrompt? {
+    nonisolated func prompt() throws -> SyncConflictPrompt? {
         let state = try loadState()
         return prompt(from: state)
     }

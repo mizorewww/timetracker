@@ -12,7 +12,7 @@ struct StoreRefreshCoordinator {
                 schedulesPomodoroReconciliation: true
             )
             refreshDerivedDomains(on: store, plan: plan)
-            applyPostRefreshEffects(on: store, plan: plan)
+            applyScenePostRefreshEffects(on: store, plan: plan)
         }
     }
 
@@ -103,11 +103,6 @@ struct StoreRefreshCoordinator {
         }
     }
 
-    private func applyPostRefreshEffects(on store: TimeTrackerStore, plan: StoreRefreshPlan) {
-        applyScenePostRefreshEffects(on: store, plan: plan)
-        applySystemSurfaceEffects(on: store, plan: plan)
-    }
-
     private func applyScenePostRefreshEffects(
         on store: TimeTrackerStore,
         plan: StoreRefreshPlan
@@ -122,23 +117,6 @@ struct StoreRefreshCoordinator {
 
         if plan.refreshChecklist || plan.refreshTasks || plan.refreshPreferences {
             store.autoSuggestChecklistVisualsIfNeeded()
-        }
-    }
-
-    private func applySystemSurfaceEffects(
-        on store: TimeTrackerStore,
-        plan: StoreRefreshPlan
-    ) {
-        if plan.syncLiveActivities {
-            store.syncLiveActivitiesIfAvailable()
-        }
-
-        if plan.refreshLedger || plan.refreshTasks {
-            store.syncWidgetSnapshotIfAvailable()
-        }
-
-        if plan.refreshLedger || plan.refreshTasks || plan.refreshPreferences {
-            store.syncWatchSnapshotIfAvailable()
         }
     }
 }

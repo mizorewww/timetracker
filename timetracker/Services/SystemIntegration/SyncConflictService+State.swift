@@ -15,7 +15,7 @@ extension SyncConflictService {
         category: "SyncConflictState"
     )
 
-    func loadState() throws -> SyncConflictState {
+    nonisolated func loadState() throws -> SyncConflictState {
         try withExclusiveStateAccess {
             try loadStateWithLockedState(
                 recoveryMirrorIntent:
@@ -104,7 +104,9 @@ extension SyncConflictService {
     /// remains snapshot-only for backwards compatibility. Defaults written
     /// before the destructive reset still distinguish explicit replacement
     /// from reconciliation when the authoritative state had to be quarantined.
-    private func inferredPendingLocalIntentForRecoveryMirror() -> SyncPendingLocalIntent {
+    private nonisolated func inferredPendingLocalIntentForRecoveryMirror()
+        -> SyncPendingLocalIntent
+    {
         let defaults = AppDefaults.shared
         if defaults.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) ||
             defaults.bool(forKey: AppCloudSync.activeCloudReconciliationKey)

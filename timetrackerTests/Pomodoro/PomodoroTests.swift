@@ -404,7 +404,7 @@ struct PomodoroTests {
     }
 
     @Test @MainActor
-    func outcomeResolvedMutationRecordsDurableSyncOnlyForCommittedOutcome() throws {
+    func outcomeResolvedMutationQueuesDurableSyncOnlyForCommittedOutcome() async throws {
         let directory = FileManager.default.temporaryDirectory.appending(
             path: "PomodoroOutcomeSyncTests-\(UUID().uuidString)",
             directoryHint: .isDirectory
@@ -412,7 +412,7 @@ struct PomodoroTests {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
 
-        try withPomodoroCloudSyncMode {
+        try await withPomodoroCloudSyncMode {
             let context = try makeTestContext()
             let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
             let task = try taskRepository.createTask(
@@ -424,9 +424,22 @@ struct PomodoroTests {
             let syncConflictService = SyncConflictService(
                 stateURL: directory.appending(path: "SyncConflictState.json")
             )
+            let syncSnapshotWorker = try PersistentHistorySyncSnapshotWorker(
+                container: context.container,
+                syncConflictService: syncConflictService
+            )
+            let projectionScheduler =
+                CommittedMutationSystemProjectionScheduler { sink, work in
+                    guard sink == .syncSnapshot else { return }
+                    _ = try await syncSnapshotWorker.record(
+                        events: work.events
+                    )
+                }
             let store = TimeTrackerStore(
                 writeAuthorization: .isolatedTestHarness,
-                syncConflictService: syncConflictService
+                syncConflictService: syncConflictService,
+                committedMutationSystemProjectionScheduler:
+                projectionScheduler
             )
             defer { store.pomodoroReconciliationTask?.cancel() }
             store.configureIfNeeded(context: context)
@@ -441,6 +454,7 @@ struct PomodoroTests {
             }
 
             #expect(noOp == nil)
+            await projectionScheduler.waitUntilIdle()
             #expect(try syncConflictService.loadState().localGeneration == generationBeforeNoOp)
 
             let committedSessionID: UUID? = store.performMutation(
@@ -454,6 +468,7 @@ struct PomodoroTests {
                 ).sessionID
             }
             let sessionID = try #require(committedSessionID)
+            await projectionScheduler.waitUntilIdle()
             let state = try syncConflictService.loadState()
 
             #expect((state.localGeneration ?? 0) > (generationBeforeNoOp ?? 0))
@@ -1404,7 +1419,9 @@ private enum BreakResumeTaskMutation {
 }
 
 @MainActor
-private func withPomodoroCloudSyncMode(_ body: () throws -> Void) throws {
+private func withPomodoroCloudSyncMode(
+    _ body: () async throws -> Void
+) async throws {
     let defaults = AppDefaults.shared
     let previousMode = defaults.object(forKey: AppCloudSync.modeKey)
     let previousUploadReset = defaults.object(forKey: AppCloudSync.pendingCloudUploadResetKey)
@@ -1457,5 +1474,5 @@ private func withPomodoroCloudSyncMode(_ body: () throws -> Void) throws {
             defaults.removeObject(forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
         }
     }
-    try body()
+    try await body()
 }

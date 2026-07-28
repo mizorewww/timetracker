@@ -6,6 +6,9 @@ import SwiftData
 @MainActor
 @Observable
 final class TimeTrackerStore {
+    typealias SyncConflictPromptLoader =
+        @Sendable () async throws -> SyncConflictPrompt?
+
     let llmCredentialStore: any LLMCredentialStoring
     let inboxSuggestionService: LLMInboxSuggestionService
     let checklistVisualSuggestionService: LLMChecklistVisualSuggestionService
@@ -29,6 +32,7 @@ final class TimeTrackerStore {
         appleHealthTimelinePreferenceStore: (any AppleHealthTimelinePreferenceStoring)? = nil,
         writeAuthorization: StoreWriteAuthorization = .applicationState,
         syncConflictService: SyncConflictService? = nil,
+        syncConflictPromptLoader: SyncConflictPromptLoader? = nil,
         taskDraftRecoveryStore: TaskDraftRecoveryStore? = nil,
         committedMutationSystemProjectionScheduler:
         CommittedMutationSystemProjectionScheduler? = nil
@@ -69,7 +73,20 @@ final class TimeTrackerStore {
             .unavailable
         }
         self.writeAuthorization = writeAuthorization
-        self.syncConflictService = syncConflictService ?? Self.defaultSyncConflictService()
+        let resolvedSyncConflictService =
+            syncConflictService ?? Self.defaultSyncConflictService()
+        self.syncConflictService = resolvedSyncConflictService
+        if let syncConflictPromptLoader {
+            self.syncConflictPromptLoader =
+                syncConflictPromptLoader
+        } else {
+            let promptReader = SyncConflictPromptReader(
+                service: resolvedSyncConflictService
+            )
+            self.syncConflictPromptLoader = {
+                try await promptReader.load()
+            }
+        }
         taskDraftRecoveryController = TaskDraftRecoveryController(
             store: taskDraftRecoveryStore ?? TaskDraftRecoveryStore()
         )
@@ -122,6 +139,7 @@ final class TimeTrackerStore {
     deinit {
         pomodoroReconciliationTask?.cancel()
         scheduledSyncRefreshTask?.cancel()
+        syncConflictPromptRefreshTask?.cancel()
         appleHealthTimelineLoadTask?.cancel()
         for request in inboxSuggestionTasksByItemID.values {
             request.task.cancel()
@@ -247,6 +265,14 @@ final class TimeTrackerStore {
     @ObservationIgnored var cloudAccountCheckRequestID: UUID?
     var lastSyncActivity: SyncActivityOutcome?
     var pendingSyncConflict: SyncConflictPrompt?
+    @ObservationIgnored
+    let syncConflictPromptLoader: SyncConflictPromptLoader
+    @ObservationIgnored
+    var syncConflictPromptRefreshRequestID = UUID()
+    @ObservationIgnored
+    var isSyncConflictPromptRefreshRequested = false
+    @ObservationIgnored
+    var syncConflictPromptRefreshTask: Task<Void, Never>?
     @ObservationIgnored var hasCompletedStartupConfiguration = false
     @ObservationIgnored var hasBootstrappedSyncConflictState = false
     @ObservationIgnored var isConfiguringStartup = false

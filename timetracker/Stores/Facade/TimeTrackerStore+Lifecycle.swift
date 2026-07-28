@@ -46,7 +46,8 @@ extension TimeTrackerStore {
 
     /// Resolves mutation events from the committed command outcome so stale
     /// facade caches cannot over- or under-report the domains that changed.
-    /// Returning `nil` is a canonical no-op and skips refresh and sync recording.
+    /// Returning `nil` is a canonical no-op and skips refresh, broadcast, and
+    /// post-commit projection scheduling.
     func performMutation<Outcome>(
         eventsForOutcome: (Outcome) -> Set<StoreDomainEvent>,
         _ action: () throws -> Outcome?
@@ -111,12 +112,19 @@ extension TimeTrackerStore {
         return outcome.subjectSegmentID != nil
     }
 
-    /// Refreshes and records a mutation that committed in a sibling context
-    /// under the store-scoped lock. Empty events represent a canonical no-op
-    /// and intentionally do not advance the sync generation.
-    func finishStoreScopedMutation(events: Set<StoreDomainEvent>) {
+    /// Refreshes the scene and schedules projection work for a mutation that
+    /// committed in a sibling context under the store-scoped lock. Empty
+    /// events represent a canonical no-op and do not enqueue a generation.
+    func finishStoreScopedMutation(
+        events: Set<StoreDomainEvent>,
+        forcedSystemSinks:
+        Set<CommittedMutationSystemProjectionSink> = []
+    ) {
         guard events.isEmpty == false else { return }
-        finishCommittedMutation(events: events)
+        finishCommittedMutation(
+            events: events,
+            forcedSystemSinks: forcedSystemSinks
+        )
     }
 
     /// Converges scene read models after another context may have changed the
@@ -167,7 +175,11 @@ extension TimeTrackerStore {
         }
     }
 
-    private func finishCommittedMutation(events: Set<StoreDomainEvent>) {
+    private func finishCommittedMutation(
+        events: Set<StoreDomainEvent>,
+        forcedSystemSinks:
+        Set<CommittedMutationSystemProjectionSink> = []
+    ) {
         var postCommitError: Error?
         let plan = PerformanceSignpost.interval("Store refresh planning") {
             refreshPlanner.plan(after: events)
@@ -180,18 +192,14 @@ extension TimeTrackerStore {
         } catch {
             postCommitError = error
         }
-        do {
-            try PerformanceSignpost.interval("mutation.syncSnapshot") {
-                try recordLocalSyncSnapshotIfNeeded(events: events)
-            }
-        } catch {
-            postCommitError = postCommitError ?? error
-        }
         StoreMutationBroadcaster.publish(
             events: events,
             source: self
         )
-        enqueueCommittedMutationSystemProjections(events: events)
+        enqueueCommittedMutationSystemProjections(
+            events: events,
+            forcedSystemSinks: forcedSystemSinks
+        )
 
         if let postCommitError {
             errorMessage = String(
@@ -201,8 +209,10 @@ extension TimeTrackerStore {
         }
     }
 
-    private func enqueueCommittedMutationSystemProjections(
-        events: Set<StoreDomainEvent>
+    func enqueueCommittedMutationSystemProjections(
+        events: Set<StoreDomainEvent>,
+        forcedSystemSinks:
+        Set<CommittedMutationSystemProjectionSink> = []
     ) {
         let scheduler: CommittedMutationSystemProjectionScheduler
         if let committedMutationSystemProjectionScheduler {
@@ -222,24 +232,10 @@ extension TimeTrackerStore {
             }
         }
         scheduler.enqueue(
-            CommittedMutationSystemProjectionReceipt(events: events)
+            CommittedMutationSystemProjectionReceipt(
+                events: events,
+                forcedSystemSinks: forcedSystemSinks
+            )
         )
-    }
-
-    private func recordLocalSyncSnapshotIfNeeded(events: Set<StoreDomainEvent>) throws {
-        guard let modelContext else { return }
-        let snapshotEvents: Set<StoreDomainEvent> = scheduledSyncRefreshBatch == nil
-            ? events
-            : [.fullSync]
-        let snapshotResult = try syncConflictService.recordLocalMutation(
-            context: modelContext,
-            events: snapshotEvents
-        )
-        switch snapshotResult {
-        case let .recorded(prompt):
-            pendingSyncConflict = prompt
-        case .notRecorded:
-            pendingSyncConflict = try syncConflictService.prompt()
-        }
     }
 }

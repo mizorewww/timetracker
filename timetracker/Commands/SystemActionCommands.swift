@@ -3,103 +3,49 @@ import OSLog
 import SwiftData
 
 @MainActor
-struct CommittedMutationSnapshotRecorder {
+struct SystemActionPostCommitEffects {
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
-        category: "CommittedMutationSnapshot"
+        category: "SystemActionPostCommit"
     )
 
-    private let syncConflictService: SyncConflictService
+    typealias SchedulerProvider = @MainActor (
+        ModelContainer
+    ) throws -> CommittedMutationSystemProjectionScheduler
+
+    private let schedulerProvider: SchedulerProvider
 
     init() {
-        syncConflictService = SyncConflictService()
+        schedulerProvider = { container in
+            try CommittedMutationSystemProjectionSchedulerRegistry.shared
+                .scheduler(for: container)
+        }
     }
 
-    init(syncConflictService: SyncConflictService) {
-        self.syncConflictService = syncConflictService
+    init(schedulerProvider: @escaping SchedulerProvider) {
+        self.schedulerProvider = schedulerProvider
     }
 
-    /// Snapshot persistence is a post-commit operation. Its failure must never
-    /// make callers report that the already-durable user mutation failed.
-    @discardableResult
-    func recordLocalMutation(
-        context: ModelContext,
+    /// The durable command has already committed. Sibling scenes receive a
+    /// queued read-only catch-up, while persistent-history-backed projection
+    /// lanes perform sync snapshot, Widget, Watch, and Live Activity work
+    /// independently. Neither path may delay or reverse the command result.
+    func apply(
+        container: ModelContainer,
         events: Set<StoreDomainEvent>
-    ) -> Error? {
-        do {
-            _ = try syncConflictService.recordLocalMutation(context: context, events: events)
-            return nil
-        } catch {
-            Self.logger.error(
-                "Failed to update the committed-mutation sync snapshot: \(error.localizedDescription, privacy: .public)"
-            )
-            return error
-        }
-    }
-}
-
-@MainActor
-struct CommittedMutationSurfaceSynchronizer {
-    private static let logger = Logger(
-        subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
-        category: "CommittedMutationSurfaces"
-    )
-
-    private let widgetCache: WidgetSnapshotCache?
-
-    init(widgetCache: WidgetSnapshotCache? = nil) {
-        self.widgetCache = widgetCache
-    }
-
-    /// System-surface refresh is post-commit work. A failure is reported for
-    /// diagnostics but must not make a durable App Intent mutation look failed
-    /// (which could prompt an unsafe retry of a non-idempotent action).
-    @discardableResult
-    func synchronize(
-        context: ModelContext,
-        events: Set<StoreDomainEvent>,
-        now: Date = Date()
-    ) async -> Error? {
-        do {
-            let store = TimeTrackerStore()
-            store.configureRepositoriesIfNeeded(context: context)
-            let surfaceError = try store.refreshCommittedMutationSurfaces(
-                events: events,
-                widgetCache: widgetCache,
-                now: now
-            )
-            await store.waitForLiveActivityReconciliationIfAvailable()
-            if let surfaceError {
-                Self.logger.error(
-                    "Failed to refresh a committed mutation on system surfaces: \(surfaceError.localizedDescription, privacy: .public)"
-                )
-                return surfaceError
-            }
-            return nil
-        } catch {
-            Self.logger.error(
-                "Failed to refresh a committed mutation on system surfaces: \(error.localizedDescription, privacy: .public)"
-            )
-            return error
-        }
-    }
-}
-
-@MainActor
-struct SystemActionPostCommitEffects {
-    /// Each effect runs after the system action has committed. A best-effort
-    /// failure must not turn a durable action into a retryable failure.
-    func apply(context: ModelContext, events: Set<StoreDomainEvent>) async {
+    ) {
         guard events.isEmpty == false else { return }
-        _ = CommittedMutationSnapshotRecorder().recordLocalMutation(
-            context: context,
-            events: events
-        )
-        _ = await CommittedMutationSurfaceSynchronizer().synchronize(
-            context: context,
-            events: events
-        )
         StoreMutationBroadcaster.publish(events: events)
+        do {
+            let scheduler = try schedulerProvider(container)
+            scheduler.enqueue(
+                CommittedMutationSystemProjectionReceipt(events: events)
+            )
+        } catch {
+            Self.logger.error(
+                "Could not schedule committed system-action projections: \(error.localizedDescription, privacy: .public)"
+            )
+        }
     }
 }
 

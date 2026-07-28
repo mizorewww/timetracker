@@ -135,6 +135,45 @@ struct CoreSyncConflictResolutionIdentityTests {
     }
 
     @Test @MainActor
+    func resolvingAConflictClearsThePromptInSiblingScenes() async throws {
+        try await withICloudSyncMode {
+            let fixture = try makeConflictFixture()
+            defer { fixture.removeTemporaryFiles() }
+            let scheduler =
+                CommittedMutationSystemProjectionScheduler { _, _ in }
+            let firstStore = TimeTrackerStore(
+                writeAuthorization: .isolatedTestHarness,
+                syncConflictService: fixture.service,
+                committedMutationSystemProjectionScheduler: scheduler
+            )
+            let secondStore = TimeTrackerStore(
+                writeAuthorization: .isolatedTestHarness,
+                syncConflictService: fixture.service,
+                committedMutationSystemProjectionScheduler: scheduler
+            )
+            firstStore.configureRepositoriesIfNeeded(
+                context: fixture.context
+            )
+            secondStore.configureRepositoriesIfNeeded(
+                context: fixture.context
+            )
+            firstStore.pendingSyncConflict = fixture.prompt
+            secondStore.pendingSyncConflict = fixture.prompt
+            secondStore.installSyncObservers()
+
+            let result = try firstStore.resolveSyncConflict(
+                expectedConflictID: fixture.prompt.id,
+                resolution: .uploadLocal
+            )
+            await secondStore.waitForSyncConflictPromptRefresh()
+
+            #expect(result == .appliedImmediately)
+            #expect(firstStore.pendingSyncConflict == nil)
+            #expect(secondStore.pendingSyncConflict == nil)
+        }
+    }
+
+    @Test @MainActor
     func unconfiguredStoreResolutionThrowsWithoutMutatingGlobalFeedback() {
         let store = makeTestStore()
 
@@ -253,6 +292,64 @@ struct CoreSyncConflictResolutionIdentityTests {
             }
         }
         try body()
+    }
+
+    private func withICloudSyncMode(
+        _ body: () async throws -> Void
+    ) async throws {
+        let defaults = AppDefaults.shared
+        let previousMode = defaults.string(forKey: AppCloudSync.modeKey)
+        let previousEnabled = defaults.object(
+            forKey: AppCloudSync.enabledKey
+        )
+        let recoveryKeys = [
+            AppCloudSync.pendingCloudUploadResetKey,
+            AppCloudSync.pendingCloudDownloadResetKey,
+            AppCloudSync.queuedCloudReconciliationKey,
+            AppCloudSync.activeCloudReconciliationKey,
+            AppCloudSync.cloudRecoveryStoreResetKey,
+            AppCloudSync.activeCloudDownloadRecoveryKey,
+        ]
+        let previousRecoveryValues = Dictionary(
+            uniqueKeysWithValues: recoveryKeys.map {
+                ($0, defaults.object(forKey: $0))
+            }
+        )
+        recoveryKeys.forEach { defaults.removeObject(forKey: $0) }
+        defaults.set(
+            AppCloudSync.modeICloud,
+            forKey: AppCloudSync.modeKey
+        )
+        defer {
+            if let previousMode {
+                defaults.set(
+                    previousMode,
+                    forKey: AppCloudSync.modeKey
+                )
+            } else {
+                defaults.removeObject(
+                    forKey: AppCloudSync.modeKey
+                )
+            }
+            if let previousEnabled {
+                defaults.set(
+                    previousEnabled,
+                    forKey: AppCloudSync.enabledKey
+                )
+            } else {
+                defaults.removeObject(
+                    forKey: AppCloudSync.enabledKey
+                )
+            }
+            for key in recoveryKeys {
+                if let previousValue = previousRecoveryValues[key] {
+                    defaults.set(previousValue, forKey: key)
+                } else {
+                    defaults.removeObject(forKey: key)
+                }
+            }
+        }
+        try await body()
     }
 }
 

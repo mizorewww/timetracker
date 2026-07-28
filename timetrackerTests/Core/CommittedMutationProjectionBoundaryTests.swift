@@ -81,7 +81,12 @@ struct CommittedMutationProjectionBoundaryTests {
     }
 
     @Test @MainActor
-    func blockedSystemProjectionsDoNotDelayCommittedMutationVisibilityOrBroadcast() async throws {
+    func ordinarySceneMutationRefreshesAndBroadcastsBeforeQueuedProjectionsWithoutSynchronousSyncStateIO()
+        async throws
+    {
+        let cloudSyncMode = SceneCloudSyncModeLease()
+        defer { cloudSyncMode.restore() }
+        let syncStateIO = SceneSyncStateIOProbe()
         let context = try makeTestContext()
         let gate = BlockingSystemProjectionWorker()
         let scheduler = CommittedMutationSystemProjectionScheduler {
@@ -91,7 +96,12 @@ struct CommittedMutationProjectionBoundaryTests {
         }
         let fixture = makeStoreFixture(
             scheduler: scheduler,
-            name: #function
+            name: #function,
+            localStateFile: DurableLocalFile(
+                injectFault: { point in
+                    syncStateIO.record(point)
+                }
+            )
         )
         defer {
             gate.releaseAll()
@@ -158,6 +168,7 @@ struct CommittedMutationProjectionBoundaryTests {
         #expect(store.tasks.contains { $0.id == taskID })
         #expect(observingStore.tasks.contains { $0.id == taskID } == false)
         #expect(store.errorMessage == nil)
+        #expect(syncStateIO.points.isEmpty)
         for sink in CommittedMutationSystemProjectionSink.allCases {
             #expect(gate.isBlocked(sink))
             #expect(gate.calls(for: sink).count == 1)
@@ -178,7 +189,42 @@ struct CommittedMutationProjectionBoundaryTests {
             #expect(calls.count == 2)
             #expect(calls.last?.events == events)
             #expect(calls.last?.receiptIDs.count == 1)
+            #expect(calls.last?.forceCurrentStateProjection == false)
         }
+        #expect(syncStateIO.points.isEmpty)
+    }
+
+    @Test @MainActor
+    func facadeCanForceOneSystemSurfaceWithoutInventingAMutationEvent()
+        async
+    {
+        let probe = RecordingSystemProjectionWorker()
+        let scheduler = CommittedMutationSystemProjectionScheduler {
+            sink,
+            work in
+            probe.record(sink: sink, work: work)
+        }
+        let fixture = makeStoreFixture(
+            scheduler: scheduler,
+            name: #function
+        )
+        defer { fixture.remove() }
+
+        fixture.store.enqueueCommittedMutationSystemProjections(
+            events: [],
+            forcedSystemSinks: [.watch]
+        )
+        await scheduler.waitUntilIdle()
+
+        #expect(probe.calls(for: .syncSnapshot).isEmpty)
+        #expect(probe.calls(for: .widget).isEmpty)
+        #expect(probe.calls(for: .liveActivity).isEmpty)
+        let watchCalls = probe.calls(for: .watch)
+        #expect(watchCalls.count == 1)
+        #expect(watchCalls.first?.events.isEmpty == true)
+        #expect(
+            watchCalls.first?.forceCurrentStateProjection == true
+        )
     }
 
     @Test @MainActor
@@ -249,7 +295,8 @@ struct CommittedMutationProjectionBoundaryTests {
     @MainActor
     private func makeStoreFixture(
         scheduler: CommittedMutationSystemProjectionScheduler,
-        name: String
+        name: String,
+        localStateFile: DurableLocalFile = DurableLocalFile()
     ) -> ProjectionBoundaryStoreFixture {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(
@@ -264,7 +311,8 @@ struct CommittedMutationProjectionBoundaryTests {
             syncConflictService: SyncConflictService(
                 stateURL: directory.appendingPathComponent(
                     SyncConflictService.stateFileName
-                )
+                ),
+                localStateFile: localStateFile
             ),
             committedMutationSystemProjectionScheduler: scheduler
         )
@@ -317,6 +365,90 @@ private struct ProjectionBoundaryStoreFixture {
 
     func remove() {
         try? FileManager.default.removeItem(at: directory)
+    }
+}
+
+@MainActor
+private final class SceneCloudSyncModeLease {
+    private let keys = [
+        AppCloudSync.modeKey,
+        AppCloudSync.enabledKey,
+        AppCloudSync.pendingCloudUploadResetKey,
+        AppCloudSync.pendingCloudDownloadResetKey,
+        AppCloudSync.queuedCloudReconciliationKey,
+        AppCloudSync.activeCloudReconciliationKey,
+        AppCloudSync.cloudRecoveryStoreResetKey,
+        AppCloudSync.activeCloudDownloadRecoveryKey,
+    ]
+    private let previousValues: [String: Any]
+
+    init() {
+        let defaults = AppDefaults.shared
+        previousValues = keys.reduce(into: [:]) { values, key in
+            if let value = defaults.object(forKey: key) {
+                values[key] = value
+            }
+        }
+        for key in keys {
+            defaults.removeObject(forKey: key)
+        }
+        defaults.set(
+            AppCloudSync.modeICloud,
+            forKey: AppCloudSync.modeKey
+        )
+        defaults.set(
+            true,
+            forKey: AppCloudSync.enabledKey
+        )
+    }
+
+    func restore() {
+        let defaults = AppDefaults.shared
+        for key in keys {
+            if let value = previousValues[key] {
+                defaults.set(value, forKey: key)
+            } else {
+                defaults.removeObject(forKey: key)
+            }
+        }
+    }
+}
+
+private final nonisolated class SceneSyncStateIOProbe:
+    @unchecked Sendable
+{
+    private let lock = NSLock()
+    private var recordedPoints: [DurableLocalFileFaultPoint] = []
+
+    var points: [DurableLocalFileFaultPoint] {
+        lock.withLock { recordedPoints }
+    }
+
+    func record(_ point: DurableLocalFileFaultPoint) {
+        lock.withLock {
+            recordedPoints.append(point)
+        }
+    }
+}
+
+@MainActor
+private final class RecordingSystemProjectionWorker {
+    private var recorded: [
+        CommittedMutationSystemProjectionSink:
+            [CommittedMutationSystemProjectionWork]
+    ] = [:]
+
+    func record(
+        sink: CommittedMutationSystemProjectionSink,
+        work: CommittedMutationSystemProjectionWork
+    ) {
+        recorded[sink, default: []].append(work)
+    }
+
+    func calls(
+        for sink: CommittedMutationSystemProjectionSink
+    ) -> [CommittedMutationSystemProjectionWork] {
+        recorded[sink, default: []]
     }
 }
 

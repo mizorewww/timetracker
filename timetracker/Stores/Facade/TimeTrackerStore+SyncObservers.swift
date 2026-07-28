@@ -126,6 +126,18 @@ extension TimeTrackerStore {
             }
             return SyncNotificationObserverToken(token)
         }
+        let promptToken = center.addObserver(
+            forName: SyncConflictPromptChangeBroadcaster.notification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { [weak self] in
+                self?.scheduleSyncConflictPromptRefresh()
+            }
+        }
+        syncObservers.append(
+            SyncNotificationObserverToken(promptToken)
+        )
         let recoveryToken = center.addObserver(
             forName: .appCloudRecoveryStateChanged,
             object: nil,

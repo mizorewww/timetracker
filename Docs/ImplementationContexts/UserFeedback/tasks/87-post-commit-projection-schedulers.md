@@ -29,8 +29,8 @@
 - [x] 固定命令在系统投影被挂起时仍可完成可见读模型刷新并返回。
 - [x] 固定 projection failure 不反转 durable mutation outcome，并按投影分类保留状态。
 - [x] 覆盖 generation 合并、精确事件并集、重复调度去重和失败后的重试。
-- [ ] 覆盖启动/前台恢复 pending work，且完成后不会重复执行旧 generation。
-- [ ] 覆盖普通 scene、App Intent 与 Watch 的既有 post-commit 语义和多 scene 防循环。
+- [x] 覆盖启动/前台恢复 pending work，且完成后不会重复执行旧 generation。
+- [x] 覆盖普通 scene、App Intent 与 Watch 的既有 post-commit 语义和多 scene 防循环。
 - [ ] 运行聚焦测试、`make test`、性能预算、格式/本地化与签名构建。
 - [ ] 运行 `make build-install-all` 并清理所有 owned 进程、设备与临时产物。
 
@@ -40,10 +40,11 @@
   可独立阻塞/失败的测试 seam 与性能 signpost。
 - [x] B1：实现可合并的 system-surface scheduler，并把普通 scene 的 Widget、
   Watch、Live Activity 移出 mutation 调用栈。
-- [~] B2：以 SwiftData persistent history 提供持久恢复，把 sync snapshot 与
+- [x] B2：以 SwiftData persistent history 提供持久恢复，把 sync snapshot 与
   materialization/Widget I/O 移出 MainActor 交互路径。
-- [ ] C：统一 App Intent 与 Watch 调用方，保留精确 outcome 与多 scene 收敛语义。
-- [ ] D：更新架构、代码、测试与工程地图；完成全量验证和性能证据。
+- [x] C：统一普通 Scene、App Intent 与 Watch 调用方，保留精确 outcome 与多 scene
+  收敛语义。
+- [~] D：更新架构、代码、测试与工程地图；完成全量验证和性能证据。
 - [ ] E：全设备安装、标记 `[x]`、移除 active link并提交关闭 checkpoint。
 
 ## 库策略
@@ -179,3 +180,18 @@
   retry、512 项有界 backlog 都保留 force 标记。worker 14 项、scheduler 12 项、
   persistent-history driver 16 项聚焦测试通过；完整门禁结果见本检查点提交。未新增
   第三方依赖；使用 SwiftData、Foundation、WidgetKit 与 Structured Concurrency。
+- 2026-07-28：完成调用方统一与恢复检查点。普通 Scene 在当前读模型刷新后只广播并
+  enqueue；App Intent 在 durable command 后立即广播并 enqueue；Watch 的实际 mutation
+  把精确 events 与 forced Watch 放在同一 receipt，duplicate/missing/invalid/failed
+  等无 history 终态只强制 Watch current-state。启动、前台、remote import 与显式冲突
+  解决触发 history-backed catch-up；启动额外强制 Watch，保证进程退出打断的 forced-only
+  终态可在下次启动补发。sync snapshot 成功后发布 prompt 变化，Scene 通过单一
+  serialized reader、single-flight + 一次 trailing refresh、100/300 ms 有界退避与
+  latest-request-wins 异步更新；前台会重读，冲突解决会清除兄弟 Scene 的旧 prompt，
+  读取失败不覆盖最后已知状态。移除 App Intent 的临时 facade/context 同步器与 Watch
+  的直接 snapshot 发布；保留 destructive Cloud reset、Cloud enablement/local winner、
+  显式 recovery/force/import 与手动 Live Activity retry 的安全同步边界。5 项 prompt、
+  6 项 conflict identity、4 项 recovery、44 项 Watch、22 项 system action 聚焦测试
+  及完整 `make test` 1560/1560 通过；`CorePerformanceBudgetTests` 11 项包含在全量门禁
+  中并通过。未新增第三方依赖；使用 SwiftData、Foundation、WidgetKit、WatchConnectivity、
+  ActivityKit 与 Structured Concurrency。

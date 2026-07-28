@@ -36,6 +36,9 @@ extension TimeTrackerStore {
             } catch {
                 processingFailure = processingFailure ?? error
             }
+            enqueueCommittedMutationSystemProjections(
+                events: [.remoteImportCompleted]
+            )
             guard let activityReason = batch.activityReason else { return }
             if let processingFailure {
                 recordSyncActivity(
@@ -62,11 +65,15 @@ extension TimeTrackerStore {
             ? batch.hasSuccessfulCloudImport
             : batch.requiresCloudImportHandling
         if shouldHandleCloudImport {
-            pendingSyncConflict = try syncConflictService.handleCloudImport(
-                context: modelContext
+            try replacePendingSyncConflict(
+                syncConflictService.handleCloudImport(
+                    context: modelContext
+                )
             )
         } else {
-            pendingSyncConflict = try syncConflictService.prompt()
+            try replacePendingSyncConflict(
+                syncConflictService.prompt()
+            )
         }
         let completedExports = Array(completedCloudExportResults)
         for (eventID, succeeded) in completedExports {
@@ -87,7 +94,9 @@ extension TimeTrackerStore {
     func refreshCloudRecoveryPresentationState() {
         persistenceWriteSafety = AppCloudSync.persistenceWriteSafety
         do {
-            pendingSyncConflict = try syncConflictService.prompt()
+            try replacePendingSyncConflict(
+                syncConflictService.prompt()
+            )
         } catch {
             recordCloudExportStateFailure(error)
             return

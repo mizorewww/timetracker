@@ -10,12 +10,20 @@ extension TimeTrackerStore {
         }
     }
 
-    func refreshForForeground() async {
+    func refreshForForeground(
+        cloudAccountStatusClient: CloudAccountStatusClient? = nil
+    ) async {
         refreshQuietly()
+        scheduleSyncConflictPromptRefresh()
         materializeCurrentDailyTaskRecurrences()
         reconcileActivePomodoro(now: Date())
+        enqueueCommittedMutationSystemProjections(
+            events: [.fullSync]
+        )
         await refreshAppleHealthTimelineIfEnabled()
-        await refreshCloudAccountStatus()
+        await refreshCloudAccountStatus(
+            client: cloudAccountStatusClient
+        )
     }
 
     @discardableResult
@@ -52,12 +60,18 @@ extension TimeTrackerStore {
             context: modelContext
         )
         guard result != .conflictChanged else {
-            pendingSyncConflict = try syncConflictService.prompt()
+            try replacePendingSyncConflict(
+                syncConflictService.prompt()
+            )
             return result
         }
-        pendingSyncConflict = nil
+        replacePendingSyncConflict(nil)
+        SyncConflictPromptChangeBroadcaster.publish()
         if hasCompletedStartupConfiguration {
             try refresh()
+            enqueueCommittedMutationSystemProjections(
+                events: [.fullSync]
+            )
         } else {
             configureIfNeeded(context: modelContext)
         }

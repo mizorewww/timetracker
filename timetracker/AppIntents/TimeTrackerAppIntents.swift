@@ -17,9 +17,8 @@ struct AddInboxItemIntent: AppIntent {
             container: SystemActionContextProvider.container
         )
         if outcome.didMutate {
-            let postCommitContext = SystemActionContextProvider.makeContext()
-            await SystemActionPostCommitEffects().apply(
-                context: postCommitContext,
+            SystemActionPostCommitEffects().apply(
+                container: SystemActionContextProvider.container,
                 events: outcome.events
             )
         }
@@ -45,9 +44,8 @@ struct StartTimerIntent: AppIntent {
         )
         let events = outcome.events
         if events.isEmpty == false {
-            let postCommitContext = SystemActionContextProvider.makeContext()
-            await SystemActionPostCommitEffects().apply(
-                context: postCommitContext,
+            SystemActionPostCommitEffects().apply(
+                container: SystemActionContextProvider.container,
                 events: events
             )
         }
@@ -76,9 +74,8 @@ struct StopTimerIntent: AppIntent {
         )
         let events = outcome.events
         if outcome.subjectSegmentID == targetID, events.isEmpty == false {
-            let postCommitContext = SystemActionContextProvider.makeContext()
-            await SystemActionPostCommitEffects().apply(
-                context: postCommitContext,
+            SystemActionPostCommitEffects().apply(
+                container: SystemActionContextProvider.container,
                 events: events
             )
         }
@@ -109,9 +106,8 @@ struct StopAllTimersIntent: AppIntent {
             container: SystemActionContextProvider.container
         )
         if outcome.didMutate {
-            let postCommitContext = SystemActionContextProvider.makeContext()
-            await SystemActionPostCommitEffects().apply(
-                context: postCommitContext,
+            SystemActionPostCommitEffects().apply(
+                container: SystemActionContextProvider.container,
                 events: outcome.events
             )
         }

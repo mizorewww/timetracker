@@ -1363,14 +1363,6 @@ struct CoreWatchCommandTests {
     }
 
     @Test
-    func storeRefreshPublishesWatchStateWhenLedgerOrTasksChange() throws {
-        let source = try sourceText("timetracker/Stores/Refresh/StoreRefreshCoordinator.swift")
-
-        #expect(source.contains("syncWatchSnapshotIfAvailable"))
-        #expect(source.contains("plan.refreshPreferences"))
-    }
-
-    @Test
     func appActivatesWatchBridgeAndWeakSceneRouterRoutesIncomingCommands() throws {
         let app = try sourceText("timetracker/App/timetrackerApp.swift")
         let contentView = try sourceText("timetracker/App/ContentView.swift")
@@ -1618,70 +1610,63 @@ struct CoreWatchCommandTests {
     }
 
     @Test @MainActor
-    func watchFacadeRefreshesAnExternallyStartedTimerThatTheCommandReuses() throws {
+    func watchFacadeRefreshesAnExternallyStartedTimerThatTheCommandReuses()
+        async throws
+    {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(
             title: "Started elsewhere",
             parentID: nil
         )
-        let store = makeTestStore()
-        store.configureIfNeeded(context: context)
+        let projectionWorker = WatchProjectionWorkerProbe()
+        let scheduler = CommittedMutationSystemProjectionScheduler {
+            sink,
+            work in
+            try await projectionWorker.run(sink: sink, work: work)
+        }
+        let store = makeWatchProjectionTestStore(scheduler: scheduler)
+        try configureWatchProjectionTestStore(
+            store,
+            context: context
+        )
         #expect(store.activeSegment(for: task.id) == nil)
 
-        let stateDirectory = FileManager.default.temporaryDirectory
-            .appendingPathComponent(
-                "WatchReuse-\(UUID().uuidString)",
-                isDirectory: true
-            )
-        try FileManager.default.createDirectory(
-            at: stateDirectory,
-            withIntermediateDirectories: true
+        let siblingContext = ModelContext(context.container)
+        let siblingRepository = SwiftDataTimeTrackingRepository(
+            context: siblingContext,
+            deviceID: "sibling"
         )
-        defer { try? FileManager.default.removeItem(at: stateDirectory) }
+        let existingSegment = try siblingRepository.startTask(
+            taskID: task.id,
+            source: .timer
+        )
+        let command = WatchTimerCommand(
+            id: UUID(),
+            type: .startTask,
+            taskID: task.id,
+            segmentID: nil,
+            issuedAt: Date(),
+            deviceID: "watch-test"
+        )
 
-        try withWatchCloudSyncMode {
-            let service = SyncConflictService(
-                stateURL: stateDirectory.appendingPathComponent("state.json")
-            )
-            #expect(try service.bootstrap(context: context) == nil)
-            let generationBeforeReuse = try service.loadState().localGeneration
-            let siblingContext = ModelContext(context.container)
-            let siblingRepository = SwiftDataTimeTrackingRepository(
-                context: siblingContext,
-                deviceID: "sibling"
-            )
-            let existingSegment = try siblingRepository.startTask(
-                taskID: task.id,
-                source: .timer
-            )
-            let command = WatchTimerCommand(
-                id: UUID(),
-                type: .startTask,
-                taskID: task.id,
-                segmentID: nil,
-                issuedAt: Date(),
-                deviceID: "watch-test"
-            )
+        let result = store.handleWatchCommand(command)
 
-            let result = store.handleWatchCommand(
-                command,
-                recordingWith: service
-            )
-
-            #expect(result.status == .success)
-            #expect(result.relatedID == existingSegment.id)
-            #expect(
-                store.watchStateSnapshot().activeTimers.contains {
-                    $0.id == existingSegment.id
-                }
-            )
-            #expect(try service.loadState().localGeneration == generationBeforeReuse)
-        }
+        #expect(result.status == .success)
+        #expect(result.relatedID == existingSegment.id)
+        #expect(
+            store.watchStateSnapshot().activeTimers.contains {
+                $0.id == existingSegment.id
+            }
+        )
+        await expectForcedWatchCurrentState(
+            scheduler: scheduler,
+            projectionWorker: projectionWorker
+        )
     }
 
     @Test @MainActor
-    func missingWatchStopRefreshesAnExternallyStoppedTimer() throws {
+    func missingWatchStopRefreshesAnExternallyStoppedTimer() async throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
@@ -1693,8 +1678,17 @@ struct CoreWatchCommandTests {
             taskID: task.id,
             source: .timer
         )
-        let store = makeTestStore()
-        store.configureIfNeeded(context: context)
+        let projectionWorker = WatchProjectionWorkerProbe()
+        let scheduler = CommittedMutationSystemProjectionScheduler {
+            sink,
+            work in
+            try await projectionWorker.run(sink: sink, work: work)
+        }
+        let store = makeWatchProjectionTestStore(scheduler: scheduler)
+        try configureWatchProjectionTestStore(
+            store,
+            context: context
+        )
         #expect(store.watchStateSnapshot().activeTimers.contains { $0.id == segment.id })
 
         let siblingContext = ModelContext(context.container)
@@ -1711,15 +1705,7 @@ struct CoreWatchCommandTests {
             deviceID: "watch-test"
         )
 
-        let result = store.handleWatchCommand(
-            command,
-            recordingWith: SyncConflictService(
-                stateURL: FileManager.default.temporaryDirectory
-                    .appendingPathComponent(
-                        "WatchMissingSegment-\(UUID().uuidString).json"
-                    )
-            )
-        )
+        let result = store.handleWatchCommand(command)
 
         #expect(result.status == .missingSegment)
         #expect(
@@ -1727,18 +1713,31 @@ struct CoreWatchCommandTests {
                 $0.id == segment.id
             } == false
         )
+        await expectForcedWatchCurrentState(
+            scheduler: scheduler,
+            projectionWorker: projectionWorker
+        )
     }
 
     @Test @MainActor
-    func missingWatchStartRefreshesAnExternallyArchivedTask() throws {
+    func missingWatchStartRefreshesAnExternallyArchivedTask() async throws {
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(
             title: "Archived elsewhere",
             parentID: nil
         )
-        let store = makeTestStore()
-        store.configureIfNeeded(context: context)
+        let projectionWorker = WatchProjectionWorkerProbe()
+        let scheduler = CommittedMutationSystemProjectionScheduler {
+            sink,
+            work in
+            try await projectionWorker.run(sink: sink, work: work)
+        }
+        let store = makeWatchProjectionTestStore(scheduler: scheduler)
+        try configureWatchProjectionTestStore(
+            store,
+            context: context
+        )
         #expect(store.watchStateSnapshot().recentTasks.contains { $0.taskID == task.id })
 
         let siblingContext = ModelContext(context.container)
@@ -1755,21 +1754,126 @@ struct CoreWatchCommandTests {
             deviceID: "watch-test"
         )
 
-        let result = store.handleWatchCommand(
-            command,
-            recordingWith: SyncConflictService(
-                stateURL: FileManager.default.temporaryDirectory
-                    .appendingPathComponent(
-                        "WatchMissingTask-\(UUID().uuidString).json"
-                    )
-            )
-        )
+        let result = store.handleWatchCommand(command)
 
         #expect(result.status == .missingTask)
         #expect(
             store.watchStateSnapshot().recentTasks.contains {
                 $0.taskID == task.id
             } == false
+        )
+        await expectForcedWatchCurrentState(
+            scheduler: scheduler,
+            projectionWorker: projectionWorker
+        )
+    }
+
+    @Test @MainActor
+    func duplicateWatchCommandForcesCurrentStateWithoutReplayingMutation()
+        async throws
+    {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "test"
+        ).createTask(
+            title: "Duplicate Watch command",
+            parentID: nil
+        )
+        let projectionWorker = WatchProjectionWorkerProbe()
+        let scheduler = CommittedMutationSystemProjectionScheduler {
+            sink,
+            work in
+            try await projectionWorker.run(sink: sink, work: work)
+        }
+        let store = makeWatchProjectionTestStore(scheduler: scheduler)
+        try configureWatchProjectionTestStore(
+            store,
+            context: context
+        )
+        let command = WatchTimerCommand(
+            id: UUID(),
+            type: .startTask,
+            taskID: task.id,
+            segmentID: nil,
+            issuedAt: Date(),
+            deviceID: "watch-test"
+        )
+
+        #expect(store.handleWatchCommand(command).status == .success)
+        await scheduler.waitUntilIdle()
+        let originalSegmentID = try #require(store.activeSegment(for: task.id)?.id)
+        projectionWorker.reset()
+
+        let duplicate = store.handleWatchCommand(command)
+
+        #expect(duplicate.status == .duplicate)
+        #expect(store.activeSegment(for: task.id)?.id == originalSegmentID)
+        await expectForcedWatchCurrentState(
+            scheduler: scheduler,
+            projectionWorker: projectionWorker
+        )
+    }
+
+    @Test @MainActor
+    func invalidAndFailedWatchTerminalsForceCurrentWatchState() async throws {
+        let context = try makeTestContext()
+        let invalidWorker = WatchProjectionWorkerProbe()
+        let invalidScheduler = CommittedMutationSystemProjectionScheduler {
+            sink,
+            work in
+            try await invalidWorker.run(sink: sink, work: work)
+        }
+        let configuredStore = makeWatchProjectionTestStore(
+            scheduler: invalidScheduler
+        )
+        try configureWatchProjectionTestStore(
+            configuredStore,
+            context: context
+        )
+        let invalidCommand = WatchTimerCommand(
+            id: UUID(),
+            type: .startTask,
+            taskID: nil,
+            segmentID: nil,
+            issuedAt: Date(),
+            deviceID: "watch-test"
+        )
+
+        #expect(
+            configuredStore.handleWatchCommand(invalidCommand).status ==
+                .invalid
+        )
+        await expectForcedWatchCurrentState(
+            scheduler: invalidScheduler,
+            projectionWorker: invalidWorker
+        )
+
+        let failedWorker = WatchProjectionWorkerProbe()
+        let failedScheduler = CommittedMutationSystemProjectionScheduler {
+            sink,
+            work in
+            try await failedWorker.run(sink: sink, work: work)
+        }
+        let unconfiguredStore = makeWatchProjectionTestStore(
+            scheduler: failedScheduler
+        )
+        let failedCommand = WatchTimerCommand(
+            id: UUID(),
+            type: .stopSegment,
+            taskID: nil,
+            segmentID: UUID(),
+            issuedAt: Date(),
+            deviceID: "watch-test"
+        )
+
+        #expect(
+            unconfiguredStore.handleWatchCommand(failedCommand).status ==
+                .failed
+        )
+        await expectForcedWatchCurrentState(
+            scheduler: failedScheduler,
+            projectionWorker: failedWorker
         )
     }
 
@@ -1948,99 +2052,216 @@ struct CoreWatchCommandTests {
     }
 
     @Test @MainActor
-    func watchStoreRecordsTheCommittedTimerInTheConflictSnapshot() throws {
+    func watchMutationRefreshesAndBroadcastsBeforeBlockedProjectionReturns()
+        async throws
+    {
+        await StoreMutationBroadcaster.waitUntilIdle()
         let context = try makeTestContext()
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(
-            title: "Watch snapshot task",
+            title: "Watch asynchronous projection task",
             parentID: nil,
             colorHex: nil,
             iconName: nil
         )
-        let store = makeTestStore()
-        store.configureIfNeeded(context: context)
-
-        try withWatchCloudSyncMode {
-            let stateURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent("TimeTrackerWatchSnapshot-\(UUID().uuidString)", isDirectory: true)
-                .appendingPathComponent("state.json")
-            let service = SyncConflictService(stateURL: stateURL)
-            #expect(try service.bootstrap(context: context) == nil)
-            let baselineExportID = UUID()
-            try service.markCloudExportStarted(eventID: baselineExportID)
-            try service.markCloudExportFinished(eventID: baselineExportID, succeeded: true)
-            let command = WatchTimerCommand(
-                id: UUID(),
-                type: .startTask,
-                taskID: task.id,
-                segmentID: nil,
-                issuedAt: Date(),
-                deviceID: "watch-test"
+        let projectionWorker = WatchProjectionWorkerProbe(
+            blockedSinks: Set(
+                CommittedMutationSystemProjectionSink.allCases
             )
-
-            store.handleWatchCommand(command, recordingWith: service)
-
-            let segment = try #require(store.activeSegment(for: task.id))
-            #expect(try service.loadState().localSnapshot?.segments.contains { $0.id == segment.id } == true)
+        )
+        let scheduler = CommittedMutationSystemProjectionScheduler {
+            sink,
+            work in
+            try await projectionWorker.run(sink: sink, work: work)
         }
+        let store = makeWatchProjectionTestStore(scheduler: scheduler)
+        let observingStore = makeTestStore()
+        let observingContext = ModelContext(context.container)
+        try configureWatchProjectionTestStore(
+            store,
+            context: context
+        )
+        try configureWatchProjectionTestStore(
+            observingStore,
+            context: observingContext
+        )
+        observingStore.installStoreMutationObserverIfNeeded()
+        defer {
+            projectionWorker.releaseAll()
+            observingStore.removeStoreMutationObserver()
+        }
+        #expect(observingStore.activeSegment(for: task.id) == nil)
+        let command = WatchTimerCommand(
+            id: UUID(),
+            type: .startTask,
+            taskID: task.id,
+            segmentID: nil,
+            issuedAt: Date(),
+            deviceID: "watch-test"
+        )
+
+        let result = store.handleWatchCommand(command)
+
+        #expect(result.status == .success)
+        guard let segmentID = result.relatedID else {
+            Issue.record("A successful Watch start must return its segment ID")
+            projectionWorker.releaseAll()
+            await scheduler.waitUntilIdle()
+            return
+        }
+        #expect(store.activeSegment(for: task.id)?.id == segmentID)
+        #expect(observingStore.activeSegment(for: task.id) == nil)
+        await projectionWorker.waitUntilBlocked(.watch)
+        #expect(projectionWorker.isBlocked(.watch))
+
+        await StoreMutationBroadcaster.waitUntilIdle()
+
+        #expect(observingStore.activeSegment(for: task.id)?.id == segmentID)
+        #expect(projectionWorker.isBlocked(.watch))
+
+        projectionWorker.releaseAll()
+        await scheduler.waitUntilIdle()
+
+        var receiptIDs: Set<UUID> = []
+        for sink in CommittedMutationSystemProjectionSink.allCases {
+            let calls = projectionWorker.calls(for: sink)
+            #expect(calls.count == 1)
+            #expect(calls.first?.events.isEmpty == false)
+            #expect(calls.first?.receiptIDs.count == 1)
+            receiptIDs.formUnion(calls.first?.receiptIDs ?? [])
+            #expect(
+                calls.first?.forceCurrentStateProjection ==
+                    (sink == .watch)
+            )
+        }
+        #expect(receiptIDs.count == 1)
     }
 }
 
 @MainActor
-private func withWatchCloudSyncMode(_ body: () throws -> Void) throws {
-    let defaults = AppDefaults.shared
-    let previousMode = defaults.object(forKey: AppCloudSync.modeKey)
-    let previousUploadReset = defaults.object(forKey: AppCloudSync.pendingCloudUploadResetKey)
-    let previousDownloadReset = defaults.object(forKey: AppCloudSync.pendingCloudDownloadResetKey)
-    let previousQueuedReconciliation = defaults.object(forKey: AppCloudSync.queuedCloudReconciliationKey)
-    let previousActiveReconciliation = defaults.object(forKey: AppCloudSync.activeCloudReconciliationKey)
-    let previousCloudRecoveryStoreReset = defaults.object(forKey: AppCloudSync.cloudRecoveryStoreResetKey)
-    let previousActiveCloudDownloadRecovery = defaults.object(forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
-    defaults.set(AppCloudSync.modeICloud, forKey: AppCloudSync.modeKey)
-    defaults.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
-    defaults.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
-    defaults.removeObject(forKey: AppCloudSync.queuedCloudReconciliationKey)
-    defaults.removeObject(forKey: AppCloudSync.activeCloudReconciliationKey)
-    defaults.removeObject(forKey: AppCloudSync.cloudRecoveryStoreResetKey)
-    defaults.removeObject(forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
-    defer {
-        if let previousMode {
-            defaults.set(previousMode, forKey: AppCloudSync.modeKey)
-        } else {
-            defaults.removeObject(forKey: AppCloudSync.modeKey)
+private func makeWatchProjectionTestStore(
+    scheduler: CommittedMutationSystemProjectionScheduler
+) -> TimeTrackerStore {
+    TimeTrackerStore(
+        appleHealthDataReader: UnavailableAppleHealthDataReader(),
+        appleHealthTimelinePreferenceStore:
+        TestAppleHealthTimelinePreferenceStore(),
+        writeAuthorization: .isolatedTestHarness,
+        committedMutationSystemProjectionScheduler: scheduler
+    )
+}
+
+@MainActor
+private func configureWatchProjectionTestStore(
+    _ store: TimeTrackerStore,
+    context: ModelContext
+) throws {
+    store.configureRepositoriesIfNeeded(context: context)
+    try store.refreshCoordinator.refreshReadModels(
+        store,
+        plan: store.refreshPlanner.plan(after: [.fullSync])
+    )
+}
+
+@MainActor
+private func expectForcedWatchCurrentState(
+    scheduler: CommittedMutationSystemProjectionScheduler,
+    projectionWorker: WatchProjectionWorkerProbe
+) async {
+    await scheduler.waitUntilIdle()
+
+    #expect(projectionWorker.calls(for: .syncSnapshot).isEmpty)
+    #expect(projectionWorker.calls(for: .widget).isEmpty)
+    #expect(projectionWorker.calls(for: .liveActivity).isEmpty)
+    let watchCalls = projectionWorker.calls(for: .watch)
+    #expect(watchCalls.count == 1)
+    guard let work = watchCalls.first else {
+        Issue.record("Expected one forced Watch current-state projection")
+        return
+    }
+    #expect(work.events.isEmpty)
+    #expect(work.receiptIDs.count == 1)
+    #expect(work.forceCurrentStateProjection)
+}
+
+@MainActor
+private final class WatchProjectionWorkerProbe {
+    private let blockedSinks:
+        Set<CommittedMutationSystemProjectionSink>
+    private var recorded: [
+        CommittedMutationSystemProjectionSink:
+            [CommittedMutationSystemProjectionWork]
+    ] = [:]
+    private var didBlock:
+        Set<CommittedMutationSystemProjectionSink> = []
+    private var entryWaiters: [
+        CommittedMutationSystemProjectionSink:
+            [CheckedContinuation<Void, Never>]
+    ] = [:]
+    private var releaseContinuations: [
+        CommittedMutationSystemProjectionSink:
+            CheckedContinuation<Void, Never>
+    ] = [:]
+    private var released = false
+
+    init(
+        blockedSinks:
+        Set<CommittedMutationSystemProjectionSink> = []
+    ) {
+        self.blockedSinks = blockedSinks
+    }
+
+    func run(
+        sink: CommittedMutationSystemProjectionSink,
+        work: CommittedMutationSystemProjectionWork
+    ) async throws {
+        recorded[sink, default: []].append(work)
+        guard released == false,
+              blockedSinks.contains(sink),
+              didBlock.insert(sink).inserted
+        else {
+            return
         }
-        if let previousUploadReset {
-            defaults.set(previousUploadReset, forKey: AppCloudSync.pendingCloudUploadResetKey)
-        } else {
-            defaults.removeObject(forKey: AppCloudSync.pendingCloudUploadResetKey)
-        }
-        if let previousDownloadReset {
-            defaults.set(previousDownloadReset, forKey: AppCloudSync.pendingCloudDownloadResetKey)
-        } else {
-            defaults.removeObject(forKey: AppCloudSync.pendingCloudDownloadResetKey)
-        }
-        if let previousQueuedReconciliation {
-            defaults.set(previousQueuedReconciliation, forKey: AppCloudSync.queuedCloudReconciliationKey)
-        } else {
-            defaults.removeObject(forKey: AppCloudSync.queuedCloudReconciliationKey)
-        }
-        if let previousActiveReconciliation {
-            defaults.set(previousActiveReconciliation, forKey: AppCloudSync.activeCloudReconciliationKey)
-        } else {
-            defaults.removeObject(forKey: AppCloudSync.activeCloudReconciliationKey)
-        }
-        if let previousCloudRecoveryStoreReset {
-            defaults.set(previousCloudRecoveryStoreReset, forKey: AppCloudSync.cloudRecoveryStoreResetKey)
-        } else {
-            defaults.removeObject(forKey: AppCloudSync.cloudRecoveryStoreResetKey)
-        }
-        if let previousActiveCloudDownloadRecovery {
-            defaults.set(previousActiveCloudDownloadRecovery, forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
-        } else {
-            defaults.removeObject(forKey: AppCloudSync.activeCloudDownloadRecoveryKey)
+
+        await withCheckedContinuation { continuation in
+            releaseContinuations[sink] = continuation
+            entryWaiters.removeValue(forKey: sink)?.forEach {
+                $0.resume()
+            }
         }
     }
-    try body()
+
+    func waitUntilBlocked(
+        _ sink: CommittedMutationSystemProjectionSink
+    ) async {
+        guard releaseContinuations[sink] == nil else { return }
+        await withCheckedContinuation { continuation in
+            entryWaiters[sink, default: []].append(continuation)
+        }
+    }
+
+    func isBlocked(
+        _ sink: CommittedMutationSystemProjectionSink
+    ) -> Bool {
+        releaseContinuations[sink] != nil
+    }
+
+    func calls(
+        for sink: CommittedMutationSystemProjectionSink
+    ) -> [CommittedMutationSystemProjectionWork] {
+        recorded[sink, default: []]
+    }
+
+    func reset() {
+        recorded.removeAll()
+    }
+
+    func releaseAll() {
+        released = true
+        let continuations = Array(releaseContinuations.values)
+        releaseContinuations.removeAll()
+        continuations.forEach { $0.resume() }
+    }
 }
 
 private func watchSnapshot(

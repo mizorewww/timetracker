@@ -49,7 +49,9 @@ extension TimeTrackerStore {
         if configuresSyncConflictState,
            pendingSyncConflict == nil
         {
-            pendingSyncConflict = try? syncConflictService.prompt()
+            replacePendingSyncConflict(
+                try? syncConflictService.prompt()
+            )
         }
         if pendingSyncConflict != nil {
             configureCloudRecovery(context: context)
@@ -107,6 +109,14 @@ extension TimeTrackerStore {
         persistenceWriteSafety = writeAuthorization.usesApplicationState
             ? AppCloudSync.persistenceWriteSafety
             : .ready
+        enqueueCommittedMutationSystemProjections(
+            events: [.fullSync],
+            // A Watch command can have a terminal outcome without creating
+            // SwiftData history (duplicate, missing, invalid, or failed).
+            // Re-publish current state at startup so that forced-only work
+            // interrupted by process exit still converges.
+            forcedSystemSinks: [.watch]
+        )
         if writeAuthorization.usesApplicationState,
            timetrackerApp.isUnitTestHost() == false
         {
@@ -156,7 +166,11 @@ extension TimeTrackerStore {
         guard hasBootstrappedSyncConflictState == false else { return }
         for _ in 0 ..< 2 {
             do {
-                pendingSyncConflict = try syncConflictService.bootstrap(context: context)
+                try replacePendingSyncConflict(
+                    syncConflictService.bootstrap(
+                        context: context
+                    )
+                )
                 hasBootstrappedSyncConflictState = true
                 return
             } catch {

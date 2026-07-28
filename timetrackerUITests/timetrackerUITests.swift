@@ -8425,6 +8425,63 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testTodayPrimaryTimerActionKeepsOneStyleAcrossTimerStates() throws {
+        let app = launchApp(replacesDemoDataOnLaunch: true)
+        XCTAssertTrue(homeIsReady(in: app))
+
+        let screenshotPrefix = platformScreenshotPrefix(in: app)
+        let activeAction = app.buttons["home.startTimer"].firstMatch
+        scrollUntilHittable(activeAction, direction: .up, in: app)
+        XCTAssertTrue(
+            activeAction.waitForExistence(timeout: 5) && activeAction.isHittable
+        )
+        XCTAssertEqual(activeAction.label, "Start Another Timer")
+        XCTAssertGreaterThanOrEqual(activeAction.frame.height, 44)
+        let activeFrame = activeAction.frame
+        try capture(
+            "\(screenshotPrefix)-today-timer-picker-action-active",
+            app: app
+        )
+
+        let stopButtons = app.buttons.matching(NSPredicate(
+            format: "identifier BEGINSWITH %@ AND label BEGINSWITH %@",
+            "home.activeTimer.",
+            "Stop "
+        ))
+        while stopButtons.firstMatch.waitForExistence(timeout: 1) {
+            let stop = stopButtons.firstMatch
+            scrollUntilHittable(stop, direction: .down, in: app)
+            XCTAssertTrue(stop.isHittable)
+            let stoppedIdentifier = stop.identifier
+            activate(stop)
+            XCTAssertTrue(
+                app.buttons[stoppedIdentifier].firstMatch
+                    .waitForNonExistence(timeout: 5)
+            )
+        }
+
+        let idleAction = app.buttons["home.startTimer"].firstMatch
+        scrollUntilHittable(idleAction, direction: .up, in: app)
+        XCTAssertTrue(
+            idleAction.waitForExistence(timeout: 5) && idleAction.isHittable
+        )
+        XCTAssertEqual(idleAction.label, "Start Timer")
+        XCTAssertEqual(idleAction.frame.width, activeFrame.width, accuracy: 2)
+        XCTAssertEqual(idleAction.frame.height, activeFrame.height, accuracy: 2)
+        XCTAssertGreaterThanOrEqual(idleAction.frame.height, 44)
+        try capture(
+            "\(screenshotPrefix)-today-timer-picker-action-idle",
+            app: app
+        )
+
+        activate(idleAction)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["timer.taskPicker"]
+                .firstMatch.waitForExistence(timeout: 5)
+        )
+    }
+
+    @MainActor
     func testTodayPersistentExplanationsOpenFromInformationButtons() throws {
         let app = launchApp(replacesDemoDataOnLaunch: true)
         #if os(macOS)

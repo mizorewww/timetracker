@@ -16,7 +16,6 @@ struct CompactHomeView: View {
             CompactNowSection(
                 store: store,
                 segments: content.activeSegments,
-                allowsParallelTimers: store.preferences.allowParallelTimers,
                 openTask: openTask,
                 startTimer: { presentationRouter.presentStartTaskPicker() }
             )

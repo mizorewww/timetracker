@@ -1902,6 +1902,25 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：`RootLayoutPolicy` 行为测试覆盖 compact size class、719/720 pt 边界和首次测量；`AdaptiveShellUITests` 从可见 Tab Bar/Sidebar 判断实际 shell，并在普通字号的紧凑/常规宽度保存截图。代码审查逐项分类生产 UI 的平台分支，确认没有设备/屏幕身份布局读取；格式、本地化、完整签名测试和全设备安装仍是关闭门禁。
 
+## AD-140：Home 全局计时选择入口保持同一原生整行样式
+
+状态：Accepted
+
+替代关系：本决策替代 AD-039 中“空闲 Start Timer 使用突出样式、已有计时的 Start Another Timer / Switch Timer 使用次级样式”的视觉层级差异。AD-039 的单一主动作、状态文案、宽度布局与性能边界，以及 AD-050 的可见文字和 AD-053 的选择/停止命令分离继续有效。
+
+背景：Today 的同一个 `home.startTimer` 全局入口在无活动计时时由 `HomeNowEmptyStartButton` 渲染为 prominent 胶囊，在有活动计时时又由 `HomeNowActiveContent` 渲染为 leading 整行按钮。空 Quick Start 还复制了第三套 Start Timer 按钮。状态改变因此同时改变控件结构、视觉层级、图标和尺寸，并让 compact 与 regular 宿主必须分别维护分支。
+
+决策：
+
+- `TimerPickerMode` 是 Home 全局计时选择入口的唯一展示与命令模式来源：无活动为 `.start`，允许并行且已有活动为 `.startAnother`，独占模式已有活动为 `.switchTimer`。三个标题必须准确保留 Start Timer、Start Another Timer、Switch Timer。
+- `HomeTimerPickerButton` 是这一全局入口唯一的 SwiftUI owner。它复用原有 Start Another Timer 的原生 `Button` + `Label`、leading 整行、`body.medium`、可换行文字、至少 44 pt 高度和同一内边距；状态只能改变标题和系统图标，不得改变 prominence、组件树或 hit target。
+- `.start` 与 `.startAnother` 共享 `plus.circle` 视觉语法；`.switchTimer` 使用 `arrow.left.arrow.right.circle` 明确表达切换。Now 空闲、Now 已运行和空 Quick Start 都调用该组件并打开同一个 scene-owned task picker。
+- 任务级 `TaskTimerActionButton`、任务菜单/滑动动作、App Intent、Watch task row、Widget Link 和 Live Activity 不属于这个全局 picker launcher。它们继续按指定任务与系统表面语义使用各自的原生容器，不得为了源码复用制造虚假的全局选择动作。
+
+后果：iPhone、iPad、macOS 以及 compact/regular 宽度下，计时状态变化不再让唯一入口突然变成另一种控件；用户仍能从准确标题和图标区分开始、并行开始与切换。Home 删除两套重复按钮但不改变 ledger、并行准入、picker dismissal、Watch/Widget wire contract 或本地化键，也不需要第三方 UI 库。
+
+验证：纯展示测试固定三种 `TimerPickerMode` 的共享视觉语法；正常字号 iPhone、iPad 与 macOS XCUITest 在同一场景中记录 Start Another Timer，停止最后一个活动计时后确认同一入口变为 Start Timer、保持可命中并打开同一 picker，并保存两种状态截图。完整签名测试、格式、本地化、受影响平台构建、全设备 Release 安装与 owned resource 清理仍是关闭门禁。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

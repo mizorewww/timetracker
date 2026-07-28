@@ -18,10 +18,10 @@
 ## 验收条件
 
 - [x] 先增加能够区分空闲、并行和切换三种状态的展示行为测试或 UI acceptance。
-- [ ] 主页三个宽度/平台入口只保留一个共享按钮实现，不再维护空闲专用组件。
-- [ ] 空闲状态显示“开始计时”，并行状态显示“再开始一个计时”，禁用并行时显示
+- [x] 主页三个宽度/平台入口只保留一个共享按钮实现，不再维护空闲专用组件。
+- [x] 空闲状态显示“开始计时”，并行状态显示“再开始一个计时”，禁用并行时显示
   “切换计时”；三者使用“再开始一个计时”当前的原生整行样式。
-- [ ] 正常字号 iPhone、iPad 和 macOS 的按钮标题、图标、44 pt 触控尺寸及截图验收通过。
+- [x] 正常字号 iPhone、iPad 和 macOS 的按钮标题、图标、44 pt 触控尺寸及截图验收通过。
 - [ ] `make test`、格式、本地化门禁通过，实现提交后完成 `make build-install-all`。
 
 ## 子代理编排
@@ -49,3 +49,15 @@
   第三套原始按钮，纳入同一共享 Home 组件。新增纯展示契约，锁定 `.start` 与
   `.startAnother` 共用 `plus.circle` 视觉语法、`.switchTimer` 保留切换图标；
   `TimerPickerUIContractTests` 2/2 通过，SwiftFormat 0/875 待格式化。
+- 2026-07-28：删除空闲专用的突出按钮，紧凑/宽布局和空 Quick Start 统一调用
+  `HomeTimerPickerButton`。第一次 iPhone UI 验收先发现按钮点击框只有 22 pt；修正后又
+  发现把内边距放在 `Button` 外会令 `List` 根行和嵌套行相差 24 pt。最终把内边距收进
+  原生 `Button` 标签，空闲/运行态都得到同一个 60 pt 完整点击框，未增加展示状态或
+  命令层。
+- 2026-07-28：`testTodayPrimaryTimerActionKeepsOneStyleAcrossTimerStates` 在 iPhone 17 Pro、
+  iPad Pro 13 英寸（M5）和 macOS 各 1/1 通过；每个平台都保存并目检了运行态与空闲态
+  正常字号截图，按钮可点击且会打开同一个 `timer.taskPicker`。结果包：
+  `iOS-20260728-225807.xcresult`、`iOS-20260728-230056.xcresult`、
+  `macOS-20260728-230258.xcresult`。
+- 2026-07-28：实现 checkpoint 门禁通过：SwiftFormat 0/875、本地化资源 9/9、
+  `make test` 1572 tests / 176 suites。等待提交后执行全设备安装。

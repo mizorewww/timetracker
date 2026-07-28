@@ -3,20 +3,25 @@ import SwiftUI
 struct CompactNowSection: View {
     let store: TimeTrackerStore
     let segments: [TimeSegment]
-    let allowsParallelTimers: Bool
     let openTask: (UUID) -> Void
     let startTimer: () -> Void
 
     var body: some View {
         Section {
             if segments.isEmpty {
-                HomeNowEmptyStartButton(startTimer: startTimer)
-                    .listRowBackground(Color.clear)
+                HomeTimerPickerButton(
+                    mode: store.timerPickerMode,
+                    action: startTimer,
+                    accessibilityIdentifier: "home.startTimer"
+                )
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
             } else {
                 HomeNowActiveContent(
                     store: store,
                     segments: segments,
-                    allowsParallelTimers: allowsParallelTimers,
+                    timerPickerMode: store.timerPickerMode,
                     actionLabelStyle: .iconOnly,
                     openTask: openTask,
                     startTimer: startTimer
@@ -46,12 +51,11 @@ struct CompactQuickStartSection: View {
         Section {
             VStack(spacing: 0) {
                 if tasks.isEmpty {
-                    Button(action: startTimer) {
-                        Label(AppStrings.startTimer, systemImage: "clock.arrow.circlepath")
-                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    HomeTimerPickerButton(
+                        mode: store.timerPickerMode,
+                        action: startTimer,
+                        accessibilityIdentifier: "home.quickStart.startTimer"
+                    )
 
                     Divider()
                         .padding(.horizontal, 12)

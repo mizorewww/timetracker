@@ -18,9 +18,11 @@ struct ActiveTimersSection: View {
 
             if segments.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    HomeNowEmptyStartButton(startTimer: startTimer)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(14)
+                    HomeTimerPickerButton(
+                        mode: store.timerPickerMode,
+                        action: startTimer,
+                        accessibilityIdentifier: "home.startTimer"
+                    )
                 }
                 .appCard(padding: 0)
                 .accessibilityElement(children: .contain)
@@ -32,7 +34,7 @@ struct ActiveTimersSection: View {
                 HomeNowActiveContent(
                     store: store,
                     segments: segments,
-                    allowsParallelTimers: store.preferences.allowParallelTimers,
+                    timerPickerMode: store.timerPickerMode,
                     actionLabelStyle: .titleAndIcon,
                     openTask: openTask,
                     startTimer: startTimer

@@ -1,6 +1,6 @@
 # 89：Analysis Heatmap 独立页面 实现记忆
 
-状态：2026-07-28 进行中
+状态：2026-07-28 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
 > [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
@@ -17,7 +17,7 @@
 - [x] 独立页面显示完整 Heatmap、现有时间范围和空/加载/错误状态。
 - [x] 返回后 Analysis 的选择和滚动语义符合原生导航。
 - [x] 行为测试、普通字号 iPhone/iPad/macOS 截图、`make test`、格式与本地化门禁通过。
-- [ ] 最终提交完成 `make build-install-all`。
+- [x] 最终提交完成 `make build-install-all`。
 
 ## 子代理编排
 
@@ -47,3 +47,6 @@
 - 2026-07-28：普通字号 iPhone、13 英寸 iPad Pro、macOS 独立入口、完整页面与系统返回
   XCUITest 均通过，截图人工检查通过；配置空态 iPhone XCUITest 通过。`make test`
   1564/1564、SwiftFormat 875/875、本地化 9/9、hook 与 diff 门禁全部通过。
+- 2026-07-28：实现 checkpoint `70280a84` 已提交；Release 全设备构建安装通过，应用已安装
+  到 iPad Pro M4、iPhone Air 和 `/Applications/timetracker.app`，iOS 包内包含 Watch
+  companion。

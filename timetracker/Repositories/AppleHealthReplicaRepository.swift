@@ -88,60 +88,60 @@ final class SwiftDataAppleHealthReplicaRepository:
         _ changes: AppleHealthReplicaChangeBatch,
         syncedAt: Date
     ) throws {
-        do {
-            let workouts = try canonicalWorkouts(changes.workouts)
-            let sleep = try canonicalSleep(changes.sleep)
-            try applyWorkoutChanges(
-                upserts: workouts,
-                deletedIDs: changes.deletedWorkoutIDs
-            )
-            try applySleepChanges(
-                upserts: sleep,
-                deletedIDs: changes.deletedSleepIDs
-            )
-            try updateCheckpoint(
-                stream: .workout,
-                anchorData: changes.workoutAnchor,
-                syncedAt: syncedAt
-            )
-            try updateCheckpoint(
-                stream: .sleep,
-                anchorData: changes.sleepAnchor,
-                syncedAt: syncedAt
-            )
-            try context.save()
-        } catch {
-            context.rollback()
-            throw error
+        try PerformanceSignpost.interval("AppleHealthReplicaApply") {
+            do {
+                let workouts = try canonicalWorkouts(changes.workouts)
+                let sleep = try canonicalSleep(changes.sleep)
+                try applyWorkoutChanges(
+                    upserts: workouts,
+                    deletedIDs: changes.deletedWorkoutIDs
+                )
+                try applySleepChanges(
+                    upserts: sleep,
+                    deletedIDs: changes.deletedSleepIDs
+                )
+                try updateCheckpoint(
+                    stream: .workout,
+                    anchorData: changes.workoutAnchor,
+                    syncedAt: syncedAt
+                )
+                try updateCheckpoint(
+                    stream: .sleep,
+                    anchorData: changes.sleepAnchor,
+                    syncedAt: syncedAt
+                )
+                try context.save()
+            } catch {
+                context.rollback()
+                throw error
+            }
         }
     }
 
     func snapshot(
         overlapping interval: DateInterval
     ) throws -> AppleHealthReplicaSnapshot {
-        guard interval.duration > 0 else {
+        try PerformanceSignpost.interval("AppleHealthReplicaSnapshot") {
+            guard interval.duration > 0 else {
+                let status = try replicaStatus()
+                return AppleHealthReplicaSnapshot(
+                    samples: .empty,
+                    recordCount: status.recordCount,
+                    lastSuccessfulSyncAt: status.lastSuccessfulSyncAt
+                )
+            }
+            let workouts = try workoutSamples(overlapping: interval)
+            let sleep = try sleepSamples(overlapping: interval)
             let status = try replicaStatus()
             return AppleHealthReplicaSnapshot(
-                samples: .empty,
+                samples: AppleHealthSampleBatch(
+                    workouts: workouts,
+                    sleep: sleep
+                ),
                 recordCount: status.recordCount,
                 lastSuccessfulSyncAt: status.lastSuccessfulSyncAt
             )
         }
-        let workouts = try workoutSamples().filter {
-            $0.startedAt < interval.end && $0.endedAt > interval.start
-        }
-        let sleep = try sleepSamples().filter {
-            $0.startedAt < interval.end && $0.endedAt > interval.start
-        }
-        let status = try replicaStatus()
-        return AppleHealthReplicaSnapshot(
-            samples: AppleHealthSampleBatch(
-                workouts: workouts,
-                sleep: sleep
-            ),
-            recordCount: status.recordCount,
-            lastSuccessfulSyncAt: status.lastSuccessfulSyncAt
-        )
     }
 
     func allSamples() throws -> AppleHealthReplicaSnapshot {
@@ -183,9 +183,8 @@ final class SwiftDataAppleHealthReplicaRepository:
         upserts: [AppleHealthWorkoutSample],
         deletedIDs: Set<UUID>
     ) throws {
-        let existingRecords = try context.fetch(
-            FetchDescriptor<AppleHealthReplicaSchemaV1.WorkoutRecord>()
-        )
+        let affectedIDs = Set(upserts.map(\.id)).union(deletedIDs)
+        let existingRecords = try workoutRecords(withIDs: affectedIDs)
         var byID = Dictionary(
             existingRecords.map { ($0.sampleID, $0) },
             uniquingKeysWith: { first, duplicate in
@@ -225,9 +224,8 @@ final class SwiftDataAppleHealthReplicaRepository:
         upserts: [AppleHealthSleepSample],
         deletedIDs: Set<UUID>
     ) throws {
-        let existingRecords = try context.fetch(
-            FetchDescriptor<AppleHealthReplicaSchemaV1.SleepRecord>()
-        )
+        let affectedIDs = Set(upserts.map(\.id)).union(deletedIDs)
+        let existingRecords = try sleepRecords(withIDs: affectedIDs)
         var byID = Dictionary(
             existingRecords.map { ($0.sampleID, $0) },
             uniquingKeysWith: { first, duplicate in
@@ -290,9 +288,33 @@ final class SwiftDataAppleHealthReplicaRepository:
     }
 
     private func workoutSamples() throws -> [AppleHealthWorkoutSample] {
-        try context.fetch(
-            FetchDescriptor<AppleHealthReplicaSchemaV1.WorkoutRecord>()
-        ).map { record in
+        try workoutSamples(
+            from: context.fetch(
+                FetchDescriptor<AppleHealthReplicaSchemaV1.WorkoutRecord>()
+            )
+        )
+    }
+
+    private func workoutSamples(
+        overlapping interval: DateInterval
+    ) throws -> [AppleHealthWorkoutSample] {
+        let start = interval.start
+        let end = interval.end
+        return try workoutSamples(
+            from: context.fetch(
+                FetchDescriptor<AppleHealthReplicaSchemaV1.WorkoutRecord>(
+                    predicate: #Predicate {
+                        $0.startedAt < end && $0.endedAt > start
+                    }
+                )
+            )
+        )
+    }
+
+    private func workoutSamples(
+        from records: [AppleHealthReplicaSchemaV1.WorkoutRecord]
+    ) throws -> [AppleHealthWorkoutSample] {
+        try records.map { record in
             guard let kind = AppleHealthWorkoutKind(
                 rawValue: record.kindRaw
             ) else {
@@ -311,9 +333,33 @@ final class SwiftDataAppleHealthReplicaRepository:
     }
 
     private func sleepSamples() throws -> [AppleHealthSleepSample] {
-        try context.fetch(
-            FetchDescriptor<AppleHealthReplicaSchemaV1.SleepRecord>()
-        ).map { record in
+        try sleepSamples(
+            from: context.fetch(
+                FetchDescriptor<AppleHealthReplicaSchemaV1.SleepRecord>()
+            )
+        )
+    }
+
+    private func sleepSamples(
+        overlapping interval: DateInterval
+    ) throws -> [AppleHealthSleepSample] {
+        let start = interval.start
+        let end = interval.end
+        return try sleepSamples(
+            from: context.fetch(
+                FetchDescriptor<AppleHealthReplicaSchemaV1.SleepRecord>(
+                    predicate: #Predicate {
+                        $0.startedAt < end && $0.endedAt > start
+                    }
+                )
+            )
+        )
+    }
+
+    private func sleepSamples(
+        from records: [AppleHealthReplicaSchemaV1.SleepRecord]
+    ) throws -> [AppleHealthSleepSample] {
+        try records.map { record in
             guard let stage = AppleHealthSleepStage(
                 rawValue: record.stageRaw
             ) else {
@@ -328,6 +374,36 @@ final class SwiftDataAppleHealthReplicaRepository:
                 sourceBundleIdentifier:
                 record.sourceBundleIdentifier,
                 sourceProductType: record.sourceProductType
+            )
+        }
+    }
+
+    private func workoutRecords(
+        withIDs ids: Set<UUID>
+    ) throws -> [AppleHealthReplicaSchemaV1.WorkoutRecord] {
+        guard ids.isEmpty == false else {
+            return []
+        }
+        return try ids.chunkedForReplicaPredicate().flatMap { chunk in
+            try context.fetch(
+                FetchDescriptor<AppleHealthReplicaSchemaV1.WorkoutRecord>(
+                    predicate: #Predicate { chunk.contains($0.sampleID) }
+                )
+            )
+        }
+    }
+
+    private func sleepRecords(
+        withIDs ids: Set<UUID>
+    ) throws -> [AppleHealthReplicaSchemaV1.SleepRecord] {
+        guard ids.isEmpty == false else {
+            return []
+        }
+        return try ids.chunkedForReplicaPredicate().flatMap { chunk in
+            try context.fetch(
+                FetchDescriptor<AppleHealthReplicaSchemaV1.SleepRecord>(
+                    predicate: #Predicate { chunk.contains($0.sampleID) }
+                )
             )
         }
     }

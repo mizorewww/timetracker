@@ -283,6 +283,89 @@ struct AppleHealthReplicaRepositoryTests {
     }
 
     @Test @MainActor
+    func rangeSnapshotDoesNotDecodeUnrelatedRowsOutsideTheInterval() throws {
+        let container = try AppleHealthReplicaModelContainerFactory
+            .makeInMemoryContainer(
+                name: "AppleHealthReplicaRangePredicate-\(UUID().uuidString)"
+            )
+        let repository = SwiftDataAppleHealthReplicaRepository(
+            container: container
+        )
+        let context = ModelContext(container)
+        context.insert(
+            AppleHealthReplicaSchemaV1.WorkoutRecord(
+                sampleID: UUID(),
+                kindRaw: "future-unknown-kind",
+                startedAt: Date(timeIntervalSince1970: 10000),
+                endedAt: Date(timeIntervalSince1970: 11000),
+                sourceBundleIdentifier: "future.health"
+            )
+        )
+        try context.save()
+
+        let snapshot = try repository.snapshot(
+            overlapping: DateInterval(
+                start: Date(timeIntervalSince1970: 100),
+                end: Date(timeIntervalSince1970: 200)
+            )
+        )
+
+        #expect(snapshot.samples == .empty)
+        #expect(snapshot.recordCount == 1)
+    }
+
+    @Test @MainActor
+    func largeIncrementalBatchConvergesAcrossPredicateChunks() throws {
+        let repository = try makeAppleHealthReplicaTestRepository()
+        let IDs = (0 ..< 825).map { _ in UUID() }
+        let initial = IDs.enumerated().map { index, id in
+            appleHealthWorkout(
+                id: id,
+                kind: .walking,
+                start: TimeInterval(index * 10),
+                end: TimeInterval(index * 10 + 5)
+            )
+        }
+        try repository.apply(
+            AppleHealthReplicaChangeBatch(
+                workouts: initial,
+                deletedWorkoutIDs: [],
+                workoutAnchor: Data("large-1".utf8),
+                sleep: [],
+                deletedSleepIDs: [],
+                sleepAnchor: Data()
+            ),
+            syncedAt: Date(timeIntervalSince1970: 9000)
+        )
+
+        let updated = initial.dropFirst(25).map {
+            appleHealthWorkout(
+                id: $0.id,
+                kind: .running,
+                start: $0.startedAt.timeIntervalSince1970,
+                end: $0.endedAt.timeIntervalSince1970
+            )
+        }
+        try repository.apply(
+            AppleHealthReplicaChangeBatch(
+                workouts: updated,
+                deletedWorkoutIDs: Set(IDs.prefix(25)),
+                workoutAnchor: Data("large-2".utf8),
+                sleep: [],
+                deletedSleepIDs: [],
+                sleepAnchor: Data()
+            ),
+            syncedAt: Date(timeIntervalSince1970: 10000)
+        )
+
+        let snapshot = try repository.allSamples()
+        #expect(snapshot.samples.workouts.count == 800)
+        #expect(snapshot.samples.workouts.allSatisfy { $0.kind == .running })
+        #expect(snapshot.recordCount == 800)
+        #expect(try repository.anchors().workout == Data("large-2".utf8))
+    }
+
+    @Test @MainActor
     func clearRemovesRecordsAndAnchorsTogether() throws {
         let repository = try makeAppleHealthReplicaTestRepository()
         try repository.apply(

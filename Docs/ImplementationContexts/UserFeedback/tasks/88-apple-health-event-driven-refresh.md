@@ -48,3 +48,9 @@
   文案已如实说明本机加密只读 cache 与 JSON 导出；签名 generic iOS build 已确认同时包含
   HealthKit 和 background-delivery entitlement。待本 checkpoint 格式、本地化与回归门禁
   完成后提交。
+- 2026-07-28：checkpoint B 已提交为 `962e64ad`。
+- 2026-07-28：checkpoint C 实现完成。SwiftData replica 的增量 apply 改为仅查询变更/
+  删除 UUID，并用 400 项 predicate chunk 避免 SQLite 参数上限；区间 snapshot 把 overlap
+  条件下推给 SwiftData，不再全表 materialize 后过滤。apply/snapshot 增加原生 OS signpost。
+  新的边界行为测试先证明旧实现会解码区间外损坏行，并覆盖 825 项跨 chunk 收敛；优化后
+  Repository 9/9、CorePerformanceBudget 11/11 通过。

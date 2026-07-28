@@ -15,9 +15,9 @@
 
 ## 验收条件
 
-- [ ] 没有计时器驱动的 HealthKit 轮询。
-- [ ] 首次需要数据时刷新一次；后续由明确的生命周期/用户动作或 HealthKit 变更事件触发。
-- [ ] 并发或短时间重复触发合并为一次增量同步，旧请求不能覆盖新结果。
+- [x] 没有计时器驱动的 HealthKit 轮询。
+- [x] 首次需要数据时刷新一次；后续由明确的生命周期/用户动作或 HealthKit 变更事件触发。
+- [x] 并发或短时间重复触发合并为一次增量同步，旧请求不能覆盖新结果。
 - [ ] 锚点、修改、删除、失败回滚与 JSON 导出行为测试继续通过。
 - [ ] 完成性能相关测试、`make test`、格式检查和全设备安装。
 
@@ -42,3 +42,9 @@
   前台、显式刷新、授权重试和清库才使其失效。并发消费者共享同一个 anchored query，
   单个 waiter 取消不影响其余消费者，最后一个 waiter 取消仍回滚。新增 3 个行为测试；
   SyncService 7/7、ReplicaFacade 3/3、Health Task Analytics 11/11 通过。
+- 2026-07-28：checkpoint B 实现完成。iOS reader 使用两个 `HKObserverQuery` 观察 workout
+  与 sleep，并启用 HealthKit immediate background delivery；事件回调以保存的双 anchor
+  完成一次共享增量同步，随后推进 store revision，从本机 replica 重投影视图。授权用途
+  文案已如实说明本机加密只读 cache 与 JSON 导出；签名 generic iOS build 已确认同时包含
+  HealthKit 和 background-delivery entitlement。待本 checkpoint 格式、本地化与回归门禁
+  完成后提交。

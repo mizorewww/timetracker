@@ -135,7 +135,7 @@ sync snapshot、Widget、Watch 与 Live Activity 的提交后更新现在通过�
 
 ### Apple 健康
 
-Apple 健康集成只申请读取运动和睡眠分析类型，不向 HealthKit 写入数据。获得读取能力后，应用使用 HealthKit anchored query 增量读取新增、修改和删除，并把稳定样本 UUID、类型/阶段、日期与时间区间、来源 bundle 以及睡眠来源产品类型保存到独立的本机只读 SwiftData replica。HealthKit 合法的起止时间相等样本也按来源事实保存并推进检查点，但不会作为正时长计入时间线或分析；反向时间区间仍会使该代提交整体回滚。opaque HealthKit anchors 只作为本机增量检查点保存。界面和分析只消费不可变值快照，不提供新增、编辑、删除、补录、计时或 AI 修改入口。
+Apple 健康集成只申请读取运动和睡眠分析类型，不向 HealthKit 写入数据。获得读取能力后，应用使用 HealthKit anchored query 增量读取新增、修改和删除，并把稳定样本 UUID、类型/阶段、日期与时间区间、来源 bundle 以及睡眠来源产品类型保存到独立的本机只读 SwiftData replica。iOS 的 `HKObserverQuery` 与 HealthKit background-delivery entitlement 只负责通知“相关类型有变化”；回调随后使用保存的 opaque anchor 获取具体变化，并在事务成功后才完成系统回调。事件内容和本机 replica 都不会由该机制上传到 App 服务器或 iCloud。HealthKit 合法的起止时间相等样本也按来源事实保存并推进检查点，但不会作为正时长计入时间线或分析；反向时间区间仍会使该代提交整体回滚。opaque HealthKit anchors 只作为本机增量检查点保存。界面和分析只消费不可变值快照，不提供新增、编辑、删除、补录、计时或 AI 修改入口。
 
 该 replica 使用独立的版本化 schema 和 `cloudKitDatabase: .none`，不属于主业务模型、`SyncDataSnapshot`、CloudKit conflict、restore 或 fingerprint 边界；iOS 文件使用首次解锁后数据保护并排除系统备份。它不会通过 iCloud 或 App 自身跨设备同步。“同步 Apple 健康”只表示从当前设备 HealthKit 增量刷新。关闭时间线只隐藏投影，不删除 replica；macOS 没有 HealthKit reader，也不会把其它设备的健康记录伪装成本机数据。
 

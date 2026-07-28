@@ -32,13 +32,13 @@ final class AppleHealthReplicaSyncService {
         at syncedAt: Date = Date()
     ) async throws -> AppleHealthReplicaSnapshot {
         markNeedsSynchronization()
-        try await synchronizeIfNeeded(at: syncedAt)
+        _ = try await synchronizeIfNeeded(at: syncedAt)
         return try repository.allSamples()
     }
 
     func synchronizeIfNeeded(
         at syncedAt: Date = Date()
-    ) async throws {
+    ) async throws -> Int {
         while synchronizedGeneration < requestedGeneration {
             try Task.checkCancellation()
             let synchronization = inFlightSynchronization
@@ -79,6 +79,7 @@ final class AppleHealthReplicaSyncService {
                 throw error
             }
         }
+        return synchronizedGeneration
     }
 
     private func beginSynchronization(

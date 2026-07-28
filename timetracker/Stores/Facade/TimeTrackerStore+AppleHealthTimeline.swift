@@ -187,6 +187,7 @@ extension TimeTrackerStore {
 
             appleHealthTimelineState = .requesting
             try await appleHealthDataReader.requestReadAuthorization()
+            await startAppleHealthReplicaObservationIfNeeded()
         } catch is CancellationError {
             guard isCurrentAppleHealthTimelineRequest(requestID),
                   isAppleHealthTimelineEnabled
@@ -222,7 +223,8 @@ extension TimeTrackerStore {
     private func loadAppleHealthTimeline(
         requestID: UUID,
         now: Date,
-        calendar: Calendar
+        calendar: Calendar,
+        synchronizesReplica: Bool = true
     ) async {
         let visibleInterval = appleHealthVisibleInterval(
             now: now,
@@ -249,7 +251,8 @@ extension TimeTrackerStore {
             let loadTask = Task { @MainActor in
                 try Task.checkCancellation()
                 let batch = try await appleHealthSamples(
-                    overlapping: queryInterval
+                    overlapping: queryInterval,
+                    synchronizesReplica: synchronizesReplica
                 )
                 try Task.checkCancellation()
                 return batch
@@ -305,18 +308,73 @@ extension TimeTrackerStore {
     }
 
     func appleHealthSamples(
-        overlapping interval: DateInterval
+        overlapping interval: DateInterval,
+        synchronizesReplica: Bool = true
     ) async throws -> AppleHealthSampleBatch {
         guard let appleHealthReplicaSyncService else {
             return try await appleHealthDataReader.samples(
                 overlapping: interval
             )
         }
-        try await appleHealthReplicaSyncService.synchronizeIfNeeded()
-        try Task.checkCancellation()
+        if synchronizesReplica {
+            let generation = try await appleHealthReplicaSyncService
+                .synchronizeIfNeeded()
+            try Task.checkCancellation()
+            recordAppleHealthReplicaGeneration(generation)
+        }
         return try appleHealthReplicaRepository.snapshot(
             overlapping: interval
         ).samples
+    }
+
+    func startAppleHealthReplicaObservationIfNeeded() async {
+        guard isAppleHealthReplicaObservationActive == false,
+              let observer =
+              appleHealthDataReader
+                  as? any AppleHealthReplicaChangeObserving
+        else {
+            return
+        }
+        isAppleHealthReplicaObservationActive = true
+        do {
+            try await observer.startObservingReplicaChanges {
+                [weak self] in
+                await self?.handleObservedAppleHealthReplicaChange()
+            }
+        } catch {
+            isAppleHealthReplicaObservationActive = false
+        }
+    }
+
+    private func handleObservedAppleHealthReplicaChange() async {
+        guard let appleHealthReplicaSyncService else { return }
+        appleHealthReplicaSyncService.markNeedsSynchronization()
+        do {
+            let generation = try await appleHealthReplicaSyncService
+                .synchronizeIfNeeded()
+            try Task.checkCancellation()
+            recordAppleHealthReplicaGeneration(generation)
+        } catch is CancellationError {
+            return
+        } catch {
+            guard isAppleHealthTimelineEnabled else { return }
+            appleHealthTimelineState = .failed(error.localizedDescription)
+            return
+        }
+
+        guard isAppleHealthTimelineEnabled else { return }
+        let requestID = beginAppleHealthTimelineRequest()
+        await loadAppleHealthTimeline(
+            requestID: requestID,
+            now: Date(),
+            calendar: .current,
+            synchronizesReplica: false
+        )
+    }
+
+    private func recordAppleHealthReplicaGeneration(_ generation: Int) {
+        guard generation > appleHealthReplicaRevision else { return }
+        appleHealthReplicaRevision = generation
     }
 
     private func appleHealthVisibleInterval(

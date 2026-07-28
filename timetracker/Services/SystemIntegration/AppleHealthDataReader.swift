@@ -23,6 +23,14 @@ protocol AppleHealthDataReading: AnyObject {
 }
 
 @MainActor
+protocol AppleHealthReplicaChangeObserving: AnyObject {
+    func startObservingReplicaChanges(
+        _ handler: @escaping @MainActor @Sendable () async -> Void
+    ) async throws
+    func stopObservingReplicaChanges()
+}
+
+@MainActor
 final class UnavailableAppleHealthDataReader: AppleHealthDataReading {
     let isHealthDataAvailable = false
 
@@ -86,13 +94,21 @@ enum AppleHealthDataReaderFactory {
 #if os(iOS) && canImport(HealthKit)
 import HealthKit
 
+private enum AppleHealthReplicaObservationError: Error {
+    case backgroundDeliveryUnavailable
+}
+
 @MainActor
 final class HealthKitAppleHealthDataReader:
     AppleHealthDataReading,
-    AppleHealthReplicaChangeReading
+    AppleHealthReplicaChangeReading,
+    AppleHealthReplicaChangeObserving
 {
     private static let replicaQueryPageLimit = 1000
     private let healthStore: HKHealthStore
+    private var replicaObserverQueries: [HKObserverQuery] = []
+    private var replicaObservationHandler:
+        (@MainActor @Sendable () async -> Void)?
 
     init(healthStore: HKHealthStore = HKHealthStore()) {
         self.healthStore = healthStore
@@ -171,11 +187,94 @@ final class HealthKitAppleHealthDataReader:
         )
     }
 
+    func startObservingReplicaChanges(
+        _ handler: @escaping @MainActor @Sendable () async -> Void
+    ) async throws {
+        guard isHealthDataAvailable else {
+            throw AppleHealthReadError.unavailable
+        }
+        replicaObservationHandler = handler
+        guard replicaObserverQueries.isEmpty else { return }
+
+        let types = try observedSampleTypes()
+        let queries = types.map { type in
+            HKObserverQuery(
+                sampleType: type,
+                predicate: nil
+            ) { [weak self] _, completion, error in
+                guard error == nil else {
+                    completion()
+                    return
+                }
+                Task { @MainActor [weak self] in
+                    guard let handler =
+                        self?.replicaObservationHandler
+                    else {
+                        completion()
+                        return
+                    }
+                    await handler()
+                    completion()
+                }
+            }
+        }
+        replicaObserverQueries = queries
+        queries.forEach(healthStore.execute)
+
+        do {
+            for type in types {
+                try await enableBackgroundDelivery(for: type)
+            }
+        } catch {
+            stopObservingReplicaChanges()
+            throw error
+        }
+    }
+
+    func stopObservingReplicaChanges() {
+        replicaObserverQueries.forEach(healthStore.stop)
+        replicaObserverQueries = []
+        replicaObservationHandler = nil
+    }
+
     private func readTypes() throws -> Set<HKObjectType> {
         guard let sleepType = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) else {
             throw AppleHealthReadError.requiredTypesUnavailable
         }
         return [HKObjectType.workoutType(), sleepType]
+    }
+
+    private func observedSampleTypes() throws -> [HKSampleType] {
+        guard let sleepType = HKObjectType.categoryType(
+            forIdentifier: .sleepAnalysis
+        ) else {
+            throw AppleHealthReadError.requiredTypesUnavailable
+        }
+        return [HKObjectType.workoutType(), sleepType]
+    }
+
+    private func enableBackgroundDelivery(
+        for type: HKObjectType
+    ) async throws {
+        try await withCheckedThrowingContinuation {
+            (continuation: CheckedContinuation<Void, Error>) in
+            healthStore.enableBackgroundDelivery(
+                for: type,
+                frequency: .immediate
+            ) { succeeded, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if succeeded {
+                    continuation.resume()
+                } else {
+                    continuation.resume(
+                        throwing:
+                        AppleHealthReplicaObservationError
+                            .backgroundDeliveryUnavailable
+                    )
+                }
+            }
+        }
     }
 
     private func workoutSamples(predicate: NSPredicate) async throws -> [AppleHealthWorkoutSample] {

@@ -1,3 +1,3 @@
 CFBundleDisplayName = "時間追蹤";
 CFBundleName = "時間追蹤";
-NSHealthShareUsageDescription = "時間追蹤會從「Apple 健康」讀取運動與睡眠記錄，並顯示在時間軸上。健康記錄只留在本機，不會存入本 App 的資料庫或 iCloud。開啟此功能會建立一組與健康記錄無關的普通可編輯任務範本，這些範本可能透過 iCloud 同步。";
+NSHealthShareUsageDescription = "時間追蹤會從「Apple 健康」讀取運動與睡眠記錄，並顯示在時間軸和分析中。App 會在本機保留加密、唯讀快取，用於增量更新和匯出。個人健康記錄絕不會進入本 App 的 iCloud 資料庫；「清除全部資料」會刪除該快取。";

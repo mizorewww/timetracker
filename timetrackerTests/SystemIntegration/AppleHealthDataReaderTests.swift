@@ -268,7 +268,11 @@ struct AppleHealthDataReaderTests {
         )
 
         #expect(iosEntitlements["com.apple.developer.healthkit"] as? Bool == true)
-        #expect(iosEntitlements["com.apple.developer.healthkit.background-delivery"] == nil)
+        #expect(
+            iosEntitlements[
+                "com.apple.developer.healthkit.background-delivery"
+            ] as? Bool == true
+        )
         #expect(iosEntitlements["com.apple.developer.healthkit.access"] == nil)
         #expect(macEntitlements["com.apple.developer.healthkit"] == nil)
         #expect(

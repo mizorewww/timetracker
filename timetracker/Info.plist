@@ -22,7 +22,7 @@
 		</dict>
 	</array>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Time Tracker reads workouts and sleep from Apple Health to show them on your timeline. Health records remain on this device and are not stored in the app database or iCloud. Enabling this feature creates ordinary editable task templates independent of your records; those templates may sync with iCloud.</string>
+	<string>Time Tracker reads workouts and sleep from Apple Health to show them on your timeline and in analysis. It keeps an encrypted, read-only cache on this device for incremental refresh and export. Personal Health records never enter the app's iCloud database; Clear All deletes the cache.</string>
 	<key>TimeTrackerAutomaticDemoDataMode</key>
 	<string>$(TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE)</string>
 	<key>UIBackgroundModes</key>

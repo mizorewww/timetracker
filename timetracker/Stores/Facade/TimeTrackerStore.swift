@@ -240,7 +240,9 @@ final class TimeTrackerStore {
     var isAppleHealthTimelineEnabled: Bool
     var appleHealthTimelineItems: [AppleHealthTimelineItem] = []
     var appleHealthTimelineState: AppleHealthTimelineState
+    var appleHealthReplicaRevision = 0
     var appleHealthTaskCatalogErrorMessage: String?
+    @ObservationIgnored var isAppleHealthReplicaObservationActive = false
     @ObservationIgnored var appleHealthTimelineRequestID = UUID()
     @ObservationIgnored var appleHealthTimelineLoadTask:
         Task<AppleHealthSampleBatch, Error>?

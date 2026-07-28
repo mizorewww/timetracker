@@ -39,22 +39,24 @@ struct AppleHealthReplicaSyncServiceTests {
             repository: repository
         )
 
-        try await service.synchronizeIfNeeded(
+        let firstGeneration = try await service.synchronizeIfNeeded(
             at: Date(timeIntervalSince1970: 500)
         )
-        try await service.synchronizeIfNeeded(
+        let cachedGeneration = try await service.synchronizeIfNeeded(
             at: Date(timeIntervalSince1970: 600)
         )
 
         #expect(reader.requestCount == 1)
+        #expect(cachedGeneration == firstGeneration)
         #expect(try repository.allSamples().recordCount == 1)
 
         service.markNeedsSynchronization()
-        try await service.synchronizeIfNeeded(
+        let refreshedGeneration = try await service.synchronizeIfNeeded(
             at: Date(timeIntervalSince1970: 700)
         )
 
         #expect(reader.requestCount == 2)
+        #expect(refreshedGeneration > cachedGeneration)
         #expect(try repository.anchors() == AppleHealthReplicaAnchors(
             workout: Data("workout-2".utf8),
             sleep: Data("sleep-2".utf8)

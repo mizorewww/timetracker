@@ -5,6 +5,89 @@ import Testing
 @Suite(.serialized)
 struct AppleHealthReplicaFacadeTests {
     @Test @MainActor
+    func observedChangeIncrementallyRefreshesReplicaAndVisibleTimeline()
+        async throws
+    {
+        let now = Date()
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let firstWorkoutID = UUID()
+        let secondWorkoutID = UUID()
+        let reader = ObservingReplicaFacadeAppleHealthReader(
+            changes: [
+                AppleHealthReplicaChangeBatch(
+                    workouts: [
+                        AppleHealthWorkoutSample(
+                            id: firstWorkoutID,
+                            kind: .walking,
+                            startedAt: now.addingTimeInterval(-2400),
+                            endedAt: now.addingTimeInterval(-1800),
+                            sourceBundleIdentifier: "test.health"
+                        ),
+                    ],
+                    deletedWorkoutIDs: [],
+                    workoutAnchor: Data("workout-1".utf8),
+                    sleep: [],
+                    deletedSleepIDs: [],
+                    sleepAnchor: Data("sleep-1".utf8)
+                ),
+                AppleHealthReplicaChangeBatch(
+                    workouts: [
+                        AppleHealthWorkoutSample(
+                            id: secondWorkoutID,
+                            kind: .running,
+                            startedAt: now.addingTimeInterval(-1200),
+                            endedAt: now.addingTimeInterval(-600),
+                            sourceBundleIdentifier: "test.health"
+                        ),
+                    ],
+                    deletedWorkoutIDs: [],
+                    workoutAnchor: Data("workout-2".utf8),
+                    sleep: [],
+                    deletedSleepIDs: [],
+                    sleepAnchor: Data("sleep-2".utf8)
+                ),
+            ]
+        )
+        let repository = try makeAppleHealthReplicaTestRepository()
+        let store = TimeTrackerStore(
+            appleHealthDataReader: reader,
+            appleHealthReplicaRepository: repository,
+            appleHealthTimelinePreferenceStore:
+            TestAppleHealthTimelinePreferenceStore(),
+            writeAuthorization: .isolatedTestHarness
+        )
+
+        await store.showAppleHealthInTimeline(
+            now: now,
+            calendar: calendar
+        )
+        let firstRevision = store.appleHealthReplicaRevision
+
+        #expect(reader.observationStartCount == 1)
+        #expect(reader.receivedReplicaAnchors == [.empty])
+        #expect(store.appleHealthTimelineItems.map(\.id) == [
+            .appleHealthWorkout(firstWorkoutID),
+        ])
+
+        await reader.emitObservedChange()
+
+        #expect(reader.observationStartCount == 1)
+        #expect(reader.receivedReplicaAnchors == [
+            .empty,
+            AppleHealthReplicaAnchors(
+                workout: Data("workout-1".utf8),
+                sleep: Data("sleep-1".utf8)
+            ),
+        ])
+        #expect(store.appleHealthReplicaRevision > firstRevision)
+        #expect(Set(store.appleHealthTimelineItems.map(\.id)) == [
+            .appleHealthWorkout(firstWorkoutID),
+            .appleHealthWorkout(secondWorkoutID),
+        ])
+    }
+
+    @Test @MainActor
     func timelineSynchronizesThenReadsReplicaAndHideKeepsReplica() async throws {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         var calendar = Calendar(identifier: .gregorian)
@@ -223,5 +306,58 @@ private final class ReplicaFacadeAppleHealthReader:
     ) async throws -> AppleHealthReplicaChangeBatch {
         receivedReplicaAnchors.append(anchors)
         return changes
+    }
+}
+
+@MainActor
+private final class ObservingReplicaFacadeAppleHealthReader:
+    AppleHealthDataReading,
+    AppleHealthReplicaChangeReading,
+    AppleHealthReplicaChangeObserving
+{
+    let isHealthDataAvailable = true
+    var changes: [AppleHealthReplicaChangeBatch]
+    var receivedReplicaAnchors: [AppleHealthReplicaAnchors] = []
+    var observationStartCount = 0
+    private var observationHandler: (@MainActor @Sendable () async -> Void)?
+
+    init(changes: [AppleHealthReplicaChangeBatch]) {
+        self.changes = changes
+    }
+
+    func authorizationRequestStatus() async throws
+        -> AppleHealthAuthorizationRequestStatus
+    {
+        .unnecessary
+    }
+
+    func requestReadAuthorization() async throws {}
+
+    func samples(
+        overlapping _: DateInterval
+    ) async throws -> AppleHealthSampleBatch {
+        .empty
+    }
+
+    func replicaChanges(
+        after anchors: AppleHealthReplicaAnchors
+    ) async throws -> AppleHealthReplicaChangeBatch {
+        receivedReplicaAnchors.append(anchors)
+        return changes.removeFirst()
+    }
+
+    func startObservingReplicaChanges(
+        _ handler: @escaping @MainActor @Sendable () async -> Void
+    ) async throws {
+        observationStartCount += 1
+        observationHandler = handler
+    }
+
+    func stopObservingReplicaChanges() {
+        observationHandler = nil
+    }
+
+    func emitObservedChange() async {
+        await observationHandler?()
     }
 }

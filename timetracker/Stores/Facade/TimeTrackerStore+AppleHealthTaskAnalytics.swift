@@ -29,6 +29,7 @@ extension TimeTrackerStore {
         if allowsAuthorizationRequest {
             try await appleHealthDataReader.requestReadAuthorization()
             try Task.checkCancellation()
+            await startAppleHealthReplicaObservationIfNeeded()
             appleHealthReplicaSyncService?.markNeedsSynchronization()
         } else {
             let authorizationStatus = try await appleHealthDataReader

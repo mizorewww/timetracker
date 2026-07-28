@@ -1,9 +1,9 @@
 # 92：Apple Health 加载不结束实现记忆
 
-状态：2026-07-28 进行中
+状态：2026-07-28 已完成
 
 > 本文件是主代理与子代理的实现、验证和编排记忆；唯一任务来源仍是
-> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的 `[~]` 条目。
+> [`Docs/userfeedback.md`](../../../userfeedback.md) 中对应的状态条目。
 
 ## 认领范围
 
@@ -16,8 +16,8 @@
 - [x] 先建立能复现无限加载的行为测试，并定位缺失的终止状态。
 - [x] 授权、无数据、增量成功、失败、取消和不可用状态都能确定结束加载。
 - [x] 增量 anchor 与 replica durable write 仍保持事务安全，不丢失重试机会。
-- [ ] 正常字号 UI/状态文案验收通过；需要时保存 Apple Health 设置/任务详情截图。
-- [ ] `make test`、格式、本地化门禁通过，实现提交后完成 `make build-install-all`。
+- [x] 正常字号 UI/状态文案验收通过；需要时保存 Apple Health 设置/任务详情截图。
+- [x] `make test`、格式、本地化门禁通过，实现提交后完成 `make build-install-all`。
 
 ## 子代理编排
 
@@ -46,3 +46,15 @@
   observer。聚焦 replica facade 5/5 测试通过；完整 `make test` 通过 1568 tests /
   176 suites，SwiftFormat、diff、三语言本地化与 hook 门禁通过。实现未改变视觉布局，
   采用状态机行为测试验收，不创建无信息增益的截图；待 checkpoint 提交与设备安装。
+- 2026-07-28：checkpoint A 提交为 `2aff7826`。Release `make build-install-all` 成功：
+  iOS App（含已签名 Watch companion）安装到 iPad Pro M4 与 iPhone Air，universal
+  macOS App 安装并验签到 `/Applications/timetracker.app`。当前没有可见实体 Apple
+  Watch，因此不声称独立 Watch 真机覆盖。
+
+## 完成边界
+
+- 本任务修复异步生命周期与加载终态，没有修改 UI 布局或用户文案；HIG 验收由明确的
+  requesting/loading/empty/content/failure 状态行为测试完成，不重复生成外观完全相同的截图。
+- 未引入第三方依赖；继续使用 Apple HealthKit、Swift Concurrency、SwiftData replica 与
+  现有 generation coalescing。
+- 用户自有 `.gitignore` 修改未被读取为任务、未修改、未暂存或提交。

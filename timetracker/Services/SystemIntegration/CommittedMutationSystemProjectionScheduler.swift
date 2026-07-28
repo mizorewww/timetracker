@@ -5,9 +5,29 @@ nonisolated enum CommittedMutationSystemProjectionSink:
     Hashable,
     Sendable
 {
+    case syncSnapshot
     case widget
     case watch
     case liveActivity
+
+    static let systemSurfaceCases: [Self] = [
+        .widget,
+        .watch,
+        .liveActivity,
+    ]
+
+    var persistentHistoryLane: PersistentHistoryProjectionLane {
+        switch self {
+        case .syncSnapshot:
+            .syncSnapshot
+        case .widget:
+            .widget
+        case .watch:
+            .watch
+        case .liveActivity:
+            .liveActivity
+        }
+    }
 }
 
 nonisolated struct CommittedMutationSystemProjectionFailure:
@@ -182,19 +202,37 @@ final class CommittedMutationSystemProjectionScheduler {
     ) -> Set<StoreDomainEvent> {
         StoreDomainEventBatchLimiter.bounded(
             events.filter { event in
-                switch event {
-                case .taskChanged,
-                     .ledgerChanged,
-                     .pomodoroChanged,
-                     .remoteImportCompleted,
-                     .fullSync:
+                switch sink {
+                case .syncSnapshot:
                     true
-                case .preferenceChanged:
-                    sink == .watch
-                case .checklistChanged,
-                     .countdownChanged,
-                     .inboxChanged:
-                    false
+                case .widget, .liveActivity:
+                    switch event {
+                    case .taskChanged,
+                         .ledgerChanged,
+                         .pomodoroChanged,
+                         .remoteImportCompleted,
+                         .fullSync:
+                        true
+                    case .preferenceChanged,
+                         .checklistChanged,
+                         .countdownChanged,
+                         .inboxChanged:
+                        false
+                    }
+                case .watch:
+                    switch event {
+                    case .taskChanged,
+                         .ledgerChanged,
+                         .pomodoroChanged,
+                         .preferenceChanged,
+                         .remoteImportCompleted,
+                         .fullSync:
+                        true
+                    case .checklistChanged,
+                         .countdownChanged,
+                         .inboxChanged:
+                        false
+                    }
                 }
             }
         )

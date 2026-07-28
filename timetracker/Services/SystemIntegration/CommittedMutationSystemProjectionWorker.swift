@@ -138,6 +138,9 @@ private final class CommittedMutationModelContainerProvider {
 /// be released without making the older facts visible again.
 @MainActor
 final class CommittedMutationSystemProjectionWorker {
+    typealias SyncRecorder = @MainActor (
+        Set<StoreDomainEvent>
+    ) throws -> Void
     typealias Materializer = @MainActor (
         CommittedMutationSystemProjectionWork
     ) throws -> CommittedMutationSystemProjectionMaterialization?
@@ -159,6 +162,7 @@ final class CommittedMutationSystemProjectionWorker {
         var successfulSinks: Set<CommittedMutationSystemProjectionSink> = []
     }
 
+    private let syncRecorder: SyncRecorder
     private let materializer: Materializer
     private let publisher: Publisher
     private var statesByGeneration: [UInt: GenerationState] = [:]
@@ -183,6 +187,20 @@ final class CommittedMutationSystemProjectionWorker {
         now: @escaping @MainActor () -> Date = Date.init
     ) {
         let resolvedWidgetCache = widgetCache ?? WidgetSnapshotCache()
+        syncRecorder = { events in
+            guard let container =
+                containerProvider.currentContainer()
+            else {
+                throw CommittedMutationSystemProjectionWorkerError
+                    .storeContainerReleased
+            }
+            let context = ModelContext(container)
+            context.autosaveEnabled = false
+            _ = try SyncConflictService().recordLocalMutation(
+                context: context,
+                events: events
+            )
+        }
         materializer = { _ in
             guard let container = containerProvider.currentContainer() else {
                 throw CommittedMutationSystemProjectionWorkerError
@@ -205,9 +223,11 @@ final class CommittedMutationSystemProjectionWorker {
     }
 
     init(
+        syncRecorder: @escaping SyncRecorder = { _ in },
         materializer: @escaping Materializer,
         publisher: @escaping Publisher
     ) {
+        self.syncRecorder = syncRecorder
         self.materializer = materializer
         self.publisher = publisher
     }
@@ -216,6 +236,11 @@ final class CommittedMutationSystemProjectionWorker {
         sink: CommittedMutationSystemProjectionSink,
         work: CommittedMutationSystemProjectionWork
     ) async throws {
+        if sink == .syncSnapshot {
+            try syncRecorder(work.events)
+            return
+        }
+
         let materialization = try materialization(
             requestedBy: sink,
             work: work
@@ -238,6 +263,9 @@ final class CommittedMutationSystemProjectionWorker {
         requestedBy sink: CommittedMutationSystemProjectionSink,
         work: CommittedMutationSystemProjectionWork
     ) throws -> CommittedMutationSystemProjectionMaterialization? {
+        let systemSurfaceTargets = work.targetSinks.intersection(
+            CommittedMutationSystemProjectionSink.systemSurfaceCases
+        )
         newestRequestedGeneration = max(
             newestRequestedGeneration,
             work.generation
@@ -246,7 +274,7 @@ final class CommittedMutationSystemProjectionWorker {
         var state: GenerationState
         if let cached = statesByGeneration[work.generation] {
             state = cached
-            state.targetedSinks.formUnion(work.targetSinks)
+            state.targetedSinks.formUnion(systemSurfaceTargets)
         } else {
             let outcome: MaterializationOutcome
             do {
@@ -258,7 +286,7 @@ final class CommittedMutationSystemProjectionWorker {
             }
             state = GenerationState(
                 outcome: outcome,
-                targetedSinks: work.targetSinks
+                targetedSinks: systemSurfaceTargets
             )
         }
 
@@ -354,6 +382,10 @@ final class CommittedMutationSystemProjectionWorker {
         widgetCache: WidgetSnapshotCache
     ) async throws {
         switch sink {
+        case .syncSnapshot:
+            assertionFailure(
+                "Sync snapshot publication bypassed its dedicated recorder."
+            )
         case .widget:
             // Deliberately bypasses TimeTrackerStore.errorMessage. Projection
             // diagnostics belong to the scheduler's per-sink failure state.

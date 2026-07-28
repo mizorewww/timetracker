@@ -23,9 +23,48 @@ struct CommittedMutationSystemProjectionWorkerTests {
         #expect(probe.materializationCount == 1)
         #expect(
             Set(probe.publications.map(\.sink)) ==
-                Set(CommittedMutationSystemProjectionSink.allCases)
+                Set(
+                    CommittedMutationSystemProjectionSink
+                        .systemSurfaceCases
+                )
         )
         #expect(Set(probe.publications.map(\.generatedAt)).count == 1)
+    }
+
+    @Test @MainActor
+    func schedulerRecordsSyncEventsWithoutMaterializingASurface() async {
+        let probe = SystemProjectionWorkerProbe()
+        let worker = probe.makeWorker()
+        let scheduler = CommittedMutationSystemProjectionScheduler {
+            sink,
+            work in
+            try await worker.perform(sink: sink, work: work)
+        }
+        let events: Set<StoreDomainEvent> = [
+            .taskChanged(
+                taskID: UUID(),
+                affectedAncestorIDs: []
+            ),
+            .checklistChanged(
+                taskID: UUID(),
+                affectedAncestorIDs: []
+            ),
+        ]
+
+        scheduler.enqueue(CommittedMutationSystemProjectionReceipt(
+            events: events
+        ))
+        await scheduler.waitUntilIdle()
+
+        #expect(probe.recordedSyncEvents == [events])
+        #expect(probe.materializationCount == 1)
+        #expect(
+            Set(probe.publications.map(\.sink)) ==
+                Set(
+                    CommittedMutationSystemProjectionSink
+                        .systemSurfaceCases
+                )
+        )
     }
 
     @Test @MainActor
@@ -86,7 +125,10 @@ struct CommittedMutationSystemProjectionWorkerTests {
         #expect(probe.materializationCount == 1)
         #expect(
             scheduler.failedSinks ==
-                Set(CommittedMutationSystemProjectionSink.allCases)
+                Set(
+                    CommittedMutationSystemProjectionSink
+                        .systemSurfaceCases
+                )
         )
         #expect(probe.publications.isEmpty)
 
@@ -97,7 +139,10 @@ struct CommittedMutationSystemProjectionWorkerTests {
         #expect(scheduler.failedSinks.isEmpty)
         #expect(
             Set(probe.publications.map(\.sink)) ==
-                Set(CommittedMutationSystemProjectionSink.allCases)
+                Set(
+                    CommittedMutationSystemProjectionSink
+                        .systemSurfaceCases
+                )
         )
     }
 
@@ -338,6 +383,7 @@ private final class SystemProjectionWorkerProbe {
 
     private(set) var materializationCount = 0
     private(set) var publications: [Publication] = []
+    private(set) var recordedSyncEvents: [Set<StoreDomainEvent>] = []
     private var failuresRemaining: [
         CommittedMutationSystemProjectionSink: Int
     ]
@@ -354,6 +400,12 @@ private final class SystemProjectionWorkerProbe {
 
     func makeWorker() -> CommittedMutationSystemProjectionWorker {
         CommittedMutationSystemProjectionWorker(
+            syncRecorder: { [weak self] events in
+                guard let self else {
+                    throw SystemProjectionWorkerProbeError.deallocated
+                }
+                recordedSyncEvents.append(events)
+            },
             materializer: { [weak self] work in
                 guard let self else {
                     throw SystemProjectionWorkerProbeError.deallocated

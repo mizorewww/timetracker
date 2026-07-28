@@ -176,30 +176,35 @@ struct CommittedMutationSystemProjectionSchedulerTests {
     }
 
     @Test @MainActor
-    func irrelevantEventsAreSkippedAndPreferencesTargetOnlyWatch() async {
+    func everyMutationTargetsSyncWhileSystemSurfacesStayDomainScoped() async {
         let probe = ProjectionWorkerProbe()
         let scheduler = CommittedMutationSystemProjectionScheduler {
             sink,
             work in
             try await probe.run(sink: sink, work: work)
         }
+        let syncOnlyEvents: Set<StoreDomainEvent> = [
+            .checklistChanged(
+                taskID: UUID(),
+                affectedAncestorIDs: []
+            ),
+            .countdownChanged,
+            .inboxChanged(itemIDs: [UUID()]),
+        ]
 
         scheduler.enqueue(
             CommittedMutationSystemProjectionReceipt(
-                events: [
-                    .checklistChanged(
-                        taskID: UUID(),
-                        affectedAncestorIDs: []
-                    ),
-                    .countdownChanged,
-                    .inboxChanged(itemIDs: [UUID()]),
-                ]
+                events: syncOnlyEvents
             )
         )
         await scheduler.waitUntilIdle()
 
-        #expect(scheduler.latestGeneration == 0)
-        for sink in CommittedMutationSystemProjectionSink.allCases {
+        #expect(scheduler.latestGeneration == 1)
+        #expect(
+            probe.calls(for: .syncSnapshot).map(\.events)
+                == [syncOnlyEvents]
+        )
+        for sink in CommittedMutationSystemProjectionSink.systemSurfaceCases {
             #expect(probe.calls(for: sink).isEmpty)
         }
 
@@ -213,10 +218,16 @@ struct CommittedMutationSystemProjectionSchedulerTests {
         )
         await scheduler.waitUntilIdle()
 
-        #expect(scheduler.latestGeneration == 1)
+        #expect(scheduler.latestGeneration == 2)
         #expect(probe.calls(for: .widget).isEmpty)
         #expect(probe.calls(for: .liveActivity).isEmpty)
         #expect(probe.calls(for: .watch).map(\.events) == [preferenceEvent])
+        #expect(
+            probe.calls(for: .syncSnapshot).map(\.events) == [
+                syncOnlyEvents,
+                preferenceEvent,
+            ]
+        )
     }
 
     @Test @MainActor
@@ -246,7 +257,7 @@ struct CommittedMutationSystemProjectionSchedulerTests {
     }
 
     @Test @MainActor
-    func partiallyEvictedReceiptReplayTargetsOnlyTheMissingWatchLane() async {
+    func partiallyEvictedReceiptReplayTargetsMissingSyncAndWatchLanes() async {
         let probe = ProjectionWorkerProbe()
         let scheduler = CommittedMutationSystemProjectionScheduler {
             sink,
@@ -268,6 +279,11 @@ struct CommittedMutationSystemProjectionSchedulerTests {
         await scheduler.waitUntilIdle()
 
         #expect(scheduler.acknowledgedReceiptCount(for: .watch) == 512)
+        #expect(
+            scheduler.acknowledgedReceiptCount(
+                for: .syncSnapshot
+            ) == 512
+        )
         #expect(scheduler.acknowledgedReceiptCount(for: .widget) == 1)
         #expect(
             scheduler.acknowledgedReceiptCount(for: .liveActivity) == 1
@@ -280,8 +296,20 @@ struct CommittedMutationSystemProjectionSchedulerTests {
         #expect(probe.calls(for: .liveActivity).count == 1)
         let watchReplay = probe.calls(for: .watch).last
         #expect(watchReplay?.receiptIDs == [original.id])
-        #expect(watchReplay?.targetSinks == [.watch])
+        #expect(
+            watchReplay?.targetSinks == [
+                .syncSnapshot,
+                .watch,
+            ]
+        )
         #expect(watchReplay?.events == [.fullSync])
+        let syncReplay = probe.calls(for: .syncSnapshot).last
+        #expect(syncReplay?.receiptIDs == [original.id])
+        #expect(syncReplay?.targetSinks == [
+            .syncSnapshot,
+            .watch,
+        ])
+        #expect(syncReplay?.events == [.fullSync])
     }
 
     @Test @MainActor

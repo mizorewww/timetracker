@@ -134,3 +134,9 @@
   未知未来实体安全降级为 `.fullSync`。因此一次 history scan 即使跨过多个并发
   receipt，也不会用首个 receipt 的局部领域错误确认更远 frontier；当前 V14 的
   17 个实体都有显式映射。driver 聚焦测试现为 13 项。未新增第三方依赖。
+- 2026-07-28：把 sync snapshot 加入现有 coalescing scheduler，成为与 Widget、
+  Watch、Live Activity 对等且独立确认/失败/重试的第四条 lane。所有本地领域事件都
+  进入 sync lane，三个系统表面继续按自身领域过滤；sync effect 不参与也不阻塞三表面
+  共用一次 committed-fact materialization，materialization 失败只等待实际表面 lane
+  都观察后释放缓存供显式重试。scheduler 9 项、worker 10 项聚焦测试通过。未新增
+  第三方依赖；使用 Swift Structured Concurrency、SwiftData 与既有同步服务。

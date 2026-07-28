@@ -202,3 +202,14 @@
   新 worker/scheduler/driver 行为测试继续覆盖后台物化、Watch 排序与 lane 独立失败。
   Watch 与 Widget 聚焦测试通过；完整 `make test` 为 1557/1557，格式、本地化、hook
   与 diff 门禁均通过。未新增第三方依赖；继续使用 Apple 原生框架与既有基础设施。
+- 2026-07-28：完成当前行为文档与工程决策同步。Architecture、CodeGuide、ProjectMap、
+  Testing、UserGuide、PrivacyAndSecurity 和 CodeRefactorPlan 现在记录四条异步 lane、
+  每 lane cursor/attempt/reset fence、后台物化、App Intent/Watch 同 receipt、启动/
+  前台/import catch-up、异步 conflict prompt 与明确保留的 Cloud recovery 安全边界；
+  AD-137 局部替代旧同步 post-commit 编排条款。调研 Apple SwiftData persistent history、
+  WidgetKit 与 ActivityKit 官方方案，并审查 Apple 官方 `swift-async-algorithms`
+  （约 3.7k stars）；其 debounce/channel 不能提供四 lane durable cursor、reset epoch、
+  acknowledgement 与恢复协议，因此不增加依赖。Apple HIG/SwiftUI 验收确认本项没有
+  UI、文案、布局、accessibility、extension DTO 或可见设计变化；静态截图无法验证
+  caller latency、失败隔离或 persistent-history 重放，故截图不适用，改以行为/性能预算、
+  Release 安装和真实系统表面收敛验收。

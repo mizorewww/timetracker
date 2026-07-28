@@ -1840,6 +1840,28 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：行为测试覆盖四项默认、跨实例覆盖、显式清空、自定义覆盖、重置、损坏/超限回退、重复、固定组合和无修饰普通键拒绝。macOS UI 自动化在普通字号下确认四个原生 recorder、默认组合和默认态禁用的重置按钮，保存 Settings 与带快捷键的 File 菜单截图，并实际按下 `Shift-Command-M` 触发 focused-scene 的添加时间动作。iOS 签名构建证明条件依赖没有进入非 macOS 产品。完整 `make test`、格式、本地化和 `make build-install-all` 仍是任务关闭门禁。
 
+## AD-137：提交后同步保护与系统表面按 persistent history 异步收敛
+
+状态：Accepted
+
+替代关系：本决策替代 AD-004 中由 mutation 调用方直接刷新 sync snapshot/Widget/Watch/Live Activity 的编排、AD-020 中 `Configuration` 装配 repository-only 系统表面的具体所有权、AD-098 中“App Intent 提交后创建新 context 做 snapshot/system projection”、AD-103 中“System Action 同步记录 snapshot/更新系统表面后再广播”、AD-109 中“普通 Scene 在 snapshot recording 后才广播且系统表面依赖各自同步 post-commit path”，以及 AD-111 中“普通 mutation/Watch 调用方直接消费锁内 prompt 或把后续 prompt 读取失败报告为 post-commit refresh failure”的条款。上述决策的共享命令/稳定 DTO/传输上限、职责拆分、store-scoped writer、exact events、兄弟 Scene 只读收敛、无副作用循环和 conflict ID/CAS 要求继续有效。本决策不替代 AD-018、AD-074、AD-076、AD-081 或 AD-094；尤其 AD-094 的 destructive reset 前最终保护快照与同一外层 store lock 保证完整保留。
+
+背景：sync recovery snapshot、Widget App Group 写入、WatchConnectivity payload 与 Live Activity reconciliation 都曾串在 durable commit 之后。大型 store、跨进程状态锁或系统框架延迟会延长 Scene、Shortcuts 与 Watch 命令返回；任一表面失败还会共享错误槽位，混淆“业务事实已保存”和“只读投影尚未收敛”。仅把工作包进非结构化 Task 又没有跨进程 frontier、reset fence 或 per-sink acknowledgement，进程退出和 store replacement 后无法证明哪些效果已完成。
+
+决策：
+
+- 每个持久 SwiftData outer save 明确写稳定 history author：普通 Scene/fresh coordinator 为 `localMutation`，sync restore 为 `syncReconciliation`，migration/seed 为 `bootstrapMaintenance`；未知或缺失 author 不能推断成本机 mutation。Scene、App Intent 与 Watch 把同一 command outcome 的 exact `StoreDomainEvent` 和可选 forced sink 作为一个 receipt 交给物理 `TimerStoreScope` 共享的 `CommittedMutationSystemProjectionScheduler`。Scene 只等待自身必要 read-model refresh；App Intent 与 Watch 在 durable result 后返回，不等待 projection。
+- scheduler 维护 sync snapshot、Widget、Watch、Live Activity 四条独立 lane。`PersistentHistoryProjectionDriver` 用短生命周期 `@ModelActor` 分页读取 chronological history，先固定 tail，再在 effect 成功后对该 lane 的 opaque token 做单调确认；四条 cursor、full-reconciliation attempt、store UUID 与 reset epoch 各自耐久化。sync lane 只响应 `localMutation` 领域，三个系统表面消费所有相关 author；未知实体提升为 `.fullSync`。lane 不删除共享 history，单 lane 失败不确认、不阻塞 sibling，也不写共享 `errorMessage`。
+- 三个系统表面每 generation 由 fresh background materializer 读取一次 committed facts 并复用不可变 DTO；Widget App Group 写入在专用 actor 串行，框架 publication 才回到所需 actor。每次物化、缓存、发布和确认都受 container revision 与 reset epoch fence 保护；替换前开始的工作可完成，但不能发布/确认到新 store。已开始工作不取消，pending receipt/events 有界合并，超限安全降级 `.fullSync`。
+- forced current-state 是指定系统表面的请求，不伪造 history。Watch 每个 typed terminal outcome 都在同一 receipt 强制 Watch：真实 mutation 同时携带实际 events；duplicate/missing/invalid/failed 等无 mutation 终态使用空 events，只刷新 Watch。启动额外 force Watch，弥补进程退出打断的 forced-only publication。
+- 启动、前台与 remote import 在 read-model refresh 后 enqueue history-backed catch-up；它们不重复 suggestion 或发送 Scene 的副作用。进程内 `StoreMutationBroadcaster` 仍只让兄弟 Scene 下一 MainActor turn 读取收敛。
+- sync lane 成功后发布 prompt-change notification。Scene 通过单一 serialized reader、single-flight 加一次 trailing refresh、有界退避和 latest-request-wins 异步更新；失败保留最后已知 prompt，前台重读，显式 resolution 广播 sibling clear。prompt I/O 不改变 Watch/App Intent 终态。
+- Cloud enablement 的本机赢家 staging、显式 conflict/recovery/force upload/import、AD-094 destructive reset 前最终保护，以及 Settings 的手动 Live Activity Retry 仍是明确同步安全/人工重试边界；不得为追求“全异步”削弱它们。
+
+后果：提交调用方不再等待四类投影 I/O，失败按 lane 隔离并可由后续提交、启动、前台或 remote import 恢复；persistent history、幂等 snapshot postcondition、cursor CAS、epoch/container fence 共同提供 at-least-once 收敛而不伪造业务失败。forced-only Watch request 是进程内调度状态，不得描述成持久业务 transaction；跨进程恢复承诺来自 history frontier/interrupted full attempt，Watch 无 history 的终态由下次 App 启动明确 force current state。应用增加少量最多 64 KiB、排除备份的本机 cursor/attempt metadata，但不改变 SwiftData/CloudKit schema、Widget/Watch/Live Activity wire payload、用户可见设计或 Privacy Manifest API 声明。实现只使用 SwiftData persistent history、Structured Concurrency、Foundation、WidgetKit、WatchConnectivity、ActivityKit 与现有 `DurableLocalFile`，不新增第三方依赖。
+
+验证：行为测试覆盖 author provenance、真实 opaque token/过期恢复、四 lane 独立 ack/failure/retry、同 receipt/coalescing/有界 backlog、forced-current-state、container/reset fence、单次后台物化、MainActor heartbeat、sync snapshot 幂等重放、Scene/App Intent/Watch 调用方、启动/前台/import catch-up，以及 prompt 乱序/失败/兄弟 Scene。完整签名单元、性能预算、格式、本地化、全设备 Release 安装与资源清理仍是任务关闭门禁；本次没有视觉、文案或 DTO 变化，截图不能验证异步时序与恢复语义。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

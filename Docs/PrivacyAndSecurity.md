@@ -1,7 +1,7 @@
 # TimeTracker 隐私与安全说明
 
 状态：工程级数据流说明，非法律隐私政策
-校对日期：2026-07-27
+校对日期：2026-07-28
 
 本文说明仓库当前实现如何存储和传输数据，并列出发行前安全门禁。最终上架文案仍需根据实际发行地区、服务方和 App Store 隐私申报单独审核。
 
@@ -18,6 +18,7 @@
 | AI 自动建议同意 | 本机 UserDefaults | 不同步；开启后才允许客户端自动向已配置 endpoint 发送必要字段 | 不导出 |
 | Widget 快照 | App Group 共享容器 | 同一设备的小组件扩展 | 不作为独立备份 |
 | Watch 快照和命令 | 主应用与 Watch 内存/队列 | 配对设备之间的 WatchConnectivity | 不作为独立备份 |
+| 系统投影恢复 metadata | 本机 Application Support 中的 opaque history cursor、store UUID、lane、reset epoch 与 full-reconciliation attempt | 不传输；仅用于本机 sync snapshot、Widget、Watch、Live Activity 失败恢复 | 不导出 |
 | Apple 健康运动与睡眠记录 | 独立、只读、device-local SwiftData replica；排除备份 | 不由 App 传输，不进入 CloudKit/iCloud | 用户主动 JSON 导出 |
 | Apple 健康任务模板 | SwiftData；模板内容与实际健康记录无关 | 作为普通任务定义进入用户的 CloudKit | JSON |
 | 诊断与测试截图 | 开发环境文件 | 仅在维护者主动分享时 | 不属于应用 JSON |
@@ -40,6 +41,8 @@ LLM API 密钥使用 Keychain generic password：
 新生成的 `DeviceIdentity` 仅由平台前缀和随机 UUID 组成，不使用 Mac 主机名、账户名或用户可读设备名称。
 
 iOS 的 `SyncConflictState.json`、pending forced-upload 恢复镜像和腐损状态隔离文件可能包含任务、偏好或账本快照。写入后都使用 `FileProtectionType.completeUntilFirstUserAuthentication`：设备本次启动首次解锁前不可读，首次解锁后即使再次锁屏也可供后台 Shortcuts/CloudKit 协调使用。macOS 不使用这项 iOS Data Protection 属性；普通 file lock 本身不被当成用户快照。权威 state 读写限 128 MiB，recovery mirror 限 64 MiB；metadata 预检后仍只通过 `FileHandle` 读取 `limit + 1`，防止文件增长 TOCTOU 造成无界内存占用。写端在解析路径或触盘前先编码并验证 state 与 mirror；任一超限都保留旧的有效文件，独立 mirror rewrite 也会在最终写入边界复检。损坏或超限的权威 state 会隔离并要求显式恢复；损坏或超限的 pending mirror 会单独隔离并忽略，既不覆盖权威 state，也不阻塞仍可使用的主库。超限文件隔离不会整份载入内存。
+
+四条后台投影 lane 分别持久化 SwiftData opaque history token、物理 store UUID、lane、format 与 reset epoch；full-reconciliation attempt 只增加 attempt UUID/epoch。每个 cursor/attempt 文件最大 64 KiB，reset epoch sidecar 最大 4 KiB；都通过既有 `DurableLocalFile` 原子替换、排除备份，并在 iOS 使用 `completeUntilFirstUserAuthentication`。损坏、超限、store/lane/epoch 不匹配会触发完整重建或隔离，不能伪装成已确认。此 metadata 不主动复制任务标题、备注、密钥或其它业务 payload，也不进入 CloudKit、Watch、Widget、Live Activity、AI 请求或 JSON 导出。
 
 ## 3. iCloud 与多设备
 
@@ -128,6 +131,8 @@ pending/in-flight 工作；客户端只接受仍匹配最新标题、task path �
 
 ## 5. 系统扩展数据流
 
+sync snapshot、Widget、Watch 与 Live Activity 的提交后更新现在通过四条 persistent-history lane 异步追赶。这个调度变化只改变执行时机与本机恢复 metadata，不改变任何扩展 DTO、字段、接收方、App Group、WatchConnectivity 或 ActivityKit payload；每条 lane 只有成功后才确认自己的 cursor，失败也不会让已提交业务动作变成可重试失败。
+
 ### Apple 健康
 
 Apple 健康集成只申请读取运动和睡眠分析类型，不向 HealthKit 写入数据。获得读取能力后，应用使用 HealthKit anchored query 增量读取新增、修改和删除，并把稳定样本 UUID、类型/阶段、日期与时间区间、来源 bundle 以及睡眠来源产品类型保存到独立的本机只读 SwiftData replica。HealthKit 合法的起止时间相等样本也按来源事实保存并推进检查点，但不会作为正时长计入时间线或分析；反向时间区间仍会使该代提交整体回滚。opaque HealthKit anchors 只作为本机增量检查点保存。界面和分析只消费不可变值快照，不提供新增、编辑、删除、补录、计时或 AI 修改入口。
@@ -156,7 +161,7 @@ Watch payload 与 UserDefaults 恢复队列是不可信边界。Producer 对 sta
 
 ### App Intents
 
-App Intents 把系统提供的用户参数传入共享领域命令。Intent 结果不得回显密钥或内部诊断详情。持久 mutation 提交后才生成同步/Widget/Watch/Live Activity 投影；投影刷新失败不会撤销事实，也不能把已提交动作伪装为失败并诱导系统重复执行。
+App Intents 把系统提供的用户参数传入共享领域命令。Intent 结果不得回显密钥或内部诊断详情。持久 mutation 提交后只 enqueue exact events；sync snapshot、Widget、Watch 与 Live Activity 在后台从 persistent history 追赶，Intent 不等待或同步生成 payload。投影失败不会撤销事实，也不能把已提交动作伪装为失败并诱导系统重复执行。
 
 ### Deep links
 
@@ -196,6 +201,8 @@ Widget、Live Activity 和系统使用 `timetracker` URL 打开主应用。应�
 
 每次添加 SDK、持久标识符、分析、网络服务或新的 Required Reason API 时，重新审核所有 target 和扩展，不只审核主应用。
 
+本次后台投影重构没有新增 SDK、网络目的地、wire/schema、持久用户标识符或 Required Reason API；cursor/attempt 是本机运行恢复 metadata。因此无需新增 Privacy Manifest 声明，但仍必须在最终 Archive 中验证既有 target 的合并结果。
+
 ## 9. 威胁边界与工程规则
 
 当前重点威胁：
@@ -224,7 +231,7 @@ Widget、Live Activity 和系统使用 `timetracker` URL 打开主应用。应�
 - [ ] 远程 HTTP endpoint、伪装 loopback、跨源 redirect 和 HTTPS 降级被拒绝，合法 loopback 与同源 redirect 按预期允许。
 - [ ] PrivacyInfo 文件已加入正确 target 并通过归档验证。
 - [ ] 主 App `1C8F.1`/`CA92.1`、Widget `1C8F.1`、Watch `CA92.1` 与各 target 的实际 UserDefaults/App Group 用途一致。
-- [ ] iOS 同步权威状态、恢复镜像和腐损隔离文件的 protection attribute 为 `completeUntilFirstUserAuthentication`，且首次解锁前/后的后台行为符合预期。
+- [ ] iOS 同步权威状态、恢复镜像、腐损隔离、四 lane cursor/attempt 的 protection attribute 为 `completeUntilFirstUserAuthentication`；cursor/attempt 排除备份、满足 64 KiB 上限，reset 会清理旧 frontier 并保留递增 epoch。
 - [ ] App Store 隐私标签与 AI/CloudKit 实际数据流一致。
 - [ ] AI 默认/推荐 endpoint 的运营方、用途、保留期、训练用途、跨境处理与删除渠道已确认并写入发行披露；未确认时不作“零保留”承诺。
 - [ ] AI 配置 Test→Save、自动建议默认关闭和用户显式开启行为通过测试/人工检查。

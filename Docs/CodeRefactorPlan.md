@@ -26,7 +26,7 @@ These are the highest-priority mixed-responsibility owners, not an exhaustive li
 
 | Area | Current concentration | Preferred boundary |
 | --- | --- | --- |
-| `Stores/Facade/TimeTrackerStore+Lifecycle.swift` | Generic refresh, mutation authorization/post-commit work, repository requirements, errors, and sync snapshot finishing share one owner | Split refresh/account/conflict lifecycle, mutation orchestration, and repository/error support without widening private helpers |
+| `Stores/Facade/TimeTrackerStore+Lifecycle.swift` | Mutation authorization, current-scene refresh, repository requirements, common errors, and scheduler enqueue orchestration share one owner | Split mutation orchestration from repository/error support without moving sync/system projection work back into the facade |
 | `Stores/Facade/TimeTrackerStore+PreferenceCommands.swift` | Thin preference setters (`preferredColorScheme`, `allowParallelTimers`, `showGrossAndWallTogether`) plus one generic `setPreference` dispatcher | Low priority: most preference families already moved to `StoreScopedPreferenceCommandCoordinator`; revisit only if new preference setters accumulate here |
 | `Stores/Facade/TimeTrackerStore+SyncObservers.swift` | Observer installation, event decoding, batch drain, conflict processing, and recovery presentation share one owner | Separate observer/event intake from batch processing and recovery presentation; keep the fixed-deadline bounded coalescer semantics |
 | `Features/Tasks/Management/TaskRowComponents.swift` | Row action policy, context menu, swipe actions, and destructive confirmation remain coupled | Extract one shared action context before separating menu and swipe presentation, so they cannot acquire divergent confirmation state |

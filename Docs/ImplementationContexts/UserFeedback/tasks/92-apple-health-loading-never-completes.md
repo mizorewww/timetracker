@@ -35,6 +35,23 @@
 
 ## 进度记录
 
+- 2026-07-28：修复前在独立临时 iPhone 17 Pro 模拟器运行既有
+  `testAppleHealthTaskDetailShowsOnlyAnalyticsSections`，188 秒后仍找不到
+  `task.detail.summary.gross`，1/1 失败，保留红测结果
+  `build/UITestResults/iOS-20260728-220451.xcresult`，模拟器由 Makefile 自动关闭并删除。
+  随后从 `TaskDetailAnalyticsLoadRequest` 移除 `appleHealthReplicaRevision`：本地 replica
+  generation 更新不再取消发起该写入的加载；显式重试、范围、日期与实时 bucket 仍会按原
+  规则触发新读取。
+- 2026-07-28：同一 Apple Health Task Detail XCUITest 修复后 1/1 通过（111.141 秒），
+  `task.detail.summary.gross`、`task.detail.summary.wall`、历史图表与本地 replica
+  workout 均真实出现，加载/失败状态不再常驻；结果为
+  `build/UITestResults/iOS-20260728-221029.xcresult`。已人工检查测试附件
+  `iphone-task-detail-apple-health-analytics-only`：正常字号下 Summary 为
+  Gross/Wall 50 min，Week 图表及筛选控件完整、无 spinner，符合 HIG 的“内容尽快可用、
+  进度指示必须终止”。临时模拟器已自动关闭并删除。
+- 2026-07-28：实现 checkpoint 完整 `make test` 通过 1571 tests / 176 suites
+  （49.864 秒）；SwiftFormat 与聚焦 replica facade 5/5 均通过。下一步提交实现后运行
+  `make build-install-all`，再关闭任务。
 - 2026-07-28：用户真机复验仍然无限加载，重新打开任务。已确认第二条独立根因：
   Task Detail 把 `appleHealthReplicaRevision` 放入 `.task(id:)`；首次 HealthKit 增量读取
   写入本地 replica 后 revision 自增，SwiftUI 随即取消尚未提交 UI 终态的加载任务，

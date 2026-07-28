@@ -57,10 +57,7 @@ private struct TaskDetailAnalyticsWorkspace: View {
         )
         let loadRequest = TaskDetailAnalyticsLoadRequest(
             request: request,
-            retryID: retryID,
-            appleHealthReplicaRevision: isAppleHealthTask
-                ? store.appleHealthReplicaRevision
-                : 0
+            retryID: retryID
         )
         let refreshPlan = scenePhase == .active
             ? AnalyticsRefreshPlan.next(
@@ -304,10 +301,7 @@ private struct TaskDetailAnalyticsWorkspace: View {
                 referenceDate: effectiveReferenceDate,
                 liveNow: liveNow
             ),
-            retryID: retryID,
-            appleHealthReplicaRevision: isAppleHealthTask
-                ? store.appleHealthReplicaRevision
-                : 0
+            retryID: retryID
         )
     }
 
@@ -328,5 +322,4 @@ private struct TaskDetailAnalyticsWorkspace: View {
 private struct TaskDetailAnalyticsLoadRequest: Hashable {
     let request: TaskAnalyticsSnapshotRequest
     let retryID: UUID
-    let appleHealthReplicaRevision: Int
 }

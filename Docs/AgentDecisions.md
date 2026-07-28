@@ -1862,6 +1862,26 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：行为测试覆盖 author provenance、真实 opaque token/过期恢复、四 lane 独立 ack/failure/retry、同 receipt/coalescing/有界 backlog、forced-current-state、container/reset fence、单次后台物化、MainActor heartbeat、sync snapshot 幂等重放、Scene/App Intent/Watch 调用方、启动/前台/import catch-up，以及 prompt 乱序/失败/兄弟 Scene。完整签名单元、性能预算、格式、本地化、全设备 Release 安装与资源清理仍是任务关闭门禁；本次没有视觉、文案或 DTO 变化，截图不能验证异步时序与恢复语义。
 
+## AD-138：macOS 可配置快捷键覆盖稳定的主要操作
+
+状态：Accepted
+
+替代关系：本决策替代 AD-136 中“只开放四项动作”、`Command-1...5` 固定不参与配置，以及验收只覆盖四个 recorder 的条款。AD-136 的设备本地存储、成熟录制库、应用前台菜单触发、原子 payload、冲突策略和标准 `Command-N` / `Command-,` 约束继续有效。
+
+背景：四个可配置动作只覆盖手动补录、两种开始计时和刷新，用户仍需频繁在菜单、侧边栏和任务行之间移动。macOS 菜单应让稳定的主要命令可发现并可按个人工作流分配，但不应为低频或依赖选择的动作擅自抢占系统组合，也不能让删除、停止全部计时或数据重置获得容易误触的全局入口。
+
+决策：
+
+- `MacKeyboardShortcutAction` 是唯一稳定注册表，按创建、计时、整理、导航和数据五组覆盖 16 项：手动补录、选择任务开始、开始/停止所选任务、添加子任务、开始番茄钟、归档所选任务、新建/排序分类、生成 AI 任务计划、五个主目的地和刷新数据。
+- 高频既有组合保留为默认：`Shift-Command-M/S/P`、`Command-1...5` 和 `Command-R`。选择任务开始、停止、添加子任务、归档、分类管理和 AI 计划默认 `nil`，但始终出现在 Settings recorder 与原生菜单；用户可以录制、清空或恢复默认。
+- `Command-N` 与 `Command-,` 继续是不可改写的标准命令。删除、停止全部计时、重置数据等 destructive 动作，以及只属于局部控件的筛选/编辑键盘行为不进入注册表。
+- 所有菜单动作复用既有 store 或 scene presentation router 边界；需要任务选择、活动 segment、可归档子树或空闲 presentation host 的动作在前置条件不满足时置灰，不隐藏也不猜测目标。
+- 读取与写入共享同一语义 assignment validation，拒绝不可转换、无修饰普通键、标准保留、系统占用或动作间重复的组合；无默认动作清空后不写冗余 disabled override。
+
+后果：用户可以为大部分稳定 Mac 工作流自行建立键盘路径，同时默认安装不会新增低频按键占用或扩大 destructive 操作面。菜单与设置增加动作数量和分组维护成本；任何新增动作必须同时定义分组、默认/排除理由、菜单可用条件、三语文案、命令边界测试和普通字号 UI 验收。实现继续使用锁定的 `KeyboardShortcuts 3.0.1`，不新增依赖或自制录制器。
+
+验证：表驱动行为测试验证 16 项注册表、五组完整性、默认唯一性、default-nil 的分配/清空、损坏与语义非法 payload 只读回退、重复/保留拒绝和 revision 稳定。macOS XCUITest 在真实 Settings scene 中确认 16 个 recorder 与默认组合，验证默认 Add Time 组合触发同一 focused-scene 动作、Task 菜单持续暴露九个主要动作，并保存分组设置与展开菜单截图。完整签名单元、格式、本地化和全设备 Release 安装仍是任务关闭门禁。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

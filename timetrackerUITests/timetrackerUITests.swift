@@ -126,13 +126,62 @@ final class timetrackerUITests: XCTestCase {
                 ].exists
             }
         )
-        XCTAssertTrue(
-            waitUntil(timeout: 5) {
-                settingsWindow.searchFields.count == 4
-            },
-            "The shortcut section must expose one native recorder for each configurable action."
+        let settingsScrollView = settingsWindow.scrollViews[
+            "settings.view"
+        ].firstMatch
+        XCTAssertTrue(settingsScrollView.exists && settingsScrollView.isHittable)
+        let recorderActionIDs = [
+            "addTime",
+            "chooseTaskToStart",
+            "addSubtask",
+            "newTaskCategory",
+            "startSelectedTask",
+            "stopSelectedTask",
+            "startPomodoro",
+            "archiveSelectedTask",
+            "sortTaskCategories",
+            "generateTaskPlan",
+            "navigateToday",
+            "navigateInbox",
+            "navigateTasks",
+            "navigatePomodoro",
+            "navigateAnalytics",
+            "refreshData",
+        ]
+        for actionID in recorderActionIDs {
+            let row = settingsWindow.descendants(matching: .any)[
+                "settings.shortcuts.recorder.\(actionID)"
+            ].firstMatch
+            scrollUntilHittable(
+                row,
+                direction: .up,
+                maximumScrolls: 12,
+                in: settingsScrollView
+            )
+            XCTAssertTrue(
+                row.waitForExistence(timeout: 3),
+                "The shortcut registry must expose a recorder for \(actionID)."
+            )
+            XCTAssertTrue(
+                row.searchFields.firstMatch.exists,
+                "\(actionID) must use the native shortcut recorder."
+            )
+        }
+        try recordScreenshot(
+            settingsWindow.screenshot(),
+            name: "mac-settings-keyboard-shortcuts-navigation-data"
         )
-        let addTimeRecorder = settingsWindow.searchFields.firstMatch
+
+        let addTimeRow = settingsWindow.descendants(matching: .any)[
+            "settings.shortcuts.recorder.addTime"
+        ].firstMatch
+        scrollUntilHittable(
+            addTimeRow,
+            direction: .down,
+            maximumScrolls: 12,
+            in: settingsScrollView
+        )
+        let addTimeRecorder = addTimeRow.searchFields.firstMatch
         XCTAssertTrue(
             addTimeRecorder.waitForExistence(timeout: 5) &&
                 addTimeRecorder.isHittable
@@ -143,10 +192,18 @@ final class timetrackerUITests: XCTestCase {
         )
         try recordScreenshot(
             settingsWindow.screenshot(),
-            name: "mac-settings-keyboard-shortcuts-defaults"
+            name: "mac-settings-keyboard-shortcuts-creation-timing"
         )
         let resetAll = app.buttons["settings.shortcuts.resetAll"].firstMatch
-        XCTAssertTrue(resetAll.waitForExistence(timeout: 5))
+        scrollUntilHittable(
+            resetAll,
+            direction: .up,
+            maximumScrolls: 12,
+            in: settingsScrollView
+        )
+        XCTAssertTrue(
+            resetAll.waitForExistence(timeout: 5)
+        )
         XCTAssertFalse(
             resetAll.isEnabled,
             "Reset All must stay disabled while every action uses its default."
@@ -172,12 +229,37 @@ final class timetrackerUITests: XCTestCase {
         ].firstMatch
         XCTAssertTrue(
             manualTimeNote.waitForExistence(timeout: 5),
-            "The restored shortcut must invoke Add Time in the focused main scene."
+            "The default shortcut must invoke Add Time in the focused main scene."
         )
         let cancel = app.buttons["Cancel"].firstMatch
         XCTAssertTrue(cancel.waitForExistence(timeout: 3) && cancel.isHittable)
         activate(cancel)
         XCTAssertTrue(manualTimeNote.waitForNonExistence(timeout: 5))
+
+        let taskMenu = app.menuBars.menuBarItems["Task"].firstMatch
+        XCTAssertTrue(taskMenu.waitForExistence(timeout: 3))
+        activate(taskMenu)
+        for title in [
+            "Choose Task to Start…",
+            "Start Selected Task",
+            "Stop Selected Task",
+            "Start Pomodoro",
+            "Add Subtask to Selected Task…",
+            "New Category",
+            "Sort Categories",
+            "Generate Task Plan…",
+            "Archive Selected Task",
+        ] {
+            XCTAssertTrue(
+                app.menuItems[title].firstMatch.waitForExistence(timeout: 3),
+                "Task menu must keep \(title) discoverable."
+            )
+        }
+        try recordScreenshot(
+            XCUIScreen.main.screenshot(),
+            name: "mac-task-menu-shortcut-coverage"
+        )
+        app.typeKey(.escape, modifierFlags: [])
         #else
         throw XCTSkip("macOS-only shortcut settings")
         #endif
@@ -11974,6 +12056,21 @@ final class timetrackerUITests: XCTestCase {
             scroll(direction: direction, toward: element, in: app)
         }
     }
+
+    #if os(macOS)
+    @MainActor
+    private func scrollUntilHittable(
+        _ element: XCUIElement,
+        direction: ScrollDirection,
+        maximumScrolls: Int = 6,
+        in scrollView: XCUIElement
+    ) {
+        let deltaY: CGFloat = direction == .up ? -420 : 420
+        for _ in 0 ..< maximumScrolls where !element.isHittable {
+            scrollView.scroll(byDeltaX: 0, deltaY: deltaY)
+        }
+    }
+    #endif
 
     @MainActor
     private func gentlyScrollUntilHittable(

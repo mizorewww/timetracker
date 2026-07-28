@@ -98,6 +98,9 @@
 "inbox.completed.countFormat" = "已完成（%d）";
 "quickStart.edit" = "編輯快速開始";
 "menu.startSelectedTask" = "開始所選任務計時";
+"menu.chooseTaskToStart" = "選擇要開始的任務…";
+"menu.stopSelectedTask" = "停止所選任務計時";
+"menu.addSubtask" = "為所選任務新增子任務…";
 "menu.startPomodoro" = "開始番茄鐘";
 "menu.task" = "任務";
 "menu.archiveSelectedTask" = "封存所選任務";
@@ -152,7 +155,12 @@
 "settings.category.advanced.title" = "進階";
 "settings.category.advanced.subtitle" = "維護、診斷與 App 資訊";
 "settings.keyboardShortcuts.title" = "鍵盤快速鍵";
-"settings.keyboardShortcuts.footer" = "快速鍵僅在 Time Tracker 位於前景時生效。「新增任務」、「設定」和導覽快速鍵保持固定。一般按鍵需配合 Command、Option 或 Control；功能鍵可單獨使用。";
+"settings.keyboardShortcuts.footer" = "快速鍵僅在 Time Tracker 位於前景時生效。「新增任務」和「設定」保留系統標準快速鍵；未分配的操作可在此錄製。一般按鍵需配合 Command、Option 或 Control；功能鍵可單獨使用。";
+"settings.keyboardShortcuts.group.creation" = "建立";
+"settings.keyboardShortcuts.group.timing" = "計時";
+"settings.keyboardShortcuts.group.organization" = "整理";
+"settings.keyboardShortcuts.group.navigation" = "導覽";
+"settings.keyboardShortcuts.group.data" = "資料";
 "settings.keyboardShortcuts.resetAll" = "還原預設快速鍵";
 "settings.keyboardShortcuts.none" = "無";
 "settings.keyboardShortcuts.duplicateFormat" = "%@ 已使用這個快速鍵。";

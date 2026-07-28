@@ -203,6 +203,16 @@ The default UI matrix uses normal text sizes and ordinary interaction paths. The
   axes/ranges, and debug details remain compact metadata. A macOS typography change to
   shared views also runs the same seven-page matrix on an owned iPhone and 13-inch iPad
   simulator so established iOS sizes and navigation remain unchanged.
+- macOS shortcut coverage acceptance: the ordered registry must contain every action in
+  the Creation, Timing, Organization, Navigation, and Data groups exactly once, retain
+  unique safe defaults, and permit context actions with no default assignment. Command
+  tests cover custom assignment and clearing for both defaulted and default-nil actions,
+  corrupt/oversized payload fallback, read/write semantic validation, duplicates,
+  standard reserved commands, and revision stability after rejection. At normal text
+  size, XCUITest opens the real Settings scene, proves all 16 native recorders exist,
+  confirms the Add Time default and invokes that focused-scene command through its
+  shortcut, proves all nine Task menu actions remain discoverable, and captures both
+  grouped Settings and expanded menus.
 - Checklist editor row acceptance: `testChecklistRowCentersControlsAndGrowsForLongTitles`
   launches a UI-test-only long-title fixture at normal text size on iPhone, iPad, and
   macOS. A one-line row and a title taller than the retired four-line cap must keep

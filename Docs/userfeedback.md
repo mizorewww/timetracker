@@ -133,7 +133,7 @@ Note: `[~]` 表示 Codex 当前正在处理；本文件是任务内容和状态�
 - [x] Bug: 总是提示 apple health returned a record that could not be stored safely
 - [x] Performance: 目前 Apple Health 似乎是轮询方案,非常影响性能.然而,我希望能够内建数据库缓存,每次只增量读取.然后允许icloud同步和导出. (我知道Apple不允许上架App这样干,但是我不上架这个app,纯自用)
 - [x] UI: Analysis的 Heatmap 单独做一页
-- [ ] Feature: Mac有快捷键功能,但是可以绑定的快捷键太少了.应该软件大部分操作都有快捷键
+- [~] Feature: Mac有快捷键功能,但是可以绑定的快捷键太少了.应该软件大部分操作都有快捷键
 - [ ] Code: 目前仍然有一些latform specific的ui,尽量少搞platform specific的ui，是否渲染iPhone界面根据宽度决定。建议全量审查一次代码，和平台相关的代码能删就删,这个写入文档里
 - [ ] Bug: 侧边栏,若侧边栏是A任务高亮状态,尝试点击B任务,切换到B任务高亮状态,会先跳转到Tasks,再次点击才能切换到B任务高亮状态
 - [ ] UI: 全平台的开始计时和开始另一个计时统一为‘开始另一个计时’的样式和代码

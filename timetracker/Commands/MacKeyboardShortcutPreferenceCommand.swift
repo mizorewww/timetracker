@@ -23,20 +23,10 @@ struct MacKeyboardShortcutPreferenceCommand {
         for action: MacKeyboardShortcutAction
     ) throws {
         if let shortcut {
-            guard
-                shortcut.toSwiftUI != nil,
-                !shortcut.modifiers.isEmpty ||
-                shortcut.key.map(
-                    MacKeyboardShortcutAction.standaloneFunctionKeys.contains
-                ) == true
-            else {
-                throw MacKeyboardShortcutValidationError.unsupported
-            }
-            guard
-                !MacKeyboardShortcutAction.reservedShortcuts.contains(shortcut),
-                !shortcut.isTakenBySystem
-            else {
-                throw MacKeyboardShortcutValidationError.reserved
+            if let validationError =
+                MacKeyboardShortcutAction.validationError(for: shortcut)
+            {
+                throw validationError
             }
             if let duplicate = conflictingAction(
                 for: shortcut,

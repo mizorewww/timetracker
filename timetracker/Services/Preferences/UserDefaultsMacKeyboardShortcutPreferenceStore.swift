@@ -52,9 +52,11 @@ final class UserDefaultsMacKeyboardShortcutPreferenceStore:
     ) throws {
         var overrides = loadOverrides() ?? [:]
         if let shortcut {
-            overrides[action] = shortcut == action.defaultShortcut
+            overrides[action] = action.defaultShortcut == shortcut
                 ? nil
                 : .custom(shortcut)
+        } else if action.defaultShortcut == nil {
+            overrides[action] = nil
         } else {
             overrides[action] = .disabled
         }
@@ -131,7 +133,7 @@ final class UserDefaultsMacKeyboardShortcutPreferenceStore:
             }
             guard let shortcut else { continue }
             guard
-                !MacKeyboardShortcutAction.reservedShortcuts.contains(shortcut),
+                MacKeyboardShortcutAction.isValidAssignment(shortcut),
                 seen.insert(shortcut).inserted
             else {
                 return false

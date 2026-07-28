@@ -4,32 +4,50 @@ import SwiftData
 import SwiftUI
 
 final class TimeTrackerAppDelegate: NSObject, NSApplicationDelegate {
-    private var uiTestWindow: NSWindow?
+    private static var uiTestBootstrapScheduled = false
+    private static var uiTestWindow: NSWindow?
+    private static var uiTestWindowObserver: NSObjectProtocol?
 
     func applicationDidFinishLaunching(_: Notification) {
-        guard CommandLine.arguments.contains("--uitesting") else { return }
+        Self.scheduleUITestWindowBootstrap()
+    }
 
-        AppDefaults.shared.set(false, forKey: "NSQuitAlwaysKeepsWindows")
-        NSApp.setActivationPolicy(.regular)
+    static func scheduleUITestWindowBootstrap() {
+        guard CommandLine.arguments.contains("--uitesting"),
+              uiTestBootstrapScheduled == false
+        else {
+            return
+        }
+        uiTestBootstrapScheduled = true
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            NSApp.activate(ignoringOtherApps: true)
-            let hasVisibleContentWindow = NSApp.windows.contains { window in
+            AppDefaults.shared.set(false, forKey: "NSQuitAlwaysKeepsWindows")
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate()
+            _ = NSRunningApplication.current.activate(
+                options: [.activateAllWindows]
+            )
+            Self.installUITestWindowObserver()
+            let visibleContentWindow = NSApp.windows.first { window in
                 window.isVisible && window.canBecomeMain && !window.title.isEmpty
             }
 
-            if !hasVisibleContentWindow {
+            if let visibleContentWindow {
+                Self.positionUITestWindow(visibleContentWindow)
+                visibleContentWindow.makeKeyAndOrderFront(nil)
+                visibleContentWindow.orderFrontRegardless()
+            } else {
                 NSApp.sendAction(Selector(("newWindow:")), to: nil, from: nil)
             }
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                self.openUITestWindowIfNeeded()
-                self.resizeUITestWindowIfRequested()
+                Self.openUITestWindowIfNeeded()
+                Self.resizeUITestWindowIfRequested()
             }
         }
     }
 
-    private func openUITestWindowIfNeeded() {
+    private static func openUITestWindowIfNeeded() {
         guard CommandLine.arguments.contains("--uitesting") else { return }
 
         let hasVisibleContentWindow = NSApp.windows.contains { window in
@@ -51,11 +69,41 @@ final class TimeTrackerAppDelegate: NSObject, NSApplicationDelegate {
         window.contentViewController = hostingController
         window.setFrameAutosaveName("TimeTrackerUITestWindow")
         window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-        uiTestWindow = window
+        NSApp.activate()
+        _ = NSRunningApplication.current.activate(
+            options: [.activateAllWindows]
+        )
+        Self.uiTestWindow = window
     }
 
-    private func resizeUITestWindowIfRequested() {
+    private static func installUITestWindowObserver() {
+        guard uiTestWindowObserver == nil else { return }
+        uiTestWindowObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didBecomeKeyNotification,
+            object: nil,
+            queue: .main
+        ) { notification in
+            guard let window = notification.object as? NSWindow else { return }
+            positionUITestWindow(window)
+        }
+    }
+
+    private static func positionUITestWindow(_ window: NSWindow) {
+        guard window.canBecomeMain, !window.title.isEmpty,
+              let screen = NSScreen.screens.first
+        else {
+            return
+        }
+        window.collectionBehavior.insert(.moveToActiveSpace)
+        let visibleFrame = screen.visibleFrame
+        let origin = NSPoint(
+            x: visibleFrame.midX - (window.frame.width / 2),
+            y: visibleFrame.midY - (window.frame.height / 2)
+        )
+        window.setFrameOrigin(origin)
+    }
+
+    private static func resizeUITestWindowIfRequested() {
         let environment = ProcessInfo.processInfo.environment
         guard
             let widthText = environment["TIMETRACKER_UI_TEST_WINDOW_WIDTH"],

@@ -6,30 +6,20 @@ struct MacKeyboardShortcutSettingsSection: View {
     let settings: MacKeyboardShortcutSettings
 
     var body: some View {
-        Section {
-            ForEach(MacKeyboardShortcutAction.allCases) { action in
-                LabeledContent {
-                    KeyboardShortcuts.Recorder(
-                        shortcut: binding(for: action)
-                    )
-                    .shortcutValidation { shortcut in
-                        validationResult(for: shortcut, action: action)
+        Group {
+            ForEach(MacKeyboardShortcutGroup.allCases) { group in
+                Section {
+                    ForEach(group.actions) { action in
+                        shortcutRecorder(for: action)
                     }
-                } label: {
-                    Text(action.title)
+                } header: {
+                    groupHeader(for: group)
+                } footer: {
+                    if group == .data {
+                        Text(.app("settings.keyboardShortcuts.footer"))
+                    }
                 }
-                .accessibilityElement(children: .contain)
-                .accessibilityIdentifier(
-                    "settings.shortcuts.recorder.\(action.rawValue)"
-                )
             }
-        } header: {
-            SettingsHeader(
-                symbol: "keyboard",
-                title: AppStrings.localized("settings.keyboardShortcuts.title")
-            )
-        } footer: {
-            Text(.app("settings.keyboardShortcuts.footer"))
         }
         .keyboardShortcutsConflictPolicy(
             .init(
@@ -38,7 +28,6 @@ struct MacKeyboardShortcutSettingsSection: View {
                 disallowed: .block
             )
         )
-        .accessibilityIdentifier("settings.shortcuts.view")
 
         Section {
             Button(AppStrings.localized("settings.keyboardShortcuts.resetAll")) {
@@ -47,6 +36,45 @@ struct MacKeyboardShortcutSettingsSection: View {
             .disabled(settings.isUsingDefaults)
             .accessibilityIdentifier("settings.shortcuts.resetAll")
         }
+    }
+
+    @ViewBuilder
+    private func groupHeader(
+        for group: MacKeyboardShortcutGroup
+    ) -> some View {
+        if group == .creation {
+            VStack(alignment: .leading, spacing: 8) {
+                SettingsHeader(
+                    symbol: "keyboard",
+                    title: AppStrings.localized(
+                        "settings.keyboardShortcuts.title"
+                    )
+                )
+                .accessibilityIdentifier("settings.shortcuts.view")
+                Text(group.title)
+            }
+        } else {
+            Text(group.title)
+        }
+    }
+
+    private func shortcutRecorder(
+        for action: MacKeyboardShortcutAction
+    ) -> some View {
+        LabeledContent {
+            KeyboardShortcuts.Recorder(
+                shortcut: binding(for: action)
+            )
+            .shortcutValidation { shortcut in
+                validationResult(for: shortcut, action: action)
+            }
+        } label: {
+            Text(action.title)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(
+            "settings.shortcuts.recorder.\(action.rawValue)"
+        )
     }
 
     private func binding(

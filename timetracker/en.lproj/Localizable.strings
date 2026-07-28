@@ -98,6 +98,9 @@
 "inbox.completed.countFormat" = "Completed (%d)";
 "quickStart.edit" = "Edit Quick Start";
 "menu.startSelectedTask" = "Start Selected Task";
+"menu.chooseTaskToStart" = "Choose Task to Start…";
+"menu.stopSelectedTask" = "Stop Selected Task";
+"menu.addSubtask" = "Add Subtask to Selected Task…";
 "menu.startPomodoro" = "Start Pomodoro";
 "menu.task" = "Task";
 "menu.archiveSelectedTask" = "Archive Selected Task";
@@ -152,7 +155,12 @@
 "settings.category.advanced.title" = "Advanced";
 "settings.category.advanced.subtitle" = "Maintenance, diagnostics, and app information";
 "settings.keyboardShortcuts.title" = "Keyboard Shortcuts";
-"settings.keyboardShortcuts.footer" = "Shortcuts work while Time Tracker is active. New Task, Settings, and navigation shortcuts stay fixed. Ordinary keys require Command, Option, or Control; function keys can be used alone.";
+"settings.keyboardShortcuts.footer" = "Shortcuts work while Time Tracker is active. New Task and Settings keep their standard shortcuts. Unassigned actions can be recorded here. Ordinary keys require Command, Option, or Control; function keys can be used alone.";
+"settings.keyboardShortcuts.group.creation" = "Creation";
+"settings.keyboardShortcuts.group.timing" = "Timing";
+"settings.keyboardShortcuts.group.organization" = "Organization";
+"settings.keyboardShortcuts.group.navigation" = "Navigation";
+"settings.keyboardShortcuts.group.data" = "Data";
 "settings.keyboardShortcuts.resetAll" = "Restore Default Shortcuts";
 "settings.keyboardShortcuts.none" = "None";
 "settings.keyboardShortcuts.duplicateFormat" = "%@ already uses this shortcut.";

@@ -98,6 +98,9 @@
 "inbox.completed.countFormat" = "已完成（%d）";
 "quickStart.edit" = "编辑快速开始";
 "menu.startSelectedTask" = "开始所选任务计时";
+"menu.chooseTaskToStart" = "选择要开始的任务…";
+"menu.stopSelectedTask" = "停止所选任务计时";
+"menu.addSubtask" = "为所选任务添加子任务…";
 "menu.startPomodoro" = "开始番茄钟";
 "menu.task" = "任务";
 "menu.archiveSelectedTask" = "归档所选任务";
@@ -152,7 +155,12 @@
 "settings.category.advanced.title" = "高级";
 "settings.category.advanced.subtitle" = "维护、诊断与应用信息";
 "settings.keyboardShortcuts.title" = "键盘快捷键";
-"settings.keyboardShortcuts.footer" = "快捷键仅在 Time Tracker 位于前台时生效。“新建任务”、“设置”和导航快捷键保持固定。普通按键需配合 Command、Option 或 Control；功能键可单独使用。";
+"settings.keyboardShortcuts.footer" = "快捷键仅在 Time Tracker 位于前台时生效。“新建任务”和“设置”保留系统标准快捷键；未分配的操作可在此录制。普通按键需配合 Command、Option 或 Control；功能键可单独使用。";
+"settings.keyboardShortcuts.group.creation" = "创建";
+"settings.keyboardShortcuts.group.timing" = "计时";
+"settings.keyboardShortcuts.group.organization" = "整理";
+"settings.keyboardShortcuts.group.navigation" = "导航";
+"settings.keyboardShortcuts.group.data" = "数据";
 "settings.keyboardShortcuts.resetAll" = "恢复默认快捷键";
 "settings.keyboardShortcuts.none" = "无";
 "settings.keyboardShortcuts.duplicateFormat" = "%@ 已使用这个快捷键。";

@@ -35,14 +35,4 @@ extension TimeTrackerStore {
             quickStartTaskIDs: preferences.quickStartTaskIDs
         )
     }
-
-    func syncWatchSnapshotIfAvailable(now: Date = Date()) {
-        let snapshot = watchStateSnapshot(now: now)
-        #if os(iOS) && canImport(WatchConnectivity)
-        WatchConnectivityBridge.shared.updateApplicationContext(snapshot)
-        WatchConnectivityBridge.shared.sendReachableMessage(snapshot)
-        #else
-        _ = snapshot
-        #endif
-    }
 }

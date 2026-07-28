@@ -195,3 +195,10 @@
   及完整 `make test` 1560/1560 通过；`CorePerformanceBudgetTests` 11 项包含在全量门禁
   中并通过。未新增第三方依赖；使用 SwiftData、Foundation、WidgetKit、WatchConnectivity、
   ActivityKit 与 Structured Concurrency。
+- 2026-07-28：删除迁移完成后已无生产调用者的旧同步系统表面入口，包括 facade 的
+  聚合 helper、Store 级 Widget/Watch 同步保存，以及仅供旧路径等待 Live Activity
+  reconciliation 的 helper；保留设置页显式 Live Activity Retry 与 Cloud reset/
+  recovery 的同步安全边界。删除 3 项只验证废弃入口或共享 `errorMessage` 的旧测试，
+  新 worker/scheduler/driver 行为测试继续覆盖后台物化、Watch 排序与 lane 独立失败。
+  Watch 与 Widget 聚焦测试通过；完整 `make test` 为 1557/1557，格式、本地化、hook
+  与 diff 门禁均通过。未新增第三方依赖；继续使用 Apple 原生框架与既有基础设施。

@@ -82,26 +82,6 @@ struct CoreWidgetSnapshotTests {
         }
     }
 
-    @Test @MainActor
-    func widgetSnapshotSaveFailureIsSurfacedByTheMainStore() {
-        let store = makeTestStore()
-        let unavailableCache = WidgetSnapshotCache(
-            store: SharedWidgetSnapshotStore(defaults: nil)
-        )
-
-        store.syncWidgetSnapshotIfAvailable(
-            now: Date(timeIntervalSinceReferenceDate: 12000),
-            cache: unavailableCache
-        )
-
-        #expect(store.errorMessage != nil)
-        #expect(
-            store.errorMessage?.contains(
-                WidgetSnapshotStoreError.sharedContainerUnavailable.localizedDescription
-            ) == true
-        )
-    }
-
     @Test
     func widgetSnapshotStoreDistinguishesMissingAndCorruptedData() throws {
         let suiteName = "WidgetSnapshotLoadTests-\(UUID().uuidString)"

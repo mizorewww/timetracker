@@ -526,14 +526,9 @@ extension TimeTrackerStore {
     func syncLiveActivitiesIfAvailable() {
         LiveActivityCoordinator.shared.sync(activeSegments: activeSegments, tasks: tasks, now: Date())
     }
-
-    func waitForLiveActivityReconciliationIfAvailable() async {
-        await LiveActivityCoordinator.shared.waitUntilIdle()
-    }
 }
 #else
 extension TimeTrackerStore {
     func syncLiveActivitiesIfAvailable() {}
-    func waitForLiveActivityReconciliationIfAvailable() async {}
 }
 #endif

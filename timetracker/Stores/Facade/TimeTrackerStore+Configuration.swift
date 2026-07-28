@@ -181,8 +181,8 @@ extension TimeTrackerStore {
 
     /// Attaches persistence repositories without running application-startup
     /// migrations, seeding, observers, recovery, or background automations.
-    /// System actions use this narrow path after their mutation has committed so
-    /// they can refresh Widget, Watch, and Live Activity state while the app is closed.
+    /// Tests and narrowly scoped recovery flows can use this without claiming
+    /// that the full application lifecycle has completed.
     func configureRepositoriesIfNeeded(context: ModelContext) {
         guard taskRepository == nil else { return }
         modelContext = context
@@ -194,79 +194,5 @@ extension TimeTrackerStore {
             context: context,
             timeRepository: timeRepository
         )
-    }
-
-    /// Refreshes only the read models required by external system surfaces.
-    /// This intentionally avoids the normal refresh coordinator because task and
-    /// preference refreshes there may schedule LLM suggestion work.
-    @discardableResult
-    func refreshCommittedMutationSurfaceReadModels(
-        events: Set<StoreDomainEvent>
-    ) throws -> Bool {
-        let surfaceEvents = events.filter { event in
-            switch event {
-            case .taskChanged, .ledgerChanged, .pomodoroChanged, .remoteImportCompleted, .fullSync:
-                true
-            case .checklistChanged, .preferenceChanged, .countdownChanged, .inboxChanged:
-                false
-            }
-        }
-        guard surfaceEvents.isEmpty == false else { return false }
-
-        let eventPlan = StoreRefreshPlanner().plan(after: surfaceEvents)
-        let taskPlan = StoreRefreshPlan(
-            scopes: [.tasks],
-            affectedTaskIDs: eventPlan.affectedTaskIDs,
-            directlyAffectedTaskIDs: eventPlan.directlyAffectedTaskIDs,
-            explicitlyAffectedAncestorTaskIDs: eventPlan.explicitlyAffectedAncestorTaskIDs
-        )
-        try refreshTaskDomain(plan: taskPlan)
-
-        let hasLoadedLedgerHistory = ledgerDomainStore.hasLoadedHistory
-        let includesLedgerHistory = hasLoadedLedgerHistory == false ||
-            eventPlan.includeLedgerHistory
-        let ledgerPlan = StoreRefreshPlan(
-            scopes: includesLedgerHistory
-                ? [.ledgerHistory, .rollups]
-                : [.ledgerVisible, .rollups],
-            affectedTaskIDs: eventPlan.affectedTaskIDs,
-            directlyAffectedTaskIDs: eventPlan.directlyAffectedTaskIDs,
-            explicitlyAffectedAncestorTaskIDs: eventPlan.explicitlyAffectedAncestorTaskIDs,
-            affectedLedgerRanges: hasLoadedLedgerHistory && eventPlan.includeLedgerHistory
-                ? eventPlan.affectedLedgerRanges
-                : []
-        )
-        try refreshLedgerDomain(plan: ledgerPlan)
-        refreshRollupDomain(plan: ledgerPlan)
-
-        let currentPreferences = try fetchSyncedPreferences()
-        preferenceDomainStore.refresh(
-            syncedPreferences: currentPreferences,
-            localLLMAPIKey: "",
-            localLLMAutomaticSuggestionsEnabled: AppDefaults.shared.bool(
-                forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
-            )
-        )
-        syncedPreferences = preferenceDomainStore.syncedPreferences
-        preferences = preferenceDomainStore.preferences
-        return true
-    }
-
-    /// Retained for callers that still perform all post-commit effects inline.
-    /// The asynchronous projection worker uses the read-model boundary above,
-    /// then publishes each system surface independently.
-    func refreshCommittedMutationSurfaces(
-        events: Set<StoreDomainEvent>,
-        widgetCache: WidgetSnapshotCache? = nil,
-        now: Date = Date()
-    ) throws -> Error? {
-        guard try refreshCommittedMutationSurfaceReadModels(events: events) else {
-            return nil
-        }
-
-        syncLiveActivitiesIfAvailable()
-        let widgetError = syncWidgetSnapshotIfAvailable(now: now, cache: widgetCache)
-        syncWatchSnapshotIfAvailable(now: now)
-        return widgetError
     }
 }

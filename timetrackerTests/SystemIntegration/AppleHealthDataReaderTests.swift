@@ -178,6 +178,11 @@ struct AppleHealthDataReaderTests {
                 visibleInterval: visibleInterval
             )
 
+            #expect(
+                batch.workouts.contains {
+                    $0.startedAt == $0.endedAt
+                }
+            )
             #expect(items.count == 2)
             #expect(items.contains { $0.subject == .appleHealthSleep })
             #expect(

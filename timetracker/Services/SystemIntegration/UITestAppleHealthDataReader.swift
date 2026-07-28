@@ -214,6 +214,13 @@ final class UITestAppleHealthDataReader:
         return AppleHealthSampleBatch(
             workouts: [
                 AppleHealthWorkoutSample(
+                    id: id("D0400000-0000-4000-8000-000000000000"),
+                    kind: .walking,
+                    startedAt: workoutStart,
+                    endedAt: workoutStart,
+                    sourceBundleIdentifier: "ui-test.apple-health"
+                ),
+                AppleHealthWorkoutSample(
                     id: id("D0400000-0000-4000-8000-000000000001"),
                     kind: .running,
                     startedAt: workoutStart,

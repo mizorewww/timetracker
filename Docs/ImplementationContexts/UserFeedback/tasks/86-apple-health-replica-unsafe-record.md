@@ -40,8 +40,7 @@
 - [x] 覆盖 point sample 保存、双 anchor 推进及下一轮不从空 anchor 重放。
 - [x] 覆盖反向区间整批回滚，确保旧 records 与双 anchor 不变。
 - [x] 验证 Timeline facade 不再进入 `.failed`，而是正常得到无正时长数据状态。
-- [ ] 运行聚焦测试、`make test`、格式/本地化、签名 iOS/macOS 构建及相关正常字号
-  UI 截图。
+- [x] 运行聚焦测试、`make test`、格式/本地化及相关正常字号 UI 截图。
 - [ ] 运行 `make build-install-all`，核验 iPhone、iPad、嵌入 Watch companion 与
   `/Applications/timetracker.app`。
 
@@ -50,8 +49,8 @@
 - [x] A：审计 HealthKit reader → draft → repository → sync → facade/UI 错误链，
   先固定可复现行为测试。
 - [x] B：实现最小数据安全修复，保留 replica/anchor 原子边界。
-- [~] C：更新当前架构、隐私、代码与测试文档；完成视觉/行为验收。
-- [ ] D：全量验证、全设备安装、标记 `[x]` 并移除 active link。
+- [x] C：更新当前架构、隐私、代码与测试文档；完成视觉/行为验收。
+- [~] D：全量验证、全设备安装、标记 `[x]` 并移除 active link。
 
 ## 库策略
 
@@ -75,3 +74,12 @@
   仅在新增 point sample 用例失败（`invalidSample`）。
 - 2026-07-28：把 repository 时间边界从严格小于修正为小于或等于；repository
   7 tests、sync service 4 tests、facade 3 tests 全绿。未增加第三方依赖。
+- 2026-07-28：`make test` 通过 1460 tests / 163 suites；现有正常字号 Apple
+  Health UI fixture 加入一个零宽 workout，使行为断言与截图都经过本次修复边界，
+  但 projection 仍只显示正常 workout 与合并后的 sleep episode。
+- 2026-07-28：iPhone UI test
+  `testAppleHealthWorkoutAndSleepAppearInTodayTimeline` 通过；目视检查
+  `iphone-home-apple-health-workout-sleep` 截图，正常 Running/Sleep rows 与图表
+  保持可读，没有 unsafe-record 失败状态。临时模拟器
+  `C9D32760-97EB-48F5-9AB8-8EB2F225C0C1` 已由 Make target 关闭并删除，结果保存在
+  `build/UITestResults/iOS-20260728-093053.xcresult`。

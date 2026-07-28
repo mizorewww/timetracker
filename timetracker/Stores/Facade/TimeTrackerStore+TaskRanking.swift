@@ -8,27 +8,28 @@ extension TimeTrackerStore {
         excluding excludedIDs: Set<UUID> = []
     ) -> [TaskNode] {
         let availableTasks = tasks.filter {
-            isTaskAvailableForTracking($0) &&
-                !excludedIDs.contains($0.id)
+            isTaskAvailableForTracking($0)
         }
+        return TaskUsageRankingService().rankedTasks(
+            availableTasks: availableTasks,
+            activityByTaskID: taskUsageActivityByTaskID(
+                for: availableTasks
+            ),
+            excluding: excludedIDs
+        )
+    }
 
-        return availableTasks.sorted { lhs, rhs in
-            let lhsActivity = rollupDomainStore.activitySummary(for: lhs.id)
-            let rhsActivity = rollupDomainStore.activitySummary(for: rhs.id)
-            let lhsSegmentCount = lhsActivity?.segmentCount ?? 0
-            let rhsSegmentCount = rhsActivity?.segmentCount ?? 0
-
-            if lhsSegmentCount != rhsSegmentCount {
-                return lhsSegmentCount > rhsSegmentCount
+    func taskUsageActivityByTaskID(
+        for availableTasks: [TaskNode]
+    ) -> [UUID: TaskLedgerActivitySummary] {
+        availableTasks.reduce(into: [:]) {
+            activityByTaskID,
+            task in
+            if let activity = rollupDomainStore.activitySummary(
+                for: task.id
+            ) {
+                activityByTaskID[task.id] = activity
             }
-
-            let lhsLastStartedAt = lhsActivity?.lastStartedAt ?? .distantPast
-            let rhsLastStartedAt = rhsActivity?.lastStartedAt ?? .distantPast
-            if lhsLastStartedAt != rhsLastStartedAt {
-                return lhsLastStartedAt > rhsLastStartedAt
-            }
-
-            return lhs.id.uuidString < rhs.id.uuidString
         }
     }
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-struct TimeAggregationService {
+nonisolated struct TimeAggregationService {
     func totalSeconds(segments: [TimeSegment], mode: AggregationMode, now: Date = Date()) -> Int {
         switch mode {
         case .gross:

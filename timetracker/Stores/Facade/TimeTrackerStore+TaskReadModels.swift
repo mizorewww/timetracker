@@ -15,14 +15,21 @@ extension TimeTrackerStore {
     }
 
     func frequentRecentTasks(excluding excludedIDs: Set<UUID> = [], limit: Int = 3) -> [TaskNode] {
-        guard limit > 0 else { return [] }
-        let historicallyUsedTasks = rankedTrackableTasks(excluding: excludedIDs)
-            .filter { rollupDomainStore.activitySummary(for: $0.id) != nil }
-        let historicallyUsedIDs = Set(historicallyUsedTasks.map(\.id))
-        let fallbackTasks = recentTasks.filter {
-            !excludedIDs.contains($0.id) && !historicallyUsedIDs.contains($0.id)
-        }
-        return Array((historicallyUsedTasks + fallbackTasks).prefix(limit))
+        let availableTasks = tasks.filter(isTaskAvailableForTracking)
+        let activityByTaskID = taskUsageActivityByTaskID(
+            for: availableTasks
+        )
+        let rankingService = TaskUsageRankingService()
+        return rankingService.frequentRecentTasks(
+            availableTasks: availableTasks,
+            rankedTasks: rankingService.rankedTasks(
+                availableTasks: availableTasks,
+                activityByTaskID: activityByTaskID
+            ),
+            activityByTaskID: activityByTaskID,
+            excluding: excludedIDs,
+            limit: limit
+        )
     }
 
     var archivedTasks: [TaskNode] {

@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-enum AppStrings {
+nonisolated enum AppStrings {
     static let appName = localized("app.name")
 
     static let today = localized("nav.today")
@@ -31,7 +31,7 @@ enum AppStrings {
     static let grossTime = localized("metric.grossTime")
     static let todayTracked = localized("metric.todayTracked")
 
-    static func localized(_ key: String) -> String {
+    nonisolated static func localized(_ key: String) -> String {
         NSLocalizedString(key, comment: "")
     }
 }

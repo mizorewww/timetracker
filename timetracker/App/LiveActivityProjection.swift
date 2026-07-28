@@ -1,6 +1,6 @@
 import Foundation
 
-struct LiveActivityTaskProjection: Equatable {
+nonisolated struct LiveActivityTaskProjection: Equatable {
     let title: String
     let path: String
     let abbreviatedPath: String
@@ -8,7 +8,7 @@ struct LiveActivityTaskProjection: Equatable {
     let colorHex: String
 }
 
-struct LiveActivityProjectionService {
+nonisolated struct LiveActivityProjectionService {
     func primarySegment(
         from activeSegments: [TimeSegment],
         now: Date
@@ -28,7 +28,18 @@ struct LiveActivityProjectionService {
         tasks: [TaskNode],
         fallbackTitle: String
     ) -> LiveActivityTaskProjection {
-        let indexes = TaskTreeService().indexes(tasks: tasks)
+        taskProjection(
+            taskID: taskID,
+            indexes: TaskTreeService().indexes(tasks: tasks),
+            fallbackTitle: fallbackTitle
+        )
+    }
+
+    func taskProjection(
+        taskID: UUID,
+        indexes: TaskTreeIndexes,
+        fallbackTitle: String
+    ) -> LiveActivityTaskProjection {
         let task = indexes.taskByID[taskID]
         let presentation = indexes.taskIdentityPresentation(for: taskID)
         let visual = presentation?.visual ?? TaskVisualPresentation(

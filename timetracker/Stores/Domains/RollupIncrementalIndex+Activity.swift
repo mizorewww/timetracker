@@ -1,6 +1,6 @@
 import Foundation
 
-struct TaskLedgerActivitySummary: Equatable {
+nonisolated struct TaskLedgerActivitySummary: Equatable, Sendable {
     let segmentCount: Int
     let lastStartedAt: Date
 }

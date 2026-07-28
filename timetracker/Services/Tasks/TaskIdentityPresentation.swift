@@ -100,7 +100,7 @@ nonisolated struct TaskIdentityPresentation: Equatable, Sendable {
     }
 }
 
-extension TaskTreeIndexes {
+nonisolated extension TaskTreeIndexes {
     func taskIdentityPresentation(for taskID: UUID) -> TaskIdentityPresentation? {
         guard let task = taskByID[taskID] else { return nil }
         return TaskIdentityPresentation(

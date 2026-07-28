@@ -1,6 +1,6 @@
 import Foundation
 
-struct TaskTreeIndexes {
+nonisolated struct TaskTreeIndexes {
     static let empty = TaskTreeIndexes(
         orderedTaskIDs: [],
         taskByID: [:],

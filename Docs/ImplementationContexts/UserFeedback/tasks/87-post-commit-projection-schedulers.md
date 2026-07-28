@@ -161,3 +161,11 @@
   9 个 worker、3 个 replay 聚焦测试通过；隔离 worktree 完整 `make test` 为
   1535/1535。未新增第三方依赖；复用 SwiftData、Foundation、Structured
   Concurrency 与现有 `DurableLocalFile`。
+- 2026-07-28：完成共享后台系统表面物化器检查点。短生命周期 `@ModelActor` 从 fresh
+  context 一次读取 committed facts，生成不可变 Widget、Watch、Live Activity DTO；
+  Watch 状态、任务使用排序及 task-tree indexes 抽成生产与 facade 共用的纯服务，
+  避免后台路径复制算法或重复构建层级。真实 SQLite 边界测试覆盖 tombstone、缺失
+  task/session、部分 recurrence 图、Unicode 字节截断、128 KiB Watch payload 预算与
+  quick-start/legacy 顺序，并用 MainActor heartbeat 证明大读取不占用 UI actor。
+  物化器 4 项、Watch 43 项及完整 `make test` 1539/1539 通过。未新增第三方依赖；
+  使用 Apple SwiftData、Foundation、Structured Concurrency 与现有 DTO/缓存设施。

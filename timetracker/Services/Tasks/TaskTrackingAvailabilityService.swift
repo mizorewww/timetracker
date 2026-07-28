@@ -1,6 +1,6 @@
 import Foundation
 
-struct TaskWorkEligibility: Equatable {
+nonisolated struct TaskWorkEligibility: Equatable {
     let visibleTaskIDs: Set<UUID>
     let trackableTaskIDs: Set<UUID>
 }
@@ -16,7 +16,7 @@ nonisolated enum TaskParentChangeBlocker: Equatable {
 /// Archived or deleted branches are hidden and cannot receive new work. Apple
 /// Health branches stay visible, but are sync-only. Legacy
 /// planned/active/completed raw values are inert compatibility bytes.
-struct TaskTrackingAvailabilityService {
+nonisolated struct TaskTrackingAvailabilityService {
     func eligibility(tasks: [TaskNode]) -> TaskWorkEligibility {
         let canonicalTasks = tasks.deduplicatedByID()
         let allTaskIDs = Set(canonicalTasks.map(\.id))

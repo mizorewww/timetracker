@@ -1,6 +1,6 @@
 import Foundation
 
-struct LedgerSummaryService {
+nonisolated struct LedgerSummaryService {
     private let aggregationService = TimeAggregationService()
 
     func totalSeconds(

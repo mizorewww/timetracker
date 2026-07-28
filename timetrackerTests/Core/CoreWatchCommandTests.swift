@@ -1365,17 +1365,9 @@ struct CoreWatchCommandTests {
     @Test
     func storeRefreshPublishesWatchStateWhenLedgerOrTasksChange() throws {
         let source = try sourceText("timetracker/Stores/Refresh/StoreRefreshCoordinator.swift")
-        let facade = try sourceText("timetracker/Stores/Facade/TimeTrackerStore+WatchSnapshot.swift")
 
         #expect(source.contains("syncWatchSnapshotIfAvailable"))
         #expect(source.contains("plan.refreshPreferences"))
-        #expect(facade.contains("rankedTrackableTasks()"))
-        #expect(facade.contains("preferences.quickStartTaskIDs"))
-        #expect(facade.contains("WatchTransportLimits.maximumRecentTasks"))
-        #expect(facade.contains("quickStartRankByTaskID"))
-        #expect(facade.contains("maximumSnapshotTextBytes"))
-        #expect(facade.contains("boundedUTF8Prefix"))
-        #expect(facade.contains("WatchConnectivityBridge.shared.updateApplicationContext"))
     }
 
     @Test

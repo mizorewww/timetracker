@@ -17,7 +17,7 @@ struct WidgetSnapshotCache {
         #endif
     }
 
-    static func snapshot(
+    nonisolated static func snapshot(
         activeSegments: [TimeSegment],
         taskByID: [UUID: TaskNode],
         taskParentPathByID: [UUID: String],

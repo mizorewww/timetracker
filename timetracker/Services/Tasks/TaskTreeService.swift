@@ -1,6 +1,6 @@
 import Foundation
 
-struct TaskTreeService {
+nonisolated struct TaskTreeService {
     static let maximumDisplayedPathComponents = 6
 
     func indexes(tasks: [TaskNode]) -> TaskTreeIndexes {
@@ -157,7 +157,7 @@ struct TaskTreeService {
     }
 }
 
-private struct TaskBreadcrumbAccumulator {
+private nonisolated struct TaskBreadcrumbAccumulator {
     static let maximumExactComponentCount = 4
 
     let firstComponent: String

@@ -12,7 +12,7 @@ enum TimeSessionSource: String, Codable, CaseIterable {
     case liveActivity
 }
 
-enum AggregationMode: String, CaseIterable, Identifiable {
+nonisolated enum AggregationMode: String, CaseIterable, Identifiable {
     case gross
     case wallClock
 
@@ -26,7 +26,7 @@ enum AggregationMode: String, CaseIterable, Identifiable {
 /// Local write paths reject future records, but CloudKit, imports, and legacy
 /// stores can still contain clock-skewed values. Every read path therefore
 /// clips an interval to its reference date instead of trusting `endedAt`.
-enum TrackedTimePolicy {
+nonisolated enum TrackedTimePolicy {
     enum WriteValidation: Equatable {
         case valid
         case invalidRange

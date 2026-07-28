@@ -1,6 +1,6 @@
 import Foundation
 
-struct TaskHierarchyRepairPlan: Equatable {
+nonisolated struct TaskHierarchyRepairPlan: Equatable {
     let cycleBreakerTaskIDs: Set<UUID>
     let taskIDsToDisplayAsRoots: Set<UUID>
 

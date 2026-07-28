@@ -89,6 +89,17 @@ nonisolated struct TimerStoreScope: Hashable, Sendable {
         return storeURL
     }
 
+    /// Stable process-lifetime fallback for stores that do not expose durable
+    /// Core Data metadata, principally in-memory test and preview containers.
+    var persistentHistoryFallbackStoreIdentifier: String {
+        switch storage {
+        case let .persistent(storeURL):
+            "persistent-url-v1:" + storeURL.absoluteString
+        case let .inMemory(identity):
+            "in-memory-v1:" + identity.uuidString.lowercased()
+        }
+    }
+
     var mutationLockURL: URL {
         switch storage {
         case let .persistent(storeURL):

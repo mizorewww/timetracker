@@ -116,3 +116,15 @@
   行为测试与 21 个 Cloud recovery gate 测试通过；完整 `make test` 1507 项通过，
   performance budget 全绿。未新增第三方依赖；使用 Apple 原生 SwiftData、Foundation
   和既有 `DurableLocalFile`。
+- 2026-07-28：完成 B2 的 persistent-history driver 检查点。专用 actor 使用独立
+  `@ModelActor` 按 256 条分页读取 chronological transaction；持久库从 Core Data
+  metadata 取得真实 store UUID，并且仅在 reset epoch 前后读一致时把 UUID/epoch
+  一起缓存。full reconciliation 在 effect 前固定 history tail，incremental 与 full
+  都只在 effect 成功后确认 lane cursor；sync lane 只由精确 `localMutation` 触发，
+  但所有 author 仍推进同一 unfiltered frontier。真实过期 token 自动转为 full，
+  in-memory store 使用 driver 生命周期内的 volatile baseline。11 项真实 history
+  测试覆盖真空 store、并发 tail、失败重放、独立 lane、过期恢复、内存库、MainActor
+  heartbeat、256/257 分页、epoch 变化后丢弃旧注册和跨 driver 重启。实现接线时 driver 必须按一次 work
+  短生命周期创建，或在 container 更新时显式替换，不能让 `@ModelActor` 强引用破坏
+  现有 weak-container registry 的清理语义。未新增第三方依赖；使用 SwiftData、
+  Core Data metadata、Foundation、Structured Concurrency 与既有 `DurableLocalFile`。

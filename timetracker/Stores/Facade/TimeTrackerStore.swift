@@ -15,6 +15,9 @@ final class TimeTrackerStore {
     let appleHealthTimelinePreferenceStore: any AppleHealthTimelinePreferenceStoring
     let writeAuthorization: StoreWriteAuthorization
     let taskDraftRecoveryController: TaskDraftRecoveryController
+    @ObservationIgnored
+    let committedMutationSystemProjectionScheduler:
+        CommittedMutationSystemProjectionScheduler?
 
     init(
         llmCredentialStore: (any LLMCredentialStoring)? = nil,
@@ -26,7 +29,9 @@ final class TimeTrackerStore {
         appleHealthTimelinePreferenceStore: (any AppleHealthTimelinePreferenceStoring)? = nil,
         writeAuthorization: StoreWriteAuthorization = .applicationState,
         syncConflictService: SyncConflictService? = nil,
-        taskDraftRecoveryStore: TaskDraftRecoveryStore? = nil
+        taskDraftRecoveryStore: TaskDraftRecoveryStore? = nil,
+        committedMutationSystemProjectionScheduler:
+        CommittedMutationSystemProjectionScheduler? = nil
     ) {
         self.llmCredentialStore =
             llmCredentialStore ?? Self.defaultLLMCredentialStore()
@@ -65,7 +70,11 @@ final class TimeTrackerStore {
         }
         self.writeAuthorization = writeAuthorization
         self.syncConflictService = syncConflictService ?? Self.defaultSyncConflictService()
-        taskDraftRecoveryController = TaskDraftRecoveryController(store: taskDraftRecoveryStore ?? TaskDraftRecoveryStore())
+        taskDraftRecoveryController = TaskDraftRecoveryController(
+            store: taskDraftRecoveryStore ?? TaskDraftRecoveryStore()
+        )
+        self.committedMutationSystemProjectionScheduler =
+            committedMutationSystemProjectionScheduler
     }
 
     private static func defaultAppleHealthTimelinePreferenceStore()

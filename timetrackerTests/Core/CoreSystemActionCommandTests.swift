@@ -91,7 +91,7 @@ struct CoreSystemActionCommandTests {
     }
 
     @Test @MainActor
-    func committedSystemActionRefreshesEveryConfiguredSceneWithoutStartingSuggestions() throws {
+    func committedSystemActionRefreshesEveryConfiguredSceneWithoutStartingSuggestions() async throws {
         let context = try makeTestContext()
         let task = try SwiftDataTaskRepository(
             context: context,
@@ -124,6 +124,7 @@ struct CoreSystemActionCommandTests {
         )
         let segmentID = try #require(started.subjectSegmentID)
         StoreMutationBroadcaster.publish(events: started.events)
+        await StoreMutationBroadcaster.waitUntilIdle()
 
         #expect(firstScene.activeSegments.map(\.id) == [segmentID])
         #expect(secondScene.activeSegments.map(\.id) == [segmentID])
@@ -135,13 +136,14 @@ struct CoreSystemActionCommandTests {
             container: context.container
         )
         StoreMutationBroadcaster.publish(events: stopped.events)
+        await StoreMutationBroadcaster.waitUntilIdle()
 
         #expect(firstScene.activeSegments.isEmpty)
         #expect(secondScene.activeSegments.isEmpty)
     }
 
     @Test @MainActor
-    func committedLocalInboxMutationRefreshesOtherScenesWithoutStartingSuggestions() throws {
+    func committedLocalInboxMutationRefreshesOtherScenesWithoutStartingSuggestions() async throws {
         let context = try makeTestContext()
         _ = try SwiftDataTaskRepository(
             context: context,
@@ -178,6 +180,7 @@ struct CoreSystemActionCommandTests {
         }
 
         #expect(firstScene.addInboxItem(title: "Visible everywhere"))
+        await StoreMutationBroadcaster.waitUntilIdle()
 
         #expect(secondScene.openInboxItems.map(\.title) == ["Visible everywhere"])
         #expect(firstScene.inboxSuggestionInFlightIDs.isEmpty)
@@ -187,7 +190,7 @@ struct CoreSystemActionCommandTests {
     }
 
     @Test @MainActor
-    func committedLocalTaskArchiveClearsOtherSceneSelectionAndRoute() throws {
+    func committedLocalTaskArchiveClearsOtherSceneSelectionAndRoute() async throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let retainedTask = try repository.createTask(
@@ -217,6 +220,7 @@ struct CoreSystemActionCommandTests {
         }
 
         #expect(firstScene.archiveSelectedTask(taskID: archivedTask.id))
+        await StoreMutationBroadcaster.waitUntilIdle()
 
         let synchronizedTask = try #require(secondScene.task(for: archivedTask.id))
         #expect(synchronizedTask.isArchivedForLifecycle)

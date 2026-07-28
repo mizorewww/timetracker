@@ -28,6 +28,24 @@ struct StoreRefreshCoordinator {
         }
     }
 
+    /// Completes the scene-visible part of a committed mutation while keeping
+    /// Widget, Watch, and Live Activity I/O out of the caller's critical path.
+    func refreshCommittedMutationReadModels(
+        _ store: TimeTrackerStore,
+        plan: StoreRefreshPlan
+    ) throws {
+        guard store.taskRepository != nil, store.timeRepository != nil else { return }
+        try PerformanceSignpost.interval("mutation.visibleProjection") {
+            try refreshPrimaryDomains(
+                on: store,
+                plan: plan,
+                schedulesPomodoroReconciliation: true
+            )
+            refreshDerivedDomains(on: store, plan: plan)
+            applyScenePostRefreshEffects(on: store, plan: plan)
+        }
+    }
+
     private func refreshPrimaryDomains(
         on store: TimeTrackerStore,
         plan: StoreRefreshPlan,
@@ -86,10 +104,31 @@ struct StoreRefreshCoordinator {
     }
 
     private func applyPostRefreshEffects(on store: TimeTrackerStore, plan: StoreRefreshPlan) {
+        applyScenePostRefreshEffects(on: store, plan: plan)
+        applySystemSurfaceEffects(on: store, plan: plan)
+    }
+
+    private func applyScenePostRefreshEffects(
+        on store: TimeTrackerStore,
+        plan: StoreRefreshPlan
+    ) {
         if plan.validateSelection {
             store.validateSelectedTask()
         }
 
+        if plan.refreshInbox || plan.refreshTasks || plan.refreshPreferences {
+            store.autoSuggestInboxItemsIfNeeded()
+        }
+
+        if plan.refreshChecklist || plan.refreshTasks || plan.refreshPreferences {
+            store.autoSuggestChecklistVisualsIfNeeded()
+        }
+    }
+
+    private func applySystemSurfaceEffects(
+        on store: TimeTrackerStore,
+        plan: StoreRefreshPlan
+    ) {
         if plan.syncLiveActivities {
             store.syncLiveActivitiesIfAvailable()
         }
@@ -100,14 +139,6 @@ struct StoreRefreshCoordinator {
 
         if plan.refreshLedger || plan.refreshTasks || plan.refreshPreferences {
             store.syncWatchSnapshotIfAvailable()
-        }
-
-        if plan.refreshInbox || plan.refreshTasks || plan.refreshPreferences {
-            store.autoSuggestInboxItemsIfNeeded()
-        }
-
-        if plan.refreshChecklist || plan.refreshTasks || plan.refreshPreferences {
-            store.autoSuggestChecklistVisualsIfNeeded()
         }
     }
 }

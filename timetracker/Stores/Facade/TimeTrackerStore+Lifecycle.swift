@@ -1,5 +1,14 @@
 import Foundation
+import OSLog
 import SwiftData
+
+private enum CommittedMutationProjectionDiagnostics {
+    static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier
+            ?? "me.mezorewww.timetracker",
+        category: "CommittedMutationProjection"
+    )
+}
 
 extension TimeTrackerStore {
     @discardableResult
@@ -146,11 +155,13 @@ extension TimeTrackerStore {
     private func executeAuthorizedMutation<Result>(
         _ action: () throws -> Result
     ) throws -> Result {
-        try writeAuthorization.requireUserWritesAllowed()
-        if let modelContext {
-            return try modelContext.performAtomicMutation(action)
+        try PerformanceSignpost.interval("mutation.transaction") {
+            try writeAuthorization.requireUserWritesAllowed()
+            if let modelContext {
+                return try modelContext.performAtomicMutation(action)
+            }
+            return try action()
         }
-        return try action()
     }
 
     private func finishCommittedMutation(events: Set<StoreDomainEvent>) {
@@ -159,12 +170,17 @@ extension TimeTrackerStore {
             refreshPlanner.plan(after: events)
         }
         do {
-            try refresh(plan: plan)
+            try refreshCoordinator.refreshCommittedMutationReadModels(
+                self,
+                plan: plan
+            )
         } catch {
             postCommitError = error
         }
         do {
-            try recordLocalSyncSnapshotIfNeeded(events: events)
+            try PerformanceSignpost.interval("mutation.syncSnapshot") {
+                try recordLocalSyncSnapshotIfNeeded(events: events)
+            }
         } catch {
             postCommitError = postCommitError ?? error
         }
@@ -172,6 +188,7 @@ extension TimeTrackerStore {
             events: events,
             source: self
         )
+        enqueueCommittedMutationSystemProjections(events: events)
 
         if let postCommitError {
             errorMessage = String(
@@ -179,6 +196,31 @@ extension TimeTrackerStore {
                 postCommitError.localizedDescription
             )
         }
+    }
+
+    private func enqueueCommittedMutationSystemProjections(
+        events: Set<StoreDomainEvent>
+    ) {
+        let scheduler: CommittedMutationSystemProjectionScheduler
+        if let committedMutationSystemProjectionScheduler {
+            scheduler = committedMutationSystemProjectionScheduler
+        } else {
+            guard writeAuthorization.usesApplicationState else { return }
+            guard let modelContext else { return }
+            do {
+                scheduler = try
+                    CommittedMutationSystemProjectionSchedulerRegistry.shared
+                    .scheduler(for: modelContext.container)
+            } catch {
+                CommittedMutationProjectionDiagnostics.logger.error(
+                    "Could not schedule committed system projections: \(error.localizedDescription, privacy: .public)"
+                )
+                return
+            }
+        }
+        scheduler.enqueue(
+            CommittedMutationSystemProjectionReceipt(events: events)
+        )
     }
 
     private func recordLocalSyncSnapshotIfNeeded(events: Set<StoreDomainEvent>) throws {

@@ -189,7 +189,7 @@ Inbox AI 状态不再只依赖物理 `InboxItem.id`。`suggestionContextID` 是�
 
 Checklist AI visual request 也不是对 scene 缓存的写授权。请求必须固化 item 的 mutation ID、规范化标题、完整 task title/path 和 logical visual 的 `(ID, clientMutationID, userEditedAt)`；调度再把这些 provider input 与 item/visual revision 组成 scheduling fingerprint。标题或 task context 连续变化时使用 trailing debounce，pending 与 in-flight 共同计入并发上限；新 fingerprint 必须取消旧 pending/in-flight，并在等待结束、发请求前、completion 写入前分别重验 latest identity。completion 在共享 store lock 内 fresh context 重验 task 可追踪性、item 和 visual revision 后才写入。任何另一个 scene 的手动图标/颜色编辑、标题/完成/删除、task 不可用或 logical visual 重建都会使结果变成无副作用的 stale discard，并只刷新当前 scene 的 read model。相同 checklist 内容的 autosave 不得旋转 item/visual mutation ID，相同 icon/color 的建议写入必须是 durable no-op；否则 revision churn 会把正常输入误判为 stale 并形成重复预测闭环。
 
-同一 App 进程中的多 scene 通过 `StoreMutationBroadcaster` 加速收敛：本地 durable commit 完成、当前 scene 已刷新并记录 snapshot 后，以 source store 广播 events；其它 scene 只按 event plan 刷新 read model，并在任务/ledger plan 时校正失效 selection/route，不再次记录 snapshot 或自动启动 LLM。发送者按 identity 跳过重复 refresh。该通知不是跨进程协议；Widget、Watch、Intent 和其它进程仍须依赖 durable snapshot、persistent history/CloudKit 回调与各自的 post-commit 机制。
+同一 App 进程中的多 scene 通过 `StoreMutationBroadcaster` 加速收敛：本地 durable commit 完成、当前 scene 已刷新并记录 snapshot 后，把 events 放入有序队列，并在下一次 MainActor 调度中广播；其它 scene 只按 event plan 刷新 read model，并在任务/ledger plan 时校正失效 selection/route，不再次记录 snapshot、重发 system surface 或自动启动 LLM。发送者按 identity 跳过重复 refresh。普通 scene 的 Widget、Watch 与 Live Activity 更新由同一 `TimerStoreScope` 共享的 `CommittedMutationSystemProjectionScheduler` 独立排队：已经开始的副作用不取消，pending generation 合并事件，worker 用 fresh `ModelContext` 一次生成纯值 DTO，各 sink 独立失败和重试。ack/pending receipt 各最多保留 512 个；失败风暴超过事件预算时把 pending 语义提升为 `.fullSync`，不得无界积累 identity 或事件。该通知和内存 scheduler 都不是跨进程恢复协议；Widget、Watch、Intent 和其它进程仍须依赖 durable snapshot、persistent history/CloudKit 回调与各自的 post-commit 机制。
 
 任务没有产品层 workflow status。任务编辑器、列表、详情、菜单和辅助功能值都不提供状态选择器、状态徽章、完成或重开动作。Checklist 是任务完成/进度的唯一产品语义：完成全部 checklist 会让 checklist-derived remaining 为零，但不会锁住任务，用户仍可继续计时、编辑和添加清单项。持久化 `statusRaw` 仅为旧 schema/snapshot/CloudKit round-trip 保留；除 `archived` 兼容值外不得驱动业务。
 
@@ -353,7 +353,7 @@ App Intent 只负责解析系统输入和展示结果，实际写入复用主应
 
 当前 Intent 与应用进程复用 `timetrackerApp.applicationModelContainer`，不为每次查询/动作重新创建容器。Start Timer 会读取同步偏好中的 `allowParallelTimers`，不得硬编码与主应用不同的并行规则；实体查询排除 tombstone 与归档任务。系统动作同样检查 recovery 只读状态；任何写入都必须调用所属的 store-scoped coordinator 并在共享 lock 的 fresh context 内原子提交，不能把 App Intent 的 scene-less `ModelContext` 当作并发边界。
 
-Intent durable mutation 提交后，`CommittedMutationSnapshotRecorder` 更新同步恢复状态，`CommittedMutationSurfaceSynchronizer` 用窄依赖配置刷新 task/ledger/preference read models，再投影到 Widget、Watch 和 Live Activity。它不会启动完整应用 lifecycle 或自动 LLM 工作。post-commit 失败只记录/呈现“已保存但投影刷新失败”，不得把已提交的非幂等动作返回为失败并诱发系统重试。
+Intent durable mutation 提交后，`CommittedMutationSnapshotRecorder` 更新同步恢复状态，`CommittedMutationSurfaceSynchronizer` 用窄依赖配置刷新 task/ledger/preference read models，再投影到 Widget、Watch 和 Live Activity。这个 scene-less compatibility path 尚未接入 ordinary-scene scheduler；迁移前仍必须保持现有 outcome 语义。它不会启动完整应用 lifecycle 或自动 LLM 工作。post-commit 失败只记录/呈现“已保存但投影刷新失败”，不得把已提交的非幂等动作返回为失败并诱发系统重试。
 
 ### Live Activity
 

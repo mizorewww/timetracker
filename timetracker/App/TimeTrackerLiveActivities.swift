@@ -98,7 +98,6 @@ final class LiveActivityCoordinator {
     private(set) var status: LiveActivityStatus
 
     @ObservationIgnored private var lastRequest: Request?
-    @ObservationIgnored private let projectionService = LiveActivityProjectionService()
     @ObservationIgnored private let client: any LiveActivitySystemClient
     @ObservationIgnored private var authorizationObservationTask: Task<Void, Never>?
     @ObservationIgnored private var activityStateObservationTask: Task<Void, Never>?
@@ -124,10 +123,15 @@ final class LiveActivityCoordinator {
     }
 
     func sync(activeSegments: [TimeSegment], tasks: [TaskNode], now: Date) {
-        guard let primary = projectionService.primarySegment(
-            from: activeSegments,
+        sync(projection: CommittedMutationLiveActivityProjection.materialize(
+            activeSegments: activeSegments,
+            tasks: tasks,
             now: now
-        ) else {
+        ))
+    }
+
+    func sync(projection: CommittedMutationLiveActivityProjection) {
+        guard case let .active(projection) = projection else {
             dismissedSegmentID = nil
             let hasRetainedActiveState = if case .active? = reconciler.desiredState {
                 true
@@ -151,23 +155,18 @@ final class LiveActivityCoordinator {
             return
         }
 
-        let projection = projectionService.taskProjection(
-            taskID: primary.taskID,
-            tasks: tasks,
-            fallbackTitle: primary.titleSnapshotFallback
-        )
         let state = TimeTrackingActivityAttributes.ContentState(
-            taskTitle: projection.title,
-            taskPath: projection.path,
-            taskPathAbbreviated: projection.abbreviatedPath,
+            taskTitle: projection.taskTitle,
+            taskPath: projection.taskPath,
+            taskPathAbbreviated: projection.taskPathAbbreviated,
             iconName: projection.iconName,
             colorHex: projection.colorHex,
-            startedAt: primary.startedAt,
+            startedAt: projection.startedAt,
             additionalTimerCount: 0
         )
         let request = Request(
-            segmentID: primary.id.uuidString,
-            taskID: primary.taskID.uuidString,
+            segmentID: projection.segmentID,
+            taskID: projection.taskID,
             state: state
         )
         if dismissedSegmentID != nil,
@@ -520,12 +519,6 @@ extension LiveActivityFailure {
         @unknown default:
             self = .system
         }
-    }
-}
-
-private extension TimeSegment {
-    var titleSnapshotFallback: String {
-        AppStrings.activeTimers
     }
 }
 

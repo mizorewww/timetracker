@@ -67,7 +67,9 @@ Domain stores own state snapshots:
 - `AnalyticsStore` owns pure read-model overview/task snapshot caches keyed by full period, current local day, and optional live-minute identity, plus disposable ledger day buckets; cache operations are split into `AnalyticsStore+Caching`, and cached snapshots do not retain SwiftData segment objects.
 - `PreferenceStore` owns synced preference snapshots.
 
-`StoreRefreshCoordinator` owns refresh sequencing after command events. The facade does not decide the order of task, ledger, checklist, rollup, analytics, selection validation, and Live Activity side effects inline.
+`StoreRefreshCoordinator` owns refresh sequencing after command events. Its committed-mutation boundary first refreshes only the current scene's affected read models and scene-local selection/suggestion state. The facade does not decide the order of task, ledger, checklist, rollup, or analytics refresh inline.
+
+Ordinary scene mutations enqueue Widget, Watch, and Live Activity publication through one shared `CommittedMutationSystemProjectionScheduler` per physical `TimerStoreScope`. Publication is not part of the mutation caller's completion path: a worker opens a fresh read context, materializes immutable projection DTOs once per generation, and isolates each sink's failure. Work that has started is allowed to finish; only pending generations are coalesced, receipt bookkeeping is bounded, and an oversized pending event set safely degrades to `.fullSync`. A queued next-MainActor-turn `StoreMutationBroadcaster` independently converges sibling scenes as read-only consumers, so they do not repeat sync recording, system publication, or suggestion work. The sync recovery snapshot remains a separate synchronous post-commit durability boundary until persistent-history recovery replaces that dependency.
 
 `StoreDomainEvent` is the write-side invalidation language. Commands emit what happened, not which views should refresh:
 
@@ -294,7 +296,7 @@ AI responses use one dedicated ephemeral `URLSession`, with cache and cookies di
 
 `DeviceIdentity` is an opaque local tie-break identifier, not a device fingerprint. Only the current platform prefix plus a canonical UUID is reusable; malformed, cross-platform, controlled-character, or oversized persisted values are replaced with a fresh random identifier.
 
-App Intents use the application model container and the same commands. After an intent commits, a narrow post-commit synchronizer refreshes only task/ledger/preference state needed by Widget, Watch, and Live Activity; it does not start the full app lifecycle or automatic LLM jobs. A projection failure never turns a committed, potentially non-idempotent action into an intent failure.
+App Intents use the application model container and the same commands. After an intent commits, a narrow post-commit synchronizer refreshes only task/ledger/preference state needed by Widget, Watch, and Live Activity; it does not start the full app lifecycle or automatic LLM jobs. This scene-less compatibility path has not yet moved to the ordinary scene scheduler. A projection failure never turns a committed, potentially non-idempotent action into an intent failure.
 
 System input routing is lifecycle-safe and bounded. `AppDeepLinkRouter` validates a small URL grammar before immediate execution or enqueue; each scene owns a semantic-deduplicating `PendingDeepLinkQueue` capped at 16 entries and drains it only after repositories are ready and its typed presentation slot is available. Navigation/modal deep links acquire that slot before mutating destination state, while direct timer start/stop actions do not wait for an unrelated sheet. `WatchCommandRouter` owns the process-wide Watch bridge callback but retains scene stores weakly, prefers the most recently active scene, removes released registrations, and uninstalls the callback when no scene remains. This prevents startup URLs from bypassing validation and prevents a singleton connectivity closure from leaking or targeting a stale scene.
 
@@ -332,6 +334,7 @@ timetracker/Services
   Maintenance/    Database repair, export, and cleanup support
   SystemIntegration/
                    Sync conflict orchestration/state/export, versioned snapshots,
+                   committed-mutation system projection scheduling,
                    Widget/Watch handoff, credentials, and connectivity transport
   Tasks/          Task tree derivation and validation helpers
 timetracker/Features/Home

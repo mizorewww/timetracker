@@ -177,11 +177,10 @@ extension TimeTrackerStore {
     /// Refreshes only the read models required by external system surfaces.
     /// This intentionally avoids the normal refresh coordinator because task and
     /// preference refreshes there may schedule LLM suggestion work.
-    func refreshCommittedMutationSurfaces(
-        events: Set<StoreDomainEvent>,
-        widgetCache: WidgetSnapshotCache? = nil,
-        now: Date = Date()
-    ) throws -> Error? {
+    @discardableResult
+    func refreshCommittedMutationSurfaceReadModels(
+        events: Set<StoreDomainEvent>
+    ) throws -> Bool {
         let surfaceEvents = events.filter { event in
             switch event {
             case .taskChanged, .ledgerChanged, .pomodoroChanged, .remoteImportCompleted, .fullSync:
@@ -190,7 +189,7 @@ extension TimeTrackerStore {
                 false
             }
         }
-        guard surfaceEvents.isEmpty == false else { return nil }
+        guard surfaceEvents.isEmpty == false else { return false }
 
         let eventPlan = StoreRefreshPlanner().plan(after: surfaceEvents)
         let taskPlan = StoreRefreshPlan(
@@ -228,6 +227,20 @@ extension TimeTrackerStore {
         )
         syncedPreferences = preferenceDomainStore.syncedPreferences
         preferences = preferenceDomainStore.preferences
+        return true
+    }
+
+    /// Retained for callers that still perform all post-commit effects inline.
+    /// The asynchronous projection worker uses the read-model boundary above,
+    /// then publishes each system surface independently.
+    func refreshCommittedMutationSurfaces(
+        events: Set<StoreDomainEvent>,
+        widgetCache: WidgetSnapshotCache? = nil,
+        now: Date = Date()
+    ) throws -> Error? {
+        guard try refreshCommittedMutationSurfaceReadModels(events: events) else {
+            return nil
+        }
 
         syncLiveActivitiesIfAvailable()
         let widgetError = syncWidgetSnapshotIfAvailable(now: now, cache: widgetCache)

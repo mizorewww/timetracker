@@ -103,3 +103,16 @@
   fingerprint。三个行为测试先证明旧实现会重复推进/写盘，再覆盖跨 service Cloud
   重放、pending conflict identity 稳定，以及关闭同步且无 recovery 时零读写。未新增
   第三方依赖；继续复用 SwiftData、Foundation 与现有 `DurableLocalFile`。
+- 2026-07-28：完成 B2 的 durable lane cursor/reset-fence 前置检查点。根据 Apple
+  SwiftData 官方 history API，将完整 opaque `DefaultHistoryToken` 分别持久化给 sync
+  snapshot、Widget、Watch、Live Activity；cursor 支持已协调空库的 `nil` baseline、
+  单调 expected-token CAS、full-reconciliation attempt lease、store/lane/format
+  校验、损坏/超限隔离与原子替换。Cloud recovery reset 在 store mutation lock 内持有
+  durable-root lock，先递增保留的 reset epoch，再删除 SQLite、cursor 与 attempt；
+  reset 前挂起或已被新 attempt 取代的 worker 都不能回写旧 frontier；active attempt
+  阻止增量确认，并允许过期 token 重建为空 baseline。注册接口不再默认 epoch 0；
+  安全工厂读取当前 generation，后续 driver 必须在专用非 MainActor actor 上使用，避免
+  root-lock 文件 I/O 阻塞调用 actor。17 个 cursor
+  行为测试与 21 个 Cloud recovery gate 测试通过；完整 `make test` 1507 项通过，
+  performance budget 全绿。未新增第三方依赖；使用 Apple 原生 SwiftData、Foundation
+  和既有 `DurableLocalFile`。

@@ -602,7 +602,9 @@ struct CoreCloudRecoveryGateTests {
     }
 
     @Test @MainActor
-    func realStoreCleanupDeletesSQLiteFilesButPreservesTheMutationLock() throws {
+    func realStoreCleanupInvalidatesHistoryWorkAndPreservesResetFenceAndMutationLock()
+        throws
+    {
         try withRecoveryDefaults {
             let storeURL = try makeTemporaryStoreURL()
             defer { removeTemporaryStoreDirectory(for: storeURL) }
@@ -617,6 +619,35 @@ struct CoreCloudRecoveryGateTests {
                     )
                 )
             }
+            let historyCursorURL = storeURL.deletingLastPathComponent()
+                .appendingPathComponent(
+                    storeURL.lastPathComponent
+                        + ".post-commit-history.widget.cursor.v1.json"
+                )
+            let historyAttemptURL = storeURL.deletingLastPathComponent()
+                .appendingPathComponent(
+                    storeURL.lastPathComponent
+                        + ".post-commit-history.widget.attempt.v1.json"
+                )
+            #expect(
+                FileManager.default.createFile(
+                    atPath: historyCursorURL.path,
+                    contents: Data("cursor".utf8)
+                )
+            )
+            #expect(
+                FileManager.default.createFile(
+                    atPath: historyAttemptURL.path,
+                    contents: Data("attempt".utf8)
+                )
+            )
+            let scope = TimerStoreScope(
+                persistentStoreURL: storeURL
+            )
+            let resetFence = PersistentHistoryProjectionResetFence(
+                scope: scope
+            )
+            #expect(try resetFence.currentEpoch() == 0)
             let lockURL = TimerStoreScope(
                 persistentStoreURL: storeURL
             ).mutationLockURL
@@ -640,6 +671,17 @@ struct CoreCloudRecoveryGateTests {
             for suffix in suffixes {
                 #expect(FileManager.default.fileExists(atPath: storeURL.path + suffix) == false)
             }
+            #expect(
+                FileManager.default.fileExists(
+                    atPath: historyCursorURL.path
+                ) == false
+            )
+            #expect(
+                FileManager.default.fileExists(
+                    atPath: historyAttemptURL.path
+                ) == false
+            )
+            #expect(try resetFence.currentEpoch() == 1)
             #expect(FileManager.default.fileExists(atPath: lockURL.path))
         }
     }

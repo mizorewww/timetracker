@@ -91,7 +91,17 @@ extension AppCloudSync {
             AppDefaults.shared.set(true, forKey: cloudRecoveryStoreResetKey)
         }
         do {
-            try storeFileRemover(storeURL)
+            let durableRoot = storeURL.deletingLastPathComponent()
+            let localFile = DurableLocalFile()
+            try localFile.withExclusiveAccess(through: durableRoot) {
+                try PersistentHistoryProjectionResetFence(
+                    scope: TimerStoreScope(
+                        persistentStoreURL: storeURL
+                    ),
+                    localFile: localFile
+                ).advanceForStoreReset()
+                try storeFileRemover(storeURL)
+            }
         } catch {
             logger.error(
                 "CloudKit recovery could not remove persistent store files: \(error.localizedDescription, privacy: .public)"
@@ -194,18 +204,26 @@ extension AppCloudSync {
         let directory = storeURL.deletingLastPathComponent()
         guard fileManager.fileExists(atPath: directory.path) else { return }
 
-        let storePrefix = storeURL.lastPathComponent
-        let storeFiles = try fileManager.contentsOfDirectory(
-            at: directory,
-            includingPropertiesForKeys: nil
-        )
-        .filter {
-            $0.lastPathComponent.hasPrefix(storePrefix) &&
-                $0.lastPathComponent != storePrefix + StoreScopedTimerMutationLock.fileSuffix
-        }
+        let localFile = DurableLocalFile()
+        try localFile.withExclusiveAccess(through: directory) {
+            let storePrefix = storeURL.lastPathComponent
+            let storeFiles = try fileManager.contentsOfDirectory(
+                at: directory,
+                includingPropertiesForKeys: nil
+            )
+            .filter {
+                $0.lastPathComponent.hasPrefix(storePrefix) &&
+                    $0.lastPathComponent
+                    != storePrefix
+                    + StoreScopedTimerMutationLock.fileSuffix
+            }
 
-        for file in storeFiles {
-            try fileManager.removeItem(at: file)
+            for file in storeFiles {
+                try localFile.removeIfPresent(
+                    at: file,
+                    durableRootURL: directory
+                )
+            }
         }
     }
 

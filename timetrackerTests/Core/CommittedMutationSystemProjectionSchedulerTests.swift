@@ -231,6 +231,139 @@ struct CommittedMutationSystemProjectionSchedulerTests {
     }
 
     @Test @MainActor
+    func emptyReceiptOnlyRunsWatchWhenForced() async {
+        let probe = ProjectionWorkerProbe()
+        let scheduler = CommittedMutationSystemProjectionScheduler {
+            sink,
+            work in
+            try await probe.run(sink: sink, work: work)
+        }
+
+        scheduler.enqueue(
+            CommittedMutationSystemProjectionReceipt(events: [])
+        )
+        await scheduler.waitUntilIdle()
+
+        #expect(scheduler.latestGeneration == 0)
+        for sink in CommittedMutationSystemProjectionSink.allCases {
+            #expect(probe.calls(for: sink).isEmpty)
+        }
+
+        let forcedReceipt = CommittedMutationSystemProjectionReceipt(
+            events: [],
+            forcedSystemSinks: [.watch]
+        )
+        scheduler.enqueue(forcedReceipt)
+        await scheduler.waitUntilIdle()
+
+        #expect(scheduler.latestGeneration == 1)
+        let watchWork = probe.calls(for: .watch)
+        #expect(watchWork.count == 1)
+        #expect(watchWork.first?.receiptIDs == [forcedReceipt.id])
+        #expect(watchWork.first?.targetSinks == [.watch])
+        #expect(watchWork.first?.events.isEmpty == true)
+        #expect(
+            watchWork.first?.forceCurrentStateProjection == true
+        )
+        for sink in [
+            CommittedMutationSystemProjectionSink.syncSnapshot,
+            .widget,
+            .liveActivity,
+        ] {
+            #expect(probe.calls(for: sink).isEmpty)
+        }
+    }
+
+    @Test @MainActor
+    func mergedForcedWatchWorkRetainsForceAcrossFailureAndRetry() async {
+        let probe = ProjectionWorkerProbe(
+            failuresRemaining: [.watch: 1]
+        )
+        let scheduler = CommittedMutationSystemProjectionScheduler {
+            sink,
+            work in
+            try await probe.run(sink: sink, work: work)
+        }
+        let forcedReceipt = CommittedMutationSystemProjectionReceipt(
+            events: [],
+            forcedSystemSinks: [.watch]
+        )
+        let eventReceipt = CommittedMutationSystemProjectionReceipt(
+            events: [.preferenceChanged(key: "quickStart")]
+        )
+
+        scheduler.enqueue(forcedReceipt)
+        scheduler.enqueue(eventReceipt)
+        await scheduler.waitUntilIdle()
+
+        #expect(scheduler.failedSinks == [.watch])
+        let failedWork = probe.calls(for: .watch)
+        #expect(failedWork.count == 1)
+        #expect(
+            failedWork.first?.receiptIDs ==
+                [forcedReceipt.id, eventReceipt.id]
+        )
+        #expect(failedWork.first?.events == eventReceipt.events)
+        #expect(
+            failedWork.first?.forceCurrentStateProjection == true
+        )
+
+        scheduler.retryFailedSinks()
+        await scheduler.waitUntilIdle()
+
+        #expect(scheduler.failedSinks.isEmpty)
+        let retriedWork = probe.calls(for: .watch)
+        #expect(retriedWork.count == 2)
+        #expect(
+            retriedWork.last?.forceCurrentStateProjection == true
+        )
+        #expect(retriedWork.last?.targetSinks == [.watch])
+        #expect(probe.calls(for: .syncSnapshot).count == 1)
+    }
+
+    @Test @MainActor
+    func boundedFailedWatchBacklogRetainsForcedCurrentState() async {
+        let probe = ProjectionWorkerProbe(
+            failuresRemaining: [.watch: 1]
+        )
+        let scheduler = CommittedMutationSystemProjectionScheduler {
+            sink,
+            work in
+            try await probe.run(sink: sink, work: work)
+        }
+        let receipts = (0 ..< 700).map { _ in
+            CommittedMutationSystemProjectionReceipt(
+                events: [],
+                forcedSystemSinks: [.watch]
+            )
+        }
+
+        receipts.forEach(scheduler.enqueue)
+        await scheduler.waitUntilIdle()
+
+        #expect(scheduler.failedSinks == [.watch])
+        #expect(scheduler.pendingReceiptCount(for: .watch) == 512)
+        let failedCalls = probe.calls(for: .watch)
+        #expect(failedCalls.count == 1)
+        #expect(
+            failedCalls.first?.forceCurrentStateProjection == true
+        )
+
+        scheduler.retryFailedSinks()
+        await scheduler.waitUntilIdle()
+
+        #expect(scheduler.failedSinks.isEmpty)
+        let completedCalls = probe.calls(for: .watch)
+        #expect(completedCalls.count == 2)
+        #expect(
+            completedCalls.last?.forceCurrentStateProjection == true
+        )
+        #expect(probe.calls(for: .syncSnapshot).isEmpty)
+        #expect(probe.calls(for: .widget).isEmpty)
+        #expect(probe.calls(for: .liveActivity).isEmpty)
+    }
+
+    @Test @MainActor
     func acknowledgedReceiptDeduplicationIsBounded() async {
         let probe = ProjectionWorkerProbe()
         let scheduler = CommittedMutationSystemProjectionScheduler {

@@ -103,6 +103,11 @@ private nonisolated struct CommittedMutationMaterializationFailure:
     }
 }
 
+private nonisolated enum CommittedMutationMaterializationOutcome: Sendable {
+    case projected(CommittedMutationSystemProjectionMaterialization?)
+    case failed(CommittedMutationMaterializationFailure)
+}
+
 @MainActor
 private final class CommittedMutationModelContainerProvider {
     struct Registration {
@@ -174,24 +179,42 @@ private final class CommittedMutationModelContainerProvider {
 /// be released without making the older facts visible again.
 @MainActor
 final class CommittedMutationSystemProjectionWorker {
-    typealias SyncRecorder = @MainActor (
+    typealias SyncRecorder = @MainActor @Sendable (
         Set<StoreDomainEvent>
-    ) throws -> Void
-    typealias Materializer = @MainActor (
+    ) async throws -> Void
+    typealias Materializer = @MainActor @Sendable (
         CommittedMutationSystemProjectionWork
-    ) throws -> CommittedMutationSystemProjectionMaterialization?
-    typealias Publisher = @MainActor (
+    ) async throws -> CommittedMutationSystemProjectionMaterialization?
+    typealias Publisher = @MainActor @Sendable (
         CommittedMutationSystemProjectionSink,
         CommittedMutationSystemProjectionMaterialization
     ) async throws -> Void
+    typealias ContainerRegistrationValidator = @MainActor @Sendable (
+        UInt
+    ) -> Bool
 
-    private enum MaterializationOutcome {
-        case projected(CommittedMutationSystemProjectionMaterialization?)
-        case failed(CommittedMutationMaterializationFailure)
+    private enum MaterializationPhase {
+        case inFlight(
+            attemptID: UUID,
+            task: Task<CommittedMutationMaterializationOutcome, Never>
+        )
+        case resolved(
+            attemptID: UUID,
+            outcome: CommittedMutationMaterializationOutcome
+        )
+
+        var attemptID: UUID {
+            switch self {
+            case let .inFlight(attemptID, _),
+                 let .resolved(attemptID, _):
+                attemptID
+            }
+        }
     }
 
     private struct GenerationState {
-        let outcome: MaterializationOutcome
+        let sourceContainerRevision: UInt?
+        var phase: MaterializationPhase
         var targetedSinks: Set<CommittedMutationSystemProjectionSink>
         var materializationAttemptedSinks:
             Set<CommittedMutationSystemProjectionSink> = []
@@ -201,28 +224,27 @@ final class CommittedMutationSystemProjectionWorker {
     private let syncRecorder: SyncRecorder
     private let materializer: Materializer
     private let publisher: Publisher
+    private let isContainerRegistrationCurrent:
+        ContainerRegistrationValidator
     private var statesByGeneration: [UInt: GenerationState] = [:]
     private var newestRequestedGeneration: UInt = 0
 
     convenience init(
         container: ModelContainer,
-        widgetCache: WidgetSnapshotCache? = nil,
         now: @escaping @MainActor () -> Date = Date.init
     ) {
         self.init(
             containerProvider:
             CommittedMutationModelContainerProvider(container),
-            widgetCache: widgetCache,
             now: now
         )
     }
 
     fileprivate init(
         containerProvider: CommittedMutationModelContainerProvider,
-        widgetCache: WidgetSnapshotCache? = nil,
         now: @escaping @MainActor () -> Date = Date.init
     ) {
-        let resolvedWidgetCache = widgetCache ?? WidgetSnapshotCache()
+        let widgetWriter = WidgetSnapshotProjectionWriter()
         syncRecorder = { events in
             guard let container =
                 containerProvider.currentContainer()
@@ -230,22 +252,21 @@ final class CommittedMutationSystemProjectionWorker {
                 throw CommittedMutationSystemProjectionWorkerError
                     .storeContainerReleased
             }
-            let context = ModelContext(container)
-            context.autosaveEnabled = false
-            _ = try SyncConflictService().recordLocalMutation(
-                context: context,
-                events: events
+            let worker = try PersistentHistorySyncSnapshotWorker(
+                container: container
             )
+            _ = try await worker.record(events: events)
         }
         materializer = { _ in
             guard let container = containerProvider.currentContainer() else {
                 throw CommittedMutationSystemProjectionWorkerError
                     .storeContainerReleased
             }
-            let context = ModelContext(container)
-            context.autosaveEnabled = false
-            return try Self.materializeCurrentFacts(
-                context: context,
+            let materializer =
+                CommittedMutationSystemSurfaceMaterializer(
+                    modelContainer: container
+                )
+            return try await materializer.materialize(
                 now: now()
             )
         }
@@ -253,33 +274,51 @@ final class CommittedMutationSystemProjectionWorker {
             try await Self.publish(
                 sink: sink,
                 materialization: materialization,
-                widgetCache: resolvedWidgetCache
+                widgetWriter: widgetWriter
             )
+        }
+        isContainerRegistrationCurrent = { revision in
+            containerProvider.isCurrent(revision: revision)
         }
     }
 
     init(
         syncRecorder: @escaping SyncRecorder = { _ in },
         materializer: @escaping Materializer,
-        publisher: @escaping Publisher
+        publisher: @escaping Publisher,
+        isContainerRegistrationCurrent:
+        @escaping ContainerRegistrationValidator = { _ in true }
     ) {
         self.syncRecorder = syncRecorder
         self.materializer = materializer
         self.publisher = publisher
+        self.isContainerRegistrationCurrent =
+            isContainerRegistrationCurrent
     }
 
     func perform(
         sink: CommittedMutationSystemProjectionSink,
-        work: CommittedMutationSystemProjectionWork
+        work: CommittedMutationSystemProjectionWork,
+        expectedContainerRevision: UInt? = nil
     ) async throws {
+        try requireCurrentContainerRegistration(
+            expectedContainerRevision
+        )
         if sink == .syncSnapshot {
-            try syncRecorder(work.events)
+            try await syncRecorder(work.events)
+            try requireCurrentContainerRegistration(
+                expectedContainerRevision
+            )
             return
         }
 
-        let materialization = try materialization(
+        let materialization = try await materialization(
             requestedBy: sink,
-            work: work
+            work: work,
+            sourceContainerRevision: expectedContainerRevision
+        )
+        try requireCurrentContainerRegistration(
+            expectedContainerRevision
         )
         guard let materialization else {
             markSuccessful(sink: sink, generation: work.generation)
@@ -287,9 +326,19 @@ final class CommittedMutationSystemProjectionWorker {
         }
 
         do {
+            try requireCurrentContainerRegistration(
+                expectedContainerRevision
+            )
             try await publisher(sink, materialization)
+            try requireCurrentContainerRegistration(
+                expectedContainerRevision
+            )
             markSuccessful(sink: sink, generation: work.generation)
         } catch {
+            discardGenerationIfSourcedFromChangedRegistration(
+                generation: work.generation,
+                expectedRevision: expectedContainerRevision
+            )
             pruneSupersededGenerations()
             throw error
         }
@@ -297,8 +346,20 @@ final class CommittedMutationSystemProjectionWorker {
 
     private func materialization(
         requestedBy sink: CommittedMutationSystemProjectionSink,
-        work: CommittedMutationSystemProjectionWork
-    ) throws -> CommittedMutationSystemProjectionMaterialization? {
+        work: CommittedMutationSystemProjectionWork,
+        sourceContainerRevision: UInt?
+    ) async throws -> CommittedMutationSystemProjectionMaterialization? {
+        do {
+            try requireCurrentContainerRegistration(
+                sourceContainerRevision
+            )
+        } catch {
+            discardGenerationIfSourcedFromChangedRegistration(
+                generation: work.generation,
+                expectedRevision: sourceContainerRevision
+            )
+            throw error
+        }
         let systemSurfaceTargets = work.targetSinks.intersection(
             CommittedMutationSystemProjectionSink.systemSurfaceCases
         )
@@ -308,26 +369,76 @@ final class CommittedMutationSystemProjectionWorker {
         )
 
         var state: GenerationState
-        if let cached = statesByGeneration[work.generation] {
+        if let cached = statesByGeneration[work.generation],
+           cached.sourceContainerRevision == sourceContainerRevision
+        {
             state = cached
             state.targetedSinks.formUnion(systemSurfaceTargets)
         } else {
-            let outcome: MaterializationOutcome
-            do {
-                outcome = try .projected(materializer(work))
-            } catch {
-                outcome = .failed(
-                    CommittedMutationMaterializationFailure(error)
-                )
-            }
+            statesByGeneration[work.generation] = nil
+            let attemptID = UUID()
+            let materializer = materializer
+            let task:
+                Task<CommittedMutationMaterializationOutcome, Never> =
+                Task { @MainActor in
+                    do {
+                        let materialization = try await materializer(
+                            work
+                        )
+                        return CommittedMutationMaterializationOutcome
+                            .projected(materialization)
+                    } catch {
+                        return .failed(
+                            CommittedMutationMaterializationFailure(error)
+                        )
+                    }
+                }
             state = GenerationState(
-                outcome: outcome,
+                sourceContainerRevision: sourceContainerRevision,
+                phase: .inFlight(
+                    attemptID: attemptID,
+                    task: task
+                ),
                 targetedSinks: systemSurfaceTargets
             )
         }
+        statesByGeneration[work.generation] = state
+        pruneSupersededGenerations()
+
+        let attemptID = state.phase.attemptID
+        let outcome: CommittedMutationMaterializationOutcome
+        switch state.phase {
+        case let .inFlight(_, task):
+            outcome = await task.value
+            do {
+                try requireCurrentContainerRegistration(
+                    sourceContainerRevision
+                )
+            } catch {
+                discardGenerationIfSourcedFromChangedRegistration(
+                    generation: work.generation,
+                    expectedRevision: sourceContainerRevision
+                )
+                throw error
+            }
+            guard var current = statesByGeneration[work.generation],
+                  current.sourceContainerRevision ==
+                  sourceContainerRevision,
+                  current.phase.attemptID == attemptID
+            else {
+                throw CommittedMutationSystemProjectionWorkerError
+                    .storeContainerRegistrationChanged
+            }
+            current.phase = .resolved(
+                attemptID: attemptID,
+                outcome: outcome
+            )
+            state = current
+        case let .resolved(_, resolved):
+            outcome = resolved
+        }
 
         state.materializationAttemptedSinks.insert(sink)
-        let outcome = state.outcome
         if case .failed = outcome,
            state.materializationAttemptedSinks.isSuperset(
                of: state.targetedSinks
@@ -348,6 +459,36 @@ final class CommittedMutationSystemProjectionWorker {
         case let .failed(error):
             throw error
         }
+    }
+
+    func containerRegistrationDidChange() {
+        // Dropping a Task handle does not cancel an already-started read. Its
+        // attempt token simply cannot reinsert or publish an obsolete DTO.
+        statesByGeneration.removeAll()
+    }
+
+    private func requireCurrentContainerRegistration(
+        _ expectedRevision: UInt?
+    ) throws {
+        guard let expectedRevision else { return }
+        guard isContainerRegistrationCurrent(expectedRevision) else {
+            throw CommittedMutationSystemProjectionWorkerError
+                .storeContainerRegistrationChanged
+        }
+    }
+
+    private func discardGenerationIfSourcedFromChangedRegistration(
+        generation: UInt,
+        expectedRevision: UInt?
+    ) {
+        guard let expectedRevision,
+              isContainerRegistrationCurrent(expectedRevision) == false,
+              statesByGeneration[generation]?
+              .sourceContainerRevision == expectedRevision
+        else {
+            return
+        }
+        statesByGeneration[generation] = nil
     }
 
     private func markSuccessful(
@@ -372,50 +513,10 @@ final class CommittedMutationSystemProjectionWorker {
         }
     }
 
-    /// Performs a complete surface read instead of narrowing by the first
-    /// sink's event set. The scheduler may give each sink a filtered event
-    /// batch, so the first sink to arrive cannot define shared generation data.
-    static func materializeCurrentFacts(
-        context: ModelContext,
-        now: Date
-    ) throws -> CommittedMutationSystemProjectionMaterialization {
-        let store = TimeTrackerStore()
-        store.configureRepositoriesIfNeeded(context: context)
-        _ = try store.refreshCommittedMutationSurfaceReadModels(
-            events: [.fullSync]
-        )
-
-        let activeTaskIDs = Set(store.activeSegments.map(\.taskID))
-        let widgetSnapshot = WidgetSnapshotCache.snapshot(
-            activeSegments: store.activeSegments,
-            taskByID: store.taskByID,
-            taskParentPathByID: store.taskParentPathByID,
-            recentTasks: store.frequentRecentTasks(
-                excluding: activeTaskIDs,
-                limit: 3
-            ),
-            todayGrossSeconds: store.todayGrossSeconds(now: now),
-            todayWallSeconds: store.todayWallSeconds(now: now),
-            generatedAt: now
-        )
-
-        return CommittedMutationSystemProjectionMaterialization(
-            widgetSnapshot: widgetSnapshot,
-            watchSnapshot: store.watchStateSnapshot(now: now),
-            liveActivity:
-            CommittedMutationLiveActivityProjection.materialize(
-                activeSegments: store.activeSegments,
-                tasks: store.tasks,
-                now: now
-            ),
-            generatedAt: now
-        )
-    }
-
     private static func publish(
         sink: CommittedMutationSystemProjectionSink,
         materialization: CommittedMutationSystemProjectionMaterialization,
-        widgetCache: WidgetSnapshotCache
+        widgetWriter: WidgetSnapshotProjectionWriter
     ) async throws {
         switch sink {
         case .syncSnapshot:
@@ -425,7 +526,9 @@ final class CommittedMutationSystemProjectionWorker {
         case .widget:
             // Deliberately bypasses TimeTrackerStore.errorMessage. Projection
             // diagnostics belong to the scheduler's per-sink failure state.
-            try widgetCache.save(materialization.widgetSnapshot)
+            try await widgetWriter.save(
+                materialization.widgetSnapshot
+            )
         case .watch:
             try publishWatch(materialization.watchSnapshot)
         case .liveActivity:
@@ -512,6 +615,7 @@ final class CommittedMutationSystemProjectionSchedulerRegistry {
     private final class Entry {
         let containerProvider: CommittedMutationModelContainerProvider
         let scheduler: CommittedMutationSystemProjectionScheduler
+        let worker: CommittedMutationSystemProjectionWorker
 
         init(
             container: ModelContainer,
@@ -522,9 +626,11 @@ final class CommittedMutationSystemProjectionSchedulerRegistry {
             let containerProvider =
                 CommittedMutationModelContainerProvider(container)
             self.containerProvider = containerProvider
-            let worker = CommittedMutationSystemProjectionWorker(
-                containerProvider: containerProvider
-            )
+            let projectionWorker =
+                CommittedMutationSystemProjectionWorker(
+                    containerProvider: containerProvider
+                )
+            worker = projectionWorker
             scheduler = CommittedMutationSystemProjectionScheduler {
                 sink,
                 work in
@@ -556,7 +662,7 @@ final class CommittedMutationSystemProjectionSchedulerRegistry {
                             )
                             try await projector(invocation)
                         } else {
-                            try await worker.perform(
+                            try await projectionWorker.perform(
                                 sink: sink,
                                 work:
                                 CommittedMutationSystemProjectionWork(
@@ -564,7 +670,9 @@ final class CommittedMutationSystemProjectionSchedulerRegistry {
                                     targetSinks: work.targetSinks,
                                     receiptIDs: work.receiptIDs,
                                     events: invocation.events
-                                )
+                                ),
+                                expectedContainerRevision:
+                                registrationRevision
                             )
                         }
 
@@ -575,13 +683,25 @@ final class CommittedMutationSystemProjectionSchedulerRegistry {
                                 .storeContainerRegistrationChanged
                         }
                     }
-                    try await driver.run(sink.persistentHistoryLane)
+                    try await driver.run(
+                        sink.persistentHistoryLane,
+                        forceCurrentStateEffect:
+                        work.forceCurrentStateProjection
+                    )
                 }
             }
         }
 
         func updateContainer(_ container: ModelContainer) {
+            let previousRevision =
+                containerProvider.currentRegistration()?.revision
             containerProvider.update(container)
+            guard containerProvider.currentRegistration()?.revision !=
+                previousRevision
+            else {
+                return
+            }
+            worker.containerRegistrationDidChange()
         }
 
         var hasLiveContainer: Bool {

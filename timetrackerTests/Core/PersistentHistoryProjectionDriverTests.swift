@@ -57,6 +57,126 @@ struct PersistentHistoryProjectionDriverTests {
     }
 
     @Test @MainActor
+    func readyCursorRunsForcedCurrentStateWithoutHistoryWhileOrdinaryRunStaysIdle()
+        async throws
+    {
+        try await withPersistentHistoryProjectionFixture(
+            name: #function
+        ) { fixture in
+            let probe = PersistentHistoryProjectionEffectProbe()
+            let driver = try fixture.makeDriver(probe: probe)
+
+            try await driver.run(.watch)
+            try await driver.run(.watch)
+            try await driver.run(
+                .watch,
+                forceCurrentStateEffect: true
+            )
+            try await driver.run(.watch)
+
+            #expect(
+                await probe.invocations() == [
+                    PersistentHistoryProjectionInvocation(
+                        lane: .watch,
+                        kind: .fullReconciliation,
+                        transactionCount: 0,
+                        events: [.fullSync]
+                    ),
+                    PersistentHistoryProjectionInvocation(
+                        lane: .watch,
+                        kind: .forcedCurrentState,
+                        transactionCount: 0,
+                        events: []
+                    ),
+                ]
+            )
+        }
+    }
+
+    @Test @MainActor
+    func failedForcedCurrentStateDoesNotAdvanceIrrelevantHistoryBeforeRetry()
+        async throws
+    {
+        try await withPersistentHistoryProjectionFixture(
+            name: #function
+        ) { fixture in
+            let probe = PersistentHistoryProjectionEffectProbe(
+                failingInvocationIndices: [1]
+            )
+            let driver = try fixture.makeDriver(probe: probe)
+            try await driver.run(.watch)
+            try fixture.insertInboxItem(
+                title: "Watch-irrelevant pending history",
+                author: .localMutation
+            )
+
+            await #expect(
+                throws: PersistentHistoryProjectionEffectProbeError.self
+            ) {
+                try await driver.run(
+                    .watch,
+                    forceCurrentStateEffect: true
+                )
+            }
+            try await driver.run(
+                .watch,
+                forceCurrentStateEffect: true
+            )
+            try await driver.run(.watch)
+
+            let invocations = await probe.invocations()
+            #expect(invocations.map(\.kind) == [
+                .fullReconciliation,
+                .forcedCurrentState,
+                .forcedCurrentState,
+            ])
+            #expect(invocations.map(\.transactionCount) == [0, 1, 1])
+            #expect(invocations[1].events.isEmpty)
+            #expect(invocations[2].events.isEmpty)
+        }
+    }
+
+    @Test @MainActor
+    func forcedCurrentStateProjectsAndAdvancesIrrelevantUnseenHistory()
+        async throws
+    {
+        try await withPersistentHistoryProjectionFixture(
+            name: #function
+        ) { fixture in
+            let probe = PersistentHistoryProjectionEffectProbe()
+            let driver = try fixture.makeDriver(probe: probe)
+            try await driver.run(.watch)
+            try fixture.insertInboxItem(
+                title: "Watch-irrelevant history",
+                author: .localMutation
+            )
+
+            try await driver.run(
+                .watch,
+                forceCurrentStateEffect: true
+            )
+            try await driver.run(.watch)
+
+            #expect(
+                await probe.invocations() == [
+                    PersistentHistoryProjectionInvocation(
+                        lane: .watch,
+                        kind: .fullReconciliation,
+                        transactionCount: 0,
+                        events: [.fullSync]
+                    ),
+                    PersistentHistoryProjectionInvocation(
+                        lane: .watch,
+                        kind: .forcedCurrentState,
+                        transactionCount: 1,
+                        events: []
+                    ),
+                ]
+            )
+        }
+    }
+
+    @Test @MainActor
     func fullReconciliationCapturesTailBeforeRunningItsEffect() async throws {
         try await withPersistentHistoryProjectionFixture(
             name: #function
@@ -642,6 +762,20 @@ private final class PersistentHistoryProjectionDriverFixture {
             context.insert(TaskNode(
                 title: title,
                 parentID: nil,
+                deviceID: "persistent-history-projection-test"
+            ))
+        }
+    }
+
+    func insertInboxItem(
+        title: String,
+        author: TimeTrackerHistoryAuthor
+    ) throws {
+        let context = ModelContext(container)
+        context.autosaveEnabled = false
+        try context.performAtomicMutation(author: author) {
+            context.insert(InboxItem(
+                title: title,
                 deviceID: "persistent-history-projection-test"
             ))
         }

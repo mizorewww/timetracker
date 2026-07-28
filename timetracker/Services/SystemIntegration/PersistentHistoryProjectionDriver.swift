@@ -8,6 +8,7 @@ nonisolated enum PersistentHistoryProjectionInvocationKind:
 {
     case fullReconciliation
     case incremental
+    case forcedCurrentState
 }
 
 nonisolated struct PersistentHistoryProjectionInvocation:
@@ -228,13 +229,16 @@ actor PersistentHistoryProjectionDriver {
     }
 
     func run(
-        _ lane: PersistentHistoryProjectionLane
+        _ lane: PersistentHistoryProjectionLane,
+        forceCurrentStateEffect: Bool = false
     ) async throws {
         if scope.persistentStoreURL == nil {
             let identity = try registeredIdentity()
             try await runVolatile(
                 lane,
-                identity: identity
+                identity: identity,
+                forceCurrentStateEffect:
+                forceCurrentStateEffect
             )
             return
         }
@@ -255,7 +259,9 @@ actor PersistentHistoryProjectionDriver {
                         lane,
                         after: acknowledgedToken,
                         identity: identity,
-                        cursorStore: cursorStore
+                        cursorStore: cursorStore,
+                        forceCurrentStateEffect:
+                        forceCurrentStateEffect
                     )
                 } catch let error as SwiftDataError
                     where error == .historyTokenExpired
@@ -278,7 +284,8 @@ actor PersistentHistoryProjectionDriver {
 
     private func runVolatile(
         _ lane: PersistentHistoryProjectionLane,
-        identity: PersistentHistoryProjectionStoreIdentity
+        identity: PersistentHistoryProjectionStoreIdentity,
+        forceCurrentStateEffect: Bool
     ) async throws {
         guard case let .ready(acknowledgedToken) =
             volatileCursors[lane]
@@ -306,6 +313,12 @@ actor PersistentHistoryProjectionDriver {
         guard let candidateToken = summary.lastToken,
               candidateToken != acknowledgedToken
         else {
+            if forceCurrentStateEffect {
+                try await runForcedCurrentStateEffect(
+                    lane: lane,
+                    transactionCount: 0
+                )
+            }
             return
         }
         if Self.shouldRunEffect(lane: lane, summary: summary) {
@@ -318,6 +331,11 @@ actor PersistentHistoryProjectionDriver {
                     summary: summary
                 )
             ))
+        } else if forceCurrentStateEffect {
+            try await runForcedCurrentStateEffect(
+                lane: lane,
+                transactionCount: summary.transactionCount
+            )
         }
         volatileCursors[lane] = .ready(candidateToken)
     }
@@ -358,7 +376,8 @@ actor PersistentHistoryProjectionDriver {
         _ lane: PersistentHistoryProjectionLane,
         after acknowledgedToken: DefaultHistoryToken?,
         identity: PersistentHistoryProjectionStoreIdentity,
-        cursorStore: PersistentHistoryLaneCursorStore
+        cursorStore: PersistentHistoryLaneCursorStore,
+        forceCurrentStateEffect: Bool
     ) async throws {
         let summary = try await reader.scan(
             after: acknowledgedToken,
@@ -368,6 +387,12 @@ actor PersistentHistoryProjectionDriver {
         guard let candidateToken = summary.lastToken,
               candidateToken != acknowledgedToken
         else {
+            if forceCurrentStateEffect {
+                try await runForcedCurrentStateEffect(
+                    lane: lane,
+                    transactionCount: 0
+                )
+            }
             return
         }
         if Self.shouldRunEffect(lane: lane, summary: summary) {
@@ -380,6 +405,11 @@ actor PersistentHistoryProjectionDriver {
                     summary: summary
                 )
             ))
+        } else if forceCurrentStateEffect {
+            try await runForcedCurrentStateEffect(
+                lane: lane,
+                transactionCount: summary.transactionCount
+            )
         }
         switch try cursorStore.advanceIncrementally(
             to: candidateToken,
@@ -392,6 +422,18 @@ actor PersistentHistoryProjectionDriver {
             throw PersistentHistoryProjectionDriverError
                 .cursorAdvanceRequiresRetry
         }
+    }
+
+    private func runForcedCurrentStateEffect(
+        lane: PersistentHistoryProjectionLane,
+        transactionCount: Int
+    ) async throws {
+        try await effect(PersistentHistoryProjectionInvocation(
+            lane: lane,
+            kind: .forcedCurrentState,
+            transactionCount: transactionCount,
+            events: []
+        ))
     }
 
     private func registeredIdentity()

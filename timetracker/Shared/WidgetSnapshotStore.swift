@@ -58,7 +58,7 @@ nonisolated struct WidgetSnapshotTimelinePolicy: Sendable {
     }
 }
 
-struct SharedWidgetSnapshotStore {
+nonisolated struct SharedWidgetSnapshotStore {
     static let suiteName = "group.me.mezorewww.timetracker"
     static let testSuiteName = "me.mezorewww.timetracker.widgetsnapshot.tests"
     static let snapshotKey = "widget.activeTimerSnapshot.v1"
@@ -82,9 +82,7 @@ struct SharedWidgetSnapshotStore {
             || CommandLine.arguments.contains("--uitesting")
     }
 
-    var defaults: UserDefaults?
-    var encoder: JSONEncoder = .init()
-    var decoder: JSONDecoder = .init()
+    let defaults: UserDefaults?
 
     init(defaults: UserDefaults? = UserDefaults(suiteName: Self.effectiveSuiteName)) {
         self.defaults = defaults
@@ -101,7 +99,7 @@ struct SharedWidgetSnapshotStore {
         guard snapshot.isStructurallyValid else {
             throw WidgetSnapshotStoreError.invalidSnapshot
         }
-        let data = try encoder.encode(snapshot)
+        let data = try JSONEncoder().encode(snapshot)
         guard data.count <= WidgetSnapshotLimits.maximumEncodedBytes else {
             throw WidgetSnapshotStoreError.invalidSnapshot
         }
@@ -118,7 +116,7 @@ struct SharedWidgetSnapshotStore {
         guard defaults.object(forKey: Self.snapshotKey) != nil else { return .missing }
         guard let data = defaults.data(forKey: Self.snapshotKey),
               data.count <= WidgetSnapshotLimits.maximumEncodedBytes,
-              let snapshot = try? decoder.decode(WidgetSnapshot.self, from: data),
+              let snapshot = try? JSONDecoder().decode(WidgetSnapshot.self, from: data),
               snapshot.isStructurallyValid
         else {
             return .corrupted

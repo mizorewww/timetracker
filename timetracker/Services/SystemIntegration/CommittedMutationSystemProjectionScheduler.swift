@@ -44,10 +44,20 @@ nonisolated struct CommittedMutationSystemProjectionReceipt:
 {
     let id: UUID
     let events: Set<StoreDomainEvent>
+    let forcedSystemSinks:
+        Set<CommittedMutationSystemProjectionSink>
 
-    init(id: UUID = UUID(), events: Set<StoreDomainEvent>) {
+    init(
+        id: UUID = UUID(),
+        events: Set<StoreDomainEvent>,
+        forcedSystemSinks:
+        Set<CommittedMutationSystemProjectionSink> = []
+    ) {
         self.id = id
         self.events = events
+        self.forcedSystemSinks = forcedSystemSinks.intersection(
+            CommittedMutationSystemProjectionSink.systemSurfaceCases
+        )
     }
 }
 
@@ -59,6 +69,22 @@ nonisolated struct CommittedMutationSystemProjectionWork:
     let targetSinks: Set<CommittedMutationSystemProjectionSink>
     let receiptIDs: Set<UUID>
     let events: Set<StoreDomainEvent>
+    let forceCurrentStateProjection: Bool
+
+    init(
+        generation: UInt,
+        targetSinks: Set<CommittedMutationSystemProjectionSink>,
+        receiptIDs: Set<UUID>,
+        events: Set<StoreDomainEvent>,
+        forceCurrentStateProjection: Bool = false
+    ) {
+        self.generation = generation
+        self.targetSinks = targetSinks
+        self.receiptIDs = receiptIDs
+        self.events = events
+        self.forceCurrentStateProjection =
+            forceCurrentStateProjection
+    }
 }
 
 /// Coalesces committed-mutation projection work without making a durable
@@ -146,24 +172,28 @@ final class CommittedMutationSystemProjectionScheduler {
     }
 
     func enqueue(_ receipt: CommittedMutationSystemProjectionReceipt) {
-        let targetedEvents = Dictionary(
-            uniqueKeysWithValues:
-            Self.targetedSinks(for: receipt.events).map { sink in
-                let events = Self.events(receipt.events, for: sink)
-                return (sink, events)
-            }
+        let targetedSinks = Self.targetedSinks(
+            for: receipt.events
         )
-        let eligibleEvents = targetedEvents.filter { sink, _ in
-            contains(receipt.id, in: sink) == false
-        }
-        guard eligibleEvents.isEmpty == false else {
+        let eligibleSinks = targetedSinks
+            .union(receipt.forcedSystemSinks)
+            .filter {
+                contains(receipt.id, in: $0) == false
+            }
+        guard eligibleSinks.isEmpty == false else {
             return
         }
         generation &+= 1
         let receiptGeneration = generation
-        let targetSinks = Set(eligibleEvents.keys)
+        let targetSinks = Set(eligibleSinks)
 
-        for (sink, events) in eligibleEvents {
+        for sink in eligibleSinks {
+            let events = Self.events(
+                receipt.events,
+                for: sink
+            )
+            let forceCurrentStateProjection =
+                receipt.forcedSystemSinks.contains(sink)
             guard var state = states[sink] else { continue }
 
             state.receiptGenerationByID[receipt.id] = receiptGeneration
@@ -173,7 +203,9 @@ final class CommittedMutationSystemProjectionScheduler {
                     generation: receiptGeneration,
                     targetSinks: targetSinks,
                     receiptIDs: [receipt.id],
-                    events: events
+                    events: events,
+                    forceCurrentStateProjection:
+                    forceCurrentStateProjection
                 )
             )
             Self.trimPendingReceiptTracking(&state)
@@ -270,7 +302,9 @@ final class CommittedMutationSystemProjectionScheduler {
                     generation: pending.generation,
                     targetSinks: generationSinks,
                     receiptIDs: pending.receiptIDs,
-                    events: pending.events
+                    events: pending.events,
+                    forceCurrentStateProjection:
+                    pending.forceCurrentStateProjection
                 )
             }
             state.failure = nil
@@ -395,7 +429,10 @@ final class CommittedMutationSystemProjectionScheduler {
             receiptIDs: lhs.receiptIDs.union(rhs.receiptIDs),
             events: StoreDomainEventBatchLimiter.bounded(
                 lhs.events.union(rhs.events)
-            )
+            ),
+            forceCurrentStateProjection:
+            lhs.forceCurrentStateProjection ||
+                rhs.forceCurrentStateProjection
         )
     }
 
@@ -428,7 +465,9 @@ final class CommittedMutationSystemProjectionScheduler {
             // Surface materialization reads the complete current committed
             // state. Collapse an unusually long failure backlog to full sync
             // so associated IDs cannot make the event set grow without bound.
-            events: [.fullSync]
+            events: pending.events.isEmpty ? [] : [.fullSync],
+            forceCurrentStateProjection:
+            pending.forceCurrentStateProjection
         )
         for receiptID in discardedReceiptIDs
             where state.inFlight?.receiptIDs.contains(receiptID) != true

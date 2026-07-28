@@ -3,15 +3,25 @@ import Foundation
 import WidgetKit
 #endif
 
-struct WidgetSnapshotCache {
-    var store: SharedWidgetSnapshotStore
+nonisolated struct WidgetSnapshotCache {
+    let store: SharedWidgetSnapshotStore
 
     init(store: SharedWidgetSnapshotStore = SharedWidgetSnapshotStore()) {
         self.store = store
     }
 
-    func save(_ snapshot: WidgetSnapshot) throws {
+    func persist(_ snapshot: WidgetSnapshot) throws {
         try store.save(snapshot)
+    }
+
+    @MainActor
+    func save(_ snapshot: WidgetSnapshot) throws {
+        try persist(snapshot)
+        Self.reloadTimelines()
+    }
+
+    @MainActor
+    static func reloadTimelines() {
         #if canImport(WidgetKit)
         WidgetCenter.shared.reloadTimelines(ofKind: SharedWidgetSnapshotStore.widgetKind)
         #endif
@@ -92,5 +102,43 @@ struct WidgetSnapshotCache {
             activeTimers: activeTimers,
             recentTasks: recentTaskSnapshots
         )
+    }
+}
+
+/// Serializes Widget payload encoding and App Group persistence away from
+/// MainActor. WidgetKit invalidation returns to MainActor only after the new
+/// immutable snapshot is durable.
+actor WidgetSnapshotProjectionWriter {
+    typealias Persistence = @Sendable (WidgetSnapshot) throws -> Void
+    typealias TimelineReloader = @MainActor @Sendable () -> Void
+
+    private let store: SharedWidgetSnapshotStore?
+    private let persistSnapshot: Persistence?
+    private let reloadTimelines: TimelineReloader
+
+    init() {
+        store = SharedWidgetSnapshotStore()
+        persistSnapshot = nil
+        reloadTimelines = {
+            WidgetSnapshotCache.reloadTimelines()
+        }
+    }
+
+    init(
+        persist: @escaping Persistence,
+        reload: @escaping TimelineReloader = {}
+    ) {
+        store = nil
+        persistSnapshot = persist
+        reloadTimelines = reload
+    }
+
+    func save(_ snapshot: WidgetSnapshot) async throws {
+        if let persistSnapshot {
+            try persistSnapshot(snapshot)
+        } else {
+            try store?.save(snapshot)
+        }
+        await reloadTimelines()
     }
 }

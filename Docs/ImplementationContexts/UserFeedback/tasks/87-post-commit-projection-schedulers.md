@@ -169,3 +169,13 @@
   quick-start/legacy 顺序，并用 MainActor heartbeat 证明大读取不占用 UI actor。
   物化器 4 项、Watch 43 项及完整 `make test` 1539/1539 通过。未新增第三方依赖；
   使用 Apple SwiftData、Foundation、Structured Concurrency 与现有 DTO/缓存设施。
+- 2026-07-28：完成生产 projection worker 接线与 forced-current-state 检查点。sync
+  snapshot 和三表面物化均改用短生命周期后台 actor；同一 generation 在 await 前登记
+  in-flight Task，三个 surface lane 只读一次，并在缓存、发布前后校验 container
+  revision，替换容器会丢弃旧 DTO 而不取消已经开始的读。Widget JSON/App Group 写入由
+  专用 actor 串行执行，WidgetKit reload 才回到 MainActor。scheduler/driver 新增独立
+  forced-system-sink 语义，空事件 Watch 终态不会伪造 `.fullSync`，但可在无 history
+  或仅有 Watch 无关 history 时发布一次当前状态，effect 成功后才推进 cursor；merge、
+  retry、512 项有界 backlog 都保留 force 标记。worker 14 项、scheduler 12 项、
+  persistent-history driver 16 项聚焦测试通过；完整门禁结果见本检查点提交。未新增
+  第三方依赖；使用 SwiftData、Foundation、WidgetKit 与 Structured Concurrency。

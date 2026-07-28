@@ -12,7 +12,11 @@ struct CommittedMutationSystemProjectionWorkerTests {
         let scheduler = CommittedMutationSystemProjectionScheduler {
             sink,
             work in
-            try await worker.perform(sink: sink, work: work)
+            try await worker.perform(
+                sink: sink,
+                work: work,
+                expectedContainerRevision: 1
+            )
         }
 
         scheduler.enqueue(CommittedMutationSystemProjectionReceipt(
@@ -38,7 +42,11 @@ struct CommittedMutationSystemProjectionWorkerTests {
         let scheduler = CommittedMutationSystemProjectionScheduler {
             sink,
             work in
-            try await worker.perform(sink: sink, work: work)
+            try await worker.perform(
+                sink: sink,
+                work: work,
+                expectedContainerRevision: 1
+            )
         }
         let events: Set<StoreDomainEvent> = [
             .taskChanged(
@@ -76,7 +84,11 @@ struct CommittedMutationSystemProjectionWorkerTests {
         let scheduler = CommittedMutationSystemProjectionScheduler {
             sink,
             work in
-            try await worker.perform(sink: sink, work: work)
+            try await worker.perform(
+                sink: sink,
+                work: work,
+                expectedContainerRevision: 1
+            )
         }
 
         scheduler.enqueue(CommittedMutationSystemProjectionReceipt(
@@ -114,7 +126,11 @@ struct CommittedMutationSystemProjectionWorkerTests {
         let scheduler = CommittedMutationSystemProjectionScheduler {
             sink,
             work in
-            try await worker.perform(sink: sink, work: work)
+            try await worker.perform(
+                sink: sink,
+                work: work,
+                expectedContainerRevision: 1
+            )
         }
 
         scheduler.enqueue(CommittedMutationSystemProjectionReceipt(
@@ -143,6 +159,397 @@ struct CommittedMutationSystemProjectionWorkerTests {
                     CommittedMutationSystemProjectionSink
                         .systemSurfaceCases
                 )
+        )
+    }
+
+    @Test @MainActor
+    func threeSurfaceLanesShareOneSuspendedMaterializationAndMainActorHeartbeat()
+        async
+    {
+        let gate = AsyncSystemProjectionMaterializationGate()
+        let heartbeat = SystemProjectionMainActorHeartbeat()
+        let probe = AsyncSystemProjectionWorkerProbe(
+            firstMaterializationGate: gate
+        )
+        let worker = probe.makeWorker()
+        let work = systemSurfaceWork(generation: 1)
+
+        let widget = Task { @MainActor in
+            await projectionAttempt(
+                worker: worker,
+                sink: .widget,
+                work: work,
+                expectedContainerRevision: 1
+            )
+        }
+        let watch = Task { @MainActor in
+            await projectionAttempt(
+                worker: worker,
+                sink: .watch,
+                work: work,
+                expectedContainerRevision: 1
+            )
+        }
+        let liveActivity = Task { @MainActor in
+            await projectionAttempt(
+                worker: worker,
+                sink: .liveActivity,
+                work: work,
+                expectedContainerRevision: 1
+            )
+        }
+
+        await gate.waitUntilSuspended()
+        #expect(probe.materializationCount == 1)
+
+        await Task { @MainActor in
+            heartbeat.record()
+            await gate.release()
+        }.value
+
+        let outcomes = await (
+            widget.value,
+            watch.value,
+            liveActivity.value
+        )
+        #expect(heartbeat.didRun)
+        #expect(outcomes.0 == .succeeded)
+        #expect(outcomes.1 == .succeeded)
+        #expect(outcomes.2 == .succeeded)
+        #expect(probe.materializationCount == 1)
+        #expect(
+            Set(probe.publications.map(\.sink)) ==
+                Set(
+                    CommittedMutationSystemProjectionSink
+                        .systemSurfaceCases
+                )
+        )
+        #expect(Set(probe.publications.map(\.generatedAt)).count == 1)
+    }
+
+    @Test @MainActor
+    func suspendedMaterializationFailureIsSharedAndRetryReadsFresh()
+        async
+    {
+        let gate = AsyncSystemProjectionMaterializationGate()
+        let probe = AsyncSystemProjectionWorkerProbe(
+            firstMaterializationGate: gate,
+            materializationFailuresRemaining: 1
+        )
+        let worker = probe.makeWorker()
+        let work = systemSurfaceWork(generation: 1)
+
+        let widget = Task { @MainActor in
+            await projectionAttempt(
+                worker: worker,
+                sink: .widget,
+                work: work,
+                expectedContainerRevision: 1
+            )
+        }
+        let watch = Task { @MainActor in
+            await projectionAttempt(
+                worker: worker,
+                sink: .watch,
+                work: work,
+                expectedContainerRevision: 1
+            )
+        }
+        let liveActivity = Task { @MainActor in
+            await projectionAttempt(
+                worker: worker,
+                sink: .liveActivity,
+                work: work,
+                expectedContainerRevision: 1
+            )
+        }
+
+        await gate.waitUntilSuspended()
+        #expect(probe.materializationCount == 1)
+        await gate.release()
+
+        let failedOutcomes = await (
+            widget.value,
+            watch.value,
+            liveActivity.value
+        )
+        #expect(failedOutcomes.0 == .failed)
+        #expect(failedOutcomes.1 == .failed)
+        #expect(failedOutcomes.2 == .failed)
+        #expect(probe.materializationCount == 1)
+        #expect(probe.publications.isEmpty)
+
+        let widgetRetry = Task { @MainActor in
+            await projectionAttempt(
+                worker: worker,
+                sink: .widget,
+                work: work,
+                expectedContainerRevision: 1
+            )
+        }
+        let watchRetry = Task { @MainActor in
+            await projectionAttempt(
+                worker: worker,
+                sink: .watch,
+                work: work,
+                expectedContainerRevision: 1
+            )
+        }
+        let liveActivityRetry = Task { @MainActor in
+            await projectionAttempt(
+                worker: worker,
+                sink: .liveActivity,
+                work: work,
+                expectedContainerRevision: 1
+            )
+        }
+        let retryOutcomes = await (
+            widgetRetry.value,
+            watchRetry.value,
+            liveActivityRetry.value
+        )
+
+        #expect(retryOutcomes.0 == .succeeded)
+        #expect(retryOutcomes.1 == .succeeded)
+        #expect(retryOutcomes.2 == .succeeded)
+        #expect(probe.materializationCount == 2)
+        #expect(
+            Set(probe.publications.map(\.sink)) ==
+                Set(
+                    CommittedMutationSystemProjectionSink
+                        .systemSurfaceCases
+                )
+        )
+        #expect(
+            Set(probe.publications.map(\.generatedAt)) == [
+                Date(timeIntervalSinceReferenceDate: 2),
+            ]
+        )
+    }
+
+    @Test @MainActor
+    func containerRevisionChangeDuringMaterializationDropsOldDTOAndRetryReadsFresh()
+        async
+    {
+        let gate = AsyncSystemProjectionMaterializationGate()
+        let revision = SystemProjectionContainerRevisionProbe(
+            current: 1
+        )
+        let probe = AsyncSystemProjectionWorkerProbe(
+            firstMaterializationGate: gate
+        )
+        let worker = probe.makeWorker {
+            [weak revision] expectedRevision in
+            revision?.isCurrent(expectedRevision) == true
+        }
+        let work = CommittedMutationSystemProjectionWork(
+            generation: 1,
+            targetSinks: [.widget],
+            receiptIDs: [UUID()],
+            events: [.fullSync]
+        )
+
+        let oldRegistration = Task { @MainActor in
+            await projectionAttempt(
+                worker: worker,
+                sink: .widget,
+                work: work,
+                expectedContainerRevision: 1
+            )
+        }
+        await gate.waitUntilSuspended()
+
+        revision.replace(with: 2)
+        await gate.release()
+
+        #expect(await oldRegistration.value == .failed)
+        #expect(probe.materializationCount == 1)
+        #expect(probe.publications.isEmpty)
+
+        let freshRegistration = await projectionAttempt(
+            worker: worker,
+            sink: .widget,
+            work: work,
+            expectedContainerRevision: 2
+        )
+
+        #expect(freshRegistration == .succeeded)
+        #expect(probe.materializationCount == 2)
+        #expect(probe.publications.map(\.sink) == [.widget])
+        #expect(
+            probe.publications.map(\.generatedAt) == [
+                Date(timeIntervalSinceReferenceDate: 2),
+            ]
+        )
+    }
+
+    @Test @MainActor
+    func containerRevisionChangeDiscardsCachedMaterializationFailure()
+        async
+    {
+        let revision = SystemProjectionContainerRevisionProbe(
+            current: 1
+        )
+        let probe = AsyncSystemProjectionWorkerProbe(
+            materializationFailuresRemaining: 1
+        )
+        let worker = probe.makeWorker {
+            [weak revision] expectedRevision in
+            revision?.isCurrent(expectedRevision) == true
+        }
+        let work = systemSurfaceWork(generation: 1)
+
+        let oldFailure = await projectionAttempt(
+            worker: worker,
+            sink: .widget,
+            work: work,
+            expectedContainerRevision: 1
+        )
+        #expect(oldFailure == .failed)
+        #expect(probe.materializationCount == 1)
+        #expect(probe.publications.isEmpty)
+
+        revision.replace(with: 2)
+
+        let widget = Task { @MainActor in
+            await projectionAttempt(
+                worker: worker,
+                sink: .widget,
+                work: work,
+                expectedContainerRevision: 2
+            )
+        }
+        let watch = Task { @MainActor in
+            await projectionAttempt(
+                worker: worker,
+                sink: .watch,
+                work: work,
+                expectedContainerRevision: 2
+            )
+        }
+        let liveActivity = Task { @MainActor in
+            await projectionAttempt(
+                worker: worker,
+                sink: .liveActivity,
+                work: work,
+                expectedContainerRevision: 2
+            )
+        }
+        let outcomes = await (
+            widget.value,
+            watch.value,
+            liveActivity.value
+        )
+
+        #expect(outcomes.0 == .succeeded)
+        #expect(outcomes.1 == .succeeded)
+        #expect(outcomes.2 == .succeeded)
+        #expect(probe.materializationCount == 2)
+        #expect(
+            Set(probe.publications.map(\.sink)) ==
+                Set(
+                    CommittedMutationSystemProjectionSink
+                        .systemSurfaceCases
+                )
+        )
+        #expect(
+            Set(probe.publications.map(\.generatedAt)) == [
+                Date(timeIntervalSinceReferenceDate: 2),
+            ]
+        )
+    }
+
+    @Test @MainActor
+    func blockedWidgetPersistenceKeepsMainActorResponsiveAndOnlyWidgetFails()
+        async
+    {
+        let gate = SystemProjectionBlockingOperationGate()
+        let persistence = SystemProjectionThreadSafeInvocationProbe()
+        let reload = SystemProjectionThreadSafeInvocationProbe()
+        let surfacePublications =
+            SystemProjectionSurfacePublicationProbe()
+        let writer = WidgetSnapshotProjectionWriter(
+            persist: { _ in
+                persistence.record()
+                gate.blockFirstEntry()
+                throw SystemProjectionWorkerProbeError.expected
+            },
+            reload: {
+                reload.record()
+            }
+        )
+        let materialization = systemProjectionMaterialization(
+            generatedAt: Date(
+                timeIntervalSinceReferenceDate: 1
+            )
+        )
+        let worker = CommittedMutationSystemProjectionWorker(
+            materializer: { _ in materialization },
+            publisher: { sink, value in
+                switch sink {
+                case .syncSnapshot:
+                    Issue.record(
+                        "The sync lane must bypass surface publication."
+                    )
+                case .widget:
+                    try await writer.save(value.widgetSnapshot)
+                case .watch, .liveActivity:
+                    surfacePublications.record(sink)
+                }
+            },
+            isContainerRegistrationCurrent: { _ in true }
+        )
+        let scheduler = CommittedMutationSystemProjectionScheduler {
+            sink,
+            work in
+            try await worker.perform(
+                sink: sink,
+                work: work,
+                expectedContainerRevision: 1
+            )
+        }
+        let coordinator = Task.detached {
+            await gate.waitUntilBlocked()
+            let safetyRelease = Task.detached {
+                try? await Task.sleep(for: .seconds(2))
+                gate.releaseOnce(from: .safety)
+            }
+            await Task { @MainActor in
+                gate.releaseOnce(from: .heartbeat)
+            }.value
+            safetyRelease.cancel()
+            _ = await safetyRelease.result
+        }
+
+        scheduler.enqueue(CommittedMutationSystemProjectionReceipt(
+            events: [.fullSync]
+        ))
+        await scheduler.waitUntilIdle()
+        await coordinator.value
+
+        #expect(gate.firstRelease == .heartbeat)
+        #expect(persistence.count == 1)
+        #expect(reload.count == 0)
+        #expect(scheduler.failedSinks == [.widget])
+        #expect(
+            surfacePublications.sinks == [
+                .watch,
+                .liveActivity,
+            ] ||
+                surfacePublications.sinks == [
+                    .liveActivity,
+                    .watch,
+                ]
+        )
+        #expect(
+            scheduler.acknowledgedGeneration(for: .watch) == 1
+        )
+        #expect(
+            scheduler.acknowledgedGeneration(for: .liveActivity) ==
+                1
+        )
+        #expect(
+            scheduler.acknowledgedGeneration(for: .widget) == nil
         )
     }
 
@@ -185,7 +592,8 @@ struct CommittedMutationSystemProjectionWorkerTests {
 
         try await worker.perform(
             sink: .watch,
-            work: preferenceWork
+            work: preferenceWork,
+            expectedContainerRevision: 1
         )
 
         #expect(probe.materializationCount == 3)
@@ -251,63 +659,25 @@ struct CommittedMutationSystemProjectionWorkerTests {
         )
 
         await #expect(throws: SystemProjectionWorkerProbeError.expected) {
-            try await worker.perform(sink: .widget, work: olderWork)
+            try await worker.perform(
+                sink: .widget,
+                work: olderWork,
+                expectedContainerRevision: 1
+            )
         }
-        try? await worker.perform(sink: .watch, work: newerWork)
+        try? await worker.perform(
+            sink: .watch,
+            work: newerWork,
+            expectedContainerRevision: 1
+        )
         #expect(probe.materializationCount == 2)
 
-        try? await worker.perform(sink: .widget, work: olderWork)
+        try? await worker.perform(
+            sink: .widget,
+            work: olderWork,
+            expectedContainerRevision: 1
+        )
         #expect(probe.materializationCount == 3)
-    }
-
-    @Test @MainActor
-    func productionMaterializerReadsCompleteCurrentSurfaceFacts() throws {
-        let context = try makeTestContext()
-        let taskRepository = SwiftDataTaskRepository(
-            context: context,
-            deviceID: "projection-worker-test"
-        )
-        let timeRepository = SwiftDataTimeTrackingRepository(
-            context: context,
-            deviceID: "projection-worker-test"
-        )
-        let task = try taskRepository.createTask(
-            title: "Current committed timer",
-            parentID: nil,
-            colorHex: "#0A84FF",
-            iconName: "timer"
-        )
-        let segment = try timeRepository.startTask(
-            taskID: task.id,
-            source: .timer
-        )
-        let now = segment.startedAt.addingTimeInterval(30)
-
-        let materialization =
-            try CommittedMutationSystemProjectionWorker
-                .materializeCurrentFacts(
-                    context: context,
-                    now: now
-                )
-
-        #expect(materialization.generatedAt == now)
-        #expect(
-            materialization.widgetSnapshot.activeTimers.map(\.id) ==
-                [segment.id]
-        )
-        #expect(
-            materialization.watchSnapshot.activeTimers.map(\.id) ==
-                [segment.id]
-        )
-        guard case let .active(liveActivity) =
-            materialization.liveActivity
-        else {
-            Issue.record("Expected an active Live Activity projection.")
-            return
-        }
-        #expect(liveActivity.segmentID == segment.id.uuidString)
-        #expect(liveActivity.taskID == task.id.uuidString)
-        #expect(liveActivity.taskTitle == "Current committed timer")
     }
 
     @Test @MainActor
@@ -371,6 +741,284 @@ struct CommittedMutationSystemProjectionWorkerTests {
         let second = try registry.scheduler(for: secondContainer)
 
         #expect(first === second)
+    }
+}
+
+private nonisolated enum SystemProjectionAttemptOutcome:
+    Equatable,
+    Sendable
+{
+    case succeeded
+    case failed
+}
+
+@MainActor
+private func projectionAttempt(
+    worker: CommittedMutationSystemProjectionWorker,
+    sink: CommittedMutationSystemProjectionSink,
+    work: CommittedMutationSystemProjectionWork,
+    expectedContainerRevision: UInt
+) async -> SystemProjectionAttemptOutcome {
+    do {
+        try await worker.perform(
+            sink: sink,
+            work: work,
+            expectedContainerRevision: expectedContainerRevision
+        )
+        return .succeeded
+    } catch {
+        return .failed
+    }
+}
+
+private nonisolated func systemSurfaceWork(
+    generation: UInt
+) -> CommittedMutationSystemProjectionWork {
+    CommittedMutationSystemProjectionWork(
+        generation: generation,
+        targetSinks: Set(
+            CommittedMutationSystemProjectionSink.systemSurfaceCases
+        ),
+        receiptIDs: [UUID()],
+        events: [.fullSync]
+    )
+}
+
+private nonisolated func systemProjectionMaterialization(
+    generatedAt: Date
+) -> CommittedMutationSystemProjectionMaterialization {
+    CommittedMutationSystemProjectionMaterialization(
+        widgetSnapshot: WidgetSnapshot(
+            generatedAt: generatedAt,
+            todayGrossSeconds: 0,
+            todayWallSeconds: 0,
+            activeTimers: [],
+            recentTasks: []
+        ),
+        watchSnapshot: WatchStateSnapshot(
+            generatedAt: generatedAt,
+            todayGrossSeconds: 0,
+            todayWallSeconds: 0,
+            activeTimers: [],
+            recentTasks: []
+        ),
+        liveActivity: .inactive,
+        generatedAt: generatedAt
+    )
+}
+
+private actor AsyncSystemProjectionMaterializationGate {
+    private var didSuspend = false
+    private var didRelease = false
+    private var suspendedWaiters:
+        [CheckedContinuation<Void, Never>] = []
+    private var releaseContinuation:
+        CheckedContinuation<Void, Never>?
+
+    func suspendFirstMaterialization() async {
+        guard didSuspend == false else { return }
+        didSuspend = true
+        let waiters = suspendedWaiters
+        suspendedWaiters.removeAll()
+        waiters.forEach { $0.resume() }
+        guard didRelease == false else { return }
+        await withCheckedContinuation { continuation in
+            releaseContinuation = continuation
+        }
+    }
+
+    func waitUntilSuspended() async {
+        guard didSuspend == false else { return }
+        await withCheckedContinuation { continuation in
+            suspendedWaiters.append(continuation)
+        }
+    }
+
+    func release() {
+        guard didRelease == false else { return }
+        didRelease = true
+        releaseContinuation?.resume()
+        releaseContinuation = nil
+    }
+}
+
+@MainActor
+private final class AsyncSystemProjectionWorkerProbe {
+    struct Publication {
+        let sink: CommittedMutationSystemProjectionSink
+        let generatedAt: Date
+    }
+
+    private let firstMaterializationGate:
+        AsyncSystemProjectionMaterializationGate?
+    private var materializationFailuresRemaining: Int
+    private(set) var materializationCount = 0
+    private(set) var publications: [Publication] = []
+
+    init(
+        firstMaterializationGate:
+        AsyncSystemProjectionMaterializationGate? = nil,
+        materializationFailuresRemaining: Int = 0
+    ) {
+        self.firstMaterializationGate =
+            firstMaterializationGate
+        self.materializationFailuresRemaining =
+            materializationFailuresRemaining
+    }
+
+    func makeWorker(
+        isContainerRegistrationCurrent:
+        @escaping CommittedMutationSystemProjectionWorker
+            .ContainerRegistrationValidator = { _ in true }
+    ) -> CommittedMutationSystemProjectionWorker {
+        CommittedMutationSystemProjectionWorker(
+            materializer: { [weak self] _ in
+                guard let self else {
+                    throw SystemProjectionWorkerProbeError.deallocated
+                }
+                materializationCount += 1
+                let attempt = materializationCount
+                if attempt == 1,
+                   let firstMaterializationGate
+                {
+                    await firstMaterializationGate
+                        .suspendFirstMaterialization()
+                }
+                if materializationFailuresRemaining > 0 {
+                    materializationFailuresRemaining -= 1
+                    throw SystemProjectionWorkerProbeError.expected
+                }
+                return systemProjectionMaterialization(
+                    generatedAt: Date(
+                        timeIntervalSinceReferenceDate:
+                        TimeInterval(attempt)
+                    )
+                )
+            },
+            publisher: { [weak self] sink, materialization in
+                guard let self else {
+                    throw SystemProjectionWorkerProbeError.deallocated
+                }
+                publications.append(Publication(
+                    sink: sink,
+                    generatedAt: materialization.generatedAt
+                ))
+            },
+            isContainerRegistrationCurrent:
+            isContainerRegistrationCurrent
+        )
+    }
+}
+
+@MainActor
+private final class SystemProjectionMainActorHeartbeat {
+    private(set) var didRun = false
+
+    func record() {
+        didRun = true
+    }
+}
+
+@MainActor
+private final class SystemProjectionContainerRevisionProbe {
+    private var current: UInt
+
+    init(current: UInt) {
+        self.current = current
+    }
+
+    func isCurrent(_ revision: UInt) -> Bool {
+        revision == current
+    }
+
+    func replace(with revision: UInt) {
+        current = revision
+    }
+}
+
+private final nonisolated class SystemProjectionBlockingOperationGate:
+    @unchecked Sendable
+{
+    enum ReleaseSource: Equatable {
+        case heartbeat
+        case safety
+    }
+
+    private let lock = NSLock()
+    private let resume = DispatchSemaphore(value: 0)
+    private var didBlock = false
+    private var isBlocked = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var releaseSource: ReleaseSource?
+
+    var firstRelease: ReleaseSource? {
+        lock.withLock { releaseSource }
+    }
+
+    func blockFirstEntry() {
+        let state = lock.withLock {
+            () -> (Bool, [CheckedContinuation<Void, Never>]) in
+            guard didBlock == false else { return (false, []) }
+            didBlock = true
+            isBlocked = true
+            defer { waiters.removeAll() }
+            return (true, waiters)
+        }
+        state.1.forEach { $0.resume() }
+        if state.0 {
+            resume.wait()
+        }
+    }
+
+    func waitUntilBlocked() async {
+        await withCheckedContinuation { continuation in
+            let resumeImmediately = lock.withLock {
+                guard isBlocked == false else { return true }
+                waiters.append(continuation)
+                return false
+            }
+            if resumeImmediately {
+                continuation.resume()
+            }
+        }
+    }
+
+    func releaseOnce(from source: ReleaseSource) {
+        let shouldSignal = lock.withLock {
+            guard releaseSource == nil else { return false }
+            releaseSource = source
+            return true
+        }
+        if shouldSignal {
+            resume.signal()
+        }
+    }
+}
+
+private final nonisolated class SystemProjectionThreadSafeInvocationProbe:
+    @unchecked Sendable
+{
+    private let lock = NSLock()
+    private var invocationCount = 0
+
+    var count: Int {
+        lock.withLock { invocationCount }
+    }
+
+    func record() {
+        lock.withLock {
+            invocationCount += 1
+        }
+    }
+}
+
+@MainActor
+private final class SystemProjectionSurfacePublicationProbe {
+    private(set) var sinks:
+        [CommittedMutationSystemProjectionSink] = []
+
+    func record(_ sink: CommittedMutationSystemProjectionSink) {
+        sinks.append(sink)
     }
 }
 
@@ -499,7 +1147,11 @@ private func consumesMaterializationFailure(
     work: CommittedMutationSystemProjectionWork
 ) async -> Bool {
     do {
-        try await worker.perform(sink: sink, work: work)
+        try await worker.perform(
+            sink: sink,
+            work: work,
+            expectedContainerRevision: 1
+        )
         return false
     } catch {
         return true

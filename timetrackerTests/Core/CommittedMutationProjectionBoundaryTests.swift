@@ -6,6 +6,81 @@ import Testing
 @Suite(.serialized)
 struct CommittedMutationProjectionBoundaryTests {
     @Test @MainActor
+    func broadcastBurstCollapsesToOneBoundedFullSyncCatchUp() async {
+        await StoreMutationBroadcaster.waitUntilIdle()
+
+        for _ in 0 ..< 1000 {
+            StoreMutationBroadcaster.publish(
+                events: [
+                    .taskChanged(
+                        taskID: UUID(),
+                        affectedAncestorIDs: []
+                    ),
+                ]
+            )
+        }
+
+        #expect(StoreMutationBroadcaster.pendingBroadcastCount == 1)
+        #expect(StoreMutationBroadcaster.pendingBroadcastEvents == [.fullSync])
+
+        await StoreMutationBroadcaster.waitUntilIdle()
+        #expect(StoreMutationBroadcaster.pendingBroadcastCount == 0)
+
+        StoreMutationBroadcaster.publish(
+            events: [
+                .taskChanged(
+                    taskID: UUID(),
+                    affectedAncestorIDs: Set(
+                        (0 ..< 600).map { _ in UUID() }
+                    )
+                ),
+            ]
+        )
+        #expect(StoreMutationBroadcaster.pendingBroadcastCount == 1)
+        #expect(StoreMutationBroadcaster.pendingBroadcastEvents == [.fullSync])
+
+        await StoreMutationBroadcaster.waitUntilIdle()
+        #expect(StoreMutationBroadcaster.pendingBroadcastCount == 0)
+    }
+
+    @Test @MainActor
+    func reentrantBroadcastIsDrainedWithoutRecursiveDeliveryOrStranding() async {
+        await StoreMutationBroadcaster.waitUntilIdle()
+        let firstEvent = StoreDomainEvent.taskChanged(
+            taskID: UUID(),
+            affectedAncestorIDs: []
+        )
+        let secondEvent = StoreDomainEvent.ledgerChanged(
+            taskID: UUID(),
+            dateInterval: nil,
+            isVisible: true
+        )
+        let probe = ReentrantBroadcastProbe(
+            firstEvent: firstEvent,
+            secondEvent: secondEvent
+        )
+        let token = NotificationCenter.default.addObserver(
+            forName: StoreMutationBroadcaster.notification,
+            object: nil,
+            queue: .main
+        ) { notification in
+            MainActor.assumeIsolated {
+                probe.receive(notification)
+            }
+        }
+        defer {
+            NotificationCenter.default.removeObserver(token)
+        }
+
+        StoreMutationBroadcaster.publish(events: [firstEvent])
+        await StoreMutationBroadcaster.waitUntilIdle()
+
+        #expect(probe.receivedEvents == [[firstEvent], [secondEvent]])
+        #expect(probe.maximumDeliveryDepth == 1)
+        #expect(StoreMutationBroadcaster.pendingBroadcastCount == 0)
+    }
+
+    @Test @MainActor
     func blockedSystemProjectionsDoNotDelayCommittedMutationVisibilityOrBroadcast() async throws {
         let context = try makeTestContext()
         let gate = BlockingSystemProjectionWorker()
@@ -197,6 +272,41 @@ struct CommittedMutationProjectionBoundaryTests {
             store: store,
             directory: directory
         )
+    }
+}
+
+@MainActor
+private final class ReentrantBroadcastProbe {
+    private let firstEvent: StoreDomainEvent
+    private let secondEvent: StoreDomainEvent
+    private var deliveryDepth = 0
+    private var didPublishSecondEvent = false
+    private(set) var maximumDeliveryDepth = 0
+    private(set) var receivedEvents: [Set<StoreDomainEvent>] = []
+
+    init(
+        firstEvent: StoreDomainEvent,
+        secondEvent: StoreDomainEvent
+    ) {
+        self.firstEvent = firstEvent
+        self.secondEvent = secondEvent
+    }
+
+    func receive(_ notification: Notification) {
+        guard let events = StoreMutationBroadcaster.events(
+            from: notification
+        ) else {
+            return
+        }
+
+        deliveryDepth += 1
+        maximumDeliveryDepth = max(maximumDeliveryDepth, deliveryDepth)
+        receivedEvents.append(events)
+        if events == [firstEvent], didPublishSecondEvent == false {
+            didPublishSecondEvent = true
+            StoreMutationBroadcaster.publish(events: [secondEvent])
+        }
+        deliveryDepth -= 1
     }
 }
 

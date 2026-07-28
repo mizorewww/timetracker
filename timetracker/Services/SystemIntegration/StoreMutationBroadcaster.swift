@@ -13,14 +13,35 @@ enum StoreMutationBroadcaster {
         "me.mezorewww.timetracker.storeMutationCommitted"
     )
     private static let eventsUserInfoKey = "events"
+    private static let pendingBroadcastRetentionLimit = 64
     private static var pendingBroadcasts: [PendingBroadcast] = []
     private static var drainTask: Task<Void, Never>?
 
     static func publish(events: Set<StoreDomainEvent>, source: TimeTrackerStore? = nil) {
         guard events.isEmpty == false else { return }
-        pendingBroadcasts.append(
-            PendingBroadcast(events: events, source: source)
-        )
+        let boundedEvents = StoreDomainEventBatchLimiter.bounded(events)
+        let alreadyCollapsed = pendingBroadcasts.count == 1
+            && pendingBroadcasts[0].events == [.fullSync]
+            && pendingBroadcasts[0].source == nil
+        if alreadyCollapsed {
+            return
+        }
+        if boundedEvents == [.fullSync], source == nil {
+            pendingBroadcasts = [
+                PendingBroadcast(events: [.fullSync], source: nil),
+            ]
+        } else if pendingBroadcasts.count >= pendingBroadcastRetentionLimit {
+            // Every observer reads the latest committed facts. Under an
+            // unusual burst, one source-neutral full refresh subsumes every
+            // queued source-specific catch-up without retaining their IDs.
+            pendingBroadcasts = [
+                PendingBroadcast(events: [.fullSync], source: nil),
+            ]
+        } else {
+            pendingBroadcasts.append(
+                PendingBroadcast(events: boundedEvents, source: source)
+            )
+        }
         guard drainTask == nil else { return }
         drainTask = Task { @MainActor in
             // The mutating scene completes its own visible projection and
@@ -38,14 +59,27 @@ enum StoreMutationBroadcaster {
 
     private static func drainPendingBroadcasts() {
         while pendingBroadcasts.isEmpty == false {
-            let broadcast = pendingBroadcasts.removeFirst()
-            NotificationCenter.default.post(
-                name: notificationName,
-                object: broadcast.source,
-                userInfo: [eventsUserInfoKey: broadcast.events]
-            )
+            let batch = pendingBroadcasts
+            pendingBroadcasts.removeAll(keepingCapacity: true)
+            for broadcast in batch {
+                NotificationCenter.default.post(
+                    name: notificationName,
+                    object: broadcast.source,
+                    userInfo: [eventsUserInfoKey: broadcast.events]
+                )
+            }
         }
         drainTask = nil
+    }
+
+    static var pendingBroadcastCount: Int {
+        pendingBroadcasts.count
+    }
+
+    static var pendingBroadcastEvents: Set<StoreDomainEvent> {
+        pendingBroadcasts.reduce(into: []) { result, broadcast in
+            result.formUnion(broadcast.events)
+        }
     }
 
     static func events(from notification: Notification) -> Set<StoreDomainEvent>? {

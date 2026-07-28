@@ -285,6 +285,34 @@ struct CommittedMutationSystemProjectionSchedulerTests {
     }
 
     @Test @MainActor
+    func oneOversizedReceiptCollapsesAssociatedIdentitiesToFullSync() async {
+        let probe = ProjectionWorkerProbe(
+            failuresRemaining: [.widget: 1]
+        )
+        let scheduler = CommittedMutationSystemProjectionScheduler {
+            sink,
+            work in
+            try await probe.run(sink: sink, work: work)
+        }
+        let oversizedEvent = StoreDomainEvent.taskChanged(
+            taskID: UUID(),
+            affectedAncestorIDs: Set((0 ..< 600).map { _ in UUID() })
+        )
+
+        scheduler.enqueue(
+            CommittedMutationSystemProjectionReceipt(
+                events: [oversizedEvent]
+            )
+        )
+        await scheduler.waitUntilIdle()
+
+        for sink in CommittedMutationSystemProjectionSink.allCases {
+            #expect(probe.calls(for: sink).first?.events == [.fullSync])
+        }
+        #expect(scheduler.pendingEvents(for: .widget) == [.fullSync])
+    }
+
+    @Test @MainActor
     func persistentlyFailingSinkKeepsPendingReceiptTrackingBounded() async {
         let probe = ProjectionWorkerProbe(
             failuresRemaining: [.widget: 10000]

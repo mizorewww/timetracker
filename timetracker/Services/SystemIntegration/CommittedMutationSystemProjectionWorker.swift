@@ -429,9 +429,9 @@ final class CommittedMutationSystemProjectionWorker {
     }
 }
 
-/// One scheduler per physical store coordinates projections across scenes and
-/// system-action entry points. Entries retain neither their ModelContainer nor
-/// a ModelContext, so short-lived test and recovery containers can disappear.
+/// One scheduler per physical store coordinates projections across configured
+/// scene facades. Entries retain neither their ModelContainer nor a
+/// ModelContext, so short-lived test and recovery containers can disappear.
 @MainActor
 final class CommittedMutationSystemProjectionSchedulerRegistry {
     static let shared =

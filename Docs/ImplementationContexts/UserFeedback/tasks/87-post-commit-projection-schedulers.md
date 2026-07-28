@@ -80,3 +80,10 @@
   Action 定向测试通过；随后完整 `make test` 1479 项通过。未新增第三方依赖。
   sync snapshot、persistent-history recovery、App Intent/Watch/lifecycle 入口和真正
   非 MainActor materialization 仍属于活动 checkpoint B2/C，未宣称整项完成。
+- 2026-07-28：根据 B1 独立审查收紧延迟队列的内存与突发边界。共享事件批次限制器
+  以事件、关联 UUID 与偏好 key 字节的饱和成本计数，超过 512 即降级为
+  `.fullSync`；跨 scene 广播最多暂存 64 项，溢出后合并为一次 source-neutral
+  全量追赶，并用批次交换排空取代逐项 `removeFirst()`。行为测试覆盖单个超大
+  receipt、1000 次突发广播、单个超大广播，以及通知回调重入发布不递归、不丢失、
+  不遗留。scheduler 9 项、mutation boundary 4 项及完整 `make test` 1482 项通过。
+  未新增第三方依赖；Foundation、Swift Structured Concurrency 与现有事件模型已足够。

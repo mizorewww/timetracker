@@ -180,22 +180,24 @@ final class CommittedMutationSystemProjectionScheduler {
         _ events: Set<StoreDomainEvent>,
         for sink: CommittedMutationSystemProjectionSink
     ) -> Set<StoreDomainEvent> {
-        events.filter { event in
-            switch event {
-            case .taskChanged,
-                 .ledgerChanged,
-                 .pomodoroChanged,
-                 .remoteImportCompleted,
-                 .fullSync:
-                true
-            case .preferenceChanged:
-                sink == .watch
-            case .checklistChanged,
-                 .countdownChanged,
-                 .inboxChanged:
-                false
+        StoreDomainEventBatchLimiter.bounded(
+            events.filter { event in
+                switch event {
+                case .taskChanged,
+                     .ledgerChanged,
+                     .pomodoroChanged,
+                     .remoteImportCompleted,
+                     .fullSync:
+                    true
+                case .preferenceChanged:
+                    sink == .watch
+                case .checklistChanged,
+                     .countdownChanged,
+                     .inboxChanged:
+                    false
+                }
             }
-        }
+        )
     }
 
     private func contains(
@@ -353,7 +355,9 @@ final class CommittedMutationSystemProjectionScheduler {
             generation: max(lhs.generation, rhs.generation),
             targetSinks: targetSinks,
             receiptIDs: lhs.receiptIDs.union(rhs.receiptIDs),
-            events: lhs.events.union(rhs.events)
+            events: StoreDomainEventBatchLimiter.bounded(
+                lhs.events.union(rhs.events)
+            )
         )
     }
 

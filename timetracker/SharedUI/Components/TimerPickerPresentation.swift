@@ -23,6 +23,17 @@ extension TimerPickerMode {
         }
     }
 
+    /// The Today primary action deliberately uses the existing
+    /// "Start Another Timer" visual grammar for every timer-picker mode.
+    var primaryActionSystemImage: String {
+        switch self {
+        case .start, .startAnother:
+            "plus.circle"
+        case .switchTimer:
+            "arrow.left.arrow.right.circle"
+        }
+    }
+
     var footer: LocalizedStringKey {
         switch self {
         case .start:

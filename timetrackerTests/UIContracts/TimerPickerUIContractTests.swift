@@ -4,6 +4,19 @@ import Testing
 
 struct TimerPickerUIContractTests {
     @Test
+    func todayPrimaryTimerModesShareTheStartAnotherVisualGrammar() {
+        #expect(
+            TimerPickerMode.start.primaryActionSystemImage ==
+                TimerPickerMode.startAnother.primaryActionSystemImage
+        )
+        #expect(TimerPickerMode.start.primaryActionSystemImage == "plus.circle")
+        #expect(
+            TimerPickerMode.switchTimer.primaryActionSystemImage ==
+                "arrow.left.arrow.right.circle"
+        )
+    }
+
+    @Test
     func pickerIndicatorsShareSystemCircleEnvelopesAndStableSlots() {
         #expect(
             TaskTimerActionKind.allCases.map(\.compactSystemImage) == [

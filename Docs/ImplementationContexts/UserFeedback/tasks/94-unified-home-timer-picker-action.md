@@ -17,7 +17,7 @@
 
 ## 验收条件
 
-- [~] 先增加能够区分空闲、并行和切换三种状态的展示行为测试或 UI acceptance。
+- [x] 先增加能够区分空闲、并行和切换三种状态的展示行为测试或 UI acceptance。
 - [ ] 主页三个宽度/平台入口只保留一个共享按钮实现，不再维护空闲专用组件。
 - [ ] 空闲状态显示“开始计时”，并行状态显示“再开始一个计时”，禁用并行时显示
   “切换计时”；三者使用“再开始一个计时”当前的原生整行样式。
@@ -44,3 +44,8 @@
 - 2026-07-28：认领最后一项反馈。现状确认同一个 `home.startTimer` 入口分成
   `HomeNowEmptyStartButton` 的突出胶囊和 `HomeNowActiveContent` 内的原生整行按钮；
   下一步先锁定三个 `TimerPickerMode` 的展示契约，再合并组件。
+- 2026-07-28：三个子代理只读审计确认差异集中在主 App 的 Home；Watch、Widget、
+  Live Activity 只有指定任务的系统动作，不存在这组全局入口。空 Quick Start 还保留
+  第三套原始按钮，纳入同一共享 Home 组件。新增纯展示契约，锁定 `.start` 与
+  `.startAnother` 共用 `plus.circle` 视觉语法、`.switchTimer` 保留切换图标；
+  `TimerPickerUIContractTests` 2/2 通过，SwiftFormat 0/875 待格式化。

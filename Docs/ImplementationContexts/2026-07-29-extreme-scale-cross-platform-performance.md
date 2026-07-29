@@ -71,8 +71,20 @@ queries without changing lifecycle, LWW, archive, recurrence, or sync-only seman
 - 2026-07-29: Signed `Release` generic macOS and generic iOS builds passed. The iOS
   product embedded and validated Watch, Widget, and Live Activity targets. No UI
   automation was needed or run on the physical macOS host.
+- 2026-07-29: Frozen commit `0572f585` received a noninteractive Release Time
+  Profiler check against the exact DerivedData executable. PID 84242 was verified
+  with `lsof`, recorded for 8.656 seconds, terminated, and waited. The trace contained
+  zero `potential-hangs` rows at the 250 ms threshold and 167 one-millisecond running
+  samples, concentrated in startup sync-state decoding and initial ledger refresh.
+  This trace did not replay the in-memory six-figure XCTest fixture, so the command
+  improvement is supported by the deterministic red/green budget rather than an
+  unsupported trace delta. The earlier Release baseline is recorded in
+  `2026-07-29-performance-hardening.md`; both baseline and frozen-post-change traces
+  were free of 250 ms hangs.
 - 2026-07-29: Every test and build batch ended with no owned `xcodebuild`, `xctest`,
-  app, or runner process and zero Booted simulators.
+  app, runner, Instruments, or `xctrace` process and zero Booted simulators. The
+  temporary trace directory and owned xcresult bundles were absent or moved to Trash;
+  cleanup remains recoverable.
 
 ## Acceptance
 

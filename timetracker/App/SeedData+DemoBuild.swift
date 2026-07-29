@@ -457,7 +457,146 @@ extension SeedData {
             note: "Parallel reading"
         )
 
+        if CommandLine.arguments.contains("--uitesting-high-density-ui") {
+            try addHighDensityUITestFixture(
+                context: context,
+                categoryID: workCategory.id,
+                startOfToday: startOfToday,
+                now: now
+            )
+        }
+
         try context.saveAfterMutationStep()
+    }
+
+    private static func addHighDensityUITestFixture(
+        context: ModelContext,
+        categoryID: UUID,
+        startOfToday: Date,
+        now: Date
+    ) throws {
+        let taskCount = 1200
+        let todaySegmentCount = 600
+        let historicalSegmentCount = 980
+        var tasks: [TaskNode] = []
+        tasks.reserveCapacity(taskCount)
+
+        for index in 0 ..< taskCount {
+            let title = index < todaySegmentCount
+                ? String(format: "Stress Timeline %04d", index)
+                : String(format: "Stress Task %04d", index)
+            let task = TaskNode(
+                title: title,
+                parentID: nil,
+                deviceID: "ui-density",
+                colorHex: index.isMultiple(of: 3) ? "1677FF" : "7C3AED",
+                iconName: index.isMultiple(of: 2) ? "chart.bar" : "checklist",
+                sortOrder: Double(index + 1) * 10
+            )
+            task.path = title
+            context.insert(task)
+            context.insert(
+                TaskCategoryAssignment(
+                    taskID: task.id,
+                    categoryID: categoryID,
+                    deviceID: "ui-density"
+                )
+            )
+            tasks.append(task)
+        }
+
+        for index in 0 ..< todaySegmentCount {
+            let task = tasks[index]
+            let start = startOfToday.addingTimeInterval(
+                Double(index * 75)
+            )
+            insertHighDensitySegment(
+                context: context,
+                task: task,
+                start: start,
+                duration: Double(5 * 60 + (index % 26) * 60)
+            )
+        }
+
+        for index in 0 ..< historicalSegmentCount {
+            let task = tasks[index % tasks.count]
+            let dayOffset = 1 + index / 70
+            let start = Calendar.current.date(
+                byAdding: .day,
+                value: -dayOffset,
+                to: startOfToday
+            )?.addingTimeInterval(Double((index % 70) * 11 * 60))
+                ?? startOfToday.addingTimeInterval(
+                    -Double(dayOffset * 24 * 60 * 60)
+                )
+            insertHighDensitySegment(
+                context: context,
+                task: task,
+                start: start,
+                duration: Double(8 * 60 + (index % 23) * 60)
+            )
+        }
+
+        for index in 0 ..< 24 {
+            try addActiveSegment(
+                context: context,
+                taskID: tasks[index].id,
+                source: index.isMultiple(of: 5) ? .pomodoro : .timer,
+                start: now.addingTimeInterval(-Double((index + 1) * 90)),
+                note: "High-density active timer"
+            )
+        }
+
+        for index in 0 ..< 400 {
+            context.insert(
+                InboxItem(
+                    title: String(format: "Stress Inbox %04d", index),
+                    isCompleted: index >= 300,
+                    sortOrder: Double(index) * 10,
+                    deviceID: "ui-density"
+                )
+            )
+        }
+
+        for index in 0 ..< 120 {
+            context.insert(
+                CountdownEvent(
+                    title: String(format: "Stress Countdown %04d", index),
+                    date: now.addingTimeInterval(
+                        Double((index + 1) * 24 * 60 * 60)
+                    ),
+                    deviceID: "ui-density"
+                )
+            )
+        }
+    }
+
+    private static func insertHighDensitySegment(
+        context: ModelContext,
+        task: TaskNode,
+        start: Date,
+        duration: TimeInterval
+    ) {
+        let session = TimeSession(
+            taskID: task.id,
+            source: .timer,
+            deviceID: "ui-density",
+            startedAt: start,
+            titleSnapshot: task.title
+        )
+        let end = start.addingTimeInterval(duration)
+        session.endedAt = end
+        context.insert(session)
+        context.insert(
+            TimeSegment(
+                sessionID: session.id,
+                taskID: task.id,
+                source: .timer,
+                deviceID: "ui-density",
+                startedAt: start,
+                endedAt: end
+            )
+        )
     }
 
     private static func addSegment(

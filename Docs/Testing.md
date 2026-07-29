@@ -109,7 +109,10 @@ make UI_TEST_ONLY=timetrackerUITests/timetrackerUITests/testName test-ui-macos
 
 `test-ui-ios` creates, records, boots, shuts down, and deletes one explicit simulator.
 Override `UI_TEST_DEVICE_TYPE` and `UI_TEST_RUNTIME` for an iPad or another reviewed
-runtime; do not borrow an existing Booted device implicitly.
+runtime; do not borrow an existing Booted device implicitly. Its default configuration
+is Debug; set `UI_TEST_CONFIGURATION=Release` for an Instruments performance batch.
+That path retains optimization while compiling the UI-test-only fixture condition;
+ordinary shipping Release builds do not receive the test override.
 
 Wide Today layout coverage pairs behavior and real geometry. `HomeLayoutPolicy`
 tests fix the 1000 pt content-width breakpoint and the 678...748 / 300...410 pt

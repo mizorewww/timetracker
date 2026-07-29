@@ -17,6 +17,7 @@ LIVE_LLM_UI_RUNTIME ?= com.apple.CoreSimulator.SimRuntime.iOS-27-0
 UI_TEST_DEVICE_TYPE ?= com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro
 UI_TEST_RUNTIME ?= com.apple.CoreSimulator.SimRuntime.iOS-27-0
 UI_TEST_ONLY ?= timetrackerUITests/timetrackerUITests
+UI_TEST_CONFIGURATION ?= Debug
 UI_TEST_RESULT_ROOT ?= build/UITestResults
 
 -include .env
@@ -99,11 +100,15 @@ test-ui-ios: ## 在自清理的临时 iOS 模拟器中运行所选 XCUITest
 	  xcrun simctl boot "$$simulator_udid"; \
 	  xcrun simctl bootstatus "$$simulator_udid" -b; \
 	  xcodebuild test -project $(PROJECT) -scheme $(SCHEME) \
+	    -configuration "$(UI_TEST_CONFIGURATION)" \
 	    -destination "platform=iOS Simulator,id=$$simulator_udid" \
 	    -resultBundlePath "$$result_bundle" \
 	    -only-testing:$(UI_TEST_ONLY) \
+	    -skip-testing:timetrackerTests \
 	    -parallel-testing-enabled NO \
-	    -maximum-parallel-testing-workers 1
+	    -maximum-parallel-testing-workers 1 \
+	    ENABLE_TESTABILITY=YES \
+	    SWIFT_ACTIVE_COMPILATION_CONDITIONS=DEBUG
 
 .PHONY: test-ui-macos
 test-ui-macos: ## 在 macOS 上运行所选 XCUITest

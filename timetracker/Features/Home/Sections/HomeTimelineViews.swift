@@ -67,7 +67,7 @@ struct TimelineSection: View {
         VStack(alignment: .leading, spacing: 10) {
             SectionTitle(title: AppStrings.todayTimeline)
 
-            VStack(spacing: 0) {
+            LazyVStack(spacing: 0) {
                 if timeline.entries.isEmpty {
                     ContentUnavailableView {
                         Label(AppStrings.noTodaySegments, systemImage: "clock")

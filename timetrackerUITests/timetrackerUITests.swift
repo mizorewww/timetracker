@@ -104,6 +104,119 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
+    func testHighDensityPrimaryPagesRemainResponsive() {
+        var app = launchApp(
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: [
+                "--uitesting-high-density-ui",
+                "--uitesting-persistent-store",
+                "--uitesting-reset-persistent-store",
+            ]
+        )
+
+        XCTAssertTrue(homeIsReady(in: app))
+        XCTAssertTrue(
+            app.staticTexts["Stress Timeline 0000"]
+                .waitForExistence(timeout: 15)
+        )
+
+        for _ in 0 ..< 8 {
+            app.swipeUp()
+        }
+        for _ in 0 ..< 3 {
+            app.swipeDown()
+        }
+
+        app.terminate()
+        app = launchApp(
+            route: "tasks",
+            additionalLaunchArguments: [
+                "--uitesting-high-density-ui",
+                "--uitesting-persistent-store",
+            ]
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["tasks.view"]
+                .waitForExistence(timeout: 8)
+        )
+        for _ in 0 ..< 6 {
+            app.swipeUp()
+        }
+
+        app.terminate()
+        app = launchApp(
+            route: "inbox",
+            additionalLaunchArguments: [
+                "--uitesting-high-density-ui",
+                "--uitesting-persistent-store",
+            ]
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["inbox.view"]
+                .waitForExistence(timeout: 8)
+        )
+        XCTAssertTrue(
+            app.textFields.matching(
+                NSPredicate(
+                    format: "value == %@",
+                    "Stress Inbox 0000"
+                )
+            ).firstMatch
+                .waitForExistence(timeout: 8)
+        )
+        for _ in 0 ..< 8 {
+            app.swipeUp()
+        }
+
+        app.terminate()
+        app = launchApp(
+            route: "analytics",
+            additionalLaunchArguments: [
+                "--uitesting-high-density-ui",
+                "--uitesting-persistent-store",
+            ]
+        )
+        XCTAssertTrue(analyticsIsReady(in: app))
+        for _ in 0 ..< 6 {
+            app.swipeUp()
+        }
+    }
+
+    @MainActor
+    func testHighDensityTodayProfileWindow() {
+        let app = launchApp(
+            replacesDemoDataOnLaunch: true,
+            additionalLaunchArguments: [
+                "--uitesting-high-density-ui",
+                "--uitesting-persistent-store",
+                "--uitesting-reset-persistent-store",
+            ]
+        )
+
+        XCTAssertTrue(homeIsReady(in: app))
+        XCTAssertTrue(
+            app.staticTexts["Stress Timeline 0000"]
+                .waitForExistence(timeout: 15)
+        )
+
+        Thread.sleep(forTimeInterval: 15)
+        for _ in 0 ..< 8 {
+            app.swipeUp()
+        }
+        for _ in 0 ..< 3 {
+            app.swipeDown()
+        }
+        Thread.sleep(forTimeInterval: 20)
+        for _ in 0 ..< 8 {
+            app.swipeUp()
+        }
+        for _ in 0 ..< 3 {
+            app.swipeDown()
+        }
+        Thread.sleep(forTimeInterval: 40)
+    }
+
+    @MainActor
     func testMacKeyboardShortcutSettingsUpdatesMenuAndAction() throws {
         #if os(macOS)
         let app = launchApp(replacesDemoDataOnLaunch: true)

@@ -8,7 +8,7 @@ struct HomeCountdownSection: View {
             VStack(alignment: .leading, spacing: 10) {
                 SectionTitle(title: AppStrings.localized("settings.countdown"))
 
-                VStack(spacing: 0) {
+                LazyVStack(spacing: 0) {
                     ForEach(events) { event in
                         HomeCountdownRow(event: event)
                             .padding(14)

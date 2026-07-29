@@ -670,6 +670,48 @@ struct CorePerformanceBudgetTests {
     }
 
     @Test @MainActor
+    func timerStartIgnoresOneHundredThousandUnrelatedRecords() throws {
+        let context = try makeTestContext()
+        context.autosaveEnabled = false
+        let task = TaskNode(
+            title: "Extreme-scale timer target",
+            parentID: nil,
+            deviceID: "budget"
+        )
+        context.insert(task)
+        for index in 0 ..< 50000 {
+            context.insert(TaskNode(
+                title: "Unrelated task \(index)",
+                parentID: nil,
+                deviceID: "history"
+            ))
+            context.insert(SyncedPreference(
+                key: "performance.unrelated.\(index)",
+                valueJSON: "false",
+                deviceID: "history"
+            ))
+        }
+        try context.save()
+
+        let now = Date(timeIntervalSinceReferenceDate: 40_000_000)
+        let coordinator = StoreScopedTimerCommandCoordinator(
+            container: context.container,
+            writeAuthorization: .isolatedTestHarness,
+            deviceID: "budget",
+            nowProvider: { now }
+        )
+        let start = CFAbsoluteTimeGetCurrent()
+        let outcome = try coordinator.start(taskID: task.id)
+        let elapsed = CFAbsoluteTimeGetCurrent() - start
+
+        #expect(outcome.createdSegment?.taskID == task.id)
+        #expect(
+            elapsed < 0.25,
+            "Timer start materialized 100,000 unrelated records in \(elapsed) seconds"
+        )
+    }
+
+    @Test @MainActor
     func fiftyThousandStoredSegmentsKeepRapidRestartBounded() throws {
         let context = try makeTestContext()
         context.autosaveEnabled = false

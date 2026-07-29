@@ -107,20 +107,8 @@ struct PomodoroCommandHandler {
             else {
                 return nil
             }
-            let canonicalTasks = try context.fetch(FetchDescriptor<TaskNode>())
-            let recurrenceRules = try context.fetch(
-                FetchDescriptor<TaskRecurrenceRule>()
-            )
-            let recurrenceOccurrences = try context.fetch(
-                FetchDescriptor<TaskRecurrenceOccurrence>()
-            )
-            let trackableTaskIDs = TaskTrackingAvailabilityService()
-                .directWorkTaskIDs(
-                    tasks: canonicalTasks,
-                    recurrenceRules: recurrenceRules,
-                    recurrenceOccurrences: recurrenceOccurrences
-                )
-            guard trackableTaskIDs.contains(run.taskID) else {
+            let taskRepository = SwiftDataTaskRepository(context: context)
+            guard try taskRepository.directWorkTask(id: run.taskID) != nil else {
                 return nil
             }
             let activeSegments = try timeRepository.activeSegments()

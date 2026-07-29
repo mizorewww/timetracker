@@ -91,16 +91,7 @@ extension StoreScopedSegmentCommandCoordinator {
             context: context,
             deviceID: resolvedDeviceID
         )
-        let tasks = try taskRepository.allNodes()
-        guard try TaskTrackingAvailabilityService()
-            .directWorkTaskIDs(
-                tasks: tasks,
-                recurrenceRules: taskRepository.taskRecurrenceRules(),
-                recurrenceOccurrences:
-                taskRepository.taskRecurrenceOccurrences()
-            )
-            .contains(taskID)
-        else {
+        guard try taskRepository.directWorkTask(id: taskID) != nil else {
             throw TimeTrackingRepositoryError.taskUnavailable
         }
     }

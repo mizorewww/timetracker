@@ -73,6 +73,60 @@ struct TaskRecurrenceWorkEligibilityTests {
                 recurrenceOccurrences: []
             ).contains(fixture.templateTaskID)
         )
+        #expect(try repository.directWorkTask(id: fixture.templateTaskID) == nil)
+    }
+
+    @Test
+    func scopedAdmissionPreservesAncestorHealthAndStagedOccurrenceRules() throws {
+        let context = try makeTestContext()
+        let archivedParent = TaskNode(
+            title: "Archived parent",
+            parentID: nil,
+            deviceID: "eligibility"
+        )
+        archivedParent.archivedAt = Date(timeIntervalSinceReferenceDate: 1000)
+        let archivedChild = TaskNode(
+            title: "Archived descendant",
+            parentID: archivedParent.id,
+            deviceID: "eligibility"
+        )
+        let healthChild = TaskNode(
+            title: "Staged Health descendant",
+            parentID: AppleHealthTaskCatalog.taskDefinition(for: .sleep).id,
+            deviceID: "eligibility"
+        )
+        let stagedTemplate = TaskNode(
+            title: "Staged recurrence template",
+            parentID: nil,
+            deviceID: "eligibility"
+        )
+        let ordinaryTask = TaskNode(
+            title: "Ordinary work",
+            parentID: nil,
+            deviceID: "eligibility"
+        )
+        context.insert(archivedParent)
+        context.insert(archivedChild)
+        context.insert(healthChild)
+        context.insert(stagedTemplate)
+        context.insert(ordinaryTask)
+        context.insert(TaskRecurrenceOccurrence(
+            ruleID: UUID(),
+            templateTaskID: stagedTemplate.id,
+            occurrenceDayKey: "2026-07-29",
+            timeZoneIdentifier: "Asia/Singapore",
+            deviceID: "eligibility"
+        ))
+        try context.save()
+
+        let repository = SwiftDataTaskRepository(
+            context: ModelContext(context.container),
+            deviceID: "eligibility"
+        )
+        #expect(try repository.directWorkTask(id: archivedChild.id) == nil)
+        #expect(try repository.directWorkTask(id: healthChild.id) == nil)
+        #expect(try repository.directWorkTask(id: stagedTemplate.id) == nil)
+        #expect(try repository.directWorkTask(id: ordinaryTask.id)?.id == ordinaryTask.id)
     }
 
     @Test

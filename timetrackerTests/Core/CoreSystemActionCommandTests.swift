@@ -740,4 +740,27 @@ struct CoreSystemActionCommandTests {
             try TimerAdmissionPreferenceResolver.allowParallelTimers(in: context) == false
         )
     }
+
+    @Test @MainActor
+    func timerAdmissionLetsAWinningTombstoneRestoreTheDefaultPreference() throws {
+        let context = try makeTestContext()
+        let oldValue = SyncedPreference(
+            key: AppPreferenceKey.allowParallelTimers.rawValue,
+            valueJSON: PreferenceJSON.encode(false),
+            deviceID: "old"
+        )
+        oldValue.updatedAt = Date(timeIntervalSinceReferenceDate: 1000)
+        let tombstone = SyncedPreference(
+            key: AppPreferenceKey.allowParallelTimers.rawValue,
+            valueJSON: PreferenceJSON.encode(false),
+            deviceID: "new"
+        )
+        tombstone.updatedAt = Date(timeIntervalSinceReferenceDate: 2000)
+        tombstone.deletedAt = tombstone.updatedAt
+        context.insert(oldValue)
+        context.insert(tombstone)
+        try context.save()
+
+        #expect(try TimerAdmissionPreferenceResolver.allowParallelTimers(in: context))
+    }
 }

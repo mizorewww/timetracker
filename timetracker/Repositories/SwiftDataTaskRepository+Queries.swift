@@ -25,6 +25,36 @@ extension SwiftDataTaskRepository {
         return try context.fetch(descriptor).visibleDeduplicatedByID().first
     }
 
+    /// Resolves admission for one concrete work target without materializing
+    /// unrelated task, recurrence, or occurrence rows.
+    func directWorkTask(id: UUID) throws -> TaskNode? {
+        guard let task = try task(id: id) else { return nil }
+
+        var visitedTaskIDs = Set<UUID>()
+        var cursor: TaskNode? = task
+        while let current = cursor {
+            guard visitedTaskIDs.insert(current.id).inserted else { break }
+            guard current.isArchivedForLifecycle == false,
+                  AppleHealthTaskCatalog.syncOnlyTaskIDs.contains(current.id) == false
+            else {
+                return nil
+            }
+            guard let parentID = current.parentID else { break }
+            guard AppleHealthTaskCatalog.syncOnlyTaskIDs.contains(parentID) == false else {
+                return nil
+            }
+            cursor = try self.task(id: parentID)
+        }
+
+        let taskIDs: Set<UUID> = [id]
+        let hasVisibleRuleClaim = try taskRecurrenceRules(taskIDs: taskIDs)
+            .contains { $0.templateTaskID == id }
+        guard hasVisibleRuleClaim == false else { return nil }
+        let hasVisibleOccurrenceClaim = try taskRecurrenceOccurrences(taskIDs: taskIDs)
+            .contains { $0.templateTaskID == id }
+        return hasVisibleOccurrenceClaim ? nil : task
+    }
+
     func tasks(ids: Set<UUID>) throws -> [TaskNode] {
         guard ids.isEmpty == false else { return [] }
         let requestedIDs = Array(ids)

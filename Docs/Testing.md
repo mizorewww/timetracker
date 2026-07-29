@@ -266,7 +266,7 @@ Runtime smoothness is a product requirement. The app should not feel slower than
 
 Use two complementary checks:
 
-1. Automated performance budget tests for deterministic domain work. These belong in `CorePerformanceBudgetTests` and cover analytics snapshots, day-bucket summaries, overlap detection, task tree flattening, checklist rollups, timeline layout, and a 50,000-segment single-record rollup mutation plus cached recent-task ranking. The current alarms are `< 0.25 s` for incremental refresh and `< 0.10 s` for cached ranking. The incremental result must equal a fresh full rebuild; these wall-time thresholds are regression alarms for the test environment, not a device SLA.
+1. Automated performance budget tests for deterministic domain work. These belong in `CorePerformanceBudgetTests` and cover analytics snapshots, day-bucket summaries, overlap detection, task tree flattening, checklist rollups, timeline layout, a 50,000-segment single-record rollup mutation plus cached recent-task ranking, and one timer start surrounded by 50,000 unrelated tasks plus 50,000 unrelated synced preferences. The current alarms are `< 0.25 s` for incremental refresh and the six-figure timer admission, and `< 0.10 s` for cached ranking. The incremental result must equal a fresh full rebuild; these wall-time thresholds are regression alarms for the test environment, not a device SLA.
 2. Release profiling on macOS and real iPhone/iPad for frame pacing, scrolling, chart drawing, resize behavior, sheet presentation, and touch latency. These cannot be proven reliably by unit tests because SwiftUI rendering, device thermals, refresh rate, and OS scheduling all affect the result.
 
 Before attempting performance fixes:

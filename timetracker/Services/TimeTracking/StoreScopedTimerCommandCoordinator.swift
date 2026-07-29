@@ -123,11 +123,11 @@ private enum StoreScopedTimerCommandCoordinatorError: Error {
 @MainActor
 enum TimerAdmissionPreferenceResolver {
     static func allowParallelTimers(in context: ModelContext) throws -> Bool {
-        let preferences = try context.fetch(FetchDescriptor<SyncedPreference>())
-            .deduplicatedByID()
-            .filter {
-                $0.deletedAt == nil && SyncedPreferenceService.shouldSyncKey($0.key)
-            }
+        let key = AppPreferenceKey.allowParallelTimers.rawValue
+        let descriptor = FetchDescriptor<SyncedPreference>(
+            predicate: #Predicate { $0.key == key }
+        )
+        let preferences = try context.fetch(descriptor).deduplicatedByID()
         return AppPreferences(syncedPreferences: preferences).allowParallelTimers
     }
 }
@@ -172,16 +172,7 @@ struct StoreScopedTimerCommandCoordinator {
                 context: context,
                 deviceID: deviceID
             )
-            let tasks = try taskRepository.allNodes()
-            guard try TaskTrackingAvailabilityService()
-                .directWorkTaskIDs(
-                    tasks: tasks,
-                    recurrenceRules: taskRepository.taskRecurrenceRules(),
-                    recurrenceOccurrences:
-                    taskRepository.taskRecurrenceOccurrences()
-                )
-                .contains(taskID)
-            else {
+            guard try taskRepository.directWorkTask(id: taskID) != nil else {
                 throw SystemActionCommandError.taskNotFound
             }
 

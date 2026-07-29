@@ -98,22 +98,11 @@ extension SwiftDataTimeTrackingRepository {
     }
 
     func preparedTrackableTitleSnapshot(for taskID: UUID) throws -> String? {
-        let tasks = try context.fetch(FetchDescriptor<TaskNode>()).deduplicatedByID()
-        let recurrenceRules = try context.fetch(
-            FetchDescriptor<TaskRecurrenceRule>()
+        let taskRepository = SwiftDataTaskRepository(
+            context: context,
+            deviceID: deviceID
         )
-        let recurrenceOccurrences = try context.fetch(
-            FetchDescriptor<TaskRecurrenceOccurrence>()
-        )
-        let trackableTaskIDs = TaskTrackingAvailabilityService()
-            .directWorkTaskIDs(
-                tasks: tasks,
-                recurrenceRules: recurrenceRules,
-                recurrenceOccurrences: recurrenceOccurrences
-            )
-        guard trackableTaskIDs.contains(taskID),
-              let task = tasks.first(where: { $0.id == taskID })
-        else {
+        guard let task = try taskRepository.directWorkTask(id: taskID) else {
             throw TimeTrackingRepositoryError.taskUnavailable
         }
         return try LedgerPersistencePolicy.prepareTitleSnapshot(task.title)

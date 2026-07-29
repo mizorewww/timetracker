@@ -49,16 +49,7 @@ struct StoreScopedPomodoroCommandCoordinator {
                 context: context,
                 deviceID: resolvedDeviceID
             )
-            let tasks = try taskRepository.allNodes()
-            guard try TaskTrackingAvailabilityService()
-                .directWorkTaskIDs(
-                    tasks: tasks,
-                    recurrenceRules: taskRepository.taskRecurrenceRules(),
-                    recurrenceOccurrences:
-                    taskRepository.taskRecurrenceOccurrences()
-                )
-                .contains(taskID)
-            else {
+            guard try taskRepository.directWorkTask(id: taskID) != nil else {
                 throw SystemActionCommandError.taskNotFound
             }
             let allowParallelTimers = try TimerAdmissionPreferenceResolver
@@ -166,16 +157,7 @@ struct StoreScopedPomodoroCommandCoordinator {
                 context: context,
                 deviceID: resolvedDeviceID
             )
-            let tasks = try taskRepository.allNodes()
-            guard try TaskTrackingAvailabilityService()
-                .directWorkTaskIDs(
-                    tasks: tasks,
-                    recurrenceRules: taskRepository.taskRecurrenceRules(),
-                    recurrenceOccurrences:
-                    taskRepository.taskRecurrenceOccurrences()
-                )
-                .contains(run.taskID)
-            else {
+            guard try taskRepository.directWorkTask(id: run.taskID) != nil else {
                 return .rejected(.taskUnavailable(run.taskID))
             }
             let allowParallelTimers = try TimerAdmissionPreferenceResolver

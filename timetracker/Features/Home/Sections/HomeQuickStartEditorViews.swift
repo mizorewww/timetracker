@@ -62,14 +62,14 @@ struct QuickStartEditorSheet: View {
         }
     }
 
-    private func movePinned(_ taskID: UUID, offset: Int) {
-        guard let sourceIndex = selectedIDs.firstIndex(of: taskID) else {
-            return
-        }
-        let destinationIndex = sourceIndex + offset
-        guard selectedIDs.indices.contains(destinationIndex) else { return }
+    private func movePinned(fromOffsets: IndexSet, toOffset: Int) {
         withSelectionAnimation {
-            selectedIDs.swapAt(sourceIndex, destinationIndex)
+            selectedIDs = OrderedTaskIDSelectionMutation.movingVisibleSelections(
+                fromOffsets: fromOffsets,
+                toOffset: toOffset,
+                visibleIDs: pinnedTasks.map(\.id),
+                in: selectedIDs
+            )
         }
     }
 
@@ -95,39 +95,29 @@ struct QuickStartEditorSheet: View {
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(Array(pinnedTasks.enumerated()), id: \.element.id) { index, task in
-                            HStack(spacing: 4) {
-                                Button {
-                                    unpin(task)
-                                } label: {
-                                    QuickStartEditorTaskRow(
-                                        presentation: store.taskIdentityPresentation(for: task),
-                                        order: index + 1,
-                                        actionSystemImage: "minus.circle",
-                                        actionTint: Color.primary.opacity(0.45)
-                                    )
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel(task.title)
-                                .accessibilityValue(selectionValue(isPinned: true, order: index + 1))
-                                .accessibilityHint(
-                                    AppStrings.localized("quickStart.selection.unpinHint")
-                                )
-                                .accessibilityAddTraits(.isSelected)
-                                .accessibilityIdentifier(
-                                    "quickStart.editor.pinned.\(task.id.uuidString)"
-                                )
-
-                                QuickStartPinnedReorderControls(
-                                    taskID: task.id,
-                                    canMoveUp: index > 0,
-                                    canMoveDown: index < pinnedTasks.count - 1,
-                                    move: { offset in
-                                        movePinned(task.id, offset: offset)
-                                    }
+                            Button {
+                                unpin(task)
+                            } label: {
+                                QuickStartEditorTaskRow(
+                                    presentation: store.taskIdentityPresentation(for: task),
+                                    order: index + 1,
+                                    actionSystemImage: "minus.circle",
+                                    actionTint: Color.primary.opacity(0.45)
                                 )
                             }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(task.title)
+                            .accessibilityValue(selectionValue(isPinned: true, order: index + 1))
+                            .accessibilityHint(
+                                AppStrings.localized("quickStart.selection.unpinHint")
+                            )
+                            .accessibilityAddTraits(.isSelected)
+                            .accessibilityIdentifier(
+                                "quickStart.editor.pinned.\(task.id.uuidString)"
+                            )
                         }
                         .onDelete(perform: removePinned)
+                        .onMove(perform: movePinned)
                     }
 
                     if !selectedIDs.isEmpty {
@@ -218,48 +208,6 @@ struct QuickStartEditorSheet: View {
             AppStrings.localized("quickStart.selection.pinnedOrder"),
             order
         )
-    }
-}
-
-private struct QuickStartPinnedReorderControls: View {
-    let taskID: UUID
-    let canMoveUp: Bool
-    let canMoveDown: Bool
-    let move: (Int) -> Void
-
-    var body: some View {
-        HStack(spacing: 0) {
-            Button {
-                move(-1)
-            } label: {
-                Image(systemName: "chevron.up")
-                    .frame(
-                        width: AppLayout.minimumInteractiveTarget,
-                        height: AppLayout.minimumInteractiveTarget
-                    )
-            }
-            .disabled(canMoveUp == false)
-            .accessibilityLabel(AppStrings.localized("common.moveUp"))
-            .accessibilityIdentifier(
-                "quickStart.editor.moveUp.\(taskID.uuidString)"
-            )
-
-            Button {
-                move(1)
-            } label: {
-                Image(systemName: "chevron.down")
-                    .frame(
-                        width: AppLayout.minimumInteractiveTarget,
-                        height: AppLayout.minimumInteractiveTarget
-                    )
-            }
-            .disabled(canMoveDown == false)
-            .accessibilityLabel(AppStrings.localized("common.moveDown"))
-            .accessibilityIdentifier(
-                "quickStart.editor.moveDown.\(taskID.uuidString)"
-            )
-        }
-        .buttonStyle(.borderless)
     }
 }
 

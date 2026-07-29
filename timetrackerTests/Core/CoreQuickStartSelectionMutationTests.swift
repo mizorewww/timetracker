@@ -78,6 +78,49 @@ struct CoreQuickStartSelectionMutationTests {
     }
 
     @Test
+    func reorderUsesVisibleIdentityAndPreservesHiddenSelectionSlots() {
+        let staleBefore = UUID()
+        let first = UUID()
+        let staleBetween = UUID()
+        let second = UUID()
+        let third = UUID()
+
+        let result = OrderedTaskIDSelectionMutation.movingVisibleSelections(
+            fromOffsets: IndexSet(integer: 2),
+            toOffset: 1,
+            visibleIDs: [first, second, third],
+            in: [staleBefore, first, staleBetween, second, third]
+        )
+
+        #expect(result == [staleBefore, first, staleBetween, third, second])
+    }
+
+    @Test
+    func invalidVisibleReorderLeavesSelectionsUnchanged() {
+        let first = UUID()
+        let second = UUID()
+        let missing = UUID()
+        let selected = [first, second]
+
+        #expect(
+            OrderedTaskIDSelectionMutation.movingVisibleSelections(
+                fromOffsets: IndexSet(integer: 1),
+                toOffset: 0,
+                visibleIDs: [first, missing],
+                in: selected
+            ) == selected
+        )
+        #expect(
+            OrderedTaskIDSelectionMutation.movingVisibleSelections(
+                fromOffsets: IndexSet(integer: 2),
+                toOffset: 0,
+                visibleIDs: [first, second],
+                in: selected
+            ) == selected
+        )
+    }
+
+    @Test
     func toggleAndBulkRemovalReuseTheSameOrderedSelectionSemantics() {
         let first = UUID()
         let second = UUID()

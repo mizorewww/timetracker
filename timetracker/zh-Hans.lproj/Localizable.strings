@@ -1135,8 +1135,6 @@
 "editor.checklist.state.incomplete" = "未完成";
 "editor.checklist.action.markComplete" = "将此清单项标记为已完成。";
 "editor.checklist.action.markIncomplete" = "将此清单项标记为未完成。";
-"common.moveUp" = "上移";
-"common.moveDown" = "下移";
 "common.more" = "更多";
 "editor.task.notes" = "备注";
 "editor.task.newTitle" = "新建任务";

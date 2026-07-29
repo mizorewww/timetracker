@@ -35,10 +35,6 @@ struct TaskChecklistEditorSection: View {
         ForEach(rowPlacements) { placement in
             ChecklistEditorRow(
                 item: $checklistItems[placement.sourceIndex],
-                canMoveUp: canMove(placement: placement, direction: -1),
-                canMoveDown: canMove(placement: placement, direction: 1),
-                moveUp: { moveChecklistItem(visualIndex: placement.visualIndex, direction: -1) },
-                moveDown: { moveChecklistItem(visualIndex: placement.visualIndex, direction: 1) },
                 delete: {
                     focusedChecklistDraftID.wrappedValue = nil
                     deleteChecklistItem(placement.id)
@@ -72,25 +68,6 @@ struct TaskChecklistEditorSection: View {
                 sourceIndex: sourceIndex
             )
         }
-    }
-
-    private func moveChecklistItem(visualIndex: Int, direction: Int) {
-        let destination = direction < 0 ? visualIndex - 1 : visualIndex + 2
-        guard rowPlacements.indices.contains(visualIndex),
-              canMove(placement: rowPlacements[visualIndex], direction: direction) else { return }
-        moveChecklistItems(IndexSet(integer: visualIndex), destination)
-    }
-
-    private func canMove(placement: ChecklistEditorRowPlacement, direction: Int) -> Bool {
-        let neighborVisualIndex = placement.visualIndex + direction
-        guard orderedChecklistIndices.indices.contains(neighborVisualIndex),
-              checklistItems.indices.contains(placement.sourceIndex),
-              checklistItems.indices.contains(orderedChecklistIndices[neighborVisualIndex])
-        else {
-            return false
-        }
-        let neighborSourceIndex = orderedChecklistIndices[neighborVisualIndex]
-        return checklistItems[placement.sourceIndex].isCompleted == checklistItems[neighborSourceIndex].isCompleted
     }
 }
 

@@ -1135,8 +1135,6 @@
 "editor.checklist.state.incomplete" = "Not completed";
 "editor.checklist.action.markComplete" = "Marks this checklist item as completed.";
 "editor.checklist.action.markIncomplete" = "Marks this checklist item as not completed.";
-"common.moveUp" = "Move Up";
-"common.moveDown" = "Move Down";
 "common.more" = "More";
 "editor.task.notes" = "Notes";
 "editor.task.newTitle" = "New Task";

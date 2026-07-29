@@ -609,7 +609,7 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testTaskCategorySortingUpdatesTasksAndPersistentSidebarOrder() throws {
+    func testTaskCategorySortingUsesNativeDragWithoutArrowButtons() throws {
         #if os(iOS)
         XCUIDevice.shared.orientation = .portrait
         defer { XCUIDevice.shared.orientation = .portrait }
@@ -686,141 +686,17 @@ final class timetrackerUITests: XCTestCase {
             "taskCategory.sort.moveDown.\(workCategoryID)"
         ].firstMatch
 
-        if studyMoveUp.waitForExistence(timeout: 3),
-           studyMoveUp.isHittable
-        {
-            activate(studyMoveUp)
-        } else {
-            XCTAssertTrue(
-                workMoveDown.waitForExistence(timeout: 3) &&
-                    workMoveDown.isHittable,
-                "The sorter must expose a semantic button for either equivalent move."
-            )
-            activate(workMoveDown)
-        }
-
-        let reorderedStudyRow = taskCategorySortRow(
-            named: "Study",
-            in: sorter
-        )
-        let reorderedWorkRow = taskCategorySortRow(
-            named: "Work",
-            in: sorter
+        XCTAssertTrue(
+            studyMoveUp.waitForNonExistence(timeout: 2),
+            "Native category dragging must not be duplicated by a Move Up button."
         )
         XCTAssertTrue(
-            waitUntil(timeout: 5) {
-                reorderedStudyRow.exists &&
-                    reorderedWorkRow.exists &&
-                    reorderedStudyRow.isHittable &&
-                    reorderedWorkRow.isHittable &&
-                    reorderedStudyRow.frame.minY <
-                    reorderedWorkRow.frame.minY
-            },
-            "Moving Study up must immediately update the sorter order."
+            workMoveDown.waitForNonExistence(timeout: 2),
+            "Native category dragging must not be duplicated by a Move Down button."
         )
         waitForScreenshotTransition()
         try capture(
-            "\(screenshotPrefix)-task-category-sorter-study-first",
-            app: app
-        )
-
-        let done = app.descendants(matching: .any)[
-            "taskCategory.sort.done"
-        ].firstMatch
-        XCTAssertTrue(done.waitForExistence(timeout: 3) && done.isHittable)
-        activate(done)
-        XCTAssertTrue(sorter.waitForNonExistence(timeout: 5))
-
-        let studySectionID =
-            "tasks.category.disclosure.category-\(studyCategoryID)"
-        let workSectionID =
-            "tasks.category.disclosure.category-\(workCategoryID)"
-        let studySection = app.descendants(matching: .any)[
-            studySectionID
-        ].firstMatch
-        XCTAssertTrue(
-            studySection.waitForExistence(timeout: 8) &&
-                studySection.isHittable
-        )
-        activate(studySection)
-
-        let refreshedStudySection = app.descendants(matching: .any)[
-            studySectionID
-        ].firstMatch
-        let refreshedWorkSection = app.descendants(matching: .any)[
-            workSectionID
-        ].firstMatch
-        XCTAssertTrue(
-            waitUntil(timeout: 5) {
-                refreshedStudySection.exists &&
-                    refreshedWorkSection.exists &&
-                    refreshedStudySection.isHittable &&
-                    refreshedWorkSection.isHittable &&
-                    refreshedStudySection.frame.minY <
-                    refreshedWorkSection.frame.minY
-            },
-            "Tasks must render the persisted Study-before-Work Category order."
-        )
-
-        if screenshotPrefix == "ipad" || screenshotPrefix == "mac" {
-            let studySidebarID =
-                "sidebar.category.disclosure.category-\(studyCategoryID)"
-            let workSidebarID =
-                "sidebar.category.disclosure.category-\(workCategoryID)"
-            var studySidebar = app.descendants(matching: .any)[
-                studySidebarID
-            ].firstMatch
-            if !studySidebar.waitForExistence(timeout: 2) ||
-                !studySidebar.isHittable
-            {
-                let identifiedToggle = app.descendants(matching: .any)[
-                    "sidebar.show"
-                ].firstMatch
-                let systemToggle = app.buttons["Show Sidebar"].firstMatch
-                if identifiedToggle.waitForExistence(timeout: 2),
-                   identifiedToggle.isHittable
-                {
-                    activate(identifiedToggle)
-                } else {
-                    XCTAssertTrue(
-                        systemToggle.waitForExistence(timeout: 3) &&
-                            systemToggle.isHittable,
-                        "A collapsed persistent Sidebar must expose a scriptable toggle."
-                    )
-                    activate(systemToggle)
-                }
-                studySidebar = app.descendants(matching: .any)[
-                    studySidebarID
-                ].firstMatch
-            }
-            XCTAssertTrue(
-                studySidebar.waitForExistence(timeout: 5) &&
-                    studySidebar.isHittable
-            )
-            activate(studySidebar)
-
-            let refreshedStudySidebar = app.descendants(matching: .any)[
-                studySidebarID
-            ].firstMatch
-            let refreshedWorkSidebar = app.descendants(matching: .any)[
-                workSidebarID
-            ].firstMatch
-            XCTAssertTrue(
-                waitUntil(timeout: 5) {
-                    refreshedStudySidebar.exists &&
-                        refreshedWorkSidebar.exists &&
-                        refreshedStudySidebar.isHittable &&
-                        refreshedWorkSidebar.isHittable &&
-                        refreshedStudySidebar.frame.minY <
-                        refreshedWorkSidebar.frame.minY
-                },
-                "The persistent Sidebar must mirror the Tasks Category order."
-            )
-        }
-
-        waitForScreenshotTransition()
-        try capture(
-            "\(screenshotPrefix)-task-category-study-before-work",
+            "\(screenshotPrefix)-task-category-native-drag",
             app: app
         )
     }
@@ -2885,7 +2761,10 @@ final class timetrackerUITests: XCTestCase {
 
         XCTAssertTrue(titleField.waitForExistence(timeout: 5))
         XCTAssertTrue(symbolPicker.waitForExistence(timeout: 5))
-        XCTAssertTrue(actionsMenu.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            actionsMenu.waitForNonExistence(timeout: 2),
+            "The Checklist row must not duplicate native gestures with a More button."
+        )
         XCTAssertEqual(
             completion.frame.midY,
             titleField.frame.midY,
@@ -2898,12 +2777,6 @@ final class timetrackerUITests: XCTestCase {
             accuracy: 2,
             "The checklist symbol and a one-line title must share a visual center."
         )
-        XCTAssertEqual(
-            actionsMenu.frame.midY,
-            titleField.frame.midY,
-            accuracy: 2,
-            "The checklist actions and a one-line title must share a visual center."
-        )
 
         #if os(macOS)
         let minimumTargetSize: CGFloat = 28
@@ -2913,7 +2786,6 @@ final class timetrackerUITests: XCTestCase {
         for (name, control) in [
             ("completion", completion),
             ("symbol", symbolPicker),
-            ("actions", actionsMenu),
         ] {
             XCTAssertGreaterThanOrEqual(
                 control.frame.width,
@@ -2960,7 +2832,7 @@ final class timetrackerUITests: XCTestCase {
         ].firstMatch
         XCTAssertTrue(longTitleField.waitForExistence(timeout: 5))
         XCTAssertTrue(longSymbolPicker.waitForExistence(timeout: 5))
-        XCTAssertTrue(longActionsMenu.waitForExistence(timeout: 5))
+        XCTAssertTrue(longActionsMenu.waitForNonExistence(timeout: 2))
 
         let longTitleHeight = longTitleField.frame.height
         XCTAssertGreaterThan(
@@ -2982,20 +2854,6 @@ final class timetrackerUITests: XCTestCase {
             longTitleField.frame.midY,
             accuracy: 3,
             "The checklist symbol must remain centered beside a long title."
-        )
-        XCTAssertEqual(
-            longActionsMenu.frame.midY,
-            longTitleField.frame.midY,
-            accuracy: 3,
-            "The checklist actions must remain centered beside a long title."
-        )
-        XCTAssertGreaterThanOrEqual(
-            longActionsMenu.frame.width,
-            minimumTargetSize - 0.5
-        )
-        XCTAssertGreaterThanOrEqual(
-            longActionsMenu.frame.height,
-            minimumTargetSize - 0.5
         )
 
         try capture(
@@ -3406,8 +3264,8 @@ final class timetrackerUITests: XCTestCase {
                     format: "identifier BEGINSWITH %@",
                     "task.editor.checklist.moveUp."
                 ))
-                .firstMatch.waitForExistence(timeout: 5),
-            "macOS must keep an always-visible Move Up alternative to drag."
+                .firstMatch.waitForNonExistence(timeout: 2),
+            "Native Checklist dragging must not be duplicated by Move Up buttons."
         )
         XCTAssertTrue(
             app.buttons
@@ -3415,8 +3273,17 @@ final class timetrackerUITests: XCTestCase {
                     format: "identifier BEGINSWITH %@",
                     "task.editor.checklist.moveDown."
                 ))
-                .firstMatch.waitForExistence(timeout: 5),
-            "macOS must keep an always-visible Move Down alternative to drag."
+                .firstMatch.waitForNonExistence(timeout: 2),
+            "Native Checklist dragging must not be duplicated by Move Down buttons."
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)
+                .matching(NSPredicate(
+                    format: "identifier BEGINSWITH %@",
+                    "task.editor.checklist.more."
+                ))
+                .firstMatch.waitForNonExistence(timeout: 2),
+            "Checklist context actions must not require an always-visible More button."
         )
         try capture("mac-task-checklist-direct-reordering", app: app)
         #else
@@ -3437,6 +3304,15 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(
             app.buttons["Sort"].firstMatch.waitForNonExistence(timeout: 2),
             "Checklist rows already support direct drag, so the redundant Sort mode must not be shown."
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)
+                .matching(NSPredicate(
+                    format: "identifier BEGINSWITH %@",
+                    "task.editor.checklist.more."
+                ))
+                .firstMatch.waitForNonExistence(timeout: 2),
+            "Checklist context actions must not require an always-visible More button."
         )
         try capture(
             "\(platformScreenshotPrefix(in: app))-task-checklist-direct-reordering",
@@ -3468,7 +3344,7 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testChecklistDeleteUsesSecondaryActions() throws {
+    func testChecklistDeleteUsesSwipeAndContextMenu() throws {
         let app = launchApp(
             route: "task-detail",
             contentSizeCategory: "UICTContentSizeCategoryL",
@@ -3505,35 +3381,20 @@ final class timetrackerUITests: XCTestCase {
             "task.editor.checklist.more.\(firstID)"
         ].firstMatch
         XCTAssertTrue(
-            firstMore.waitForExistence(timeout: 5) && firstMore.isHittable,
-            "Every checklist row must expose its secondary action menu."
+            firstMore.waitForNonExistence(timeout: 2),
+            "Delete gestures must not require an always-visible More button."
         )
 
         #if os(macOS)
-        activate(firstMore)
-        let menuDelete = app.menuItems[
-            "task.editor.checklist.delete.menu.\(firstID)"
-        ].firstMatch
-        XCTAssertTrue(
-            menuDelete.waitForExistence(timeout: 3) && menuDelete.isHittable
-        )
-        try capture("\(screenshotPrefix)-checklist-delete-more-menu", app: app)
-        app.typeKey(.escape, modifierFlags: [])
-
-        let contextCompletion = app.buttons["Align task detail"].firstMatch
-        XCTAssertTrue(contextCompletion.waitForExistence(timeout: 3))
-        let contextID = String(
-            contextCompletion.identifier.dropFirst(completionPrefix.count)
-        )
         let contextRow = app.cells
-            .containing(.any, identifier: contextCompletion.identifier)
+            .containing(.any, identifier: firstCompletion.identifier)
             .firstMatch
         XCTAssertTrue(
             contextRow.waitForExistence(timeout: 3) && contextRow.isHittable
         )
         contextRow.rightClick()
         let contextDelete = app.menuItems[
-            "task.editor.checklist.delete.context.\(contextID)"
+            "task.editor.checklist.delete.context.\(firstID)"
         ].firstMatch
         XCTAssertTrue(
             contextDelete.waitForExistence(timeout: 3) &&
@@ -3544,15 +3405,26 @@ final class timetrackerUITests: XCTestCase {
             app: app
         )
         #else
-        activate(firstMore)
-        let menuDelete = app.buttons[
-            "task.editor.checklist.delete.menu.\(firstID)"
+        let firstCell = app.cells
+            .containing(.any, identifier: firstCompletion.identifier)
+            .firstMatch
+        XCTAssertTrue(
+            firstCell.waitForExistence(timeout: 3) && firstCell.isHittable
+        )
+        firstCell.press(forDuration: 1.0)
+        let contextDelete = app.buttons[
+            "task.editor.checklist.delete.context.\(firstID)"
         ].firstMatch
         XCTAssertTrue(
-            menuDelete.waitForExistence(timeout: 3) && menuDelete.isHittable
+            contextDelete.waitForExistence(timeout: 3) &&
+                contextDelete.isHittable,
+            "Long-pressing a Checklist row must expose its destructive context action."
         )
-        try capture("\(screenshotPrefix)-checklist-delete-more-menu", app: app)
-        activate(menuDelete)
+        try capture(
+            "\(screenshotPrefix)-checklist-delete-context-menu",
+            app: app
+        )
+        activate(contextDelete)
         XCTAssertTrue(firstCompletion.waitForNonExistence(timeout: 5))
 
         let secondCompletion = app.buttons["Align task detail"].firstMatch
@@ -3570,7 +3442,7 @@ final class timetrackerUITests: XCTestCase {
         XCTAssertTrue(
             secondCell.waitForExistence(timeout: 3) && secondCell.isHittable
         )
-        secondCell.swipeLeft()
+        secondCell.swipeRight()
         let swipeDelete = app.buttons[
             "task.editor.checklist.delete.swipe.\(secondID)"
         ].firstMatch
@@ -8108,7 +7980,7 @@ final class timetrackerUITests: XCTestCase {
     }
 
     @MainActor
-    func testQuickStartEditorReordersPinnedTasks() throws {
+    func testQuickStartEditorUsesNativeDragWithoutArrowButtons() throws {
         let app = launchApp(replacesDemoDataOnLaunch: true)
         XCTAssertTrue(homeIsReady(in: app))
         let screenshotPrefix = platformScreenshotPrefix(in: app)
@@ -8164,41 +8036,21 @@ final class timetrackerUITests: XCTestCase {
         let moveUp = app.buttons[
             "quickStart.editor.moveUp.\(taskID)"
         ].firstMatch
-        XCTAssertTrue(moveUp.waitForExistence(timeout: 3))
-        activate(moveUp)
         XCTAssertTrue(
-            waitUntil(timeout: 3) {
-                thirdPinned.value as? String == "Pinned, order 2"
-            },
-            "Moving a pinned task up must update its order badge."
+            moveUp.waitForNonExistence(timeout: 2),
+            "Native Quick Start dragging must not be duplicated by a Move Up button."
         )
-        #if !os(macOS)
-        try capture("\(screenshotPrefix)-quick-start-editor-reordered", app: app)
-        #endif
-
-        let save = app.buttons["Save"].firstMatch
-        XCTAssertTrue(save.waitForExistence(timeout: 3) && save.isHittable)
-        activate(save)
-        XCTAssertTrue(editor.waitForNonExistence(timeout: 5))
-        XCTAssertTrue(homeIsReady(in: app))
-
-        let reorderedRow = app.descendants(matching: .any)[
-            "home.quickStart.task.\(taskID)"
+        let moveDown = app.buttons[
+            "quickStart.editor.moveDown.\(passedTaskID)"
         ].firstMatch
-        let previousRow = app.descendants(matching: .any)[
-            "home.quickStart.task.\(passedTaskID)"
-        ].firstMatch
-        scrollTodayUntilHittable(reorderedRow, in: app)
-        XCTAssertTrue(reorderedRow.waitForExistence(timeout: 5))
-        XCTAssertTrue(previousRow.waitForExistence(timeout: 5))
-        XCTAssertLessThan(
-            reorderedRow.frame.minY,
-            previousRow.frame.minY,
-            "The reordered pinned task must appear above the task it passed."
+        XCTAssertTrue(
+            moveDown.waitForNonExistence(timeout: 2),
+            "Native Quick Start dragging must not be duplicated by a Move Down button."
         )
-        #if !os(macOS)
-        try capture("\(screenshotPrefix)-quick-start-home-reordered", app: app)
-        #endif
+        try capture(
+            "\(screenshotPrefix)-quick-start-editor-native-drag",
+            app: app
+        )
     }
 
     @MainActor

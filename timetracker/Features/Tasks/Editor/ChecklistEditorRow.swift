@@ -2,10 +2,6 @@ import SwiftUI
 
 struct ChecklistEditorRow: View {
     @Binding var item: ChecklistEditorDraft
-    let canMoveUp: Bool
-    let canMoveDown: Bool
-    let moveUp: () -> Void
-    let moveDown: () -> Void
     let delete: () -> Void
     let toggleCompletion: () -> Void
     let focus: FocusState<UUID?>.Binding
@@ -55,87 +51,18 @@ struct ChecklistEditorRow: View {
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
             .layoutPriority(1)
-
-            macOSOrderingControls
-            actionsMenu
         }
         .frame(minHeight: 44)
         .contentShape(Rectangle())
         #if os(iOS)
-            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            .swipeActions(edge: .leading, allowsFullSwipe: false) {
                 deleteAction(source: "swipe")
             }
-        #else
-            .contextMenu {
-                contextMenuActions
-            }
         #endif
+            .contextMenu {
+                deleteAction(source: "context")
+            }
             .accessibilityElement(children: .contain)
-    }
-
-    private var actionsMenu: some View {
-        Menu {
-            orderingActions
-            Divider()
-            deleteAction(source: "menu")
-        } label: {
-            TrailingMenuLabel(systemImage: "ellipsis")
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.secondary)
-        }
-        .menuIndicator(.hidden)
-        .frame(
-            width: AppLayout.minimumInteractiveTarget,
-            height: AppLayout.minimumInteractiveTarget
-        )
-        .contentShape(Rectangle())
-        .accessibilityLabel(AppStrings.localized("common.more"))
-        .accessibilityIdentifier(
-            "task.editor.checklist.more.\(item.id.uuidString)"
-        )
-    }
-
-    @ViewBuilder
-    private var orderingActions: some View {
-        Button(action: moveUp) {
-            Label(
-                AppStrings.localized("common.moveUp"),
-                systemImage: "chevron.up"
-            )
-        }
-        .disabled(!canMoveUp)
-
-        Button(action: moveDown) {
-            Label(
-                AppStrings.localized("common.moveDown"),
-                systemImage: "chevron.down"
-            )
-        }
-        .disabled(!canMoveDown)
-    }
-
-    @ViewBuilder
-    private var contextMenuActions: some View {
-        if canMoveUp {
-            Button(action: moveUp) {
-                Label(
-                    AppStrings.localized("common.moveUp"),
-                    systemImage: "chevron.up"
-                )
-            }
-        }
-        if canMoveDown {
-            Button(action: moveDown) {
-                Label(
-                    AppStrings.localized("common.moveDown"),
-                    systemImage: "chevron.down"
-                )
-            }
-        }
-        if canMoveUp || canMoveDown {
-            Divider()
-        }
-        deleteAction(source: "context")
     }
 
     private func deleteAction(source: String) -> some View {
@@ -145,34 +72,5 @@ struct ChecklistEditorRow: View {
         .accessibilityIdentifier(
             "task.editor.checklist.delete.\(source).\(item.id.uuidString)"
         )
-    }
-
-    @ViewBuilder
-    private var macOSOrderingControls: some View {
-        #if os(macOS)
-        HStack(spacing: 4) {
-            Button(action: moveUp) {
-                Image(systemName: "chevron.up")
-                    .frame(width: 28, height: 28)
-            }
-            .disabled(!canMoveUp)
-            .accessibilityLabel(AppStrings.localized("common.moveUp"))
-            .accessibilityIdentifier(
-                "task.editor.checklist.moveUp.\(item.id.uuidString)"
-            )
-
-            Button(action: moveDown) {
-                Image(systemName: "chevron.down")
-                    .frame(width: 28, height: 28)
-            }
-            .disabled(!canMoveDown)
-            .accessibilityLabel(AppStrings.localized("common.moveDown"))
-            .accessibilityIdentifier(
-                "task.editor.checklist.moveDown.\(item.id.uuidString)"
-            )
-        }
-        .buttonStyle(.borderless)
-        .foregroundStyle(.secondary)
-        #endif
     }
 }

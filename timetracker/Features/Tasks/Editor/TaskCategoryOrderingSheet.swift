@@ -26,15 +26,7 @@ struct TaskCategoryOrderingSheet: View {
             List {
                 ForEach(orderedCategories) { category in
                     TaskCategoryOrderingRow(
-                        category: category,
-                        canMoveUp: category.id != orderedCategories.first?.id,
-                        canMoveDown: category.id != orderedCategories.last?.id,
-                        moveUp: {
-                            moveCategory(category.id, offset: -1)
-                        },
-                        moveDown: {
-                            moveCategory(category.id, offset: 1)
-                        }
+                        category: category
                     )
                     .accessibilityIdentifier(
                         "taskCategory.sort.row.\(category.id.uuidString)"
@@ -85,68 +77,18 @@ struct TaskCategoryOrderingSheet: View {
             toOffset: destination
         )
     }
-
-    private func moveCategory(_ categoryID: UUID, offset: Int) {
-        guard let sourceIndex = orderedCategories.firstIndex(
-            where: { $0.id == categoryID }
-        ) else {
-            return
-        }
-        let destinationIndex = sourceIndex + offset
-        guard orderedCategories.indices.contains(destinationIndex) else {
-            return
-        }
-        orderedCategories.swapAt(sourceIndex, destinationIndex)
-    }
 }
 
 private struct TaskCategoryOrderingRow: View {
     let category: TaskCategoryOrderingItem
-    let canMoveUp: Bool
-    let canMoveDown: Bool
-    let moveUp: () -> Void
-    let moveDown: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            Label {
-                Text(category.title)
-                    .lineLimit(nil)
-            } icon: {
-                Image(systemName: category.iconName)
-                    .foregroundStyle(Color(hex: category.colorHex) ?? .secondary)
-            }
-
-            Spacer(minLength: 8)
-
-            HStack(spacing: 4) {
-                Button(action: moveUp) {
-                    Image(systemName: "chevron.up")
-                        .frame(
-                            width: AppLayout.minimumInteractiveTarget,
-                            height: AppLayout.minimumInteractiveTarget
-                        )
-                }
-                .disabled(canMoveUp == false)
-                .accessibilityLabel(AppStrings.localized("common.moveUp"))
-                .accessibilityIdentifier(
-                    "taskCategory.sort.moveUp.\(category.id.uuidString)"
-                )
-
-                Button(action: moveDown) {
-                    Image(systemName: "chevron.down")
-                        .frame(
-                            width: AppLayout.minimumInteractiveTarget,
-                            height: AppLayout.minimumInteractiveTarget
-                        )
-                }
-                .disabled(canMoveDown == false)
-                .accessibilityLabel(AppStrings.localized("common.moveDown"))
-                .accessibilityIdentifier(
-                    "taskCategory.sort.moveDown.\(category.id.uuidString)"
-                )
-            }
-            .buttonStyle(.borderless)
+        Label {
+            Text(category.title)
+                .lineLimit(nil)
+        } icon: {
+            Image(systemName: category.iconName)
+                .foregroundStyle(Color(hex: category.colorHex) ?? .secondary)
         }
         .frame(minHeight: AppLayout.minimumInteractiveTarget)
         .accessibilityElement(children: .contain)

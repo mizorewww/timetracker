@@ -34,4 +34,54 @@ enum OrderedTaskIDSelectionMutation {
         })
         return removing(removedIDs, from: selectedIDs)
     }
+
+    static func movingVisibleSelections(
+        fromOffsets sourceOffsets: IndexSet,
+        toOffset destination: Int,
+        visibleIDs: [UUID],
+        in selectedIDs: [UUID]
+    ) -> [UUID] {
+        guard sourceOffsets.isEmpty == false,
+              destination >= 0,
+              destination <= visibleIDs.count,
+              sourceOffsets.allSatisfy(visibleIDs.indices.contains),
+              Set(visibleIDs).count == visibleIDs.count,
+              visibleIDs.allSatisfy({ visibleID in
+                  selectedIDs.filter { $0 == visibleID }.count == 1
+              })
+        else {
+            return selectedIDs
+        }
+
+        let movingIDs = sourceOffsets.map { visibleIDs[$0] }
+        var reorderedVisibleIDs = visibleIDs
+        for sourceIndex in sourceOffsets.reversed() {
+            reorderedVisibleIDs.remove(at: sourceIndex)
+        }
+        let removedBeforeDestination = sourceOffsets.count(in: 0 ..< destination)
+        let insertionIndex = destination - removedBeforeDestination
+        guard reorderedVisibleIDs.indices.contains(insertionIndex) ||
+            insertionIndex == reorderedVisibleIDs.endIndex
+        else {
+            return selectedIDs
+        }
+        reorderedVisibleIDs.insert(
+            contentsOf: movingIDs,
+            at: insertionIndex
+        )
+
+        let visibleIDSet = Set(visibleIDs)
+        var reorderedSelections = selectedIDs
+        var reorderedVisibleIndex = 0
+        for selectionIndex in reorderedSelections.indices
+            where visibleIDSet.contains(reorderedSelections[selectionIndex])
+        {
+            reorderedSelections[selectionIndex] =
+                reorderedVisibleIDs[reorderedVisibleIndex]
+            reorderedVisibleIndex += 1
+        }
+        return reorderedVisibleIndex == reorderedVisibleIDs.count
+            ? reorderedSelections
+            : selectedIDs
+    }
 }

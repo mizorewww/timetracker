@@ -1,6 +1,6 @@
 # User Feedback Task 95 — Native Reorder And Delete Gestures
 
-Status: In progress
+Status: Complete
 
 Source: [`Docs/userfeedback.md`](../../../userfeedback.md)
 
@@ -36,16 +36,16 @@ Internet references reviewed:
 
 ## Acceptance checklist
 
-- [ ] No Checklist up/down buttons or More button remain at normal text size.
-- [ ] Checklist rows still reorder directly within their incomplete/completed group.
-- [ ] iOS/iPadOS exposes Delete from a leading-edge swipe, which is a rightward swipe in left-to-right locales; full swipe remains disabled.
-- [ ] A Checklist long press on touch platforms and right-click on macOS exposes Delete.
-- [ ] Category ordering has native drag but no custom up/down buttons.
-- [ ] Quick Start pinned ordering has native drag but no custom up/down buttons.
-- [ ] Stable item/task/category identities and existing durable command boundaries are unchanged.
-- [ ] Focused behavior/UI tests pass and normal-size screenshots are visually reviewed.
-- [ ] `make test`, formatting, localization parity, signed builds, and Release all-device installation pass.
-- [ ] Every simulator/process owned by this task is released.
+- [x] No Checklist up/down buttons or More button remain at normal text size.
+- [x] Checklist rows still reorder directly within their incomplete/completed group.
+- [x] iOS/iPadOS exposes Delete from a leading-edge swipe, which is a rightward swipe in left-to-right locales; full swipe remains disabled.
+- [x] A Checklist long press on touch platforms and right-click on macOS exposes Delete.
+- [x] Category ordering has native drag but no custom up/down buttons.
+- [x] Quick Start pinned ordering has native drag but no custom up/down buttons.
+- [x] Stable item/task/category identities and existing durable command boundaries are unchanged.
+- [x] Focused behavior/UI tests pass and normal-size screenshots are visually reviewed.
+- [x] `make test`, formatting, localization parity, signed builds, and Release all-device installation pass.
+- [x] Every simulator/process owned by this task is released.
 
 ## Checkpoints
 
@@ -104,3 +104,10 @@ Internet references reviewed:
   async snapshot-worker test stopped making progress. Its focused 9-test suite then
   passed in 0.558 seconds, and a clean full rerun passed all 1,574 tests in 176 suites
   in 52.646 seconds.
+- 2026-07-29: Committed the implementation checkpoint as `b491de17`; the commit hook
+  advanced the app to 1.1.351 (406).
+- 2026-07-29: `CONFIGURATION=Release make build-install-all` succeeded. The signed app,
+  with its embedded Watch companion, was installed on `iPad Pro M4` and `iPhone Air`;
+  the paired Watch receives the companion through automatic app install. The signed
+  macOS app was copied to `/Applications/timetracker.app` and passed on-disk signature
+  validation.

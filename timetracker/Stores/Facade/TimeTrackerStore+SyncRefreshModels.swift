@@ -94,6 +94,7 @@ extension TimeTrackerStore {
     struct SyncRefreshBatch: Sendable {
         private(set) var activityReason: SyncRefreshReason?
         private(set) var requiresCloudImportHandling = false
+        private(set) var requiresReadModelCatchUp = false
         private var latestCloudImportSucceeded: Bool?
 
         mutating func insert(_ reason: SyncRefreshReason) {
@@ -106,10 +107,12 @@ extension TimeTrackerStore {
                 requiresCloudImportHandling = requiresCloudImportHandling
                     || succeeded
                     || reportsConflict
+                requiresReadModelCatchUp = true
             case let .cloudExportFinished(_, _, reportsConflict, _):
                 requiresCloudImportHandling = requiresCloudImportHandling || reportsConflict
+                requiresReadModelCatchUp = requiresReadModelCatchUp || reportsConflict
             case .remoteStoreChanged, .cloudSetupFinished:
-                break
+                requiresReadModelCatchUp = true
             }
         }
 

@@ -186,10 +186,14 @@ extension StoreScopedPomodoroCommandCoordinator {
         else {
             return false
         }
-        let segments = try timeRepository.allSegments().filter { segment in
-            segment.sessionID == run.sessionID &&
-                segment.source == .pomodoro &&
-                segment.deletedAt == nil
+        let segments: [TimeSegment] = if let sessionID = run.sessionID {
+            try timeRepository.segments(sessionIDs: [sessionID])
+                .filter { segment in
+                    segment.source == .pomodoro &&
+                        segment.deletedAt == nil
+                }
+        } else {
+            []
         }
         let segmentSeconds = TimeAggregationService().grossSeconds(segments, now: now)
         let fallbackSeconds = run.startedAt.map {

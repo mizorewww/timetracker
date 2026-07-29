@@ -27,8 +27,7 @@ struct TaskRecurrencePersistenceState {
         )
         let goals = try context.fetch(FetchDescriptor<TaskQuantityGoal>())
         let entries = try context.fetch(FetchDescriptor<TaskQuantityEntry>())
-        let segments = try context.fetch(FetchDescriptor<TimeSegment>())
-            .visibleDeduplicatedByID()
+        let activeSegments = try Self.activeSegments(in: context)
         let pomodoroRuns = try context.fetch(
             FetchDescriptor<PomodoroRun>()
         ).visibleDeduplicatedByID()
@@ -62,7 +61,7 @@ struct TaskRecurrencePersistenceState {
             .trackableTaskIDs(tasks: Array(taskByID.values))
             .subtracting(Set(occurrences.map(\.generatedTaskID)))
         activeWorkTaskIDs = Set(
-            segments.lazy.filter { $0.endedAt == nil }.map(\.taskID)
+            activeSegments.map(\.taskID)
         ).union(
             pomodoroRuns.lazy.filter {
                 $0.endedAt == nil &&
@@ -74,6 +73,22 @@ struct TaskRecurrencePersistenceState {
 
     static func occurrenceKey(ruleID: UUID, dayKey: String) -> String {
         ruleID.uuidString.lowercased() + "|" + dayKey
+    }
+
+    private static func activeSegments(in context: ModelContext) throws -> [TimeSegment] {
+        let candidateDescriptor = FetchDescriptor<TimeSegment>(
+            predicate: #Predicate { $0.endedAt == nil }
+        )
+        let candidateIDs = try Set(context.fetch(candidateDescriptor).map(\.id))
+        guard candidateIDs.isEmpty == false else { return [] }
+
+        let requestedIDs = Array(candidateIDs)
+        let canonicalDescriptor = FetchDescriptor<TimeSegment>(
+            predicate: #Predicate { requestedIDs.contains($0.id) }
+        )
+        return try context.fetch(canonicalDescriptor)
+            .visibleDeduplicatedByID()
+            .filter { $0.endedAt == nil }
     }
 
     func ancestors(of taskID: UUID) -> Set<UUID> {

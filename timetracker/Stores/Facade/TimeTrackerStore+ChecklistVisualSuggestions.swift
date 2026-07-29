@@ -161,6 +161,12 @@ extension TimeTrackerStore {
             for: Set(checklistVisualSuggestionDebounceTasksByItemID.keys)
         )
         cancelChecklistVisualSuggestionRequests(for: checklistVisualSuggestionInFlightIDs)
+        checklistVisualSuggestionFailureFingerprintByItemID.removeAll(
+            keepingCapacity: false
+        )
+        checklistVisualSuggestionRetryAfterByItemID.removeAll(
+            keepingCapacity: false
+        )
     }
 
     func cancelChecklistVisualSuggestionRequests(matching requestIDsByItemID: [UUID: UUID]) {
@@ -223,6 +229,14 @@ extension TimeTrackerStore {
             for: Set(checklistVisualSuggestionDebounceTasksByItemID.keys)
                 .subtracting(validItemIDs)
         )
+        checklistVisualSuggestionFailureFingerprintByItemID =
+            checklistVisualSuggestionFailureFingerprintByItemID.filter {
+                validItemIDs.contains($0.key)
+            }
+        checklistVisualSuggestionRetryAfterByItemID =
+            checklistVisualSuggestionRetryAfterByItemID.filter {
+                validItemIDs.contains($0.key)
+            }
     }
 
     private var canAutoSuggestChecklistVisuals: Bool {

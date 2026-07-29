@@ -6,6 +6,40 @@ import Testing
 @Suite(.serialized)
 struct LLMSuggestionCancellationTests {
     @Test @MainActor
+    func invalidChecklistItemsArePrunedFromFailureMetadata() {
+        let task = TaskNode(title: "Design", parentID: nil, deviceID: "test")
+        let currentItem = ChecklistItem(
+            taskID: task.id,
+            title: "Align controls",
+            deviceID: "test"
+        )
+        let staleIDs = Set((0 ..< 10000).map { _ in UUID() })
+        let store = makeTestStore()
+        store.tasks = [task]
+        store.taskByID = [task.id: task]
+        store.checklistItems = [currentItem]
+        store.checklistVisualSuggestionFailureFingerprintByItemID =
+            Dictionary(uniqueKeysWithValues: staleIDs.map { ($0, "failed") })
+        store.checklistVisualSuggestionRetryAfterByItemID =
+            Dictionary(uniqueKeysWithValues: staleIDs.map { ($0, Date.distantFuture) })
+        store.checklistVisualSuggestionFailureFingerprintByItemID[currentItem.id] =
+            "current"
+        store.checklistVisualSuggestionRetryAfterByItemID[currentItem.id] =
+            .distantFuture
+
+        store.cancelInvalidChecklistVisualSuggestionRequests()
+
+        #expect(
+            Set(store.checklistVisualSuggestionFailureFingerprintByItemID.keys)
+                == [currentItem.id]
+        )
+        #expect(
+            Set(store.checklistVisualSuggestionRetryAfterByItemID.keys)
+                == [currentItem.id]
+        )
+    }
+
+    @Test @MainActor
     func disablingAutomaticSuggestionsCancelsInboxAndChecklistRequestsWithoutRetrying() async throws {
         let context = try makeTestContext()
         let task = TaskNode(title: "Design", parentID: nil, deviceID: "test")

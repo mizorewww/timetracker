@@ -486,6 +486,190 @@ struct CorePerformanceBudgetTests {
     }
 
     @Test @MainActor
+    func oldSegmentUpdateKeepsRecentIndexWorkConstantSized() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(secondsFromGMT: 0))
+        let taskID = UUID()
+        let historyStart = Date(timeIntervalSinceReferenceDate: 20_000_000)
+        let segments = (0 ..< 50000).map { index in
+            let startedAt = historyStart.addingTimeInterval(Double(index * 60))
+            return TimeSegment(
+                sessionID: UUID(),
+                taskID: taskID,
+                source: .timer,
+                deviceID: "test",
+                startedAt: startedAt,
+                endedAt: startedAt.addingTimeInterval(30)
+            )
+        }
+        var store = LedgerStore()
+        let now = historyStart.addingTimeInterval(50000 * 60 + 60)
+        store.rebuildSegmentIndexes(
+            segments: segments,
+            now: now,
+            calendar: calendar
+        )
+        let recentBefore = store.recentSegments(
+            forTaskIDs: [taskID],
+            limit: LedgerStore.maximumRecentSegmentsPerTask
+        ).map(\.id)
+
+        let original = try #require(segments.first)
+        let updated = try TimeSegment(
+            sessionID: original.sessionID,
+            taskID: original.taskID,
+            source: .timer,
+            deviceID: "test",
+            startedAt: original.startedAt,
+            endedAt: #require(original.endedAt).addingTimeInterval(1)
+        )
+        updated.id = original.id
+
+        let start = CFAbsoluteTimeGetCurrent()
+        store.replaceSegments(
+            ids: [original.id],
+            with: [updated],
+            now: now,
+            calendar: calendar,
+            refreshUnchangedTimeSensitiveSegments: false
+        )
+        let elapsed = CFAbsoluteTimeGetCurrent() - start
+
+        #expect(
+            store.recentSegments(
+                forTaskIDs: [taskID],
+                limit: LedgerStore.maximumRecentSegmentsPerTask
+            ).map(\.id) == recentBefore
+        )
+        #expect(
+            elapsed < 0.05,
+            "An old segment update rebuilt the full recent index in \(elapsed) seconds"
+        )
+    }
+
+    @Test @MainActor
+    func recurrenceStartupIgnoresClosedLedgerHistory() throws {
+        let context = try makeTestContext()
+        context.autosaveEnabled = false
+        let task = TaskNode(
+            title: "Recurring startup budget",
+            parentID: nil,
+            deviceID: "test"
+        )
+        let closedWinnerTask = TaskNode(
+            title: "Closed duplicate winner",
+            parentID: nil,
+            deviceID: "test"
+        )
+        context.insert(task)
+        context.insert(closedWinnerTask)
+        let historyStart = Date(timeIntervalSinceReferenceDate: 20_000_000)
+        for index in 0 ..< 50000 {
+            let startedAt = historyStart.addingTimeInterval(Double(index * 60))
+            context.insert(TimeSegment(
+                sessionID: UUID(),
+                taskID: task.id,
+                source: .timer,
+                deviceID: "history",
+                startedAt: startedAt,
+                endedAt: startedAt.addingTimeInterval(30)
+            ))
+        }
+        context.insert(TimeSegment(
+            sessionID: UUID(),
+            taskID: task.id,
+            source: .timer,
+            deviceID: "active",
+            startedAt: historyStart.addingTimeInterval(50001 * 60)
+        ))
+        let duplicateID = UUID()
+        let duplicateSessionID = UUID()
+        let olderActiveDuplicate = TimeSegment(
+            sessionID: duplicateSessionID,
+            taskID: closedWinnerTask.id,
+            source: .timer,
+            deviceID: "older-active",
+            startedAt: historyStart
+        )
+        olderActiveDuplicate.id = duplicateID
+        olderActiveDuplicate.updatedAt = historyStart
+        context.insert(olderActiveDuplicate)
+        let closedWinner = TimeSegment(
+            sessionID: duplicateSessionID,
+            taskID: closedWinnerTask.id,
+            source: .timer,
+            deviceID: "newer-closed",
+            startedAt: historyStart,
+            endedAt: historyStart.addingTimeInterval(30)
+        )
+        closedWinner.id = duplicateID
+        closedWinner.updatedAt = historyStart.addingTimeInterval(60)
+        context.insert(closedWinner)
+        try context.save()
+
+        let freshContext = ModelContext(context.container)
+        freshContext.autosaveEnabled = false
+        let start = CFAbsoluteTimeGetCurrent()
+        let state = try TaskRecurrencePersistenceState(context: freshContext)
+        let elapsed = CFAbsoluteTimeGetCurrent() - start
+
+        #expect(state.activeWorkTaskIDs == [task.id])
+        #expect(
+            elapsed < 0.1,
+            "Recurrence startup materialized closed ledger history in \(elapsed) seconds"
+        )
+    }
+
+    @Test @MainActor
+    func pomodoroCancellationIgnoresUnrelatedLedgerHistory() throws {
+        let context = try makeTestContext()
+        context.autosaveEnabled = false
+        let task = TaskNode(
+            title: "Focused cancellation budget",
+            parentID: nil,
+            deviceID: "test"
+        )
+        context.insert(task)
+        let historyStart = Date(timeIntervalSinceReferenceDate: 30_000_000)
+        for index in 0 ..< 50000 {
+            let startedAt = historyStart.addingTimeInterval(Double(index * 60))
+            context.insert(TimeSegment(
+                sessionID: UUID(),
+                taskID: UUID(),
+                source: .timer,
+                deviceID: "history",
+                startedAt: startedAt,
+                endedAt: startedAt.addingTimeInterval(30)
+            ))
+        }
+        try context.save()
+
+        let now = historyStart.addingTimeInterval(50001 * 60)
+        let coordinator = StoreScopedPomodoroCommandCoordinator(
+            container: context.container,
+            writeAuthorization: .isolatedTestHarness,
+            deviceID: "test",
+            nowProvider: { now }
+        )
+        let started = try coordinator.start(
+            taskID: task.id,
+            focusSeconds: 25 * 60,
+            breakSeconds: 5 * 60,
+            longBreakSeconds: nil,
+            targetRounds: 2
+        )
+
+        let start = CFAbsoluteTimeGetCurrent()
+        _ = try coordinator.cancel(phase: started.startedFocus.phaseToken)
+        let elapsed = CFAbsoluteTimeGetCurrent() - start
+
+        #expect(
+            elapsed < 0.1,
+            "Pomodoro cancellation scanned unrelated ledger history in \(elapsed) seconds"
+        )
+    }
+
+    @Test @MainActor
     func fiftyThousandStoredSegmentsKeepRapidRestartBounded() throws {
         let context = try makeTestContext()
         context.autosaveEnabled = false

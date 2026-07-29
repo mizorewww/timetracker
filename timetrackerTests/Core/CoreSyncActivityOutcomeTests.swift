@@ -270,6 +270,13 @@ struct CoreSyncActivityOutcomeTests {
         failedImportOnly.insert(conflict)
         #expect(failedImportOnly.requiresCloudImportHandling)
         #expect(failedImportOnly.hasSuccessfulCloudImport == false)
+
+        var exportOnly = TimeTrackerStore.SyncRefreshBatch()
+        exportOnly.insert(failure)
+        #expect(exportOnly.requiresReadModelCatchUp == false)
+
+        exportOnly.insert(.remoteStoreChanged)
+        #expect(exportOnly.requiresReadModelCatchUp)
     }
 
     @Test @MainActor

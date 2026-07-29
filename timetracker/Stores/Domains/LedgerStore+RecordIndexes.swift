@@ -30,8 +30,12 @@ extension LedgerStore {
     }
 
     mutating func unindexRecord(_ snapshot: LedgerSegmentSnapshot) {
+        let wasRecentlyIndexed = recentSegmentIDsByTaskID[snapshot.taskID]?
+            .contains(snapshot.id) == true
         Self.remove(snapshot.id, from: snapshot.taskID, in: &segmentIDsByTaskID)
-        rebuildRecentRecordIndex(for: snapshot.taskID)
+        if wasRecentlyIndexed {
+            rebuildRecentRecordIndex(for: snapshot.taskID)
+        }
         Self.remove(snapshot.id, from: snapshot.sessionID, in: &segmentIDsBySessionID)
     }
 

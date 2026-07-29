@@ -26,19 +26,21 @@ extension TimeTrackerStore {
             } catch {
                 processingFailure = error
             }
-            do {
-                let plan = refreshPlanner.plan(after: [.remoteImportCompleted])
-                if hasCompletedStartupConfiguration {
-                    try refresh(plan: plan)
-                } else {
-                    try refreshCoordinator.refreshReadModels(self, plan: plan)
+            if batch.requiresReadModelCatchUp {
+                do {
+                    let plan = refreshPlanner.plan(after: [.remoteImportCompleted])
+                    if hasCompletedStartupConfiguration {
+                        try refresh(plan: plan)
+                    } else {
+                        try refreshCoordinator.refreshReadModels(self, plan: plan)
+                    }
+                } catch {
+                    processingFailure = processingFailure ?? error
                 }
-            } catch {
-                processingFailure = processingFailure ?? error
+                enqueueCommittedMutationSystemProjections(
+                    events: [.remoteImportCompleted]
+                )
             }
-            enqueueCommittedMutationSystemProjections(
-                events: [.remoteImportCompleted]
-            )
             guard let activityReason = batch.activityReason else { return }
             if let processingFailure {
                 recordSyncActivity(

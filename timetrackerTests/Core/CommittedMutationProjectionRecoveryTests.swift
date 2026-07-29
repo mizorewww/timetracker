@@ -114,6 +114,32 @@ struct CommittedMutationProjectionRecoveryTests {
         }
     }
 
+    @Test @MainActor
+    func completedCloudExportDoesNotRepeatReadModelProjection() async throws {
+        let recorder = ProjectionRecoveryRecorder()
+        let scheduler = CommittedMutationSystemProjectionScheduler {
+            sink,
+            work in
+            recorder.record(sink: sink, work: work)
+        }
+        let store = makeRecoveryStore(scheduler: scheduler)
+        try store.configureIfNeeded(context: makeTestContext())
+        await scheduler.waitUntilIdle()
+
+        store.scheduleQuietRefresh(reason: .cloudExportFinished(
+            eventID: UUID(),
+            succeeded: true,
+            reportsConflict: false,
+            failureMessage: nil
+        ))
+        try await Task.sleep(for: .milliseconds(500))
+        await scheduler.waitUntilIdle()
+
+        for sink in CommittedMutationSystemProjectionSink.allCases {
+            #expect(recorder.callsBySink[sink]?.count == 1)
+        }
+    }
+
     @MainActor
     private func makeRecoveryStore(
         scheduler: CommittedMutationSystemProjectionScheduler,

@@ -1,6 +1,6 @@
 # Performance Hardening — Agent Communications
 
-Status: active
+Status: complete
 
 Related memory:
 `Docs/ImplementationContexts/2026-07-29-performance-hardening.md`
@@ -82,3 +82,12 @@ runtime resources unless the primary agent explicitly assigns a batch.
   reuse, projection batch scans, and async-owner shutdown work to focused follow-ups;
   each crosses UI, physical-device, durability, or cancellation contracts that cannot
   be honestly closed by this static audit alone.
+
+### 2026-07-29 — Primary-agent closeout
+
+- Integrated the accepted findings in commit `e9bf30d3`.
+- Ran the final signed macOS unit gate (1,579 tests), generic iOS build, formatting,
+  localization, and hook checks successfully.
+- Performed no macOS UI automation; no macOS virtual machine was needed.
+- Audited all assigned runtime ownership empty and closed every delegated read-only
+  audit with no unmerged edits or retained resources.

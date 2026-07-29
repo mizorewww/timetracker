@@ -1,6 +1,6 @@
 # Performance Hardening — Implementation Memory
 
-Status: active
+Status: complete
 
 Started: 2026-07-29
 
@@ -149,6 +149,24 @@ the repository's signed verification gates.
   allocation recording but did not expose allocation summary rows for numeric export,
   so it is supporting inspection evidence rather than a claimed byte delta. No
   process, trace writer, or Booted simulator remained after recording.
+- 2026-07-29: Final `CorePerformanceBudgetTests` comparison passed 14/14. The
+  recurrence fixture also proved that a newer closed duplicate still suppresses its
+  older active sibling, preserving canonical last-write-wins behavior while keeping
+  the bounded query.
+- 2026-07-29: Repository gates passed: `make format-check` reported 0/875 files,
+  `make localization-check` passed 9/9 resources, `make check-hooks` confirmed the
+  tracked hook, and `make test` passed 1,579 tests in 176 suites in 59.459 s.
+- 2026-07-29: `make build-ios` succeeded for the generic signed iOS destination,
+  including the Watch app, Widget extension, and Live Activity extension. The earlier
+  signed Release macOS build also remained green.
+- 2026-07-29: No macOS UI automation was performed, so no macOS virtual machine was
+  required. Host use was limited to signed unit tests and exact-binary, noninteractive
+  Instruments attachment. Every batch ended with no owned app, test runner,
+  `xcodebuild`, `xctest`, `xctrace`, or Booted simulator. Valid and inconclusive trace
+  directories were moved to Trash and are recoverable.
+- 2026-07-29: Verified implementation committed as `e9bf30d3`
+  (`Optimize bounded performance hot paths`), including the automatic version advance
+  to 1.1.353 (408).
 
 ## Ranked static findings
 
@@ -185,9 +203,9 @@ the repository's signed verification gates.
 
 ## Checkpoints
 
-- [ ] Static audit findings ranked by measured/expected impact.
-- [ ] Baseline test and profile evidence recorded.
-- [ ] First verified optimization committed.
-- [ ] Remaining verified optimizations committed in coherent checkpoints.
-- [ ] Final same-worktree performance comparison and full gates green.
-- [ ] Owned resources audited empty and implementation memory closed.
+- [x] Static audit findings ranked by measured/expected impact.
+- [x] Baseline test and profile evidence recorded.
+- [x] First verified optimization committed.
+- [x] Remaining verified optimizations committed in a coherent checkpoint.
+- [x] Final same-worktree performance comparison and full gates green.
+- [x] Owned resources audited empty and implementation memory closed.

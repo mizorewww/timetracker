@@ -8,12 +8,26 @@ import SwiftUI
 /// behave the same way. HIG `layout.md` asks iPadOS apps to "support the full
 /// range of window sizes" and to "defer switching to compact view as long as
 /// possible", which is a statement about width, not hardware.
-struct RootLayoutPolicy: Equatable, Sendable {
+nonisolated struct RootLayoutPolicy: Equatable, Sendable {
     enum Shell: Equatable, Sendable {
         /// Tab bar over a single navigation stack.
         case compact
         /// Sidebar plus detail split.
         case regular
+    }
+
+    /// The only width information the root view needs to retain.
+    ///
+    /// Keeping the raw width in root state invalidates the complete app shell
+    /// throughout a live window resize even though the shell can only change
+    /// at one breakpoint.
+    nonisolated enum WidthBand: Equatable, Sendable {
+        case compact
+        case regular
+
+        init(width: CGFloat) {
+            self = width < RootLayoutPolicy.regularShellMinimumWidth ? .compact : .regular
+        }
     }
 
     /// Below this the split view cannot keep both columns usable, so the
@@ -22,8 +36,24 @@ struct RootLayoutPolicy: Equatable, Sendable {
     static let regularShellMinimumWidth: CGFloat = WidthLayoutPolicy.narrowMaximumWidth
 
     /// `nil` until the first layout pass has measured the window.
-    let measuredWidth: CGFloat?
+    let measuredWidthBand: WidthBand?
     let horizontalSizeClass: UserInterfaceSizeClass?
+
+    init(
+        measuredWidth: CGFloat?,
+        horizontalSizeClass: UserInterfaceSizeClass?
+    ) {
+        measuredWidthBand = measuredWidth.map(WidthBand.init(width:))
+        self.horizontalSizeClass = horizontalSizeClass
+    }
+
+    init(
+        measuredWidthBand: WidthBand?,
+        horizontalSizeClass: UserInterfaceSizeClass?
+    ) {
+        self.measuredWidthBand = measuredWidthBand
+        self.horizontalSizeClass = horizontalSizeClass
+    }
 
     var shell: Shell {
         // The system's own compactness signal wins whenever it says compact:
@@ -36,8 +66,11 @@ struct RootLayoutPolicy: Equatable, Sendable {
         }
         // Before the first measurement, trust the size class rather than
         // flashing the wrong shell for one frame.
-        guard let measuredWidth else { return .regular }
-        return measuredWidth >= Self.regularShellMinimumWidth ? .regular : .compact
+        guard let measuredWidthBand else { return .regular }
+        return switch measuredWidthBand {
+        case .compact: .compact
+        case .regular: .regular
+        }
     }
 }
 
@@ -51,7 +84,7 @@ extension EnvironmentValues {
     @Entry var layoutShell: RootLayoutPolicy.Shell = .regular
 }
 
-struct WidthLayoutPolicy {
+nonisolated struct WidthLayoutPolicy {
     /// The one narrow/wide breakpoint in the app.
     static let narrowMaximumWidth: CGFloat = 720
 
@@ -62,14 +95,54 @@ struct WidthLayoutPolicy {
     }
 }
 
-struct HomeLayoutPolicy {
+/// A visually lossless, bounded measurement for Today-page layout.
+///
+/// Live macOS resizing can deliver several geometry values per rendered frame.
+/// Today only needs exact values at its responsive breakpoints; between them,
+/// an 8 pt bucket is below the page's spacing granularity and avoids rebuilding
+/// all synchronous presentation projections for sub-visual changes.
+nonisolated struct HomeViewportMeasurement: Equatable, Sendable {
+    static let step: CGFloat = 8
+
+    let layoutWidth: CGFloat
+
+    init(width: CGFloat) {
+        let finiteWidth = width.isFinite ? width : 0
+        let boundedWidth = min(
+            max(0, finiteWidth),
+            HomeLayoutPolicy.maximumResponsiveViewportWidth
+        )
+        if boundedWidth == HomeLayoutPolicy.maximumResponsiveViewportWidth {
+            layoutWidth = boundedWidth
+            return
+        }
+
+        let segmentStart = HomeLayoutPolicy.responsiveViewportBreakpoints
+            .last(where: { $0 <= boundedWidth }) ?? 0
+        layoutWidth = segmentStart +
+            ((boundedWidth - segmentStart) / Self.step).rounded(.down) * Self.step
+    }
+}
+
+nonisolated struct HomeLayoutPolicy {
     private static let currentStateTwoColumnMinimumWidth: CGFloat = 744
     private static let currentStatePrimaryMinimumWidth: CGFloat = 420
     private static let currentStatePrimaryMaximumWidth: CGFloat = 620
     private static let currentStateOverviewMinimumWidth: CGFloat = 280
     private static let quickStartMinimumWidth: CGFloat = 300
+    private static let regularPagePadding: CGFloat = 28
+    private static let contentMaximumWidth: CGFloat = 1180
+    private static let twoColumnContentMinimumWidth: CGFloat = 1000
     static let visualizationContentMaximumWidth: CGFloat = 720
     static let visualizationCardPadding: CGFloat = 14
+    static let maximumResponsiveViewportWidth: CGFloat =
+        contentMaximumWidth + (regularPagePadding * 2)
+    static let responsiveViewportBreakpoints: [CGFloat] = [
+        WidthLayoutPolicy.narrowMaximumWidth,
+        currentStateTwoColumnMinimumWidth + (regularPagePadding * 2),
+        twoColumnContentMinimumWidth + (regularPagePadding * 2),
+        maximumResponsiveViewportWidth,
+    ]
 
     private let width: CGFloat
     private let widthPolicy: WidthLayoutPolicy
@@ -88,11 +161,11 @@ struct HomeLayoutPolicy {
     }
 
     var pagePadding: CGFloat {
-        isCompact ? 18 : 28
+        isCompact ? 18 : Self.regularPagePadding
     }
 
     var usesTwoColumnContent: Bool {
-        contentWidth >= 1000
+        contentWidth >= Self.twoColumnContentMinimumWidth
     }
 
     func usesSideBySideCurrentState(prefersSingleColumn: Bool) -> Bool {
@@ -101,7 +174,7 @@ struct HomeLayoutPolicy {
     }
 
     var contentMaxWidth: CGFloat {
-        1180
+        Self.contentMaximumWidth
     }
 
     var contentWidth: CGFloat {

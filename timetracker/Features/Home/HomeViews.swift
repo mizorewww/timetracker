@@ -3,10 +3,10 @@ import SwiftUI
 struct DesktopMainView: View {
     let store: TimeTrackerStore
     @Environment(AppPresentationRouter.self) private var presentationRouter
-    @State private var viewportWidth: CGFloat = 720
+    @State private var viewportMeasurement = HomeViewportMeasurement(width: 720)
 
     var body: some View {
-        let layout = HomeLayoutPolicy(width: viewportWidth)
+        let layout = HomeLayoutPolicy(width: viewportMeasurement.layoutWidth)
         let content = TodayHomeContent(store: store, quickStartLimit: 6)
 
         ScrollView {
@@ -21,11 +21,10 @@ struct DesktopMainView: View {
             .padding(.vertical, layout.pagePadding)
             .frame(maxWidth: .infinity, alignment: .center)
         }
-        .onGeometryChange(for: CGFloat.self) { proxy in
-            proxy.size.width
-        } action: { width in
-            guard abs(viewportWidth - width) > 0.5 else { return }
-            viewportWidth = width
+        .onGeometryChange(for: HomeViewportMeasurement.self) { proxy in
+            HomeViewportMeasurement(width: proxy.size.width)
+        } action: { measurement in
+            viewportMeasurement = measurement
         }
         .background(AppColors.background)
         .accessibilityIdentifier("home.view")

@@ -2,8 +2,17 @@ import SwiftUI
 
 struct TasksNavigationView: View {
     let store: TimeTrackerStore
+    let ownsRegularNavigationStack: Bool
     @Environment(\.layoutShell) private var layoutShell
     @State private var path: [TasksRoute] = []
+
+    init(
+        store: TimeTrackerStore,
+        ownsRegularNavigationStack: Bool = true
+    ) {
+        self.store = store
+        self.ownsRegularNavigationStack = ownsRegularNavigationStack
+    }
 
     var body: some View {
         if layoutShell == .regular {
@@ -13,13 +22,23 @@ struct TasksNavigationView: View {
         }
     }
 
+    @ViewBuilder
     private var regularContent: some View {
-        NavigationStack {
-            if let route = store.tasksRoute {
-                taskDetail(for: route)
-            } else {
-                TasksView(store: store)
+        if ownsRegularNavigationStack {
+            NavigationStack {
+                regularDestination
             }
+        } else {
+            regularDestination
+        }
+    }
+
+    @ViewBuilder
+    private var regularDestination: some View {
+        if let route = store.tasksRoute {
+            taskDetail(for: route)
+        } else {
+            TasksView(store: store)
         }
     }
 

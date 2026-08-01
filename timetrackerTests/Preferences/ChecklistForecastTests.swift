@@ -90,7 +90,7 @@ struct ChecklistForecastTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Forecast Task", parentID: nil, colorHex: nil, iconName: nil)
-        let end = fixedMidday().addingTimeInterval(-60)
+        let end = recentHistoricalMidday().addingTimeInterval(-60)
 
         _ = try timeRepository.addManualSegment(
             taskID: task.id,
@@ -136,7 +136,7 @@ struct ChecklistForecastTests {
         let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
         let timeRepository = SwiftDataTimeTrackingRepository(context: context, deviceID: "test")
         let task = try taskRepository.createTask(title: "Toggle Forecast Task", parentID: nil, colorHex: nil, iconName: nil)
-        let end = fixedMidday().addingTimeInterval(-60)
+        let end = recentHistoricalMidday().addingTimeInterval(-60)
 
         _ = try timeRepository.addManualSegment(
             taskID: task.id,
@@ -242,7 +242,7 @@ struct ChecklistForecastTests {
     @Test @MainActor
     func standaloneRollupPaceUsesBoundedProductionWindowAndIgnoresFutureWork() throws {
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: fixedMidday())
+        let today = calendar.startOfDay(for: recentHistoricalMidday())
         let now = try #require(calendar.date(byAdding: .hour, value: 12, to: today))
         let staleStart = try #require(calendar.date(
             byAdding: .day,
@@ -573,8 +573,8 @@ struct ChecklistForecastTests {
     }
 }
 
-private func fixedMidday() -> Date {
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-    return calendar.date(from: DateComponents(year: 2026, month: 5, day: 1, hour: 12, minute: 0))!
+private func recentHistoricalMidday() -> Date {
+    let calendar = Calendar.current
+    let yesterday = calendar.date(byAdding: .day, value: -1, to: Date())!
+    return calendar.date(bySettingHour: 12, minute: 0, second: 0, of: yesterday)!
 }

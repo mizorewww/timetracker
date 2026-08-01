@@ -2,13 +2,13 @@
 
 Status: current UI guardrails
 
-Reviewed: 2026-07-28
+Reviewed: 2026-08-01
 
 Current user behavior is documented in [User Guide](UserGuide.md); verification rules are maintained in [Testing](Testing.md). This document defines how UI work should move toward native Apple components and away from fragile custom drawing. Check it before redesigning or adding any screen.
 
 The app should feel like a first-party Apple productivity tool: calm hierarchy, native navigation, predictable controls, system gestures, readable compact layouts, minimal custom animation, and no layout surprises when text, device width, or localization changes.
 
-Layout adapts to **width, never to device model**. `AppRootView` measures the window and picks one of two shells — compact (tab bar) below 720 pt, regular (sidebar + detail) at or above it — and publishes the choice as `\.layoutShell` for nested views. An iPad in Split View and a Mac window dragged narrow therefore get the same layout an iPhone gets. Do not reintroduce `UIDevice.current.userInterfaceIdiom` or a `#if os(...)` branch to make a layout decision; `#if os(...)` is for APIs that only exist on one platform, and touch-target sizing stays platform-keyed because it encodes input modality (finger vs pointer), not width.
+Layout adapts to **width, never to device model**. `AppRootView` measures the window and picks one of two shells — compact (tab bar) below 720 pt, regular (sidebar + detail) at or above it — and publishes the choice as `\.layoutShell` for nested views. The root remembers only which side of 720 pt it is on, so ordinary live resizing does not invalidate the whole product shell. Today may visually coalesce intermediate widths to 8 pt steps, but 720, 800, 1056, and the 1236 pt viewport where content reaches its cap remain exact. An iPad in Split View and a Mac window dragged narrow therefore get the same layout an iPhone gets. Do not reintroduce `UIDevice.current.userInterfaceIdiom` or a `#if os(...)` branch to make a layout decision; `#if os(...)` is for APIs that only exist on one platform, and touch-target sizing stays platform-keyed because it encodes input modality (finger vs pointer), not width.
 
 Custom drawing is allowed only when the product concept requires it, such as analytics timelines or activity distribution charts. Editors, lists, settings, menus, sheets, and navigation are native-first.
 

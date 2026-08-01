@@ -3,31 +3,35 @@ import SwiftUI
 /// The detail column's content, shared by both shells.
 struct DesktopContentView: View {
     let store: TimeTrackerStore
+    @State private var navigationPath = NavigationPath()
 
     var body: some View {
+        NavigationStack(path: $navigationPath) {
+            destinationContent
+        }
+        .onChange(of: store.desktopDestination) { _, _ in
+            navigationPath = NavigationPath()
+        }
+    }
+
+    @ViewBuilder
+    private var destinationContent: some View {
         switch store.desktopDestination {
         case .today:
-            NavigationStack {
-                DesktopMainView(store: store)
-            }
+            DesktopMainView(store: store)
         case .inbox:
-            NavigationStack {
-                InboxView(store: store)
-            }
+            InboxView(store: store)
         case .tasks:
-            TasksNavigationView(store: store)
+            TasksNavigationView(
+                store: store,
+                ownsRegularNavigationStack: false
+            )
         case .pomodoro:
-            NavigationStack {
-                PomodoroView(store: store)
-            }
+            PomodoroView(store: store)
         case .analytics:
-            NavigationStack {
-                AnalyticsView(store: store)
-            }
+            AnalyticsView(store: store)
         case .settings:
-            NavigationStack {
-                SettingsView(store: store)
-            }
+            SettingsView(store: store)
         }
     }
 }

@@ -36,6 +36,11 @@ final class AdaptiveShellUITests: XCTestCase {
         }
         #endif
         app.launch()
+        addTeardownBlock {
+            if app.state != .notRunning {
+                app.terminate()
+            }
+        }
         #if os(macOS)
         let readyElement = app.descendants(matching: .any)["home.view"]
         #else
@@ -46,6 +51,17 @@ final class AdaptiveShellUITests: XCTestCase {
             "The app never finished initial configuration."
         )
         return app
+    }
+
+    private func activate(
+        _ element: XCUIElement,
+        in app: XCUIApplication,
+        timeout: TimeInterval = 10
+    ) {
+        XCTAssertTrue(element.waitForExistence(timeout: timeout))
+        app.activate()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 3))
+        element.click()
     }
 
     /// Today's toolbar Settings button is the reliable discriminator: only
@@ -120,10 +136,10 @@ final class AdaptiveShellUITests: XCTestCase {
         XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
         XCTAssertLessThan(app.windows.firstMatch.frame.width, Self.shellBreakpoint)
 
-        settingsButton.click()
+        activate(settingsButton, in: app)
 
         XCTAssertTrue(
-            app.descendants(matching: .any)["settings.view"].waitForExistence(timeout: 10),
+            app.descendants(matching: .any)["settings.view"].waitForExistence(timeout: 20),
             "The compact Mac shell did not route Settings through its native scene."
         )
         XCTAssertTrue(
@@ -131,6 +147,62 @@ final class AdaptiveShellUITests: XCTestCase {
             "Opening the native Settings scene replaced the main compact workspace."
         )
         attachScreenshot(app, named: "mac-compact-native-settings")
+    }
+
+    /// Repeated primary navigation must replace only the detail content. The
+    /// surrounding NavigationStack stays alive so rapid sidebar use does not
+    /// rebuild navigation infrastructure for every selection.
+    func testRapidPrimaryDestinationSwitchingKeepsEachPageReachable() {
+        let app = launchApp(windowWidth: 1180)
+        let destinations = [
+            ("sidebar.Inbox", "inbox.view"),
+            ("sidebar.Tasks", "tasks.view"),
+            ("sidebar.Pomodoro", "pomodoro.view"),
+            ("sidebar.Analytics", "analytics.view"),
+            ("sidebar.Today", "home.view"),
+        ]
+
+        activate(
+            app.descendants(matching: .any)["sidebar.Analytics"],
+            in: app
+        )
+        let analyticsDetailLink = app.descendants(matching: .any)["analytics.category.decisions"]
+        XCTAssertTrue(
+            analyticsDetailLink.waitForExistence(timeout: 15),
+            "Analytics never exposed a detail route for the navigation reset check."
+        )
+        activate(analyticsDetailLink, in: app)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["analytics.categoryDetail.decisions"]
+                .waitForExistence(timeout: 10),
+            "The Analytics detail route did not open."
+        )
+        activate(
+            app.descendants(matching: .any)["sidebar.Today"],
+            in: app
+        )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["home.view"].waitForExistence(timeout: 10),
+            "Changing primary destination did not clear the previous page's navigation path."
+        )
+
+        for _ in 0 ..< 3 {
+            for (sidebarIdentifier, pageIdentifier) in destinations {
+                let sidebarItem = app.descendants(matching: .any)[sidebarIdentifier]
+                XCTAssertTrue(
+                    sidebarItem.waitForExistence(timeout: 5),
+                    "Missing primary sidebar destination \(sidebarIdentifier)."
+                )
+                activate(sidebarItem, in: app, timeout: 5)
+                XCTAssertTrue(
+                    app.descendants(matching: .any)[pageIdentifier]
+                        .waitForExistence(timeout: 5),
+                    "Primary destination \(pageIdentifier) did not become reachable."
+                )
+            }
+        }
+
+        attachScreenshot(app, named: "mac-rapid-primary-navigation")
     }
     #endif
 

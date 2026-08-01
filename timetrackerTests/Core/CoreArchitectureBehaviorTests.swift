@@ -60,6 +60,20 @@ struct CoreArchitectureBehaviorTests {
     }
 
     @Test
+    func rootResizeMeasurementOnlyChangesAcrossTheShellBoundary() {
+        let widths: [CGFloat] = [
+            1180, 1179.25, 900, 720, 719.75, 700, 719.5, 720, 900,
+        ]
+        let observedBands = widths.map(RootLayoutPolicy.WidthBand.init(width:))
+        let stateWrites = observedBands.reduce(into: [RootLayoutPolicy.WidthBand]()) { writes, band in
+            guard writes.last != band else { return }
+            writes.append(band)
+        }
+
+        #expect(stateWrites == [.regular, .compact, .regular])
+    }
+
+    @Test
     func enumDisplayTextUsesLocalizationKeys() {
         #expect(AnalyticsRange.today.displayName == AppStrings.localized("analytics.range.day"))
         #expect(TimeSessionSource.importCalendar.displayName == AppStrings.localized("source.calendar"))
@@ -131,6 +145,38 @@ struct CoreArchitectureBehaviorTests {
         #expect(DailyTimeSeriesChartLayoutPolicy(availableWidth: 680).trailingAxisClearance == 48)
         #expect(PomodoroPageLayoutPolicy(viewportWidth: 390, prefersSingleColumn: false).verticalPadding == 16)
         #expect(PomodoroPageLayoutPolicy(viewportWidth: 900, prefersSingleColumn: false).verticalPadding == 24)
+    }
+
+    @Test
+    func homeViewportMeasurementCoalescesResizeEventsWithoutSkippingBreakpoints() {
+        #expect(HomeViewportMeasurement.step == 8)
+
+        let boundaryWidths: [CGFloat] = [
+            719.75, 720, 799.75, 800, 1055.75, 1056, 1235.75, 1236, 1600,
+        ]
+        let layoutWidths = boundaryWidths.map {
+            HomeViewportMeasurement(width: $0).layoutWidth
+        }
+        #expect(layoutWidths == [712, 720, 792, 800, 1048, 1056, 1232, 1236, 1236])
+
+        let rapidResizeWidths = stride(from: 720.0, through: 1180.0, by: 0.5)
+            .map { CGFloat($0) }
+        let stateWrites = rapidResizeWidths
+            .map(HomeViewportMeasurement.init(width:))
+            .reduce(into: [HomeViewportMeasurement]()) { writes, measurement in
+                guard writes.last != measurement else { return }
+                writes.append(measurement)
+            }
+
+        #expect(stateWrites.count <= 59)
+        #expect(stateWrites.count * 8 < rapidResizeWidths.count)
+        #expect(
+            zip(rapidResizeWidths, rapidResizeWidths.map(HomeViewportMeasurement.init(width:)))
+                .allSatisfy { rawWidth, measurement in
+                    rawWidth - measurement.layoutWidth >= 0 &&
+                        rawWidth - measurement.layoutWidth < HomeViewportMeasurement.step
+                }
+        )
     }
 
     @Test @MainActor

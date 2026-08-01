@@ -14,7 +14,7 @@ struct AppRootView<SyncConflictContent: View>: View {
     #if os(macOS)
     @Environment(\.openSettings) private var openSettings
     #endif
-    @State private var measuredWidth: CGFloat?
+    @State private var measuredWidthBand: RootLayoutPolicy.WidthBand?
     @State private var lastContentDestination: TimeTrackerStore.DesktopDestination = .today
 
     init(
@@ -27,7 +27,7 @@ struct AppRootView<SyncConflictContent: View>: View {
 
     private var layoutPolicy: RootLayoutPolicy {
         RootLayoutPolicy(
-            measuredWidth: measuredWidth,
+            measuredWidthBand: measuredWidthBand,
             horizontalSizeClass: horizontalSizeClass
         )
     }
@@ -58,22 +58,10 @@ struct AppRootView<SyncConflictContent: View>: View {
             .focusedSceneValue(\.timeTrackerStore, store)
             .focusedSceneValue(\.appPresentationRouter, presentationRouter)
         #endif
-            .onGeometryChange(for: CGFloat.self) { proxy in
-                proxy.size.width
-            } action: { width in
-                guard let measuredWidth else {
-                    measuredWidth = width
-                    return
-                }
-                let proposedShell = RootLayoutPolicy(
-                    measuredWidth: width,
-                    horizontalSizeClass: horizontalSizeClass
-                ).shell
-                // Ignore sub-point jitter unless it crosses the shell boundary.
-                guard proposedShell != shell || abs(measuredWidth - width) > 0.5 else {
-                    return
-                }
-                self.measuredWidth = width
+            .onGeometryChange(for: RootLayoutPolicy.WidthBand.self) { proxy in
+                RootLayoutPolicy.WidthBand(width: proxy.size.width)
+            } action: { widthBand in
+                measuredWidthBand = widthBand
             }
             .onAppear {
                 routeSettingsDestination(store.desktopDestination)

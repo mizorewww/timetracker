@@ -2,7 +2,7 @@
 
 Status: current verification policy
 
-Reviewed: 2026-07-28
+Reviewed: 2026-08-01
 
 ## Baseline Commands
 
@@ -116,7 +116,10 @@ ordinary shipping Release builds do not receive the test override.
 
 Wide Today layout coverage pairs behavior and real geometry. `HomeLayoutPolicy`
 tests fix the 1000 pt content-width breakpoint and the 678...748 / 300...410 pt
-column conservation. The macOS UI fixture may request a deterministic test window
+column conservation. Resize-policy tests also prove root state changes only at
+the 720 pt shell boundary and that `HomeViewportMeasurement` reduces a 0.5 pt
+event stream to bounded 8 pt buckets without skipping 720/800/1056/1236 pt.
+The macOS UI fixture may request a deterministic test window
 with `TIMETRACKER_UI_TEST_WINDOW_WIDTH` and
 `TIMETRACKER_UI_TEST_WINDOW_HEIGHT`; the AppDelegate honors these values only
 during UI testing. The iPad fixture uses an explicitly owned 13-inch landscape
@@ -124,6 +127,9 @@ simulator and hides the sidebar so the Today detail crosses the breakpoint. On
 both platforms, assert that the real Weekly Time and Quick Start headings
 are horizontally separated and vertically overlap, then retain a normal-size
 screenshot. Run the compact-shell Today regression separately on iPhone.
+The macOS adaptive-shell suite additionally cycles Inbox, Tasks, Focus,
+Analytics, and Today three times and asserts that every destination remains
+reachable through the stable regular-detail navigation container.
 
 ## What Must Stay Covered
 

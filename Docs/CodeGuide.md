@@ -1,7 +1,7 @@
 # TimeTracker 代码文档
 
 状态：当前实现说明
-校对日期：2026-07-28
+校对日期：2026-08-01
 
 本文面向维护者，说明当前代码边界、数据流、扩展方式和验证入口。架构目标与未完成计划分别见 [Architecture](Architecture.md) 和 [NextDevelopmentPlan](NextDevelopmentPlan.md)。
 
@@ -101,7 +101,8 @@
 ### 当前平台 UI 合同
 
 - Compact shell：实际窗口宽度低于 720 pt 或系统 size class 明确 compact 时，使用五个系统 `Tab`（Today、Inbox、Tasks、Focus、Analytics）。Settings 从 Today 工具栏通过当前 scene 的 `AppPresentationRouter` 打开，关闭后保留原 tab、任务路由与滚动上下文。
-- Regular shell：实际窗口宽度达到 720 pt 且 size class 非 compact 时，iPad 与 macOS 共享 `NavigationSplitView` 侧边栏与详情；窗口变窄时可以切到 compact shell，业务 Store、route 和 scene router 位于分支之上。不得用设备 idiom、屏幕型号或 `os(...)` 选择这两套产品布局。
+- Regular shell：实际窗口宽度达到 720 pt 且 size class 非 compact 时，iPad 与 macOS 共享 `NavigationSplitView` 侧边栏与详情；窗口变窄时可以切到 compact shell，业务 Store、route 和 scene router 位于分支之上。`AppRootView` 的 geometry transform 只输出 `RootLayoutPolicy.WidthBand`，root state 不保留原始窗口宽度。regular detail 只拥有一个外层 `NavigationStack`，`DesktopContentView` 在其中替换 Today/Inbox/Tasks/Focus/Analytics 内容，并在主目的地改变时清空旧页的显式 path；不得为每个主目的地重建 navigation container，也不得让旧页 detail 覆盖新目的地。不得用设备 idiom、屏幕型号或 `os(...)` 选择这两套产品布局。
+- Live resize：`DesktopMainView` 的 geometry transform 必须先映射到 Equatable `HomeViewportMeasurement`，再进入 view state。该 measurement 以 8 pt 为普通视觉步长，以 720/800/1056/1236 pt 为精确分段锚点，并在 1236 pt 封顶；不得把逐点原始宽度重新写入根组合状态。`HomeLayoutPolicy` 继续是断点与列宽的语义 owner。
 - macOS capability：单实例主 `Window`、独立系统 Settings scene、原生菜单和键盘录制属于真实平台能力；主窗口与 Settings 共享一个应用级 `TimeTrackerStore`，避免复制 CloudKit observers、自动 AI 建议与系统表面同步。应用根另持有一个设备本地 `MacKeyboardShortcutSettings`，注入主场景、Settings 和 `TimeTrackerCommands`；设置使用 `KeyboardShortcuts` 的 binding recorder，菜单继续使用原生 SwiftUI `Commands`。16 个稳定主要操作按创建、计时、整理、导航和数据分组；高频项保留安全默认，依赖上下文或低频项默认未分配但仍可录制，菜单按真实 store/router 前置条件置灰。`Command-N` 与 `Command-,` 保持标准命令；自定义写入 `AppDefaults.shared` 的单个原子 blob，不进入 `TimeTrackerStore`、SwiftData/CloudKit 或库的全局 hotkey 存储。
 - Scene presentation：主窗口与 macOS Settings 各自持有 `AppPresentationRouter`，共享 Store 但不共享 sheet。每个 scene 只有一个 `AppPresentationHost.sheet(item:)`，因此同一 scene 的编辑器不会重叠或覆盖脏草稿，另一个 scene 也不会错误弹出当前动作。router 忙时不替换现有内容；matching-ID callback 才能 replace/dismiss，防止旧 sheet 回调关闭新 sheet。macOS New Task / Add Time 命令只作用于 focused 主 scene，router 忙时禁用。
 - Scene feedback：主窗口与 macOS Settings 各自持有 `AppSceneFeedbackRouter`，共享 Store 但不共享 alert 队列。JSON 导出、数据库清理和同步恢复已使用 throwing 边界：成功/状态变化就地显示，失败只进入发起 scene 的队列，文件选择器取消不是错误。`ContentView` 对尚未迁移的 Store `errorMessage` 仅作临时桥接；新增用户操作不得依赖该共享槽位。

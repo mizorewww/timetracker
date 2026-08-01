@@ -2,7 +2,7 @@
 
 Status: current implementation and architecture guardrails
 
-Reviewed: 2026-07-28
+Reviewed: 2026-08-01
 
 Time Tracker is a local-first SwiftUI app whose source of truth is the time ledger, not a screen-level timer flag. This document answers two practical questions:
 
@@ -55,6 +55,16 @@ Repository query
 ```
 
 Views should render existing snapshots. They should not calculate analytics, tree rollups, or forecast decisions inside `body`. `TimelineView` is acceptable for clock labels; it is not a place to rebuild analytics.
+
+Responsive geometry is also an invalidation boundary. `AppRootView` retains only
+the compact/regular width band because the product shell has one 720 pt
+breakpoint; raw live-resize width must not enter root state. The desktop Today
+page maps raw geometry to `HomeViewportMeasurement`, whose 8 pt buckets are
+anchored at every semantic breakpoint and capped once the 1180 pt content width
+is reached. Primary regular-shell destinations replace content inside one stable
+outer `NavigationStack`; a page switch must not reconstruct navigation
+infrastructure. Domain snapshots and routes remain above all three presentation
+choices.
 
 ## Domain Stores and Refresh
 

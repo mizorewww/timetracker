@@ -5,61 +5,6 @@ import Testing
 
 @Suite(.serialized)
 struct CoreCloudRecoveryGateTests {
-    @Test
-    func factoryRunsRecoveryOnlyInsideTheEnabledCloudBranch() throws {
-        let source = try sourceText("timetracker/App/AppModelContainerFactory.swift")
-        let demoBranch = try #require(source.range(of: "if AppDemoDataConfiguration.usesLocalDemoStore"))
-        let disabledBranch = try #require(source.range(of: "guard AppCloudSync.isEnabled else"))
-        let recoveryGate = try #require(
-            source.range(of: "performPendingCloudRecoveryResetAfterProtectingLocalFallback(")
-        )
-        let cloudContainer = try #require(
-            source.range(of: "configurations: [cloudConfiguration]", options: .backwards)
-        )
-
-        #expect(demoBranch.lowerBound < disabledBranch.lowerBound)
-        #expect(disabledBranch.lowerBound < recoveryGate.lowerBound)
-        #expect(recoveryGate.lowerBound < cloudContainer.lowerBound)
-    }
-
-    @Test
-    func factoryKeepsFallbackProtectionAndDestructiveRecoveryUnderOneStoreLock() throws {
-        let factorySource = try sourceText("timetracker/App/AppModelContainerFactory.swift")
-        let fallbackSource = try sourceText(
-            "timetracker/App/AppModelContainerFactory+Fallback.swift"
-        )
-        #expect(
-            factorySource.contains(
-                "performPendingCloudRecoveryResetAfterProtectingLocalFallback("
-            )
-        )
-        let outerLock = try #require(
-            fallbackSource.range(of: "StoreScopedTimerMutationLock().withExclusiveAccess")
-        )
-        let fallbackRefresh = try #require(
-            fallbackSource.range(
-                of: "refreshLocalFallbackRecoverySnapshotBeforeCloudReset(",
-                range: outerLock.lowerBound ..< fallbackSource.endIndex
-            )
-        )
-        let recoveryPreparation = try #require(
-            fallbackSource.range(
-                of: "AppCloudSync.preparePendingCloudRecoveryReset()",
-                range: fallbackRefresh.lowerBound ..< fallbackSource.endIndex
-            )
-        )
-        let destructiveRecovery = try #require(
-            fallbackSource.range(
-                of: "AppCloudSync.performPendingCloudRecoveryResetIfNeeded(",
-                range: recoveryPreparation.lowerBound ..< fallbackSource.endIndex
-            )
-        )
-
-        #expect(outerLock.lowerBound < fallbackRefresh.lowerBound)
-        #expect(fallbackRefresh.lowerBound < recoveryPreparation.lowerBound)
-        #expect(recoveryPreparation.lowerBound < destructiveRecovery.lowerBound)
-    }
-
     @Test @MainActor
     func localFallbackPreflightRecapturesACommitMissedByPostCommitRecording() throws {
         try withRecoveryDefaults {

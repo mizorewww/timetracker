@@ -27,7 +27,7 @@
 
 ## 架构与设计决策
 
-- **薄封装**:Intent 只做参数解析与结果包装,所有写入经 `SystemActionCommandHandler` → `StoreScoped*CommandCoordinator` → 与应用内操作完全相同的准入、事务与同步路径。契约测试 `CoreSystemActionCommandTests.appIntentsAreThinWrappersAroundSystemActionCommands` 锁定 Intent 不得直接触碰 SwiftData 模型。
+- **薄封装**:Intent 只做参数解析与结果包装,所有写入经 `SystemActionCommandHandler` → `StoreScoped*CommandCoordinator` → 与应用内操作完全相同的准入、事务与同步路径。该边界通过 store-scoped timer/checklist/ledger 命令的可观察原子结果验证，不再以扫描 Intent 源码的字符串契约固化实现。
 - **跨进程锁**:快捷指令在独立进程运行,与应用、Widget 共享 `.timer-mutations.lock` 文件锁域(见 `PathFileLock`),锁获取有 5 秒超时,竞争时干净报错而非卡死。
 - **提交后效果**:每个变更 Intent 在提交后统一执行 `SystemActionPostCommitEffects`(快照记录、Live Activity 调和、跨 scene 广播),与手表命令同一条路径。
 - **`Stop Timer` 只停一段**:单停止语义与应用内一致(多计时并行时必须显式指定目标,避免误停)。
@@ -42,5 +42,5 @@
 
 ## 测试
 
-- `CoreSystemActionCommandTests`:命令层语义(含 stop-all 全停断言)与 Intent 薄封装契约。
-- 模拟器验收通过 `xcodebuild test -only-testing:timetrackerTests/CoreSystemActionCommandTests` 运行。
+- 自动化回归聚焦 store-scoped 命令的原子写、精确停止、陈旧调用拒绝与恢复只读边界。
+- Shortcuts/App Intent 的参数解析、系统展示和真实调用链在受影响发布中作为设备验收项执行，不以源码字符串扫描替代。

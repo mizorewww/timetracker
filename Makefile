@@ -12,16 +12,13 @@ DEVELOPMENT_TEAM ?= LT98S43NKA
 CONFIGURATION    ?= Debug
 TEST_ONLY        ?= timetrackerTests
 SCRIPTS          := scripts
-LIVE_LLM_UI_DEVICE_TYPE ?= com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro
-LIVE_LLM_UI_RUNTIME ?= com.apple.CoreSimulator.SimRuntime.iOS-27-0
 UI_TEST_DEVICE_TYPE ?= com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro
 UI_TEST_RUNTIME ?= com.apple.CoreSimulator.SimRuntime.iOS-27-0
-UI_TEST_ONLY ?= timetrackerUITests/timetrackerUITests
+UI_TEST_ONLY ?= timetrackerUITests/AdaptiveShellUITests
 UI_TEST_CONFIGURATION ?= Debug
 UI_TEST_RESULT_ROOT ?= build/UITestResults
 
 -include .env
-export TIMETRACKER_LIVE_LLM_API_KEY
 
 .PHONY: help
 help: ## 列出所有目标
@@ -122,70 +119,6 @@ test-ui-macos: ## 在 macOS 上运行所选 XCUITest
 	    -resultBundlePath "$$result_bundle" \
 	    -only-testing:$(UI_TEST_ONLY) \
 	    -parallel-testing-enabled NO
-
-.PHONY: test-llm-live
-test-llm-live: ## 用真实 DeepSeek API 验证提示词与任务计划(prompts/prompt28/prompt150/semantics/all)
-	@test -n "$${TIMETRACKER_LIVE_LLM_API_KEY:-}" || \
-	  { echo "TIMETRACKER_LIVE_LLM_API_KEY must be set in the environment or .env" >&2; exit 2; }
-	@set -eu; \
-	  live_dir="$(CURDIR)/build/LiveLLMHarness"; \
-	  mkdir -p "$$live_dir"; \
-	  umask 077; \
-	  printf '%s' "$${TIMETRACKER_LIVE_LLM_API_KEY}" > "$$live_dir/api-key"; \
-	  printf '%s' "$${TIMETRACKER_LIVE_LLM_SCENARIO:-prompt28}" > "$$live_dir/scenario"; \
-	  printf '%s' "$${TIMETRACKER_LIVE_LLM_ENDPOINT:-https://api.deepseek.com}" > "$$live_dir/endpoint"; \
-	  printf '%s' "$${TIMETRACKER_LIVE_LLM_MODEL:-deepseek-v4-flash}" > "$$live_dir/model"; \
-	  : > "$$live_dir/run"; \
-	  cleanup_live_llm() { \
-	    for name in run api-key scenario endpoint model; do \
-	      test ! -e "$$live_dir/$$name" || unlink "$$live_dir/$$name"; \
-	    done; \
-	    rmdir "$$live_dir" 2>/dev/null || true; \
-	  }; \
-	  trap cleanup_live_llm EXIT INT TERM; \
-	  xcodebuild test -project $(PROJECT) -scheme $(SCHEME) \
-	    -destination 'platform=macOS' \
-	    -only-testing:timetrackerTests/LiveDeepSeekTaskWorkspaceTests \
-	    -parallel-testing-enabled NO
-
-.PHONY: test-llm-live-ui
-test-llm-live-ui: ## 在临时 iPhone 模拟器中用真实 DeepSeek 验证 Generate/Preview/Apply
-	@test -n "$${TIMETRACKER_LIVE_LLM_API_KEY:-}" || \
-	  { echo "TIMETRACKER_LIVE_LLM_API_KEY must be set in the environment or .env" >&2; exit 2; }
-	@set -eu; \
-	  live_dir="$(CURDIR)/build/LiveLLMUIHarness"; \
-	  run_id="$$(date +%Y%m%d-%H%M%S)"; \
-	  screenshot_dir="$$live_dir/screenshots-$$run_id"; \
-	  result_bundle="$$live_dir/LiveLLMUI-$$run_id.xcresult"; \
-	  mkdir -p "$$live_dir" "$$screenshot_dir"; \
-	  umask 077; \
-	  printf '%s' "$${TIMETRACKER_LIVE_LLM_API_KEY}" > "$$live_dir/api-key"; \
-	  printf '%s' "$${TIMETRACKER_LIVE_LLM_ENDPOINT:-https://api.deepseek.com}" > "$$live_dir/endpoint"; \
-	  printf '%s' "$${TIMETRACKER_LIVE_LLM_MODEL:-deepseek-v4-flash}" > "$$live_dir/model"; \
-	  printf '%s' "$$screenshot_dir" > "$$live_dir/screenshot-dir"; \
-	  : > "$$live_dir/run"; \
-	  simulator_udid="$$(xcrun simctl create \
-	    "TimeTracker Live LLM $$run_id" \
-	    "$(LIVE_LLM_UI_DEVICE_TYPE)" \
-	    "$(LIVE_LLM_UI_RUNTIME)")"; \
-	  printf '%s' "$$simulator_udid" > "$$live_dir/simulator-udid"; \
-	  cleanup_live_llm_ui() { \
-	    xcrun simctl terminate "$$simulator_udid" me.mezorewww.timetracker >/dev/null 2>&1 || true; \
-	    xcrun simctl shutdown "$$simulator_udid" >/dev/null 2>&1 || true; \
-	    xcrun simctl delete "$$simulator_udid" >/dev/null 2>&1 || true; \
-	    for name in run api-key endpoint model screenshot-dir simulator-udid; do \
-	      test ! -e "$$live_dir/$$name" || unlink "$$live_dir/$$name"; \
-	    done; \
-	  }; \
-	  trap cleanup_live_llm_ui EXIT INT TERM; \
-	  xcrun simctl boot "$$simulator_udid"; \
-	  xcrun simctl bootstatus "$$simulator_udid" -b; \
-	  xcodebuild test -project $(PROJECT) -scheme $(SCHEME) \
-	    -destination "platform=iOS Simulator,id=$$simulator_udid" \
-	    -resultBundlePath "$$result_bundle" \
-	    -only-testing:timetrackerUITests/timetrackerUITests/testLiveDeepSeekTaskPlanGeneratePreviewAndApply \
-	    -parallel-testing-enabled NO \
-	    -maximum-parallel-testing-workers 1
 
 # ── 校验 ──────────────────────────────────────────────────────
 .PHONY: localization-check

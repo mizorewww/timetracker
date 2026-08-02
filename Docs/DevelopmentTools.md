@@ -19,7 +19,6 @@
 | `make build-install-all` | 构建 iOS+Watch 与 macOS(默认 Release),安装到设备并复制到 /Applications |
 | `make test` | macOS 单元测试；默认运行 `timetrackerTests`，可用 `TEST_ONLY=timetrackerTests/SuiteName` 聚焦套件 |
 | `make test-ui-ios` / `make test-ui-macos` | 运行 `UI_TEST_ONLY` 指定的 XCUITest；iOS 使用运行后自动删除的临时模拟器，结果保存在 `build/UITestResults` |
-| `make test-llm-live` | 用真实 DeepSeek API 跑三条 AI 提示词与任务计划验收；从 `TIMETRACKER_LIVE_LLM_API_KEY` 或本地 `.env` 读取凭据 |
 | `make localization-check` | 静态校验所有 `.strings` 资源在三语种间 key 一致(无需 `xcodebuild`,也作为 pre-commit 闸门) |
 | `make format` | 用 SwiftFormat 原地格式化所有 Swift 源 |
 | `make format-check` | 只读校验 Swift 源是否符合 SwiftFormat(不修改) |

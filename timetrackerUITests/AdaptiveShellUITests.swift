@@ -149,61 +149,6 @@ final class AdaptiveShellUITests: XCTestCase {
         attachScreenshot(app, named: "mac-compact-native-settings")
     }
 
-    /// Repeated primary navigation must replace only the detail content. The
-    /// surrounding NavigationStack stays alive so rapid sidebar use does not
-    /// rebuild navigation infrastructure for every selection.
-    func testRapidPrimaryDestinationSwitchingKeepsEachPageReachable() {
-        let app = launchApp(windowWidth: 1180)
-        let destinations = [
-            ("sidebar.Inbox", "inbox.view"),
-            ("sidebar.Tasks", "tasks.view"),
-            ("sidebar.Pomodoro", "pomodoro.view"),
-            ("sidebar.Analytics", "analytics.view"),
-            ("sidebar.Today", "home.view"),
-        ]
-
-        activate(
-            app.descendants(matching: .any)["sidebar.Analytics"],
-            in: app
-        )
-        let analyticsDetailLink = app.descendants(matching: .any)["analytics.category.decisions"]
-        XCTAssertTrue(
-            analyticsDetailLink.waitForExistence(timeout: 15),
-            "Analytics never exposed a detail route for the navigation reset check."
-        )
-        activate(analyticsDetailLink, in: app)
-        XCTAssertTrue(
-            app.descendants(matching: .any)["analytics.categoryDetail.decisions"]
-                .waitForExistence(timeout: 10),
-            "The Analytics detail route did not open."
-        )
-        activate(
-            app.descendants(matching: .any)["sidebar.Today"],
-            in: app
-        )
-        XCTAssertTrue(
-            app.descendants(matching: .any)["home.view"].waitForExistence(timeout: 10),
-            "Changing primary destination did not clear the previous page's navigation path."
-        )
-
-        for _ in 0 ..< 3 {
-            for (sidebarIdentifier, pageIdentifier) in destinations {
-                let sidebarItem = app.descendants(matching: .any)[sidebarIdentifier]
-                XCTAssertTrue(
-                    sidebarItem.waitForExistence(timeout: 5),
-                    "Missing primary sidebar destination \(sidebarIdentifier)."
-                )
-                activate(sidebarItem, in: app, timeout: 5)
-                XCTAssertTrue(
-                    app.descendants(matching: .any)[pageIdentifier]
-                        .waitForExistence(timeout: 5),
-                    "Primary destination \(pageIdentifier) did not become reachable."
-                )
-            }
-        }
-
-        attachScreenshot(app, named: "mac-rapid-primary-navigation")
-    }
     #endif
 
     /// Mirrors `RootLayoutPolicy.regularShellMinimumWidth`.

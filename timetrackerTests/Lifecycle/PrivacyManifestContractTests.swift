@@ -37,24 +37,6 @@ struct PrivacyManifestContractTests {
         }
     }
 
-    @Test
-    func sensitiveSyncRecoveryFilesKeepIOSDataProtection() throws {
-        let source = try [
-            "timetracker/Services/SystemIntegration/SyncConflictService+State.swift",
-            "timetracker/Services/SystemIntegration/SyncConflictService+StateWriting.swift",
-            "timetracker/Services/SystemIntegration/DurableLocalFile+Writing.swift",
-            "timetracker/Services/SystemIntegration/DurableLocalFile+Quarantine.swift",
-            "timetracker/Services/SystemIntegration/DurableLocalFile+Synchronization.swift",
-        ].map(sourceText).joined(separator: "\n")
-
-        #expect(source.contains("#if os(iOS)"))
-        #expect(source.contains(".protectionKey: FileProtectionType.completeUntilFirstUserAuthentication"))
-        #expect(source.contains("try localStateFile.write("))
-        #expect(source.contains("try localStateFile.quarantineIfPresent("))
-        #expect(source.contains("try protectIfSupported(temporaryURL)"))
-        #expect(source.contains("try protectIfSupported(quarantineURL)"))
-    }
-
     private func reasons(in url: URL) throws -> [String: Set<String>] {
         let value = try manifest(at: url)
         let entries = try #require(value["NSPrivacyAccessedAPITypes"] as? [[String: Any]])

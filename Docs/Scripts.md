@@ -64,7 +64,7 @@ make localization-check
 scripts/localization_check.sh --quiet
 ```
 
-该脚本也是 pre-commit 闸门:提交前先以 `--quiet` 跑一次,缺 key 即中止提交。`--repo-root` 可覆盖仓库根。范围只做 key-set parity;`Localizable.strings` 的 value 内容禁令(如"软删除")仍由 `LocalizationContractTests` Swift 套件负责,二者互补。
+该脚本也是 pre-commit 闸门:提交前先以 `--quiet` 跑一次,缺 key 即中止提交。`--repo-root` 可覆盖仓库根。范围只做 key-set parity；翻译含义、禁用术语和产品语气属于本地化审查，不再通过扫描字符串内容的 Swift 测试固化。
 
 ## `make format` / `make format-check`(`format.sh`)
 

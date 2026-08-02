@@ -1,7 +1,7 @@
 # TimeTracker 代码文档
 
 状态：当前实现说明
-校对日期：2026-08-01
+校对日期：2026-08-02
 
 本文面向维护者，说明当前代码边界、数据流、扩展方式和验证入口。架构目标与未完成计划分别见 [Architecture](Architecture.md) 和 [NextDevelopmentPlan](NextDevelopmentPlan.md)。
 
@@ -245,7 +245,7 @@ PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更�
 - Analytics Activity Heatmaps 使用 `AnalyticsStandalonePage.heatmaps` 类型化路由和 `AnalyticsHeatmapView`。首页只保留入口；独立页直接复用 `HomeActivityHeatmapSection`、`todayHeatmapRenderableTaskIDs` 与 `preferences.todayHeatmapPeriod`，不得塞进 `AnalyticsCategoryDetailView`、加载无关 `AnalyticsSnapshot`、复制 Heatmap 图表，或显示 Analytics Day/Week/Month 控件。没有可渲染任务时显示配置空态，返回交给系统导航。
 - 月范围的前后导航只用 interval start 确定目标月份，不能把上一步被月末 clamp 的日期当成新的 day-of-month 锚点。`AnalyticsMonthNavigationAnchor` 必须由 Analytics 根状态持有并传到所有 period controls；手动日期选择和 range/Today 操作负责重置它。
 - Analytics Definitions 是 `AnalyticsGlossaryList` 拥有的非交互说明：区块开场、Gross/Wall/Overlap 的含义与计算、以及一个守恒的并发示例共同组成语义。不得用 `info.circle` 等图标暗示不存在的帮助动作，也不得为静态定义另造 popover；各定义使用稳定 identifier 并保持三语结构一致。
-- `CorePerformanceBudgetTests.fiftyThousandSegmentMutationUsesConstantSizedRollupDelta` 以 50,000 个 segment 约束单 segment 增量更新和 cached recent ranking；`timerStartIgnoresOneHundredThousandUnrelatedRecords` 以 50,000 个无关 task 加 50,000 个无关 synced preference 约束共享 Timer admission 的命令时间；最终是否通过仍以冻结工作树的 xcresult 为准。
+- 性能敏感路径使用可观察的有界 query/incremental correctness 测试加 seeded Release Instruments 前后对比；不在 app-hosted 单元套件中用易受主机负载影响的 wall-clock 阈值固化实现。最终结论以冻结工作树、明确数据规模和设备的 trace/xcresult 为准。
 
 ## 5. 持久化、CloudKit 与迁移
 
@@ -481,7 +481,7 @@ Inbox 和 checklist 视觉自动建议各自最多占用 3 个调度槽；Checkl
 3. 正常字号下以稳定界面标识驱动的核心流程测试
 4. 少量稳定截图测试
 
-2026-07-25 已删除通过读取 Swift 源文件并匹配字符串来约束 UI 的源码扫描契约层（`CoreSourceLayoutTests` 与 UIContracts 源码扫描文件）：这类测试在等价重构后误报，维护成本高于护栏价值。少数混合文件保留了真正的行为测试，其中个别仍用 `sourceText(...)` 读取源码做 Deep Link 集成点、Live Activity 不可变属性或 scheme 并行化等非布局断言；这些是行为断言而非 UI 字符串扫描，不在禁止之列。新增测试必须落在上述四个层级；布局类验收使用截图/人工检查清单，不再新增源码字符串扫描。
+2026-08-02 的测试审计已删除所有通过读取 Swift 源文件并匹配字符串来约束实现的契约层：这类测试在等价重构后误报，也会让生产缺陷与同步修改的字符串断言一起变绿。新增测试必须落在上述行为层级；布局使用少量真实 UI 路径、截图与人工检查清单，架构边界通过可观察结果验证。解析 shipped entitlement、Privacy Manifest 或迁移 store fixture 不属于源码扫描。
 
 测试必须隔离 UserDefaults、Keychain、临时目录、时区与 locale。本轮已移除类别空分区测试对演示种子全局状态的依赖；新增测试仍应显式清理共享状态。
 

@@ -213,6 +213,8 @@ HealthKit 样本只进入 CloudKit-disabled 的 `AppleHealthReplicaSchemaV1` sto
 
 持久实体去重遵循确定性 last-write-wins：先比较 `updatedAt`，同一时间 tombstone 胜过 active row，再以 `createdAt`、`deviceID`、`clientMutationID` 稳定打破平局；没有 mutation ID 的 `TimeSegment` 使用稳定内容键。清理产生的 duplicate tombstone 不得反过来覆盖真正的新 canonical row。所有“只取可见记录”的查询必须先 deduplicate/LWW、再过滤 tombstone，禁止把过滤顺序颠倒。
 
+领域写事务内的查询必须随相关工作集而不是历史总量增长。`TaskRecurrencePersistenceState` 对 Segment/Pomodoro 只抓取 active candidate IDs，再回取同 ID 的全部物理行解析 canonical winner；数量记录不进入全局 state，materializer 在生成当天 occurrence 前只对 deterministic task/goal ID 执行 `fetchLimit = 1` 的 exact claim 查询。Checklist reorder 在 coordinator 完成 scoped CAS 后把同一 canonical item 数组交给 handler，handler 不得再次 fetch 全表。
+
 ### 番茄会话
 
 PomodoroRun、关联 TimeSession 与运行状态通过同一命令/仓储变更。`startedAt` 表示当前 focus/break phase 的起点，`phaseDeadline` 由持久状态与计划时长派生；它不是 View 本地倒计时。启动、前台、Pomodoro 页面出现和 deadline task 都会调用幂等 reconcile：过期 focus 在业务 deadline 截断 segment/session，避免后台挂起时间被算作专注；过期 break 不会自动新建 focus，下一轮仍需用户动作。
@@ -326,6 +328,8 @@ Cloud export 不以“收到任意成功回调”作为本机已同步证明。�
 Snapshot restore 把历史/外部 transport 当作不可信输入。进入原子 mutation 前，纯 preflight 会拒绝：单表超过 100,000 条或总计超过 250,000 条、任一表内重复 UUID、超过字段/总文本 UTF-8 预算（标题 4 KiB、note/reason 64 KiB、紧凑字段 256 B、preference JSON 256 KiB、总文本 32 MiB）、非有限或不在 `[1900-01-01, 2201-01-01)` 的日期、非有限/无法安全加 10 的 sort order、未知 enum raw value、越界 Pomodoro 计划（时长 `1...28,800` 秒、target rounds `1...24`、completed `0...target`）、类型不匹配或非法 JSON 偏好，以及能证明的 session/task 关系矛盾。当前 payload 中缺少被引用记录允许通过，以兼容 CloudKit staged import；已同时存在但任务不一致则拒绝。任一预检失败都不能改写现有记录或生成 tombstone；不做静默去重或钳制。
 
 这个边界覆盖显式 `SyncDataSnapshot.restoreAsLocalWinner` 恢复路径；已被 SwiftData/CloudKit 直接 materialize 进 context 的初始 import 不会倒流经该 snapshot preflight，不得用此证据宣称所有 CloudKit 输入已被同等拦截。
+
+`PathProcessFileLock` 的 `flock` 与 `SyncConflictProcessFileLock` 的 `lockf` 都使用 `MonotonicFileLockDeadline`/`ContinuousClock` 计算五秒 retry budget。两者保留不同的 POSIX contention errno 与关闭 descriptor 路径；禁止用 `Date` 或其他可调 wall clock 计算 elapsed timeout。
 
 ### 演示与测试数据
 

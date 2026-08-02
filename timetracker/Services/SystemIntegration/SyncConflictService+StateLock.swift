@@ -44,7 +44,9 @@ private final nonisolated class SyncConflictProcessFileLock: @unchecked Sendable
 
         // Bounded non-blocking acquire: never hang the caller (often the main
         // thread) on a lock held by a widget or Shortcuts process.
-        let deadline = Date().addingTimeInterval(Self.acquireTimeout)
+        let deadline = MonotonicFileLockDeadline(
+            timeout: Self.acquireTimeout
+        )
         var backoff = Self.initialBackoff
         while Darwin.lockf(descriptor, F_TLOCK, 0) != 0 {
             let errorCode = errno
@@ -55,7 +57,7 @@ private final nonisolated class SyncConflictProcessFileLock: @unchecked Sendable
                 Darwin.close(descriptor)
                 throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO)
             }
-            guard Date() < deadline else {
+            guard deadline.hasRemainingTime else {
                 Darwin.close(descriptor)
                 throw POSIXError(.ETIMEDOUT)
             }
@@ -65,7 +67,7 @@ private final nonisolated class SyncConflictProcessFileLock: @unchecked Sendable
         return descriptor
     }
 
-    private static let acquireTimeout: TimeInterval = 5
+    private static let acquireTimeout: Duration = .seconds(5)
     private static let initialBackoff: useconds_t = 25000
     private static let maximumBackoff: useconds_t = 250_000
 

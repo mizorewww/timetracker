@@ -7,6 +7,114 @@ import Testing
 @MainActor
 struct TaskRecurrenceWorkEligibilityTests {
     @Test
+    func orphanQuantityEntryClaimPreventsGeneratedOccurrence() throws {
+        let context = try makeTestContext()
+        let template = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "seed"
+        ).createTask(
+            title: "Imported template",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let now = try date(year: 2026, month: 8, day: 2, hour: 12)
+        let dayKey = "2026-08-02"
+        let ruleID = TaskProgressIdentity.recurrenceRuleID(
+            templateTaskID: template.id
+        )
+        let generatedTaskID = TaskProgressIdentity.generatedTaskID(
+            ruleID: ruleID,
+            dayKey: dayKey
+        )
+        context.insert(
+            TaskQuantityEntry(
+                id: UUID(),
+                taskID: generatedTaskID,
+                amount: 1,
+                recordedAt: now,
+                createdAt: now,
+                deviceID: "staged-import"
+            )
+        )
+        try context.save()
+
+        let outcome = try recurrenceCoordinator(container: context.container)
+            .createDailyRule(
+                templateTaskID: template.id,
+                startDayKey: dayKey,
+                timeZoneIdentifier: "Asia/Singapore",
+                now: now
+            )
+
+        #expect(outcome.materializations.isEmpty)
+        let fresh = ModelContext(context.container)
+        #expect(
+            try fresh.fetch(FetchDescriptor<TaskNode>())
+                .contains { $0.id == generatedTaskID } == false
+        )
+        #expect(try fresh.fetch(FetchDescriptor<TaskRecurrenceOccurrence>()).isEmpty)
+    }
+
+    @Test
+    func activePomodoroBlocksRecurrenceTemplateCreation() throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "seed"
+        ).createTask(
+            title: "Active focus",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let run = PomodoroRun(taskID: task.id, deviceID: "pomodoro")
+        run.state = .focusing
+        context.insert(run)
+        try context.save()
+
+        #expect(throws: TaskRecurrenceMutationError.templateHasActiveWork) {
+            _ = try recurrenceCoordinator(container: context.container)
+                .createDailyRule(
+                    templateTaskID: task.id,
+                    startDayKey: "2026-08-02",
+                    timeZoneIdentifier: "Asia/Singapore",
+                    now: date(year: 2026, month: 8, day: 2, hour: 12)
+                )
+        }
+    }
+
+    @Test
+    func completedPomodoroHistoryDoesNotBlockRecurrenceTemplateCreation() throws {
+        let context = try makeTestContext()
+        let task = try SwiftDataTaskRepository(
+            context: context,
+            deviceID: "seed"
+        ).createTask(
+            title: "Past focus",
+            parentID: nil,
+            colorHex: nil,
+            iconName: nil
+        )
+        let now = try date(year: 2026, month: 8, day: 2, hour: 12)
+        let run = PomodoroRun(taskID: task.id, deviceID: "pomodoro")
+        run.state = .completed
+        run.endedAt = now
+        context.insert(run)
+        try context.save()
+
+        let outcome = try recurrenceCoordinator(container: context.container)
+            .createDailyRule(
+                templateTaskID: task.id,
+                startDayKey: "2026-08-02",
+                timeZoneIdentifier: "Asia/Singapore",
+                now: now
+            )
+
+        #expect(outcome.materializations.count == 1)
+    }
+
+    @Test
     func templateRemainsAParentButOnlyOccurrenceAcceptsDirectWork()
         throws
     {
@@ -361,6 +469,16 @@ private extension TaskRecurrenceWorkEligibilityTests {
                     hour: hour
                 )
             )
+        )
+    }
+
+    func recurrenceCoordinator(
+        container: ModelContainer
+    ) -> StoreScopedTaskRecurrenceCommandCoordinator {
+        StoreScopedTaskRecurrenceCommandCoordinator(
+            container: container,
+            writeAuthorization: .isolatedTestHarness,
+            deviceID: "recurrence"
         )
     }
 }

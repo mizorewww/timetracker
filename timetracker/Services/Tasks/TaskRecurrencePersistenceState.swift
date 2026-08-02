@@ -26,11 +26,8 @@ struct TaskRecurrencePersistenceState {
             FetchDescriptor<TaskRecurrenceOccurrence>()
         )
         let goals = try context.fetch(FetchDescriptor<TaskQuantityGoal>())
-        let entries = try context.fetch(FetchDescriptor<TaskQuantityEntry>())
         let activeSegments = try Self.activeSegments(in: context)
-        let pomodoroRuns = try context.fetch(
-            FetchDescriptor<PomodoroRun>()
-        ).visibleDeduplicatedByID()
+        let activePomodoroRuns = try Self.activePomodoroRuns(in: context)
 
         rulesByID = rules.latestByID()
         ruleRowsByID = Dictionary(grouping: rules, by: \.id)
@@ -45,7 +42,6 @@ struct TaskRecurrencePersistenceState {
             .union(occurrences.map(\.templateTaskID))
         claimedTaskIDs = Set(tasks.map(\.id))
             .union(occurrences.map(\.generatedTaskID))
-            .union(entries.map(\.taskID))
         claimedOccurrenceIDs = Set(occurrences.map(\.id))
         claimedOccurrenceKeys = Set(
             occurrences.map {
@@ -56,18 +52,13 @@ struct TaskRecurrencePersistenceState {
             }
         )
         claimedQuantityGoalIDs = Set(goals.map(\.id))
-            .union(entries.map(\.quantityGoalID))
         templateEligibleTaskIDs = TaskTrackingAvailabilityService()
             .trackableTaskIDs(tasks: Array(taskByID.values))
             .subtracting(Set(occurrences.map(\.generatedTaskID)))
         activeWorkTaskIDs = Set(
             activeSegments.map(\.taskID)
         ).union(
-            pomodoroRuns.lazy.filter {
-                $0.endedAt == nil &&
-                    $0.state != .completed &&
-                    $0.state != .cancelled
-            }.map(\.taskID)
+            activePomodoroRuns.map(\.taskID)
         )
     }
 
@@ -89,6 +80,53 @@ struct TaskRecurrencePersistenceState {
         return try context.fetch(canonicalDescriptor)
             .visibleDeduplicatedByID()
             .filter { $0.endedAt == nil }
+    }
+
+    private static func activePomodoroRuns(
+        in context: ModelContext
+    ) throws -> [PomodoroRun] {
+        let completed = PomodoroState.completed.rawValue
+        let cancelled = PomodoroState.cancelled.rawValue
+        let candidateDescriptor = FetchDescriptor<PomodoroRun>(
+            predicate: #Predicate {
+                $0.endedAt == nil &&
+                    $0.stateRaw != completed &&
+                    $0.stateRaw != cancelled
+            }
+        )
+        let candidateIDs = try Set(
+            context.fetch(candidateDescriptor).map(\.id)
+        )
+        guard candidateIDs.isEmpty == false else { return [] }
+
+        let requestedIDs = Array(candidateIDs)
+        let canonicalDescriptor = FetchDescriptor<PomodoroRun>(
+            predicate: #Predicate { requestedIDs.contains($0.id) }
+        )
+        return try context.fetch(canonicalDescriptor)
+            .visibleDeduplicatedByID()
+            .filter {
+                $0.endedAt == nil &&
+                    $0.stateRaw != completed &&
+                    $0.stateRaw != cancelled
+            }
+    }
+
+    static func hasQuantityEntryClaim(
+        taskID: UUID,
+        quantityGoalID: UUID,
+        in context: ModelContext
+    ) throws -> Bool {
+        let requestedTaskID = taskID
+        let requestedGoalID = quantityGoalID
+        var descriptor = FetchDescriptor<TaskQuantityEntry>(
+            predicate: #Predicate {
+                $0.taskID == requestedTaskID ||
+                    $0.quantityGoalID == requestedGoalID
+            }
+        )
+        descriptor.fetchLimit = 1
+        return try context.fetch(descriptor).isEmpty == false
     }
 
     func ancestors(of taskID: UUID) -> Set<UUID> {

@@ -47,7 +47,12 @@ extension StoreScopedTaskRecurrenceCommandCoordinator {
               state.claimedOccurrenceKeys.contains(occurrenceKey) == false,
               state.claimedTaskIDs.contains(generatedTaskID) == false,
               state.claimedQuantityGoalIDs.contains(generatedGoalID) ==
-              false
+              false,
+              try TaskRecurrencePersistenceState.hasQuantityEntryClaim(
+                  taskID: generatedTaskID,
+                  quantityGoalID: generatedGoalID,
+                  in: context
+              ) == false
         else {
             return
         }

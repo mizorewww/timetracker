@@ -193,6 +193,30 @@ struct StoreScopedChecklistCommandCoordinatorTests {
     }
 
     @Test
+    func successfulReorderPersistsTheValidatedScopedOrder() throws {
+        let context = try makeTestContext()
+        let task = try makeTask(in: context, title: "Reorder")
+        let coordinator = coordinator(container: context.container, deviceID: "test")
+        _ = try coordinator.add(taskID: task.id, title: "First")
+        _ = try coordinator.add(taskID: task.id, title: "Second")
+        _ = try coordinator.add(taskID: task.id, title: "Third")
+        let items = try visibleItems(in: context.container)
+            .sorted { $0.sortOrder < $1.sortOrder }
+        let expectedIDs = items.reversed().map(\.id)
+
+        let outcome = try coordinator.reorder(
+            baseline: ChecklistOrderMutationBaseline(taskID: task.id, items: items),
+            orderedItemIDs: expectedIDs
+        )
+
+        #expect(outcome.didMutate)
+        let persistedIDs = try visibleItems(in: context.container)
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .map(\.id)
+        #expect(persistedIDs == expectedIDs)
+    }
+
+    @Test
     func staleVisualSuggestionCannotOverwriteAManualVisualFromAnotherScene() throws {
         let context = try makeTestContext()
         let task = try makeTask(in: context, title: "Visual owner")

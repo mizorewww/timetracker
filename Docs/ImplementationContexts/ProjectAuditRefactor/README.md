@@ -13,6 +13,7 @@ only one behavior/refactor checkpoint is active at a time.
 | --- | --- | --- |
 | AUD-001 | `AUD-001-sync-startup-gate.md` | complete |
 | AUD-002, AUD-003 | `AUD-002-003-projection-metadata-recovery.md` | complete |
+| AUD-004, AUD-005, AUD-006 | `AUD-004-006-bounded-domain-work.md` | complete |
 
 Each checkpoint records its permanent contracts, temporary scaffolding,
 verification, cleanup, and commit before the next finding begins.

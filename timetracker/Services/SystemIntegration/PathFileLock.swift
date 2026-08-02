@@ -1,6 +1,21 @@
 import Darwin
 import Foundation
 
+nonisolated struct MonotonicFileLockDeadline: Sendable {
+    private let clock: ContinuousClock
+    private let deadline: ContinuousClock.Instant
+
+    init(timeout: Duration) {
+        let clock = ContinuousClock()
+        self.clock = clock
+        deadline = clock.now.advanced(by: timeout)
+    }
+
+    var hasRemainingTime: Bool {
+        clock.now < deadline
+    }
+}
+
 /// `flock` coordinates open descriptions across processes and path aliases.
 /// A recursive in-process lock keeps same-owner nested access from self-blocking.
 final nonisolated class PathProcessFileLock: @unchecked Sendable {
@@ -46,7 +61,9 @@ final nonisolated class PathProcessFileLock: @unchecked Sendable {
         // Widget and Shortcuts processes share this lock domain. A permanently
         // blocked wait freezes the caller (often the main thread), so retry
         // with backoff for a bounded budget and fail instead of hanging.
-        let deadline = Date().addingTimeInterval(Self.acquireTimeout)
+        let deadline = MonotonicFileLockDeadline(
+            timeout: Self.acquireTimeout
+        )
         var backoff = Self.initialBackoff
         while flock(descriptor, LOCK_EX | LOCK_NB) != 0 {
             let errorCode = errno
@@ -57,7 +74,7 @@ final nonisolated class PathProcessFileLock: @unchecked Sendable {
                 Darwin.close(descriptor)
                 throw POSIXError(POSIXErrorCode(rawValue: errorCode) ?? .EIO)
             }
-            guard Date() < deadline else {
+            guard deadline.hasRemainingTime else {
                 Darwin.close(descriptor)
                 throw POSIXError(.ETIMEDOUT)
             }
@@ -67,7 +84,7 @@ final nonisolated class PathProcessFileLock: @unchecked Sendable {
         return descriptor
     }
 
-    static var acquireTimeout: TimeInterval = 5
+    static var acquireTimeout: Duration = .seconds(5)
     private static let initialBackoff: useconds_t = 25000
     private static let maximumBackoff: useconds_t = 250_000
 

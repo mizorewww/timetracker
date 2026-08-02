@@ -87,24 +87,21 @@ struct ChecklistCommandHandler {
     }
 
     func reorder(
-        taskID: UUID,
         orderedItemIDs: [UUID],
+        existingItems: [ChecklistItem],
         context: ModelContext,
         now: Date = Date(),
         deviceID: String = DeviceIdentity.current
     ) throws {
-        let items = try context.fetch(FetchDescriptor<ChecklistItem>())
-            .visibleDeduplicatedByID()
-            .filter { $0.taskID == taskID }
-            .sorted { lhs, rhs in
-                if lhs.sortOrder != rhs.sortOrder {
-                    return lhs.sortOrder < rhs.sortOrder
-                }
-                if lhs.createdAt != rhs.createdAt {
-                    return lhs.createdAt < rhs.createdAt
-                }
-                return lhs.id.uuidString < rhs.id.uuidString
+        let items = existingItems.sorted { lhs, rhs in
+            if lhs.sortOrder != rhs.sortOrder {
+                return lhs.sortOrder < rhs.sortOrder
             }
+            if lhs.createdAt != rhs.createdAt {
+                return lhs.createdAt < rhs.createdAt
+            }
+            return lhs.id.uuidString < rhs.id.uuidString
+        }
         let itemByID = items.latestByID()
         let orderedItems = orderedItemIDs.compactMap { itemByID[$0] }
         guard orderedItems.count == items.count else { return }

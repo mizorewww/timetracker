@@ -147,8 +147,8 @@ struct StoreScopedChecklistCommandCoordinator {
                 return (nil, false)
             }
             try ChecklistCommandHandler().reorder(
-                taskID: baseline.taskID,
                 orderedItemIDs: orderedItemIDs,
+                existingItems: items,
                 context: context,
                 now: nowProvider(),
                 deviceID: deviceID

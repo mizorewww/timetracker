@@ -16,6 +16,7 @@ only one behavior/refactor checkpoint is active at a time.
 | AUD-004, AUD-005, AUD-006 | `AUD-004-006-bounded-domain-work.md` | complete |
 | AUD-007 | `AUD-007-swiftdata-test-lifetime.md` | complete |
 | AUD-008, AUD-009 | `AUD-008-009-ai-review-boundary.md` | complete |
+| AUD-010 | `AUD-010-watch-device-identity.md` | complete |
 
 Each checkpoint records its permanent contracts, temporary scaffolding,
 verification, cleanup, and commit before the next finding begins.

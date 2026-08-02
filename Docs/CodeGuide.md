@@ -351,7 +351,7 @@ Snapshot restore 把历史/外部 transport 当作不可信输入。进入原子
 
 任何新增 token、密码或私钥都默认遵守同样规则，除非有独立安全设计和用户授权。
 
-`DeviceIdentity` 是本机 `UserDefaults` 中的随机平台前缀 UUID，仅用于同步 tie-break 和 mutation metadata。读取时只复用“当前平台 `mac|ios|watch` 前缀 + 大写连字符规范 UUID”的完整值；错误平台、非规范 UUID、后缀、控制字符或超过 42 UTF-8 bytes 的值会被重新生成并回写。新 identity 不包含 Mac 主机名、账户名或其他可读设备名称。
+`DeviceIdentity` 是本机 `UserDefaults` 中的随机平台前缀 UUID，仅用于同步 tie-break 和 mutation metadata。读取时只复用“当前平台 `mac|ios|watch` 前缀 + 大写连字符规范 UUID”的完整值；错误平台、非规范 UUID、后缀、控制字符或超过 42 UTF-8 bytes 的值会被重新生成并回写。主 App 与 Watch target 共同编译 `Shared/DeviceIdentity.swift`；Watch 新命令必须从 Watch 自身 defaults 取得稳定 `watch-UUID`，不能使用共享字面量、硬件/账户信息或连接状态。Watch 命令 UUID 仍是幂等键，升级前已入队的 legacy command 不重写 identity。新 identity 不包含 Mac 主机名、账户名或其他可读设备名称。
 
 Required Reason API 声明按 target 的真实 UserDefaults 边界维护：主 App 为 `1C8F.1` 与 `CA92.1`，Widget 为 App Group 场景的 `1C8F.1`，Watch 为自身偏好/队列场景的 `CA92.1`。Live Activity 当前没有独立 manifest；每次 Archive 必须检查合并结果和实际 API，不能用主 App 的声明替未覆盖 target 背书。
 

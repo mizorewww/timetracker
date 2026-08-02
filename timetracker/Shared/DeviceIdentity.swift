@@ -63,6 +63,20 @@ nonisolated enum DeviceIdentityStorage {
     }
 }
 
+nonisolated enum WatchDeviceIdentity {
+    static func loadOrCreate(
+        defaults: UserDefaults,
+        makeUUID: () -> UUID = UUID.init
+    ) -> String {
+        DeviceIdentityStorage.loadOrCreate(
+            defaults: defaults,
+            storageKey: DeviceIdentityPolicy.storageKey,
+            platform: .watch,
+            makeUUID: makeUUID
+        )
+    }
+}
+
 enum DeviceIdentity {
     nonisolated static let current = DeviceIdentityStorage.loadOrCreate(
         defaults: .standard,

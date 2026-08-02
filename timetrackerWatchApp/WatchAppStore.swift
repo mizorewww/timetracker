@@ -26,7 +26,7 @@ final class WatchAppStore: NSObject {
     }
 
     @ObservationIgnored let defaults: UserDefaults
-    @ObservationIgnored let deviceID = "watch"
+    @ObservationIgnored let deviceID: String
     @ObservationIgnored let confirmationTimeout: TimeInterval = 20
     @ObservationIgnored var confirmationTasks: [UUID: Task<Void, Never>] = [:]
     @ObservationIgnored var snapshotFreshnessTask: Task<Void, Never>?
@@ -39,6 +39,7 @@ final class WatchAppStore: NSObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        deviceID = WatchDeviceIdentity.loadOrCreate(defaults: defaults)
         if let data = defaults.data(forKey: Self.commandQueueKey) {
             if data.count <= WatchTransportLimits.maximumQueueEncodedBytes,
                let restoredQueue = try? JSONDecoder().decode(WatchCommandQueueState.self, from: data),

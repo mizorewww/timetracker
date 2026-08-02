@@ -38,7 +38,7 @@ LLM API 密钥使用 Keychain generic password：
 
 升级时若发现旧版本遗留的明文 API key，只允许读取一次并迁移到 Keychain，之后清空 UserDefaults 值并软删除敏感 SyncedPreference。Keychain 与 SwiftData 不是同一个事务：安全副本写入后，SwiftData redaction 在原子 mutation 中提交；若保存失败，redaction 会回滚而 Keychain 副本保留，后续启动可安全重试。迁移失败应报告错误，不应继续把明文当作正常存储。
 
-新生成的 `DeviceIdentity` 仅由平台前缀和随机 UUID 组成，不使用 Mac 主机名、账户名或用户可读设备名称。
+新生成的 `DeviceIdentity` 仅由平台前缀和随机 UUID 组成，不使用 Mac 主机名、账户名、硬件标识或用户可读设备名称。Apple Watch 在自身 `UserDefaults` 持久化独立的 `watch-UUID` 并随新命令发送；该值不是认证凭据，命令去重仍使用随机 command UUID。
 
 iOS 的 `SyncConflictState.json`、pending forced-upload 恢复镜像和腐损状态隔离文件可能包含任务、偏好或账本快照。写入后都使用 `FileProtectionType.completeUntilFirstUserAuthentication`：设备本次启动首次解锁前不可读，首次解锁后即使再次锁屏也可供后台 Shortcuts/CloudKit 协调使用。macOS 不使用这项 iOS Data Protection 属性；普通 file lock 本身不被当成用户快照。权威 state 读写限 128 MiB，recovery mirror 限 64 MiB；metadata 预检后仍只通过 `FileHandle` 读取 `limit + 1`，防止文件增长 TOCTOU 造成无界内存占用。写端在解析路径或触盘前先编码并验证 state 与 mirror；任一超限都保留旧的有效文件，独立 mirror rewrite 也会在最终写入边界复检。损坏或超限的权威 state 会隔离并要求显式恢复；损坏或超限的 pending mirror 会单独隔离并忽略，既不覆盖权威 state，也不阻塞仍可使用的主库。超限文件隔离不会整份载入内存。
 

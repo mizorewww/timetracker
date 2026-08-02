@@ -34,24 +34,38 @@ extension TimeTrackerStore {
         } else {
             persistenceWriteSafety = .ready
         }
+        let configuresSyncConflictState = writeAuthorization.usesApplicationState ||
+            syncConflictService.stateURLOverride != nil
+        let isCloudRecoveryPending = writeAuthorization.usesApplicationState &&
+            AppCloudSync.isCloudRecoveryPending
+        if isCloudRecoveryPending == false,
+           configuresSyncConflictState,
+           pendingSyncConflict == nil
+        {
+            do {
+                try replacePendingSyncConflict(
+                    syncConflictService.prompt()
+                )
+            } catch {
+                let detail = error.localizedDescription
+                persistenceWriteSafety = .cloudRecoveryPending(detail)
+                errorMessage = detail
+                return
+            }
+        }
+
+        // Keep facade commands unavailable until the authoritative conflict
+        // state has been read successfully. A failed prompt read must not let
+        // migrations, seeding, or a direct command race the recovery barrier.
         configureRepositoriesIfNeeded(context: context)
         guard taskRepository != nil else { return }
         if writeAuthorization.usesApplicationState {
             installSyncObservers()
         }
 
-        if writeAuthorization.usesApplicationState && AppCloudSync.isCloudRecoveryPending {
+        if isCloudRecoveryPending {
             configureCloudRecovery(context: context)
             return
-        }
-        let configuresSyncConflictState = writeAuthorization.usesApplicationState ||
-            syncConflictService.stateURLOverride != nil
-        if configuresSyncConflictState,
-           pendingSyncConflict == nil
-        {
-            replacePendingSyncConflict(
-                try? syncConflictService.prompt()
-            )
         }
         if pendingSyncConflict != nil {
             configureCloudRecovery(context: context)

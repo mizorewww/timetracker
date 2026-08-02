@@ -6,7 +6,7 @@ Only the primary agent edits this file. Candidate findings remain in owner files
 
 | ID | Severity | Category | Root cause | Evidence | Owner review | Primary validation |
 | --- | --- | --- | --- | --- | --- | --- |
-| AUD-001 | high | latent-bug, hack, security/privacy | Startup suppresses authoritative sync-conflict read failure and performs write-side work while safety state is unknown | `timetracker/Stores/Facade/TimeTrackerStore+Configuration.swift:47` | PRI-001, PSS-001 | confirmed |
+| AUD-001 | high | latent-bug, hack, security/privacy | Startup suppresses authoritative sync-conflict read failure and performs write-side work while safety state is unknown | `timetracker/Stores/Facade/TimeTrackerStore+Configuration.swift:47` | PRI-001, PSS-001 | resolved and verified 2026-08-02 |
 | AUD-002 | medium | latent-bug, durability | Corrupt full-reconciliation attempt is quarantined as absence, permitting incremental continuation from an old cursor | `timetracker/Services/SystemIntegration/PersistentHistoryLaneCursorStore.swift:256`, `:537` | PSS-002 | confirmed |
 | AUD-003 | medium | latent-bug, availability | Corrupt reset-epoch fence fails closed but has no conservative repair path; registration, lanes, and reset all remain disabled | `timetracker/Services/SystemIntegration/PersistentHistoryLaneCursorStore.swift:100`, `:110`, `:431` | PSS-003 | confirmed |
 | AUD-004 | medium | performance, latent-bug, code-smell | Recurrence lifecycle loads all quantity-entry and Pomodoro history despite the active-row bounded contract | `timetracker/Services/Tasks/TaskRecurrencePersistenceState.swift:22` | DCP-003 | confirmed |

@@ -6,6 +6,56 @@ import Testing
 @Suite(.serialized)
 struct CoreCloudRecoveryGateTests {
     @Test @MainActor
+    func unreadableInitialConflictPromptBlocksEveryStartupWrite() throws {
+        try withRecoveryDefaults {
+            let defaults = AppDefaults.shared
+            defaults.set(
+                55,
+                forKey: AppPreferenceKey.defaultFocusMinutes.rawValue
+            )
+
+            let fixtureRoot = FileManager.default.temporaryDirectory
+                .appendingPathComponent(
+                    "TimeTrackerStartupPromptGateTests-\(UUID().uuidString)",
+                    isDirectory: true
+                )
+            defer { try? FileManager.default.removeItem(at: fixtureRoot) }
+            let stateURL = fixtureRoot.appendingPathComponent("sync/state.json")
+            try FileManager.default.createDirectory(
+                at: stateURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try Data("{".utf8).write(to: stateURL)
+
+            let context = try makeTestContext()
+            let store = TimeTrackerStore(
+                appleHealthDataReader: UnavailableAppleHealthDataReader(),
+                appleHealthTimelinePreferenceStore:
+                TestAppleHealthTimelinePreferenceStore(),
+                writeAuthorization: .isolatedTestHarness,
+                syncConflictService: SyncConflictService(stateURL: stateURL)
+            )
+
+            store.configureIfNeeded(context: context)
+
+            #expect(store.hasCompletedStartupConfiguration == false)
+            #expect(store.persistenceWriteSafety != .ready)
+            #expect(store.errorMessage?.isEmpty == false)
+            #expect(
+                try context.fetch(FetchDescriptor<SyncedPreference>()).isEmpty
+            )
+            #expect(
+                defaults.object(
+                    forKey: AppPreferenceKey.defaultFocusMinutes.rawValue
+                ) as? Int == 55
+            )
+            #expect(
+                defaults.bool(forKey: SyncedPreferenceService.migrationKey) == false
+            )
+        }
+    }
+
+    @Test @MainActor
     func localFallbackPreflightRecapturesACommitMissedByPostCommitRecording() throws {
         try withRecoveryDefaults {
             let defaults = AppDefaults.shared
@@ -646,6 +696,8 @@ struct CoreCloudRecoveryGateTests {
             AppCloudSync.activeCloudDownloadRecoveryKey,
             AppDemoDataConfiguration.overrideKey,
             SeedData.automaticDemoSeedingDisabledKey,
+            SyncedPreferenceService.migrationKey,
+            AppPreferenceKey.defaultFocusMinutes.rawValue,
         ]
         let previousValues = Dictionary(uniqueKeysWithValues: keys.map { ($0, defaults.object(forKey: $0)) })
         keys.forEach { defaults.removeObject(forKey: $0) }

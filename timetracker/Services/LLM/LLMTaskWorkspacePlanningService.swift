@@ -324,7 +324,7 @@ private extension LLMTaskWorkspacePlanningService {
             in: .whitespacesAndNewlines
         )
         guard preparedRequest.isEmpty == false else {
-            throw LLMTaskPlanServiceError.missingRequest
+            throw LLMTaskPlanningError.missingRequest
         }
         let preparedInstructions: String
         do {
@@ -333,12 +333,12 @@ private extension LLMTaskWorkspacePlanningService {
         } catch let error as LLMTaskPlanInstructionsValidationError {
             switch error {
             case .controlCharacter:
-                throw LLMTaskPlanServiceError.invalidField
+                throw LLMTaskPlanningError.invalidField
             case .byteLimitExceeded:
-                throw LLMTaskPlanServiceError.instructionsTooLarge
+                throw LLMTaskPlanningError.instructionsTooLarge
             }
         } catch {
-            throw LLMTaskPlanServiceError.invalidField
+            throw LLMTaskPlanningError.invalidField
         }
 
         let preparedEndpoint = endpoint.trimmingCharacters(
@@ -358,7 +358,7 @@ private extension LLMTaskWorkspacePlanningService {
             preparedAPIKey.utf8.count <=
             LLMSuggestionInputPolicy.maximumAPIKeyByteCount
         else {
-            throw LLMTaskPlanServiceError.requestTooLarge
+            throw LLMTaskPlanningError.requestTooLarge
         }
         guard let endpointURL = LLMInboxSuggestionService.chatCompletionsURL(
             endpoint: preparedEndpoint
@@ -369,7 +369,7 @@ private extension LLMTaskWorkspacePlanningService {
         let preparedModelID =
             AppPreferenceValueSanitizer.llmModelID(modelID)
         guard preparedModelID.isEmpty == false else {
-            throw LLMTaskPlanServiceError.missingModel
+            throw LLMTaskPlanningError.missingModel
         }
         return PreparedInputs(
             request: preparedRequest,

@@ -178,6 +178,12 @@ After the batch:
 
 Do not use broad `killall` commands and do not clean another agent's resources.
 
+Disk-backed SwiftData failure tests must not unlink a store directory while a
+live `ModelContainer` or `ModelContext` may still own SQLite sidecar
+descriptors. SwiftData can close those descriptors asynchronously; use a
+unique sandbox-temporary path and allow operating-system cleanup unless a
+fixture helper can prove every owner and sidecar are closed before removal.
+
 ## Final Evidence
 
 Only the last run against the frozen source state is final evidence. Report the command, pass/fail/skip counts, signing result, relevant UI/device evidence and cleanup. Earlier targeted runs are diagnostics and are never added together to impersonate one complete pass.

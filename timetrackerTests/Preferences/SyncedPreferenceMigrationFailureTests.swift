@@ -12,7 +12,6 @@ struct SyncedPreferenceMigrationFailureTests {
         defaults.set(55, forKey: AppPreferenceKey.defaultFocusMinutes.rawValue)
 
         let storeDirectory = try makeStoreDirectory()
-        defer { try? FileManager.default.removeItem(at: storeDirectory) }
         let storeURL = storeDirectory.appending(path: "legacy-preferences.store")
         let schema = TimeTrackerModelRegistry.currentSchema
         try initializeWritableStore(at: storeURL, schema: schema)
@@ -37,7 +36,6 @@ struct SyncedPreferenceMigrationFailureTests {
         let defaults = try makeDefaults()
         defer { clear(defaults) }
         let storeDirectory = try makeStoreDirectory()
-        defer { try? FileManager.default.removeItem(at: storeDirectory) }
         let storeURL = storeDirectory.appending(path: "sensitive-preferences.store")
         let schema = TimeTrackerModelRegistry.currentSchema
         let recordID = UUID()
@@ -118,6 +116,8 @@ struct SyncedPreferenceMigrationFailureTests {
     }
 
     private func makeStoreDirectory() throws -> URL {
+        // SwiftData may close SQLite sidecars asynchronously. Keep these unique
+        // stores in the sandbox temp directory for operating-system cleanup.
         let url = FileManager.default.temporaryDirectory.appending(
             path: "SyncedPreferenceMigrationTests-\(UUID().uuidString)",
             directoryHint: .isDirectory

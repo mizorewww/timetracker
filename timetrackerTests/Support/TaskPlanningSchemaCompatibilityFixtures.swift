@@ -4,7 +4,6 @@ import SwiftData
 
 @MainActor
 struct LegacyV12TaskPlanningStoreFixture {
-    let directory: URL
     let storeURL: URL
     let taskID: UUID
 
@@ -45,7 +44,6 @@ struct LegacyV12TaskPlanningStoreFixture {
         }
 
         return LegacyV12TaskPlanningStoreFixture(
-            directory: directory,
             storeURL: storeURL,
             taskID: taskID
         )
@@ -69,9 +67,5 @@ struct LegacyV12TaskPlanningStoreFixture {
             )
             return try body(ModelContext(container))
         }
-    }
-
-    func remove() {
-        try? FileManager.default.removeItem(at: directory)
     }
 }

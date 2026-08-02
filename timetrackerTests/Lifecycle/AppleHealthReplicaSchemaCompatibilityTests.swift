@@ -12,7 +12,8 @@ struct AppleHealthReplicaSchemaCompatibilityTests {
                 path: "AppleHealthReplicaV1-\(UUID().uuidString)",
                 directoryHint: .isDirectory
             )
-        defer { try? FileManager.default.removeItem(at: directory) }
+        // SwiftData may close SQLite sidecars asynchronously. Keep this unique
+        // store in the sandbox temp directory for operating-system cleanup.
         try FileManager.default.createDirectory(
             at: directory,
             withIntermediateDirectories: true

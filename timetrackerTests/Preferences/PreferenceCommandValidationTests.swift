@@ -178,7 +178,6 @@ struct PreferenceCommandValidationTests {
     @Test @MainActor
     func standaloneCommandRollsBackWhenReadOnlyStoreCannotSave() throws {
         let storeDirectory = try makeStoreDirectory()
-        defer { try? FileManager.default.removeItem(at: storeDirectory) }
         let storeURL = storeDirectory.appending(path: "preferences.store")
         let schema = TimeTrackerModelRegistry.currentSchema
         let preferenceID = UUID()
@@ -324,6 +323,8 @@ struct PreferenceCommandValidationTests {
     }
 
     private func makeStoreDirectory() throws -> URL {
+        // SwiftData may close SQLite sidecars asynchronously. Keep this unique
+        // store in the sandbox temp directory for operating-system cleanup.
         let url = FileManager.default.temporaryDirectory.appending(
             path: "PreferenceCommandValidationTests-\(UUID().uuidString)",
             directoryHint: .isDirectory

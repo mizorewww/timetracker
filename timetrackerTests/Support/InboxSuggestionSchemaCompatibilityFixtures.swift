@@ -4,7 +4,6 @@ import SwiftData
 
 @MainActor
 struct LegacyV11InboxSuggestionStoreFixture {
-    let directory: URL
     let storeURL: URL
     let inboxItemID: UUID
     let suggestionID: UUID
@@ -53,7 +52,6 @@ struct LegacyV11InboxSuggestionStoreFixture {
         }
 
         return LegacyV11InboxSuggestionStoreFixture(
-            directory: directory,
             storeURL: storeURL,
             inboxItemID: ids.0,
             suggestionID: ids.1,
@@ -79,9 +77,5 @@ struct LegacyV11InboxSuggestionStoreFixture {
             )
             return try body(ModelContext(container))
         }
-    }
-
-    func remove() {
-        try? FileManager.default.removeItem(at: directory)
     }
 }

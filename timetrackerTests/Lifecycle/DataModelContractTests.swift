@@ -395,7 +395,6 @@ struct DataModelContractTests {
     @Test @MainActor
     func versionEightStoreMigratesToCurrentSchemaWithoutTheLegacyDailySummaryCache() throws {
         let fixture = try LegacyV8DailySummaryStoreFixture.create()
-        defer { fixture.remove() }
 
         try fixture.withCurrentContext { context in
             let taskIDs = try context.fetch(FetchDescriptor<TaskNode>()).map(\.id)
@@ -408,7 +407,6 @@ struct DataModelContractTests {
     @Test @MainActor
     func versionNineStoreMigratesInboxSuggestionIdentityAndDismissalState() throws {
         let fixture = try LegacyV9InboxStoreFixture.create()
-        defer { fixture.remove() }
 
         try fixture.withCurrentContext { context in
             let items = try context.fetch(FetchDescriptor<InboxItem>())

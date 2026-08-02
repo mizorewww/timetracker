@@ -67,7 +67,8 @@ struct CoreCloudRecoveryGateTests {
                     "TimeTrackerFallbackPreflightTests-\(UUID().uuidString)",
                     isDirectory: true
                 )
-            defer { try? FileManager.default.removeItem(at: fixtureRoot) }
+            // The disk-backed container below may close SQLite sidecars
+            // asynchronously. Leave this unique sandbox-temp fixture to the OS.
             let storeURL = fixtureRoot.appendingPathComponent("fallback.store")
             let stateURL = fixtureRoot.appendingPathComponent("sync/state.json")
             let schema = TimeTrackerModelRegistry.currentSchema

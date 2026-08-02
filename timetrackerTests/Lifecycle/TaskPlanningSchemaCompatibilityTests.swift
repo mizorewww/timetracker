@@ -8,7 +8,6 @@ struct TaskPlanningSchemaCompatibilityTests {
     @Test @MainActor
     func versionTwelveStoreMigratesToTaskProgressSchema() throws {
         let fixture = try LegacyV12TaskPlanningStoreFixture.create()
-        defer { fixture.remove() }
 
         try fixture.withCurrentContext { context in
             let tasks = try context.fetch(FetchDescriptor<TaskNode>())

@@ -89,7 +89,6 @@ struct LegacyV4CategoryStoreFixture {
 
 @MainActor
 struct LegacyV8DailySummaryStoreFixture {
-    let directory: URL
     let storeURL: URL
     let taskID: UUID
 
@@ -129,7 +128,6 @@ struct LegacyV8DailySummaryStoreFixture {
         }
 
         return LegacyV8DailySummaryStoreFixture(
-            directory: directory,
             storeURL: storeURL,
             taskID: taskID
         )
@@ -154,15 +152,10 @@ struct LegacyV8DailySummaryStoreFixture {
             return try body(ModelContext(currentContainer))
         }
     }
-
-    func remove() {
-        try? FileManager.default.removeItem(at: directory)
-    }
 }
 
 @MainActor
 struct LegacyV9InboxStoreFixture {
-    let directory: URL
     let storeURL: URL
     let dismissedItemID: UUID
     let readyItemID: UUID
@@ -216,7 +209,6 @@ struct LegacyV9InboxStoreFixture {
         }
 
         return LegacyV9InboxStoreFixture(
-            directory: directory,
             storeURL: storeURL,
             dismissedItemID: ids.0,
             readyItemID: ids.1,
@@ -242,9 +234,5 @@ struct LegacyV9InboxStoreFixture {
             )
             return try body(ModelContext(currentContainer))
         }
-    }
-
-    func remove() {
-        try? FileManager.default.removeItem(at: directory)
     }
 }

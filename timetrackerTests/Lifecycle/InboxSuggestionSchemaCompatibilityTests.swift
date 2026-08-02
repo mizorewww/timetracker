@@ -52,7 +52,6 @@ struct InboxSuggestionSchemaCompatibilityTests {
     @Test @MainActor
     func versionElevenSuggestionMigratesToChecklistDestination() throws {
         let fixture = try LegacyV11InboxSuggestionStoreFixture.create()
-        defer { fixture.remove() }
 
         try fixture.withCurrentContext { context in
             let suggestion = try #require(

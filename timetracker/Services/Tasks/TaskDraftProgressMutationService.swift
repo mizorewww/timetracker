@@ -1,13 +1,13 @@
 import Foundation
 import SwiftData
 
-@MainActor
-struct TaskDraftProgressMutationService {
+nonisolated struct TaskDraftProgressMutationService {
     let context: ModelContext
     let container: ModelContainer
     let writeAuthorization: StoreWriteAuthorization
     let deviceID: String
-    let didReachCheckpoint: (TaskDraftMutationCheckpoint) throws -> Void
+    let didReachCheckpoint:
+        @Sendable (TaskDraftMutationCheckpoint) throws -> Void
 
     func apply(
         _ draft: PreparedTaskProgressDraft,

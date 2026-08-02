@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-extension StoreScopedTaskRecurrenceCommandCoordinator {
+nonisolated extension StoreScopedTaskRecurrenceCommandCoordinator {
     func insertDailyRule(
         templateTaskID: UUID,
         startDayKey: String,

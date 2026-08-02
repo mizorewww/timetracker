@@ -3,7 +3,7 @@
 /// Production stores always use `applicationState`. Unit tests opt into the
 /// isolated harness explicitly so a developer's real fallback/recovery state
 /// cannot make an in-memory fixture read-only or be changed by the test.
-enum StoreWriteAuthorization {
+nonisolated enum StoreWriteAuthorization: Sendable {
     case applicationState
     case isolatedTestHarness
 
@@ -14,6 +14,7 @@ enum StoreWriteAuthorization {
         return false
     }
 
+    @MainActor
     func requireUserWritesAllowed() throws {
         switch self {
         case .applicationState:

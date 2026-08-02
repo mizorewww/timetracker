@@ -148,7 +148,7 @@ extension TaskCategoryAssignment {
     }
 }
 
-extension Sequence<TaskCategoryAssignment> {
+nonisolated extension Sequence<TaskCategoryAssignment> {
     func logicalWinnersByTaskID() -> [UUID: TaskCategoryAssignment] {
         reduce(into: [:]) { winners, assignment in
             guard let current = winners[assignment.taskID] else {

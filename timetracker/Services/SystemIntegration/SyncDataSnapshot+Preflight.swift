@@ -120,7 +120,7 @@ enum SyncDataSnapshotPreflightError: LocalizedError, Equatable {
     }
 }
 
-enum SyncDataSnapshotRestoreLimits {
+nonisolated enum SyncDataSnapshotRestoreLimits {
     static let maximumRecordsPerTable = 100_000
     static let maximumTotalRecords = 250_000
     static let maximumTitleByteCount = 4 * 1024

@@ -1,6 +1,6 @@
 import Foundation
 
-extension SwiftDataTaskRepository {
+nonisolated extension SwiftDataTaskRepository {
     func createGeneratedRecurrenceTask(
         id: UUID,
         template: TaskNode,

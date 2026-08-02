@@ -138,7 +138,7 @@ private struct AppPresentationSheet: View {
                     )
                 },
                 onApply: { draft in
-                    let result = store.applyAITaskWorkspaceReview(draft)
+                    let result = await store.applyAITaskWorkspaceReview(draft)
                     if case let .applied(firstRootTaskID) = result {
                         if let firstRootTaskID {
                             store.openTaskDetail(firstRootTaskID)

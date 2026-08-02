@@ -1,8 +1,7 @@
 import Foundation
 import SwiftData
 
-@MainActor
-struct TaskRecurrencePersistenceState {
+nonisolated struct TaskRecurrencePersistenceState {
     var rulesByID: [UUID: TaskRecurrenceRule]
     let ruleRowsByID: [UUID: [TaskRecurrenceRule]]
     let taskRowsByID: [UUID: [TaskNode]]

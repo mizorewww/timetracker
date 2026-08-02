@@ -65,7 +65,7 @@ extension ChecklistItemVisual {
     }
 }
 
-extension Sequence<ChecklistItemVisual> {
+nonisolated extension Sequence<ChecklistItemVisual> {
     func logicalWinnersByChecklistItemID() -> [UUID: ChecklistItemVisual] {
         reduce(into: [:]) { winners, visual in
             guard let current = winners[visual.checklistItemID] else {

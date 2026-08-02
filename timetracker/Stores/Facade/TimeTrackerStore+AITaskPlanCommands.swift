@@ -2,13 +2,13 @@ import Foundation
 import SwiftData
 
 extension TimeTrackerStore {
-    func captureAITaskWorkspaceBaseline() throws
+    func captureAITaskWorkspaceBaseline() async throws
         -> AITaskAtomicMutationBaseline
     {
         guard let modelContext else {
             throw StoreError.notConfigured
         }
-        return try StoreScopedAITaskAtomicMutationCoordinator(
+        return try await StoreScopedAITaskAtomicMutationCoordinator(
             container: modelContext.container,
             writeAuthorization: writeAuthorization
         ).captureBaseline()
@@ -16,7 +16,7 @@ extension TimeTrackerStore {
 
     func applyAITaskWorkspaceReview(
         _ draft: AITaskWorkspaceReviewDraft
-    ) -> AITaskWorkspaceApplyResult {
+    ) async -> AITaskWorkspaceApplyResult {
         guard let modelContext else {
             let message = StoreError.notConfigured.localizedDescription
             errorMessage = message
@@ -34,7 +34,7 @@ extension TimeTrackerStore {
         }.first
 
         do {
-            let outcome = try StoreScopedAITaskAtomicMutationCoordinator(
+            let outcome = try await StoreScopedAITaskAtomicMutationCoordinator(
                 container: modelContext.container,
                 writeAuthorization: writeAuthorization
             ).apply(

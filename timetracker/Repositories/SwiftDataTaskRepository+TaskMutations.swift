@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-extension SwiftDataTaskRepository {
+nonisolated extension SwiftDataTaskRepository {
     @discardableResult
     func createTask(
         title: String,

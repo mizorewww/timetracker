@@ -8,7 +8,7 @@ struct AITaskPlanGeneratorSheet: View {
 
     let store: TimeTrackerStore
     let onConfigureAI: () -> Void
-    let onApply: (AITaskWorkspaceReviewDraft) -> AITaskWorkspaceApplyResult
+    let onApply: (AITaskWorkspaceReviewDraft) async -> AITaskWorkspaceApplyResult
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dismiss) private var dismiss
@@ -16,6 +16,7 @@ struct AITaskPlanGeneratorSheet: View {
     @State private var reviewDraft: AITaskWorkspaceReviewDraft?
     @State private var disclosedCounts: AITaskWorkspaceCounts?
     @State private var generationTask: Task<Void, Never>?
+    @State private var applyTask: Task<Void, Never>?
     @State private var generationRequestID = UUID()
     @State private var generationProgress: LLMGenerationProgress?
     @State private var isGenerating = false
@@ -142,9 +143,12 @@ struct AITaskPlanGeneratorSheet: View {
         } message: {
             Text(.app("aiTaskPlan.destructive.message"))
         }
-        .onAppear(perform: refreshDisclosureCounts)
+        .task {
+            await refreshDisclosureCounts()
+        }
         .onDisappear {
             generationTask?.cancel()
+            applyTask?.cancel()
         }
         .accessibilityIdentifier("aiTaskPlan.sheet")
     }
@@ -313,10 +317,10 @@ struct AITaskPlanGeneratorSheet: View {
         )
     }
 
-    private func refreshDisclosureCounts() {
+    private func refreshDisclosureCounts() async {
         guard disclosedCounts == nil else { return }
         do {
-            disclosedCounts = try AITaskWorkspaceCounts(
+            disclosedCounts = try await AITaskWorkspaceCounts(
                 snapshot: store.captureAITaskWorkspaceBaseline().snapshot
             )
         } catch {
@@ -343,7 +347,7 @@ struct AITaskPlanGeneratorSheet: View {
                 }
             }
             do {
-                let baseline = try store.captureAITaskWorkspaceBaseline()
+                let baseline = try await store.captureAITaskWorkspaceBaseline()
                 disclosedCounts = AITaskWorkspaceCounts(
                     snapshot: baseline.snapshot
                 )
@@ -430,13 +434,18 @@ struct AITaskPlanGeneratorSheet: View {
         guard isApplying == false else { return }
         isApplying = true
         errorMessage = nil
-        switch onApply(draft) {
-        case .applied:
-            dismiss()
-        case let .workspaceChanged(message),
-             let .failed(message):
-            errorMessage = message
-            isApplying = false
+        applyTask = Task { @MainActor in
+            let result = await onApply(draft)
+            applyTask = nil
+            guard Task.isCancelled == false else { return }
+            switch result {
+            case .applied:
+                dismiss()
+            case let .workspaceChanged(message),
+                 let .failed(message):
+                errorMessage = message
+                isApplying = false
+            }
         }
     }
 

@@ -9,8 +9,7 @@ nonisolated struct TaskQuantityGoalDraft: Codable, Equatable, Sendable {
         self.unitLabel = unitLabel
     }
 
-    @MainActor
-    init(goal: TaskQuantityGoal) {
+    nonisolated init(goal: TaskQuantityGoal) {
         targetAmount = goal.targetAmount
         unitLabel = goal.unitLabel
     }
@@ -47,8 +46,7 @@ nonisolated struct TaskDailyRecurrenceDraft:
         timeZoneIdentifier = timeZone.identifier
     }
 
-    @MainActor
-    init(rule: TaskRecurrenceRule) {
+    nonisolated init(rule: TaskRecurrenceRule) {
         isEnabled = rule.isEnabled
         startDayKey = rule.startDayKey
         timeZoneIdentifier = rule.timeZoneIdentifier

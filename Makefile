@@ -74,8 +74,9 @@ build-install-all: ## 构建 iOS+Watch 与 macOS(默认 Release),安装到设备
 .PHONY: test
 test: ## macOS 单元测试(timetrackerTests)
 	xcodebuild test -project $(PROJECT) -scheme $(SCHEME) \
+	  -configuration $(CONFIGURATION) \
 	  -destination 'platform=macOS' -only-testing:$(TEST_ONLY) \
-	  -parallel-testing-enabled NO
+	  -parallel-testing-enabled NO ENABLE_TESTABILITY=YES
 
 .PHONY: test-ui-ios
 test-ui-ios: ## 在自清理的临时 iOS 模拟器中运行所选 XCUITest

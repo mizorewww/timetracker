@@ -1,7 +1,6 @@
 import SwiftData
 
-@MainActor
-struct TimerModelContextFactory {
+nonisolated struct TimerModelContextFactory {
     private let makeContext: () throws -> ModelContext
 
     init(container: ModelContainer) {
@@ -23,8 +22,7 @@ struct TimerModelContextFactory {
 ///
 /// Ordinary timer commands, task lifecycle writes, Pomodoro phase commands,
 /// ledger record editing/deletion, and sync snapshot work use this lock domain.
-@MainActor
-struct StoreScopedTimerMutationTransaction {
+nonisolated struct StoreScopedTimerMutationTransaction {
     let scope: TimerStoreScope
     let contextFactory: TimerModelContextFactory
     let mutationLock: StoreScopedTimerMutationLock

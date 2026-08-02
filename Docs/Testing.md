@@ -101,6 +101,8 @@ The compact suite intentionally concentrates on:
 - Cloud recovery read-only/failure behavior and protection of committed local data;
 - preference batch validation, secret migration rollback and test-host isolation;
 - timer, checklist, manual ledger and Pomodoro store-scoped atomic mutations;
+- AI complete-workspace persistence actor isolation, stale-baseline rejection,
+  and checkpoint rollback at the durable command boundary;
 - recurrence timezone/day identity and direct-work eligibility;
 - future-dated Cloud winners that must not revive edited or deleted ledger facts;
 - bounded LLM response parsing, cancellation, status precedence and response-size limits;

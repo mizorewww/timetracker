@@ -49,8 +49,7 @@ nonisolated enum AITaskWorkspaceOperation: Equatable, Sendable {
 /// A provider-session workspace. CRUD calls mutate only this in-memory value;
 /// durable writes are intentionally left to a later preview/confirmation and
 /// store-scoped coordinator boundary.
-@MainActor
-struct AITaskWorkspaceOverlay: Equatable, Sendable {
+nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
     private(set) var snapshot: AITaskWorkspaceSnapshot
     private(set) var operations: [AITaskWorkspaceOperation] = []
 
@@ -442,7 +441,7 @@ struct AITaskWorkspaceOverlay: Equatable, Sendable {
     }
 }
 
-private extension AITaskWorkspaceOverlay {
+private nonisolated extension AITaskWorkspaceOverlay {
     struct PreparedTaskValues {
         let title: String
         let notes: String

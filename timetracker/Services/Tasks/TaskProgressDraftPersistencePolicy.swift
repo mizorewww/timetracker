@@ -1,6 +1,6 @@
 import Foundation
 
-enum TaskProgressDraftMutationError: LocalizedError, Equatable {
+nonisolated enum TaskProgressDraftMutationError: LocalizedError, Equatable {
     case invalidTargetAmount
     case unitRequired
     case unitContainsControlCharacter
@@ -40,18 +40,18 @@ enum TaskProgressDraftMutationError: LocalizedError, Equatable {
     }
 }
 
-struct PreparedTaskQuantityGoalDraft: Equatable {
+nonisolated struct PreparedTaskQuantityGoalDraft: Equatable {
     let targetAmount: Int
     let unitLabel: String
 }
 
-struct PreparedTaskProgressDraft: Equatable {
+nonisolated struct PreparedTaskProgressDraft: Equatable {
     let quantityGoal: PreparedTaskQuantityGoalDraft?
     let confirmsQuantityProgressReset: Bool
     let dailyRecurrence: TaskDailyRecurrenceDraft?
 }
 
-enum TaskProgressDraftPersistencePolicy {
+nonisolated enum TaskProgressDraftPersistencePolicy {
     static func prepare(
         quantityGoal: TaskQuantityGoalDraft?,
         dailyRecurrence: TaskDailyRecurrenceDraft?,

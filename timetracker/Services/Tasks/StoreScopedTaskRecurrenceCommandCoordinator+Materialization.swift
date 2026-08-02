@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-extension StoreScopedTaskRecurrenceCommandCoordinator {
+nonisolated extension StoreScopedTaskRecurrenceCommandCoordinator {
     func materializeCurrentDay(
         rule: TaskRecurrenceRule,
         template: TaskNode,
@@ -119,7 +119,7 @@ extension StoreScopedTaskRecurrenceCommandCoordinator {
     }
 }
 
-private extension StoreScopedTaskRecurrenceCommandCoordinator {
+private nonisolated extension StoreScopedTaskRecurrenceCommandCoordinator {
     struct QuantityBlueprint {
         let goal: TaskQuantityGoal?
         let isValid: Bool

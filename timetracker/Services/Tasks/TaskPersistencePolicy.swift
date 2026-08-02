@@ -23,7 +23,7 @@ nonisolated enum TaskPersistenceField: Equatable {
     }
 }
 
-enum TaskPersistenceValidationError: LocalizedError, Equatable {
+nonisolated enum TaskPersistenceValidationError: LocalizedError, Equatable {
     case required(field: TaskPersistenceField)
     case controlCharacter(field: TaskPersistenceField)
     case byteLimitExceeded(field: TaskPersistenceField, actual: Int, maximum: Int)
@@ -51,14 +51,14 @@ enum TaskPersistenceValidationError: LocalizedError, Equatable {
     }
 }
 
-struct PreparedTaskPersistenceValues {
+nonisolated struct PreparedTaskPersistenceValues {
     let title: String
     let colorHex: String?
     let iconName: String?
     let notes: String?
 }
 
-enum TaskPersistencePolicy {
+nonisolated enum TaskPersistencePolicy {
     static func taskTitleValidationError(for title: String) -> TaskPersistenceValidationError? {
         validationError {
             _ = try requiredSingleLine(title, field: .taskTitle)

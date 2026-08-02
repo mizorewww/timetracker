@@ -1,6 +1,6 @@
 import Foundation
 
-enum TaskRecurrenceMutationError: LocalizedError, Equatable {
+nonisolated enum TaskRecurrenceMutationError: LocalizedError, Equatable {
     case invalidStartDay
     case invalidTimeZone
     case templateUnavailable
@@ -33,7 +33,7 @@ enum TaskRecurrenceMutationError: LocalizedError, Equatable {
     }
 }
 
-struct TaskRecurrenceRuleMutationBaseline: Equatable {
+nonisolated struct TaskRecurrenceRuleMutationBaseline: Equatable {
     let ruleID: UUID
     let templateTaskID: UUID
     let clientMutationID: UUID
@@ -45,7 +45,7 @@ struct TaskRecurrenceRuleMutationBaseline: Equatable {
     }
 }
 
-struct TaskRecurrenceMaterializationMutation: Equatable {
+nonisolated struct TaskRecurrenceMaterializationMutation: Equatable {
     let ruleID: UUID
     let templateTaskID: UUID
     let occurrenceID: UUID
@@ -54,7 +54,7 @@ struct TaskRecurrenceMaterializationMutation: Equatable {
     let affectedAncestorTaskIDs: Set<UUID>
 }
 
-struct TaskRecurrenceMutationOutcome: Equatable {
+nonisolated struct TaskRecurrenceMutationOutcome: Equatable {
     var changedRuleTemplateTaskIDs = Set<UUID>()
     var changedRuleAncestorTaskIDsByTemplateID:
         [UUID: Set<UUID>] = [:]
@@ -99,7 +99,7 @@ struct TaskRecurrenceMutationOutcome: Equatable {
     }
 }
 
-enum TaskRecurrenceMutationCheckpoint: Equatable {
+nonisolated enum TaskRecurrenceMutationCheckpoint: Equatable {
     case ruleCreated(UUID)
     case ruleUpdated(UUID)
     case generatedTaskCreated(UUID)

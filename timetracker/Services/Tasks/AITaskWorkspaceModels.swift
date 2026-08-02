@@ -153,8 +153,7 @@ nonisolated struct AITaskWorkspaceCapture: Equatable, Sendable {
     let snapshot: AITaskWorkspaceSnapshot
     let baselines: AITaskWorkspaceMutationBaselines
 
-    @MainActor
-    init(
+    nonisolated init(
         taskCategories: [TaskCategory],
         tasks: [TaskNode],
         taskCategoryAssignments: [TaskCategoryAssignment],
@@ -321,7 +320,7 @@ nonisolated struct AITaskWorkspaceCapture: Equatable, Sendable {
     }
 }
 
-private extension AITaskWorkspaceSnapshot {
+private nonisolated extension AITaskWorkspaceSnapshot {
     struct FingerprintFacts: Encodable {
         let schemaVersion: Int
         let categories: [AITaskWorkspaceCategory]

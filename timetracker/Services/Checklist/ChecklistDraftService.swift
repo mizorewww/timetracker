@@ -18,7 +18,7 @@ nonisolated enum ChecklistDraftField: Equatable {
     }
 }
 
-enum ChecklistDraftValidationError: LocalizedError, Equatable {
+nonisolated enum ChecklistDraftValidationError: LocalizedError, Equatable {
     case emptyTitle(index: Int)
     case controlCharacter(index: Int, field: ChecklistDraftField)
     case byteLimitExceeded(index: Int, field: ChecklistDraftField, actual: Int, maximum: Int)
@@ -46,7 +46,7 @@ enum ChecklistDraftValidationError: LocalizedError, Equatable {
     }
 }
 
-enum ChecklistDraftPersistencePolicy {
+nonisolated enum ChecklistDraftPersistencePolicy {
     static let maximumTitleByteCount = SyncDataSnapshotRestoreLimits.maximumTitleByteCount
     static let maximumIconNameByteCount = SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount
     static let maximumColorHexByteCount = SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount
@@ -122,7 +122,7 @@ enum ChecklistDraftPersistencePolicy {
     }
 }
 
-struct PreparedChecklistDraft {
+nonisolated struct PreparedChecklistDraft {
     let existingID: UUID?
     let title: String
     let isCompleted: Bool

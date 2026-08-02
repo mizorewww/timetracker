@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-extension TaskDraftProgressMutationService {
+nonisolated extension TaskDraftProgressMutationService {
     func saveQuantityGoal(
         _ draft: PreparedTaskQuantityGoalDraft?,
         confirmsProgressReset: Bool,

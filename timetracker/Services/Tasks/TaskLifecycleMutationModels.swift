@@ -56,7 +56,7 @@ struct TaskDraftMutationOutcome: Equatable {
     }
 }
 
-enum TaskDraftMutationCheckpoint: Equatable {
+nonisolated enum TaskDraftMutationCheckpoint: Equatable {
     case taskAndChecklistSaved(UUID)
     case quantityGoalChanged(UUID)
     case recurrence(TaskRecurrenceMutationCheckpoint)

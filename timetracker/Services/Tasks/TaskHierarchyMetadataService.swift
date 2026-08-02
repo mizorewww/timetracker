@@ -1,6 +1,6 @@
 import Foundation
 
-struct TaskHierarchyMetadata: Equatable {
+nonisolated struct TaskHierarchyMetadata: Equatable {
     let parentID: UUID?
     let depth: Int
     let path: String
@@ -10,7 +10,7 @@ struct TaskHierarchyMetadata: Equatable {
     }
 }
 
-struct TaskHierarchyMetadataService {
+nonisolated struct TaskHierarchyMetadataService {
     func normalizedMetadata(tasks: [TaskNode]) -> [UUID: TaskHierarchyMetadata] {
         let tasks = tasks.deduplicatedByID().filter { $0.deletedAt == nil }
         let repairPlan = TaskHierarchyRepairPlan(tasks: tasks)

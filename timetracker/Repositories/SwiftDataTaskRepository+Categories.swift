@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-extension SwiftDataTaskRepository {
+nonisolated extension SwiftDataTaskRepository {
     func categories() throws -> [TaskCategory] {
         try context.fetch(FetchDescriptor<TaskCategory>())
             .visibleDeduplicatedByID()

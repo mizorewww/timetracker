@@ -4,24 +4,26 @@ import SwiftData
 /// Applies a reviewed AI workspace proposal under the same store lock as task,
 /// checklist, timer, and lifecycle commands. Provider-facing tools never call
 /// this type directly.
-@MainActor
-struct StoreScopedAITaskAtomicMutationCoordinator {
+actor StoreScopedAITaskAtomicMutationCoordinator {
     let container: ModelContainer
+    let scope: TimerStoreScope
     let writeAuthorization: StoreWriteAuthorization
     let deviceID: String
-    let nowProvider: () -> Date
+    let nowProvider: @Sendable () -> Date
     private let didReachCheckpoint:
-        (AITaskAtomicMutationCheckpoint) throws -> Void
+        @Sendable (AITaskAtomicMutationCheckpoint) throws -> Void
 
+    @MainActor
     init(
         container: ModelContainer,
         writeAuthorization: StoreWriteAuthorization = .applicationState,
         deviceID: String = DeviceIdentity.current,
-        nowProvider: @escaping () -> Date = Date.init,
+        nowProvider: @escaping @Sendable () -> Date = Date.init,
         didReachCheckpoint: @escaping
-        (AITaskAtomicMutationCheckpoint) throws -> Void = { _ in }
-    ) {
+        @Sendable (AITaskAtomicMutationCheckpoint) throws -> Void = { _ in }
+    ) throws {
         self.container = container
+        scope = try TimerStoreScope(container: container)
         self.writeAuthorization = writeAuthorization
         self.deviceID = deviceID
         self.nowProvider = nowProvider
@@ -29,59 +31,61 @@ struct StoreScopedAITaskAtomicMutationCoordinator {
     }
 
     func captureBaseline() throws -> AITaskAtomicMutationBaseline {
-        let scope = try TimerStoreScope(container: container)
-        return try StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        ).withFreshReadContext { context in
-            try Self.captureBaseline(in: context)
+        try PerformanceSignpost.interval("AI workspace baseline capture") {
+            try StoreScopedTimerMutationTransaction(
+                scope: scope,
+                container: container
+            ).withFreshReadContext { context in
+                try Self.captureBaseline(in: context)
+            }
         }
     }
 
     func apply(
         _ plan: AITaskAtomicMutationPlan
-    ) throws -> AITaskAtomicMutationOutcome {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        return try StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        ).withFreshContext(author: .localMutation) { context in
-            let current = try Self.captureBaseline(in: context)
-            guard current == plan.baseline else {
-                throw AITaskAtomicMutationError.workspaceChanged
-            }
+    ) async throws -> AITaskAtomicMutationOutcome {
+        try await writeAuthorization.requireUserWritesAllowed()
+        return try PerformanceSignpost.interval("AI workspace atomic apply") {
+            try StoreScopedTimerMutationTransaction(
+                scope: scope,
+                container: container
+            ).withFreshContext(author: .localMutation) { context in
+                let current = try Self.captureBaseline(in: context)
+                guard current == plan.baseline else {
+                    throw AITaskAtomicMutationError.workspaceChanged
+                }
 
-            try validate(
-                operations: plan.operations,
-                startingFrom: current.snapshot,
-                context: context
-            )
-
-            let repository = SwiftDataTaskRepository(
-                context: context,
-                deviceID: deviceID
-            )
-            for (index, operation) in plan.operations.enumerated() {
-                try apply(
-                    operation,
-                    repository: repository,
+                try validate(
+                    operations: plan.operations,
+                    startingFrom: current.snapshot,
                     context: context
                 )
-                try didReachCheckpoint(.operationApplied(index: index))
-            }
 
-            let didMutateTasks = plan.operations.contains {
-                $0.mutatesTaskDomain
+                let repository = SwiftDataTaskRepository(
+                    context: context,
+                    deviceID: deviceID
+                )
+                for (index, operation) in plan.operations.enumerated() {
+                    try apply(
+                        operation,
+                        repository: repository,
+                        context: context
+                    )
+                    try didReachCheckpoint(.operationApplied(index: index))
+                }
+
+                let didMutateTasks = plan.operations.contains {
+                    $0.mutatesTaskDomain
+                }
+                let didMutateChecklists = plan.operations.contains {
+                    $0.mutatesChecklistDomain
+                }
+                return AITaskAtomicMutationOutcome(
+                    didMutate: didMutateTasks || didMutateChecklists,
+                    didMutateTasks: didMutateTasks,
+                    didMutateChecklists: didMutateChecklists
+                )
             }
-            let didMutateChecklists = plan.operations.contains {
-                $0.mutatesChecklistDomain
-            }
-            return AITaskAtomicMutationOutcome(
-                didMutate: didMutateTasks || didMutateChecklists,
-                didMutateTasks: didMutateTasks,
-                didMutateChecklists: didMutateChecklists
-            )
         }
     }
 }
@@ -352,18 +356,21 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
         }
         guard archivedTaskIDs.isEmpty == false else { return }
 
-        let timeRepository = SwiftDataTimeTrackingRepository(
-            context: context,
-            deviceID: deviceID
-        )
-        let pomodoroRepository = SwiftDataPomodoroRepository(
-            context: context,
-            timeRepository: timeRepository,
-            deviceID: deviceID
-        )
-        let hasActiveSegment = try timeRepository.activeSegments()
+        let hasActiveSegment = try context.fetch(
+            FetchDescriptor<TimeSegment>()
+        ).visibleDeduplicatedByID()
+            .filter { $0.endedAt == nil }
             .contains { archivedTaskIDs.contains($0.taskID) }
-        let hasActivePomodoro = try pomodoroRepository.activeRuns()
+        let completed = PomodoroState.completed.rawValue
+        let cancelled = PomodoroState.cancelled.rawValue
+        let hasActivePomodoro = try context.fetch(
+            FetchDescriptor<PomodoroRun>()
+        ).visibleDeduplicatedByID()
+            .filter {
+                $0.endedAt == nil &&
+                    $0.stateRaw != completed &&
+                    $0.stateRaw != cancelled
+            }
             .contains { archivedTaskIDs.contains($0.taskID) }
         guard hasActiveSegment == false, hasActivePomodoro == false else {
             throw AITaskAtomicMutationError.activeWorkMustStop
@@ -668,7 +675,7 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
     }
 }
 
-private extension AITaskWorkspaceOperation {
+private nonisolated extension AITaskWorkspaceOperation {
     var mutatesTaskDomain: Bool {
         switch self {
         case .useExistingCategory,

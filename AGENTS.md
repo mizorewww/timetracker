@@ -3,13 +3,14 @@
 ## Required reading, in order
 
 1. This file.
-2. Before any Apple-platform UI or SwiftUI design, implementation, review, or refactoring, read both skill instruction files completely and follow them:
+2. Before any testing-related work—including planning, writing, changing, deleting, debugging, or reviewing tests—load and read the `axiom-testing` skill completely. Read the task-relevant references routed by that skill before changing tests. Treat this as mandatory even when tests are only one part of a feature task.
+3. Before any Apple-platform UI or SwiftUI design, implementation, review, or refactoring, read both skill instruction files completely and follow them:
    - `.agents/skills/apple-hig/SKILL.md`
    - `.agents/skills/swiftui-expert-skill/SKILL.md`
 
    Also read any task-relevant files referenced by those skills before making changes. Treat these repository-local skill instructions as mandatory for iOS, iPadOS, macOS, watchOS, widgets, Live Activities, and other SwiftUI work.
-3. `Docs/ProjectMap.md` — where code lives and which file to open first.
-4. The docs matching the change type:
+4. `Docs/ProjectMap.md` — where code lives and which file to open first.
+5. The docs matching the change type:
 
 | Change type | Also read |
 | --- | --- |
@@ -64,7 +65,10 @@ Follow this lifecycle for every task. Do not skip steps to move faster; narrow t
 
 ### 2. Tests before wiring
 
+- Every feature or behavior task that adds or changes tests must maintain a test record in its implementation memory under `Docs/ImplementationContexts/`. Before implementation, record the behavior/risk each planned test protects, its independent oracle, its boundary, and whether it is permanent regression coverage or temporary scaffolding. At closeout, update the record with the retained tests, deleted scaffolding, and verification evidence.
 - Write or update failing behavior tests at the service/command/store boundary before wiring UI. UI-only changes get an acceptance checklist first.
+- Temporary characterization, exploration, fault-injection, or implementation-driving tests must be marked `TEST-SCAFFOLD` both in the test source and in the implementation memory, with a concrete removal condition. They may exist during development but must be deleted when the feature is complete; they must not become permanent regression contracts merely because they pass.
+- Permanent tests must be documented as product, durable-data, compatibility, security, or integration contracts. Do not label a test as scaffolding to bypass verification, and do not delete a permanent regression test merely because implementation is complete.
 - No source-string scan tests: they were removed on 2026-07-25 for false-positiving on equivalent refactors. Use behavior tests, accessibility identifiers, and screenshot/manual checklists.
 - Every durable write has a command-boundary test; every schema change has an old-store compatibility test.
 
@@ -76,7 +80,7 @@ Follow this lifecycle for every task. Do not skip steps to move faster; narrow t
 
 - Default gate: `make test` (signed macOS unit tests; see `Docs/Testing.md`) green.
 - UI changes: simulator runs with scripted XCTest/XCUITest assertions and screenshots at normal text size, on the affected platforms. Release the simulator and every owned process afterward. A build-only sanity check uses `make build-ios` / `make build-macos`.
-- Performance-sensitive changes: `CorePerformanceBudgetTests` (covered by `make test`) plus a Release trace before/after.
+- Performance-sensitive changes: retain a deterministic correctness test for observable query/result shape when applicable, then capture a seeded Release trace before/after as described in `Docs/Testing.md`.
 - System surfaces (Widget, Watch, Live Activity, CloudKit, App Group): simulator evidence is diagnostic only; real-device verification is a separate gate and does not block the commit checkpoint. For that gate, `make build-install-all` builds and installs the iOS+Watch and macOS apps to physical devices and `/Applications`; `make export-artifacts` produces the signed IPA and macOS zip.
 - Keep `CODE_SIGN_STYLE=Automatic` and team `LT98S43NKA`; never disable signing to make a check pass.
 
@@ -93,6 +97,7 @@ Follow this lifecycle for every task. Do not skip steps to move faster; narrow t
 
 ### 6. Close out
 
+- Reconcile the implementation memory's test record: remove every `TEST-SCAFFOLD` test whose removal condition has been met, promote only tests that now protect a documented durable contract, and confirm no unaccounted scaffolding marker remains in the changed scope.
 - Release every owned resource: terminate the tested app and runners, shut down and delete simulators created for the batch, remove temporary DerivedData/result/trace artifacts, and audit that no owned `xcodebuild`, `xctest`, UI runner, or Booted device remains. Never shut down a simulator or terminate a process another active agent explicitly owns. Drop ephemeral build outputs with `make clean` only once `build/Archives`/`build/Exports` are no longer needed as evidence.
 - Update the implementation memory and remove the active link for finished feedback tasks.
 - Report: completed scope, validation performed, resource cleanup, cumulative progress, and remaining expected checkpoints.

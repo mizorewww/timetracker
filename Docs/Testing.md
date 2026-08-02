@@ -8,7 +8,7 @@ Reviewed: 2026-08-02
 
 The test suite is a small set of independent product and data-safety contracts. It is not a second implementation, a source-layout specification, or a catalogue of every state permutation.
 
-The 2026-08-02 audit reduced the suite from 1,738 static declarations to 151 declarations. The pre-audit default run executed 1,584 Swift Testing cases plus five skipped XCTest live cases; the retained default unit run executes 147 cases. The repository ceiling is 158 declarations. Adding a test therefore requires removing or consolidating an equal number of lower-value tests.
+The 2026-08-02 audit reduced the suite from 1,738 static declarations to 151 declarations. The pre-audit default run executed 1,584 Swift Testing cases plus five skipped XCTest live cases; the retained default unit run executes 147 cases. These counts are historical audit evidence, not a quota or ceiling. Add tests when they protect a documented durable contract, and remove them when they are redundant or were explicitly created as temporary scaffolding.
 
 Count declarations with:
 
@@ -17,7 +17,36 @@ rg -n '^\s*@Test' timetrackerTests timetrackerUITests | wc -l
 rg -n '^\s*(override )?func test' timetrackerTests timetrackerUITests | wc -l
 ```
 
-Parameterized data must stay small and meaningful. Do not use a large argument table to bypass the declaration budget.
+Parameterized data must stay small and meaningful. Use cases that represent distinct contract boundaries rather than exhaustively mirroring the implementation.
+
+## Required Skill And Test Record
+
+Before planning, writing, changing, deleting, debugging, or reviewing tests, load and read the `axiom-testing` skill completely. Follow its router to read the references relevant to the task, such as Swift Testing, async testing, UI testing, or XCUITest automation. This applies to feature work that happens to include tests as well as test-only tasks.
+
+Every feature or behavior change that adds or changes tests must maintain a test record in its implementation memory under `Docs/ImplementationContexts/`. Write the plan before implementation and keep it current while developing. For each planned test or coherent parameterized group, record:
+
+- the user-visible behavior or data/security/compatibility risk it protects;
+- the independent oracle and the boundary where the assertion belongs;
+- whether it is a permanent regression contract or temporary `TEST-SCAFFOLD` coverage;
+- for scaffolding, the reason it is temporary and the exact removal condition;
+- at closeout, whether it was retained, consolidated, or deleted, plus the final verification command.
+
+This record is engineering context, not a permanent catalogue of test implementation details. Update it when the testing strategy changes so later agents do not infer a contract from a test that was only meant to help construct the feature.
+
+## Temporary Scaffolding Tests
+
+A scaffolding test exists to help build or understand a feature; it does not define the shipped contract. Examples include characterization of behavior that is being replaced, exploratory state matrices, temporary fault-injection probes, and narrow implementation-driving checks superseded by a stronger boundary test.
+
+Mark each temporary test at its declaration with a searchable comment:
+
+```swift
+// TEST-SCAFFOLD: Docs/ImplementationContexts/<task>.md — remove when <concrete condition>.
+@Test func temporaryExample() { /* ... */ }
+```
+
+The same marker and removal condition must appear in the task's test record. When the feature is complete, delete scaffolding whose removal condition is satisfied and record its deletion. A task is not complete while resolved `TEST-SCAFFOLD` markers remain in its changed scope.
+
+Do not use the marker for a durable regression test. Tests protecting shipped user behavior, durable data, migrations, security boundaries, or necessary platform integration remain permanent until the underlying contract is intentionally removed or replaced by stronger coverage.
 
 ## Default Gates
 
@@ -78,7 +107,7 @@ The compact suite intentionally concentrates on:
 - signed entitlement and Privacy Manifest declarations;
 - the width-driven adaptive shell and one explicitly audited Live Activity system-surface path.
 
-Authentication and in-app purchases are not present in this product. If either is added, its trust boundary must replace lower-value coverage rather than silently expanding the suite.
+Authentication and in-app purchases are not present in this product. If either is added, its trust boundary requires explicit permanent coverage selected by the same contract-value rules.
 
 ## Tests We Do Not Add
 
@@ -123,7 +152,7 @@ Maximum Dynamic Type, VoiceOver traversal, appearance matrices and additional de
 
 Current compatibility tests generate old stores from frozen legacy schema declarations in the current source tree. They catch migration wiring failures but do not prove compatibility with an actually shipped binary.
 
-The higher-confidence replacement is a small set of synthetic SQLite bundles generated by released tags with their contemporaneous toolchains. Each fixture must include fixed identities, schema/app/build metadata and SHA-256 hashes, then be copied to a unique temporary directory before migration. Add those fixtures by replacing current generated-schema cases, not by increasing the suite budget.
+The higher-confidence replacement is a small set of synthetic SQLite bundles generated by released tags with their contemporaneous toolchains. Each fixture must include fixed identities, schema/app/build metadata and SHA-256 hashes, then be copied to a unique temporary directory before migration. Consolidate weaker generated-schema cases when the released fixtures provide stronger coverage.
 
 ## Performance Verification
 
@@ -152,3 +181,5 @@ Do not use broad `killall` commands and do not clean another agent's resources.
 ## Final Evidence
 
 Only the last run against the frozen source state is final evidence. Report the command, pass/fail/skip counts, signing result, relevant UI/device evidence and cleanup. Earlier targeted runs are diagnostics and are never added together to impersonate one complete pass.
+
+The final report must also name the implementation memory containing the test record, list any permanent tests added or changed, and confirm that satisfied `TEST-SCAFFOLD` tests were removed. If scaffolding legitimately remains because the feature is incomplete, report it explicitly and do not describe the feature as complete.

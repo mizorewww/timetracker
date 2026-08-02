@@ -112,28 +112,76 @@ nonisolated struct PersistentHistoryProjectionResetFence:
         return try localFile.withExclusiveAccess(
             through: paths.durableRoot
         ) {
-            let current = try currentEpochWithExclusiveAccess(paths: paths)
+            let current: UInt64
+            do {
+                current = try currentEpochWithExclusiveAccess(paths: paths)
+            } catch is DurableLocalFileReadError {
+                return try recoverCorruptEpochWithExclusiveAccess(paths: paths)
+            } catch is DecodingError {
+                return try recoverCorruptEpochWithExclusiveAccess(paths: paths)
+            }
             guard current < UInt64.max else {
                 throw PersistentHistoryLaneCursorStoreError
                     .resetEpochOverflow
             }
             let next = current + 1
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.sortedKeys]
-            let data = try encoder.encode(
-                Envelope(
-                    formatVersion: Self.formatVersion,
-                    epoch: next
-                )
-            )
-            try localFile.write(
-                data,
-                to: paths.location,
-                durableRootURL: paths.durableRoot,
-                excludeFromBackup: true
-            )
+            try writeEpochWithExclusiveAccess(next, paths: paths)
             return next
         }
+    }
+
+    private func recoverCorruptEpochWithExclusiveAccess(
+        paths: (location: URL, durableRoot: URL)
+    ) throws -> UInt64 {
+        guard let storeURL = scope.persistentStoreURL else { return 0 }
+
+        // Keep ordinary reads fail-closed. Only the explicit physical-store
+        // reset may discard every frontier before replacing a corrupt fence.
+        for lane in PersistentHistoryProjectionLane.allCases {
+            let prefix = storeURL.lastPathComponent
+                + ".post-commit-history."
+                + lane.rawValue
+            try localFile.removeIfPresent(
+                at: paths.durableRoot.appendingPathComponent(
+                    prefix + ".cursor.v1.json"
+                ),
+                durableRootURL: paths.durableRoot
+            )
+            try localFile.removeIfPresent(
+                at: paths.durableRoot.appendingPathComponent(
+                    prefix + ".attempt.v1.json"
+                ),
+                durableRootURL: paths.durableRoot
+            )
+        }
+        _ = try localFile.quarantineIfPresent(
+            at: paths.location,
+            prefix: "HistoryResetEpoch.corrupt-",
+            durableRootURL: paths.durableRoot
+        )
+        let recoveredEpoch = UInt64.random(in: 1 ... UInt64.max)
+        try writeEpochWithExclusiveAccess(recoveredEpoch, paths: paths)
+        return recoveredEpoch
+    }
+
+    private func writeEpochWithExclusiveAccess(
+        _ epoch: UInt64,
+        paths: (location: URL, durableRoot: URL)
+    ) throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = try encoder.encode(
+            Envelope(
+                formatVersion: Self.formatVersion,
+                epoch: epoch
+            )
+        )
+        try localFile.write(
+            data,
+            to: paths.location,
+            durableRootURL: paths.durableRoot,
+            excludeFromBackup: true
+        )
     }
 
     fileprivate func currentEpochWithExclusiveAccess(
@@ -189,6 +237,21 @@ nonisolated struct PersistentHistoryLaneCursorStore: @unchecked Sendable {
         let storeIdentifier: String
         let resetEpoch: UInt64
         let token: DefaultHistoryToken?
+    }
+
+    private enum FullReconciliationAttemptLoadResult {
+        case missing
+        case present(PersistentHistoryLaneCursorFullReconciliationAttempt)
+        case corrupt
+
+        var blocksIncrementalWork: Bool {
+            switch self {
+            case .missing:
+                false
+            case .present, .corrupt:
+                true
+            }
+        }
     }
 
     private static let formatVersion = 1
@@ -268,8 +331,10 @@ nonisolated struct PersistentHistoryLaneCursorStore: @unchecked Sendable {
             if let attemptLocation = durableAttemptLocation(for: lane),
                try loadAttemptWithExclusiveAccess(
                    from: attemptLocation,
+                   lane: lane,
+                   cursorLocation: paths.location,
                    durableRoot: paths.durableRoot
-               ) != nil
+               ).blocksIncrementalWork
             {
                 return .requiresFullReconciliation(
                     .interruptedFullReconciliation
@@ -330,11 +395,19 @@ nonisolated struct PersistentHistoryLaneCursorStore: @unchecked Sendable {
             guard try resetEpochMatchesWithExclusiveAccess(),
                   attempt.lane == lane,
                   attempt.storeIdentifier == storeIdentifier,
-                  attempt.resetEpoch == registeredResetEpoch,
-                  try loadAttemptWithExclusiveAccess(
-                      from: attemptLocation,
-                      durableRoot: paths.durableRoot
-                  ) == attempt
+                  attempt.resetEpoch == registeredResetEpoch
+            else {
+                return false
+            }
+            let loadedAttempt = try loadAttemptWithExclusiveAccess(
+                from: attemptLocation,
+                lane: lane,
+                cursorLocation: paths.location,
+                durableRoot: paths.durableRoot
+            )
+            guard
+                case let .present(persistedAttempt) = loadedAttempt,
+                persistedAttempt == attempt
             else {
                 return false
             }
@@ -374,8 +447,10 @@ nonisolated struct PersistentHistoryLaneCursorStore: @unchecked Sendable {
             if let attemptLocation = durableAttemptLocation(for: lane),
                try loadAttemptWithExclusiveAccess(
                    from: attemptLocation,
+                   lane: lane,
+                   cursorLocation: paths.location,
                    durableRoot: paths.durableRoot
-               ) != nil
+               ).blocksIncrementalWork
             {
                 return .retryRequired
             }
@@ -536,8 +611,10 @@ nonisolated struct PersistentHistoryLaneCursorStore: @unchecked Sendable {
 
     private func loadAttemptWithExclusiveAccess(
         from location: URL,
+        lane: PersistentHistoryProjectionLane,
+        cursorLocation: URL,
         durableRoot: URL
-    ) throws -> PersistentHistoryLaneCursorFullReconciliationAttempt? {
+    ) throws -> FullReconciliationAttemptLoadResult {
         let data: Data
         do {
             guard let loaded = try localFile.read(
@@ -545,7 +622,7 @@ nonisolated struct PersistentHistoryLaneCursorStore: @unchecked Sendable {
                 from: location,
                 durableRootURL: durableRoot
             ) else {
-                return nil
+                return .missing
             }
             data = loaded
         } catch is DurableLocalFileReadError {
@@ -554,12 +631,19 @@ nonisolated struct PersistentHistoryLaneCursorStore: @unchecked Sendable {
                 prefix: "HistoryCursorAttempt.corrupt-",
                 durableRootURL: durableRoot
             )
-            return nil
+            try quarantineWithExclusiveAccess(
+                lane: lane,
+                location: cursorLocation,
+                durableRoot: durableRoot
+            )
+            return .corrupt
         }
         do {
-            return try JSONDecoder().decode(
-                PersistentHistoryLaneCursorFullReconciliationAttempt.self,
-                from: data
+            return try .present(
+                JSONDecoder().decode(
+                    PersistentHistoryLaneCursorFullReconciliationAttempt.self,
+                    from: data
+                )
             )
         } catch {
             _ = try localFile.quarantineIfPresent(
@@ -567,7 +651,12 @@ nonisolated struct PersistentHistoryLaneCursorStore: @unchecked Sendable {
                 prefix: "HistoryCursorAttempt.corrupt-",
                 durableRootURL: durableRoot
             )
-            return nil
+            try quarantineWithExclusiveAccess(
+                lane: lane,
+                location: cursorLocation,
+                durableRoot: durableRoot
+            )
+            return .corrupt
         }
     }
 

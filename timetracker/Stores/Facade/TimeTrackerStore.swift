@@ -279,6 +279,14 @@ final class TimeTrackerStore {
     /// Subtree-active-timer index cache; see TimeTrackerStore+TaskReadModels.swift.
     @ObservationIgnored var taskIDsWithActiveTimerInSubtreeCache:
         (taskRevision: UInt64, analyticsRevision: UInt, taskIDs: Set<UUID>)?
+    /// Today page read-model cache; see TimeTrackerStore+HomeReadModels.swift.
+    @ObservationIgnored var todayHomeContentCache:
+        (key: TodayHomeContentCacheKey, content: TodayHomeContent)?
+    /// Today metrics cache; see TimeTrackerStore+HomeReadModels.swift. Keyed by
+    /// ledger revision + minute bucket so repeated same-minute calls (30 s
+    /// tick, static tab-switch renders, both shells) share one interval query.
+    @ObservationIgnored var todayMetricsSnapshotCache:
+        (key: (revision: UInt, minuteBucket: Int), snapshot: TodayMetricsSnapshot)?
     var selectedTaskID: UUID?
     var errorMessage: String?
     var desktopDestination: DesktopDestination = .today

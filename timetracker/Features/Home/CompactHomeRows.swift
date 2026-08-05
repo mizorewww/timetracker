@@ -2,7 +2,7 @@ import SwiftUI
 
 struct CompactTodaySummaryRow: View {
     let store: TimeTrackerStore
-    @Environment(\.todayClockIsActive) private var clockIsActive
+    @Environment(\.pageLiveClocksActive) private var clockIsActive
 
     var body: some View {
         if clockIsActive {

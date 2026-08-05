@@ -24,6 +24,10 @@ struct CompactShellRootView<SyncConflictContent: View>: View {
                         route: todayTaskRoute
                     )
                 }
+                .environment(
+                    \.pageLiveClocksActive,
+                    store.desktopDestination == .today
+                )
             } label: {
                 Label(AppStrings.today, systemImage: "house")
                     .accessibilityIdentifier("phone.tab.today")
@@ -49,6 +53,10 @@ struct CompactShellRootView<SyncConflictContent: View>: View {
                 NavigationStack {
                     PomodoroView(store: store)
                 }
+                .environment(
+                    \.pageLiveClocksActive,
+                    store.desktopDestination == .pomodoro
+                )
             } label: {
                 Label(AppStrings.focus, systemImage: "timer")
                     .accessibilityIdentifier("phone.tab.focus")
@@ -75,13 +83,6 @@ struct CompactShellRootView<SyncConflictContent: View>: View {
             syncConflictContent
                 .padding(8)
         }
-        // Today's clock sources (1 Hz labels, 30 s/60 s snapshots) only run
-        // while the Today tab is selected; other tabs stay mounted and would
-        // otherwise keep paying their cost in the background.
-        .environment(
-            \.todayClockIsActive,
-            store.desktopDestination == .today
-        )
         // Kept verbatim: this is the identifier the existing XCUITests select on.
         .accessibilityIdentifier("phone.tabView")
     }
@@ -92,6 +93,9 @@ struct CompactShellRootView<SyncConflictContent: View>: View {
             set: { destination in
                 guard destination != .settings,
                       destination != store.desktopDestination else { return }
+                #if DEBUG
+                PageSwitchTrace.mark("SWITCH-BEGIN \(destination.rawValue)")
+                #endif
                 let requestID = store.taskDetailNavigationGuard.requestNavigation(
                     presentingConfirmationInSource: false,
                     dismissPresentedConfirmation: dismissTabNavigationConfirmation

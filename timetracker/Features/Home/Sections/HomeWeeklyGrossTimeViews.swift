@@ -6,7 +6,7 @@ struct HomeWeeklyGrossTimeSection: View {
 
     @Environment(\.calendar) private var calendar
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.todayClockIsActive) private var clockIsActive
+    @Environment(\.pageLiveClocksActive) private var clockIsActive
     @State private var snapshot: WeeklyGrossTimeSnapshot?
     @State private var clockRevision: UInt = 0
 

@@ -40,6 +40,11 @@ struct InboxView: View {
             .navigationBarTitleDisplayMode(.large)
         #endif
             .accessibilityIdentifier("inbox.view")
+            .onAppear {
+                #if DEBUG
+                PageSwitchTrace.mark("APPEAR inbox")
+                #endif
+            }
     }
 
     private var inboxList: some View {

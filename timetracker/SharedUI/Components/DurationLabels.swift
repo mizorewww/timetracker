@@ -29,7 +29,7 @@ struct TrackedTimeDisplaySnapshot: Equatable {
 struct DurationLabel: View {
     let startedAt: Date
     let endedAt: Date?
-    @Environment(\.todayClockIsActive) private var clockIsActive
+    @Environment(\.pageLiveClocksActive) private var clockIsActive
 
     var body: some View {
         let now = Date()

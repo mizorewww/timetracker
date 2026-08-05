@@ -2,27 +2,37 @@ import SwiftUI
 
 struct CompactTodaySummaryRow: View {
     let store: TimeTrackerStore
+    @Environment(\.todayClockIsActive) private var clockIsActive
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { context in
-            let snapshot = store.todayMetricsSnapshot(now: context.date)
-            VStack(spacing: 12) {
-                CompactSummaryMetric(
-                    title: AppStrings.grossTime,
-                    value: DurationFormatter.compact(snapshot.grossSeconds),
-                    systemImage: "square.stack.3d.up",
-                    tint: AppColors.grossTime
-                )
+        if clockIsActive {
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                summaryContent(snapshot: store.todayMetricsSnapshot(now: context.date))
+            }
+        } else {
+            // Static render while the Today tab is not selected.
+            summaryContent(snapshot: store.todayMetricsSnapshot(now: Date()))
+        }
+    }
 
-                if store.preferences.showGrossAndWallTogether {
-                    Divider()
-                    CompactSummaryMetric(
-                        title: AppStrings.wallTime,
-                        value: DurationFormatter.compact(snapshot.wallSeconds),
-                        systemImage: "timeline.selection",
-                        tint: AppColors.wallTime
-                    )
-                }
+    @ViewBuilder
+    private func summaryContent(snapshot: TodayMetricsSnapshot) -> some View {
+        VStack(spacing: 12) {
+            CompactSummaryMetric(
+                title: AppStrings.grossTime,
+                value: DurationFormatter.compact(snapshot.grossSeconds),
+                systemImage: "square.stack.3d.up",
+                tint: AppColors.grossTime
+            )
+
+            if store.preferences.showGrossAndWallTogether {
+                Divider()
+                CompactSummaryMetric(
+                    title: AppStrings.wallTime,
+                    value: DurationFormatter.compact(snapshot.wallSeconds),
+                    systemImage: "timeline.selection",
+                    tint: AppColors.wallTime
+                )
             }
         }
     }

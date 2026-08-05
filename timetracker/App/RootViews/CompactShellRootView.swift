@@ -75,6 +75,13 @@ struct CompactShellRootView<SyncConflictContent: View>: View {
             syncConflictContent
                 .padding(8)
         }
+        // Today's clock sources (1 Hz labels, 30 s/60 s snapshots) only run
+        // while the Today tab is selected; other tabs stay mounted and would
+        // otherwise keep paying their cost in the background.
+        .environment(
+            \.todayClockIsActive,
+            store.desktopDestination == .today
+        )
         // Kept verbatim: this is the identifier the existing XCUITests select on.
         .accessibilityIdentifier("phone.tabView")
     }

@@ -44,40 +44,48 @@ struct HomeActivityHeatmapSection: View {
 
     @Environment(\.calendar) private var calendar
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.todayClockIsActive) private var clockIsActive
     @State private var clockRevision: UInt = 0
     @State private var loadedHeatmaps: LoadedHomeActivityHeatmaps?
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 60)) { context in
-            let request = HomeActivityHeatmapRefreshRequest(
-                store: store,
-                now: context.date,
-                calendar: calendar,
-                clockRevision: clockRevision
-            )
-            Group {
-                if request.selectedTaskIDs.isEmpty == false {
-                    // Keep showing the last resolved snapshots while a newer
-                    // request computes, so recomputation never collapses the
-                    // section into a spinner mid-scroll.
-                    section(loadedHeatmaps?.snapshots)
+        Group {
+            if clockIsActive {
+                TimelineView(.periodic(from: .now, by: 60)) { context in
+                    let request = HomeActivityHeatmapRefreshRequest(
+                        store: store,
+                        now: context.date,
+                        calendar: calendar,
+                        clockRevision: clockRevision
+                    )
+                    Group {
+                        if request.selectedTaskIDs.isEmpty == false {
+                            // Keep showing the last resolved snapshots while a newer
+                            // request computes, so recomputation never collapses the
+                            // section into a spinner mid-scroll.
+                            section(loadedHeatmaps?.snapshots)
+                        }
+                    }
+                    .task(id: request) {
+                        guard request.selectedTaskIDs.isEmpty == false else {
+                            loadedHeatmaps = nil
+                            return
+                        }
+                        let snapshots = await store.todayTaskActivityHeatmapSnapshots(
+                            period: request.period,
+                            now: context.date,
+                            calendar: calendar
+                        )
+                        guard Task<Never, Never>.isCancelled == false else { return }
+                        loadedHeatmaps = LoadedHomeActivityHeatmaps(
+                            request: request,
+                            snapshots: snapshots
+                        )
+                    }
                 }
-            }
-            .task(id: request) {
-                guard request.selectedTaskIDs.isEmpty == false else {
-                    loadedHeatmaps = nil
-                    return
-                }
-                let snapshots = await store.todayTaskActivityHeatmapSnapshots(
-                    period: request.period,
-                    now: context.date,
-                    calendar: calendar
-                )
-                guard Task<Never, Never>.isCancelled == false else { return }
-                loadedHeatmaps = LoadedHomeActivityHeatmaps(
-                    request: request,
-                    snapshots: snapshots
-                )
+            } else {
+                // Static render while the Today tab is not selected.
+                section(loadedHeatmaps?.snapshots)
             }
         }
         .onChange(of: scenePhase) { _, phase in

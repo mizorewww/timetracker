@@ -276,6 +276,9 @@ final class TimeTrackerStore {
     /// TimeTrackerStore+TaskReadModels.swift.
     @ObservationIgnored var taskManagementRowSupplementProjectionCache:
         (revision: UInt64, projection: TaskManagementRowSupplementProjection)?
+    /// Subtree-active-timer index cache; see TimeTrackerStore+TaskReadModels.swift.
+    @ObservationIgnored var taskIDsWithActiveTimerInSubtreeCache:
+        (taskRevision: UInt64, analyticsRevision: UInt, taskIDs: Set<UUID>)?
     var selectedTaskID: UUID?
     var errorMessage: String?
     var desktopDestination: DesktopDestination = .today

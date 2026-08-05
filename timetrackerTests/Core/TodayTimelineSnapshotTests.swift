@@ -31,10 +31,20 @@ struct TodayTimelineSnapshotTests {
             context: context,
             deviceID: "seed"
         )
+        // Anchor to the start of the local day: offsets from `now` can cross
+        // midnight into the previous day, and the Today timeline only shows
+        // the current day's segments. Keep the end strictly before `now` and
+        // never before day start + 2 min (right after midnight the segment
+        // simply becomes short).
+        let dayStart = Calendar.current.startOfDay(for: now)
+        let endedAt = max(
+            dayStart.addingTimeInterval(120),
+            min(now.addingTimeInterval(-60), dayStart.addingTimeInterval(7200))
+        )
         let segment = try repository.addManualSegment(
             taskID: task.id,
-            startedAt: now.addingTimeInterval(-3600),
-            endedAt: now.addingTimeInterval(-1800),
+            startedAt: dayStart.addingTimeInterval(60),
+            endedAt: endedAt,
             note: nil
         )
         try store.refreshLedgerDomain(

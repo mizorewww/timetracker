@@ -14,9 +14,6 @@ struct AnalyticsView: View {
     @State private var monthNavigationAnchor: AnalyticsMonthNavigationAnchor?
 
     var body: some View {
-        #if DEBUG
-        let _ = PageSwitchTrace.mark("ANALYTICS-BODY-START")
-        #endif
         let effectiveReferenceDate = followsCurrentPeriod ? liveNow : referenceDate
         let evaluation = range.evaluation(
             referenceDate: effectiveReferenceDate,
@@ -121,11 +118,6 @@ struct AnalyticsView: View {
             .navigationBarTitleDisplayMode(.inline)
         #endif
             .accessibilityIdentifier("analytics.view")
-            .onAppear {
-                #if DEBUG
-                PageSwitchTrace.mark("APPEAR analytics")
-                #endif
-            }
             .background(AppColors.background)
             .onChange(of: range) { _, range in
                 monthNavigationAnchor = nil

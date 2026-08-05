@@ -10,13 +10,7 @@ struct CompactHomeView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        #if DEBUG
-        let _ = PageSwitchTrace.mark("TODAY-BODY-START")
-        #endif
         let content = store.todayHomeContent()
-        #if DEBUG
-        let _ = PageSwitchTrace.mark("TODAY-CONTENT-DONE")
-        #endif
 
         List {
             CompactNowSection(
@@ -90,11 +84,6 @@ struct CompactHomeView: View {
             .navigationBarTitleDisplayMode(.large)
         #endif
             .accessibilityIdentifier("home.view")
-            .onAppear {
-                #if DEBUG
-                PageSwitchTrace.mark("APPEAR today")
-                #endif
-            }
             .toolbar {
                 // `.primaryAction` resolves to the navigation bar's trailing slot on
                 // iOS and the window toolbar on macOS, so no branch is needed.

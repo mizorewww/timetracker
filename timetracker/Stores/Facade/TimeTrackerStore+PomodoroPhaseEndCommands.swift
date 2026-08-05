@@ -64,6 +64,12 @@ extension TimeTrackerStore {
         try ledgerDomainStore.refreshVisible(repository: timeRepository)
         try refreshLedgerRelationshipVisibility()
         schedulePomodoroReconciliation(now: Date())
+        // This path changes the visible ledger without bumping
+        // analyticsRevision, so the revision-keyed Today caches would serve
+        // stale active segments. Invalidate them explicitly.
+        todayHomeContentCache = nil
+        todayMetricsSnapshotCache = nil
+        todayTimelineSnapshotCache = nil
     }
 
     func schedulePomodoroReconciliation(now: Date = Date()) {

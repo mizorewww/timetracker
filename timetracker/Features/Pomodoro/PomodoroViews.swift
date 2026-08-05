@@ -47,11 +47,6 @@ struct PomodoroView: View {
             .navigationBarTitleDisplayMode(.inline)
         #endif
             .accessibilityIdentifier("pomodoro.view")
-            .onAppear {
-                #if DEBUG
-                PageSwitchTrace.mark("APPEAR pomodoro")
-                #endif
-            }
             .background(PomodoroBackgroundColor().ignoresSafeArea())
             .onAppear {
                 normalizeSelectedPlan()

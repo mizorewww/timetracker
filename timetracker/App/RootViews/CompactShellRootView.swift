@@ -93,9 +93,6 @@ struct CompactShellRootView<SyncConflictContent: View>: View {
             set: { destination in
                 guard destination != .settings,
                       destination != store.desktopDestination else { return }
-                #if DEBUG
-                PageSwitchTrace.mark("SWITCH-BEGIN \(destination.rawValue)")
-                #endif
                 let requestID = store.taskDetailNavigationGuard.requestNavigation(
                     presentingConfirmationInSource: false,
                     dismissPresentedConfirmation: dismissTabNavigationConfirmation

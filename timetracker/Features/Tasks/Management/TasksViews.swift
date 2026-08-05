@@ -12,15 +12,9 @@ struct TasksView: View {
     #endif
 
     var body: some View {
-        #if DEBUG
-        let _ = PageSwitchTrace.mark("TASKS-BODY-START")
-        #endif
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let matchingTasks = query.isEmpty ? [] : store.taskSearchResults(matching: query)
         let rowSupplements = store.taskManagementRowSupplementProjection()
-        #if DEBUG
-        let _ = PageSwitchTrace.mark("TASKS-BODY-PROJECTIONS-DONE")
-        #endif
 
         List {
             TaskRecoveryDraftsSection(store: store)
@@ -95,11 +89,6 @@ struct TasksView: View {
             .navigationBarTitleDisplayMode(.inline)
         #endif
             .accessibilityIdentifier("tasks.view")
-            .onAppear {
-                #if DEBUG
-                PageSwitchTrace.mark("APPEAR tasks")
-                #endif
-            }
         #if os(iOS)
             .listStyle(.insetGrouped)
             .scrollDismissesKeyboard(.interactively)

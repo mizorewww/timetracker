@@ -25,6 +25,8 @@
 
 `Docs/AgentDecisions.md` records binding engineering decisions (AD-xxx). Accepted decisions must be followed; superseded ones are history. Dated `Docs/Audit-*.md` snapshots were retired on 2026-07-25; one-time verification evidence now lives in the shipping commit/PR, not in a separate dated file.
 
+The `axiom-*` skills (including `axiom-testing` in item 2) come from the Axiom pi package declared in `.pi/settings.json` (cloned to `.pi/git/github.com/CharlesWiltgen/Axiom`, gitignored). That file also sets `npmCommand` to `["npm", "--legacy-peer-deps"]` because the upstream repo's docs devDependencies conflict under npm 11; keep that workaround if the package is reinstalled or updated (`pi update --extensions`).
+
 ## Makefile usage
 
 Build, release, versioning, and hook commands enter through the Makefile. `scripts/*.sh` are thin `uv run` wrappers around the Python modules in `tools/timetracker_tools/`; do not call xcodebuild or edit the pbxproj version fields ad hoc — use the targets. Full layout, wrapper mechanism, and troubleshooting are in `Docs/DevelopmentTools.md`; per-script behavior and env vars are in `Docs/Scripts.md`.

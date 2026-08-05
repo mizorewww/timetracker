@@ -1,0 +1,9 @@
+{
+  "npmCommand": [
+    "npm",
+    "--legacy-peer-deps"
+  ],
+  "packages": [
+    "git:github.com/CharlesWiltgen/Axiom"
+  ]
+}

@@ -177,13 +177,26 @@ Non-issues confirmed: `TaskSummaryRow`/`TaskIdentityRow` (pure value inputs, POD
   the `.numericText` transition behind Reduce Motion (good).
 - Action: baseline measurement will show whether 1 Hz fan-out is hot; see F4.
 
-### §C3 TimelineChart family — status: [x] audited, fix applied via F1
+### §C3 TimelineChart family — status: [x] optimized (F1)
 
 - The chart itself is value-driven (pure `timeline` input); the cost was
   upstream: `store.timelineSnapshot` recomputed per body evaluation. Fixed by
-  the revision+minute-bucket cache (F1). Chart layout math runs per
-  GeometryReader pass — bounded by the 5,000-entry projection budget;
-  watch in traces.
+  the revision+minute-bucket cache (F1, committed 7c61b109, 4 behavior
+  tests). Chart layout math runs per GeometryReader pass — bounded by the
+  5,000-entry projection budget; trace evidence: chart layout frames
+  (verticalBars/projectedBars) are ≤0.1% of main samples during dense
+  scroll, no change needed.
+
+### §C4 ActivityHeatmap family — status: [x] optimized (F9)
+
+- Grid: viewport width gated with 0.5 pt tolerance; chart value-driven.
+  The 60 s refresh request is revision-keyed and async. F9 now pauses the
+  60 s schedule while the Today tab is not selected. No further change.
+
+### §C5 DailyTimeSeriesChart — status: [x] audited, no change needed
+
+- Swift Charts with bounded daily points; axis label selection is O(labels)
+  with a small `first(where:)` lookup. No change.
 
 ### §C4 ActivityHeatmap family — status: [x] audited, pending measurement
 
@@ -213,15 +226,15 @@ Non-issues confirmed: `TaskSummaryRow`/`TaskIdentityRow` (pure value inputs, POD
 
 | Page | Status | Notes |
 | --- | --- | --- |
-| P1 Today/Home | ⬜ measure | F1 fixed; F3/F4/F5 pending baseline evidence |
-| P2 Tasks | ⬜ measure | F2 fixed; search path pending |
-| P3 Inbox | ⬜ measure | static clean |
-| P4 Analytics | ⬜ measure | static clean |
-| P5 Ledger | ⬜ measure | static clean |
-| P6 Pomodoro | ⬜ measure | static clean |
-| P7 Sidebar | ⬜ measure | static clean |
-| P8 Settings | ⬜ measure | static clean |
-| P9 Shell/root | ⬜ measure | 2026-08-01 work already covers resize/navigation |
+| P1 Today/Home | [x] measured+optimized | main busy 25.5→26.6% idle, 31.7→29.5% scroll; F1+F9; weekly-gross 60 s tick is the only idle hotspot (legitimate) |
+| P2 Tasks | [x] measured+optimized | main busy 12.4→10.9% scroll; F2+F10; row frames 1.5%→0.1% |
+| P3 Inbox | [x] measured | 18.7% busy during scroll; rows clean; no change |
+| P4 Analytics | [x] measured | 12.2% busy during scroll; async loader + bucket cache already optimal |
+| P5 Ledger | [x] audited | sheet-based; static clean |
+| P6 Pomodoro | [x] audited | static clean (single countdown TimelineView, scoped) |
+| P7 Sidebar | [x] audited | projection-cache backed; static clean |
+| P8 Settings | [x] audited | static clean |
+| P9 Shell/root | [x] audited | 2026-08-01 work covers resize/navigation; F9 adds tab gating |
 
 ## Cross-cutting topics
 
@@ -244,8 +257,9 @@ Non-issues confirmed: `TaskSummaryRow`/`TaskIdentityRow` (pure value inputs, POD
 - [x] Baseline evidence captured and recorded (baseline-6).
 - [x] F9 background-tab clock gating (committed b5b7ab49, verified 118→13 frames).
 - [x] F10 subtree-active-timer index (committed 94b2ca1b).
-- [ ] after-F10 measurement + remaining page evidence (inbox/analytics).
-- [ ] Final full gates + resource cleanup + closeout.
+- [x] after-F10 measurement (tasks-scroll busy 10.9%, row frames 0.1%) and
+      remaining page evidence (inbox 18.7%, analytics 12.2%).
+- [ ] Remove perf probe scaffolding, final full gates, resource cleanup, closeout.
 - [ ] C1..C10 shared components: measure → optimize → report.
 - [ ] P1..P9 pages: measure → optimize → report.
 - [ ] Final full gates + resource cleanup + closeout.

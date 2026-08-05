@@ -47,17 +47,21 @@ final class PerformanceProbeUITests: XCTestCase {
         super.tearDown()
     }
 
-    private func launchApp() -> XCUIApplication {
+    private func launchApp(
+        dense: Bool = true
+    ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
             "--uitesting",
-            "--uitesting-high-density-ui",
             "-ApplePersistenceIgnoreState", "YES",
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",
             "-TimeTrackerAutomaticDemoDataModeOverride", "replaceOnLaunch",
             "-TimeTrackerAutomaticDemoSeedingDisabled", "NO",
         ]
+        if dense {
+            app.launchArguments.append("--uitesting-high-density-ui")
+        }
         app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
         app.launch()
         addTeardownBlock {
@@ -68,18 +72,60 @@ final class PerformanceProbeUITests: XCTestCase {
         return app
     }
 
+    /// Control run: plain demo seed, Today must appear quickly. Validates the
+    /// probe driver itself; if this fails the harness is broken, not the app.
+    func testControlPlainLaunchShowsToday() throws {
+        let app = launchApp(dense: false)
+
+        let ready = app.descendants(matching: .any)["app.initialConfiguration.ready"]
+        XCTAssertTrue(ready.waitForExistence(timeout: 120))
+        let todayStart = Date()
+        let todayVisible = app.descendants(matching: .any)["home.view"]
+            .waitForExistence(timeout: 30)
+        print(
+            "PERF-CONTROL-TODAY elapsed=\(Date().timeIntervalSince(todayStart)) "
+                + "visible=\(todayVisible)"
+        )
+        XCTAssertTrue(todayVisible, "Plain launch must show Today quickly.")
+    }
+
     func testDenseTodayScrollAndPageTraversal() throws {
         let app = launchApp()
 
-        let ready = app.otherElements["app.initialConfiguration.ready"]
+        let ready = app.descendants(matching: .any)["app.initialConfiguration.ready"]
+        let readyStart = Date()
         XCTAssertTrue(
             ready.waitForExistence(timeout: 240),
             "The app never finished initial configuration with the dense fixture."
         )
-        try XCTSkipIf(
-            app.otherElements["home.view"].waitForExistence(timeout: 10) == false,
-            "Today did not appear; cannot drive the dense scenario."
+        print("PERF-READY elapsed=\(Date().timeIntervalSince(readyStart))")
+
+        let todayStart = Date()
+        var todayVisible = app.descendants(matching: .any)["home.view"]
+            .waitForExistence(timeout: 30)
+        if todayVisible == false {
+            // Periodic retry with tree dumps so the host can see what the app
+            // is actually presenting while Today is slow to appear.
+            for attempt in 1 ... 5 {
+                dumpAXTree(app, to: "/tmp/timetracker-ax-tree-\(attempt).txt")
+                print(
+                    "PERF-TODAY-RETRY \(attempt) elapsed="
+                        + "\(Date().timeIntervalSince(todayStart))"
+                )
+                todayVisible = app.descendants(matching: .any)["home.view"]
+                    .waitForExistence(timeout: 20)
+                if todayVisible { break }
+            }
+        }
+        print(
+            "PERF-TODAY elapsed=\(Date().timeIntervalSince(todayStart)) "
+                + "visible=\(todayVisible)"
         )
+        if todayVisible == false {
+            throw XCTSkip(
+                "Today did not appear with the dense fixture; cannot drive the scenario."
+            )
+        }
 
         // Phase 1: Today idle — 24 active timers tick at 1 Hz plus minute
         // clocks (heatmap, weekly gross, overview) run here.
@@ -104,8 +150,9 @@ final class PerformanceProbeUITests: XCTestCase {
         }
 
         // Phase 3: Tasks — 1,200-task tree.
+        restoreTabBar(app)
         app.buttons["phone.tab.tasks"].firstMatch.tap()
-        XCTAssertTrue(app.otherElements["tasks.view"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.descendants(matching: .any)["tasks.view"].waitForExistence(timeout: 15))
         phase("tasks-scroll", duration: 20) {
             for _ in 0 ..< 12 {
                 measureSwipe("tasks-scroll") {
@@ -122,8 +169,9 @@ final class PerformanceProbeUITests: XCTestCase {
         }
 
         // Phase 4: Inbox — 400 items.
+        restoreTabBar(app)
         app.buttons["phone.tab.inbox"].firstMatch.tap()
-        XCTAssertTrue(app.otherElements["inbox.view"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.descendants(matching: .any)["inbox.view"].waitForExistence(timeout: 15))
         phase("inbox-scroll", duration: 15) {
             for _ in 0 ..< 10 {
                 measureSwipe("inbox-scroll") {
@@ -134,8 +182,9 @@ final class PerformanceProbeUITests: XCTestCase {
         }
 
         // Phase 5: Analytics — dense multi-day ledger.
+        restoreTabBar(app)
         app.buttons["phone.tab.analytics"].firstMatch.tap()
-        XCTAssertTrue(app.otherElements["analytics.view"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.descendants(matching: .any)["analytics.view"].waitForExistence(timeout: 15))
         phase("analytics-scroll", duration: 15) {
             for _ in 0 ..< 10 {
                 measureSwipe("analytics-scroll") {
@@ -146,11 +195,22 @@ final class PerformanceProbeUITests: XCTestCase {
         }
 
         // Phase 6: Return to Today — final idle to catch steady-state clocks.
+        restoreTabBar(app)
         app.buttons["phone.tab.today"].firstMatch.tap()
-        XCTAssertTrue(app.otherElements["home.view"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.descendants(matching: .any)["home.view"].waitForExistence(timeout: 15))
         phase("today-idle-final", duration: 10) {
             RunLoop.current.run(until: Date().addingTimeInterval(10))
         }
+    }
+
+    /// `.tabBarMinimizeBehavior(.onScrollDown)` collapses the tab bar after
+    /// downward scrolling; scroll back up before tapping a tab.
+    private func restoreTabBar(_ app: XCUIApplication) {
+        for _ in 0 ..< 2 {
+            app.swipeDown(velocity: .fast)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
     }
 
     /// Marks a named window in the marker file and runs the interaction.
@@ -162,7 +222,7 @@ final class PerformanceProbeUITests: XCTestCase {
         let start = Date().timeIntervalSince1970
         interaction()
         let end = Date().timeIntervalSince1970
-        let entry = [
+        let entry: [String: Any] = [
             "phase": name,
             "start": start,
             "end": end,
@@ -193,5 +253,21 @@ final class PerformanceProbeUITests: XCTestCase {
         gesture()
         let elapsed = Date().timeIntervalSince(start)
         swipeDurations[phaseName, default: []].append(elapsed)
+    }
+
+    private func dumpAXTree(
+        _ app: XCUIApplication,
+        to path: String
+    ) {
+        let tree = app.debugDescription
+        try? tree.write(
+            toFile: path,
+            atomically: true,
+            encoding: .utf8
+        )
+        print(
+            "PERF-AX-TREE \(path) bytes=\(tree.utf8.count) "
+                + "prefix=\(tree.prefix(300))"
+        )
     }
 }

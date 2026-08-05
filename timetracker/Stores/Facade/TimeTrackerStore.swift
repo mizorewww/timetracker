@@ -271,6 +271,11 @@ final class TimeTrackerStore {
     /// Keyed by data revisions + day + minute bucket so repeated body
     /// evaluations after unrelated store writes reuse the last projection.
     @ObservationIgnored var todayTimelineSnapshotCache: TodayTimelineSnapshotCache?
+    /// Tasks-page row supplement projection cache (recurrence roles +
+    /// quantity progress). Keyed by taskReadModelRevision; see
+    /// TimeTrackerStore+TaskReadModels.swift.
+    @ObservationIgnored var taskManagementRowSupplementProjectionCache:
+        (revision: UInt64, projection: TaskManagementRowSupplementProjection)?
     var selectedTaskID: UUID?
     var errorMessage: String?
     var desktopDestination: DesktopDestination = .today

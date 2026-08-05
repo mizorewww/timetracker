@@ -14,9 +14,7 @@ struct TasksView: View {
     var body: some View {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let matchingTasks = query.isEmpty ? [] : store.taskSearchResults(matching: query)
-        let rowSupplements = TaskManagementRowSupplementProjection(
-            store: store
-        )
+        let rowSupplements = store.taskManagementRowSupplementProjection()
 
         List {
             TaskRecoveryDraftsSection(store: store)

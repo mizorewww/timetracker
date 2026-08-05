@@ -159,6 +159,28 @@ extension TimeTrackerStore {
         ).taskIDs.compactMap { taskByID[$0] }
     }
 
+    /// Tasks-page row supplements (recurrence role + quantity progress).
+    /// Built once per task-read-model revision: every input (recurrence
+    /// rules/occurrences, quantity goals/entries, visibility) changes only
+    /// through the task domain refresh, which bumps `taskReadModelRevision`.
+    /// Rebuilds cost a full pass over all visible tasks, so repeated body
+    /// evaluations of `TasksView` reuse the cached projection.
+    func taskManagementRowSupplementProjection()
+        -> TaskManagementRowSupplementProjection
+    {
+        if let cached = taskManagementRowSupplementProjectionCache,
+           cached.revision == taskReadModelRevision
+        {
+            return cached.projection
+        }
+        let projection = TaskManagementRowSupplementProjection(store: self)
+        taskManagementRowSupplementProjectionCache = (
+            revision: taskReadModelRevision,
+            projection: projection
+        )
+        return projection
+    }
+
     func path(for task: TaskNode) -> String {
         taskPathByID[task.id] ?? task.title
     }

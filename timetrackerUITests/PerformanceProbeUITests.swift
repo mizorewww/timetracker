@@ -74,7 +74,7 @@ final class PerformanceProbeUITests: XCTestCase {
 
     /// Control run: plain demo seed, Today must appear quickly. Validates the
     /// probe driver itself; if this fails the harness is broken, not the app.
-    func testControlPlainLaunchShowsToday() throws {
+    func testControlPlainLaunchShowsToday() {
         let app = launchApp(dense: false)
 
         let ready = app.descendants(matching: .any)["app.initialConfiguration.ready"]
@@ -114,7 +114,9 @@ final class PerformanceProbeUITests: XCTestCase {
                 )
                 todayVisible = app.descendants(matching: .any)["home.view"]
                     .waitForExistence(timeout: 20)
-                if todayVisible { break }
+                if todayVisible {
+                    break
+                }
             }
         }
         print(
@@ -204,11 +206,12 @@ final class PerformanceProbeUITests: XCTestCase {
     }
 
     /// `.tabBarMinimizeBehavior(.onScrollDown)` collapses the tab bar after
-    /// downward scrolling; scroll back up before tapping a tab.
+    /// downward scrolling; the tasks list is thousands of points deep, so
+    /// scroll back to the top before tapping a tab.
     private func restoreTabBar(_ app: XCUIApplication) {
-        for _ in 0 ..< 2 {
+        for _ in 0 ..< 12 {
             app.swipeDown(velocity: .fast)
-            RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+            RunLoop.current.run(until: Date().addingTimeInterval(0.3))
         }
         RunLoop.current.run(until: Date().addingTimeInterval(0.5))
     }
@@ -216,7 +219,7 @@ final class PerformanceProbeUITests: XCTestCase {
     /// Marks a named window in the marker file and runs the interaction.
     private func phase(
         _ name: String,
-        duration: TimeInterval,
+        duration _: TimeInterval,
         interaction: () -> Void
     ) {
         let start = Date().timeIntervalSince1970

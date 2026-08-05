@@ -15,7 +15,6 @@ struct CompactTodaySummaryRow: View {
         }
     }
 
-    @ViewBuilder
     private func summaryContent(snapshot: TodayMetricsSnapshot) -> some View {
         VStack(spacing: 12) {
             CompactSummaryMetric(

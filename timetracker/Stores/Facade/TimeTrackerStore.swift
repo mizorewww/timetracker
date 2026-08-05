@@ -267,6 +267,10 @@ final class TimeTrackerStore {
     var rollupDomainStore = RollupStore()
     var analyticsDomainStore = AnalyticsStore()
     var analyticsRevision: UInt = 0
+    /// Today timeline snapshot cache (see TimeTrackerStore+Timeline.swift).
+    /// Keyed by data revisions + day + minute bucket so repeated body
+    /// evaluations after unrelated store writes reuse the last projection.
+    @ObservationIgnored var todayTimelineSnapshotCache: TodayTimelineSnapshotCache?
     var selectedTaskID: UUID?
     var errorMessage: String?
     var desktopDestination: DesktopDestination = .today

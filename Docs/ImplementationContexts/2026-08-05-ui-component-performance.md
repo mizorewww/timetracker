@@ -116,10 +116,46 @@ and deleted at closeout. Performance wall-clock tests in the app-hosted suite ar
 permanent gates (see Docs/Testing.md §Performance Verification); use correctness tests
 + seeded Release traces instead.
 
+## Static Audit (2026-08-05) — findings
+
+All pages use `List`/`LazyVStack` with stable `ForEach` identity; no `.indices`, no
+`AnyView` in rows, no inline filtering in `ForEach`, no formatter creation in `body`,
+no unstable ids. The chart files are pure value-driven views. Findings, ranked by
+expected impact:
+
+| # | Finding | Location | Expected impact |
+| --- | --- | --- | --- |
+| F1 | Today timeline snapshot is recomputed on every `TimelineSection`/`CompactTimelineSection` body evaluation (every store change). `timelineSnapshot` runs `AnalyticsTimelineSnapshotService` over ALL today segments (`visibleDeduplicatedByID()` = sort + dedupe) with NO cache, on MainActor, twice per store change when both shells render Today. | `Stores/Facade/TimeTrackerStore+Timeline.swift`, `Features/Home/Sections/HomeTimelineViews.swift`, `CompactHomeSections.swift` | High (dense day = 1,580+ segments) |
+| F2 | `TaskManagementRowSupplementProjection(store:)` rebuilds dictionaries over ALL recurrence rules/occurrences/tasks + quantity progress on EVERY `TasksView.body` evaluation (every store change, search keystroke, expansion toggle). Not revision-cached. | `Features/Tasks/Management/TaskManagementRowContent.swift`, `TasksViews.swift` | High with 1,200 tasks |
+| F3 | Per-row store observation fan-in: `TimelineRow`, `ActiveTimerRow`, `HomeTimerTaskRow`, `TodayTimelineEntryRow` read `store` in body (task lookup, display title). Every store write re-evaluates all visible dense rows. | `Features/Home/Rows/*` | Medium-High on dense Today |
+| F4 | Per-active-timer 1 Hz `TimelineView(.periodic, by: 1)` in `DurationLabel` (Now rows, live timeline rows, countdowns). Each is scoped (good), but at 24 active timers + live timeline rows there are many concurrent 1 Hz timelines, each with `AnimatedClockText` `.numericText` transition. Also `TimelineRow.taskButton(at: Date())` rebuilds the record presentation per tick. | `SharedUI/Components/DurationLabels.swift`, `HomeTimelineRows.swift` | Medium (measure first) |
+| F5 | `CompactTodaySummaryRow` runs `store.todayMetricsSnapshot(now:)` every 30 s in a TimelineView on MainActor (interval clip + merge over today/yesterday segments). Not cached; same work on both shells. | `Features/Home/CompactHomeRows.swift` | Medium at dense scale |
+| F6 | `TimelineChart` computes bar placements inside `GeometryReader` body (per layout pass). O(n) per pass over entries; bounded by 5,000-entry projection budget. | `SharedUI/Components/TimelineChart.swift` | Low-Medium; watch in traces |
+| F7 | `CompactTodaySummaryRow`'s 30 s timeline and heatmap/weekly-gross 60 s timelines re-evaluate their store-reading closures even when data is unchanged (no dirty check). | Home sections | Low |
+| F8 | `TasksView` computes `store.taskSearchResults(matching:)` in body on every keystroke (unavoidable) and `TaskManagementFlatRow` reads store per row. | `TasksViews.swift` | Low |
+
+Non-issues confirmed: `TaskSummaryRow`/`TaskIdentityRow` (pure value inputs, POD),
+`TaskTimerActionButton` (POD), `AnimatedClockText` (small, motion-gated),
+`ActivityHeatmapGrid` (geometry width gated with 0.5 pt tolerance),
+`DailyTimeSeriesChart` (Swift Charts, bounded points), `TaskHierarchyPicker` rows
+(value inputs), Inbox/Ledger/Sidebar/Analytics pages (lazy containers, stable ids).
+
+## Measurement infrastructure (plan)
+
+- iOS simulator (iPhone 17 Pro, iOS 27): Debug build launched with `--uitesting`
+  + `--uitesting-high-density-ui` (seeds 1,200 tasks / 1,580 segments / 24 active
+  timers / 400 inbox / 120 countdowns). Scripted interaction via XCUITest perf
+  driver; CPU evidence via `/usr/bin/sample` attach to the app process (validated
+  by prior work; `xctrace` on the iOS 27 sim produced invalid traces).
+- macOS host: `xctrace` SwiftUI template works on host for SwiftUI update-count /
+  invalidation-source analysis (validated by prior work 2026-07-29, 2026-08-01).
+- Correctness: any optimization touching observable output shape gets a service/store
+  boundary test with an independent oracle before the change.
+
 ## Progress Tracker
 
 - [x] Branch created, master doc written, initial commit.
-- [ ] Static SwiftUI audit of all components (identity, lazy containers, clocks, observation).
+- [x] Static SwiftUI audit of all components (identity, lazy containers, clocks, observation).
 - [ ] Measurement harness: seeded stress fixture + baseline capture method validated.
 - [ ] C1..C10 shared components: measure → optimize → report.
 - [ ] P1..P9 pages: measure → optimize → report.

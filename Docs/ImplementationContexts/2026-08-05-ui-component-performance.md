@@ -152,11 +152,96 @@ Non-issues confirmed: `TaskSummaryRow`/`TaskIdentityRow` (pure value inputs, POD
 - Correctness: any optimization touching observable output shape gets a service/store
   boundary test with an independent oracle before the change.
 
+## Per-Component Reports
+
+### §C1 TaskSummaryRow / TaskIdentityRow — status: [x] audited, no change needed
+
+- Static: pure value inputs (`TaskIdentityPresentation` + metadata), no store
+  access, no property wrappers except `@Environment(dynamicTypeSize)`, no
+  formatters in body, POD-friendly. Used by Tasks rows, hierarchy picker,
+  sidebar — the value-presentation boundary is the right design.
+- Dynamic: no per-second clock; re-renders only when inputs change.
+- Verdict: no change (best practice already followed).
+
+### §C2 TaskTimerActionButton — status: [x] audited, no change needed
+
+- Static: POD (value inputs + closure), no observable access, no animation on
+  layout, `contentShape` scoped. Used by Home rows, pickers, Pomodoro.
+- Verdict: no change.
+
+### §C6 AnimatedClockText / DurationLabel — status: [x] audited, pending measurement
+
+- `DurationLabel` wraps a 1 Hz `TimelineView(.periodic)` — one per live
+  instance. Scoped invalidation (good) but N concurrent 1 Hz timelines at
+  density (24 active timers + live timeline rows). `AnimatedClockText` gates
+  the `.numericText` transition behind Reduce Motion (good).
+- Action: baseline measurement will show whether 1 Hz fan-out is hot; see F4.
+
+### §C3 TimelineChart family — status: [x] audited, fix applied via F1
+
+- The chart itself is value-driven (pure `timeline` input); the cost was
+  upstream: `store.timelineSnapshot` recomputed per body evaluation. Fixed by
+  the revision+minute-bucket cache (F1). Chart layout math runs per
+  GeometryReader pass — bounded by the 5,000-entry projection budget;
+  watch in traces.
+
+### §C4 ActivityHeatmap family — status: [x] audited, pending measurement
+
+- Grid: viewport width gated with 0.5 pt tolerance + scrollDisabled policy;
+  chart is value-driven. Section-level 60 s refresh request is revision-keyed
+  and async (off-main compute). No change identified.
+
+### §C5 DailyTimeSeriesChart — status: [x] audited, no change needed
+
+- Swift Charts with bounded daily points; axis label selection is O(labels)
+  with a small `first(where:)` lookup. No change.
+
+### §C7 TaskHierarchyPicker family — status: [x] audited, no change needed
+
+- `List` + `ForEach` with stable item ids, value-input rows, no inline
+  filtering, unary rows. No change.
+
+### §C8 TaskCategoryPicker — status: [x] audited, no change needed
+
+### §C9 DurationLabels/InfoRows/SectionHeaders/EmptyStates — status: [x] audited
+
+- No hot paths; value-driven. `DurationLabel` covered in §C6.
+
+### §C10 Settings rows — status: [x] audited, no change needed
+
+### Page reports
+
+| Page | Status | Notes |
+| --- | --- | --- |
+| P1 Today/Home | ⬜ measure | F1 fixed; F3/F4/F5 pending baseline evidence |
+| P2 Tasks | ⬜ measure | F2 fixed; search path pending |
+| P3 Inbox | ⬜ measure | static clean |
+| P4 Analytics | ⬜ measure | static clean |
+| P5 Ledger | ⬜ measure | static clean |
+| P6 Pomodoro | ⬜ measure | static clean |
+| P7 Sidebar | ⬜ measure | static clean |
+| P8 Settings | ⬜ measure | static clean |
+| P9 Shell/root | ⬜ measure | 2026-08-01 work already covers resize/navigation |
+
+## Cross-cutting topics
+
+- §X1 1 Hz clock sources (F4): measure first; candidate consolidation is a
+  page-level shared minute/now source only if traces prove the per-label
+  timelines are hot.
+- §X2 Metrics/heatmap/weekly-gross periodic closures (F5/F7): candidate
+  store-level revision+minute-bucket caches mirroring F1 if baseline shows
+  the 30 s/60 s recomputes.
+- §X3 Row store fan-in (F3): @Observable property-granular tracking already
+  limits invalidation to task-domain writes; no change planned.
+
 ## Progress Tracker
 
 - [x] Branch created, master doc written, initial commit.
 - [x] Static SwiftUI audit of all components (identity, lazy containers, clocks, observation).
-- [ ] Measurement harness: seeded stress fixture + baseline capture method validated.
+- [x] F1 Today timeline snapshot cache (committed 7c61b109).
+- [x] F2 Tasks row supplement projection cache (committed 2adcc70a).
+- [x] Measurement harness: perf probe UI test + host sampler + aggregator (first baseline in progress).
+- [ ] Baseline evidence captured and recorded.
 - [ ] C1..C10 shared components: measure → optimize → report.
 - [ ] P1..P9 pages: measure → optimize → report.
 - [ ] Final full gates + resource cleanup + closeout.

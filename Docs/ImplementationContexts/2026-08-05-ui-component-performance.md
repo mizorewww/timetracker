@@ -340,6 +340,48 @@ Decisions:
 
 (AD-style decisions made during this work, append only)
 
+## Test Record (closeout)
+
+| Test | Protects | Oracle | Boundary | Kind | Disposition |
+| --- | --- | --- | --- | --- | --- |
+| TodayTimelineSnapshotTests (4) | Timeline cache correctness: same-minute reads equal; ledger writes, task edits, minute advances invalidate | Store-level timeline semantics | Store facade `timelineSnapshot` | Permanent regression | Retained |
+| TaskManagementRowSupplementProjectionTests (3) | Row supplement cache: fresh store, quantity mutation invalidation, stable reads | Store read-model semantics | Store facade projection | Permanent regression | Retained |
+| TaskActiveTimerIndexTests (2) | Subtree-active-timer index: ancestors true, unrelated false, stop invalidates | Task-tree + ledger semantics | Store facade index | Permanent regression | Retained |
+| PerformanceProbeUITests (scaffold) | Measurement driver for dense-fixture scenarios | n/a (manual host-side sampling) | UI | TEST-SCAFFOLD | Deleted at closeout (35cef82d) |
+
+No `TEST-SCAFFOLD` markers remain in the changed scope.
+
+## Resource Ownership Log
+
+- Every simulator batch created one iPhone 17 Pro (iOS 27) sim and deleted it
+  in the run trap: baseline-1..6, after-f9, after-f10. Verified zero Booted
+  simulators and zero TimeTracker sims at closeout.
+- Sampler loops and xcodebuild runners were killed at batch end; no owned
+  process remains (verified via pgrep).
+- Raw evidence lives in /tmp/timetracker-perf/ (baseline-6, after-f9,
+  after-f10 sample sets + markers); metrics are recorded above. The probe
+  and scripts were host-local scaffolding and are not in the repo.
+
 ## Closeout
 
-(filled at end)
+Status: complete.
+
+- 4 optimizations landed: F1 timeline snapshot cache, F2 tasks row
+  supplement cache, F9 background-tab clock gating, F10 subtree-active-timer
+  index. 9 permanent behavior tests added; all retained.
+- Measured (dense fixture: 1,200 tasks / 1,580 segments / 24 active timers /
+  400 inbox / 120 countdowns, iPhone 17 Pro sim, iOS 27, Debug):
+  - Today main-thread busy: idle 25.5%→26.6% (noise), scroll 31.7%→29.5%;
+    background clock frames on other tabs: 118→13 sample lines (89%).
+  - Tasks scroll busy: 12.4%→10.9%; row body frames 1.5%→0.1%.
+  - Inbox 18.7%, Analytics 12.2% — clean, no change.
+  - The dense end-to-end scenario (launch → all five pages → return) went
+    from never completing to passing consistently in ~300 s.
+- Final gates on the frozen state: `make test` 175/175 passed (29 suites),
+  `make localization-check` 9/9, `make format-check` 0/723, signed
+  `make build-ios` and `make build-macos` succeeded.
+- UI unchanged: all optimizations are caching/gating; screenshots and AX
+  assertions from the probe runs confirm identical presentation.
+- Resources: zero Booted simulators, zero owned processes; evidence kept in
+  /tmp/timetracker-perf/ until the OS reclaims it.
+- Branch: `perf/ui-component-performance-2026-08-05` (13 commits).

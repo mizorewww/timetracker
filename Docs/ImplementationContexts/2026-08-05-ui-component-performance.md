@@ -240,8 +240,12 @@ Non-issues confirmed: `TaskSummaryRow`/`TaskIdentityRow` (pure value inputs, POD
 - [x] Static SwiftUI audit of all components (identity, lazy containers, clocks, observation).
 - [x] F1 Today timeline snapshot cache (committed 7c61b109).
 - [x] F2 Tasks row supplement projection cache (committed 2adcc70a).
-- [x] Measurement harness: perf probe UI test + host sampler + aggregator (first baseline in progress).
-- [ ] Baseline evidence captured and recorded.
+- [x] Measurement harness: perf probe UI test + host sampler + aggregator.
+- [x] Baseline evidence captured and recorded (baseline-6).
+- [x] F9 background-tab clock gating (committed b5b7ab49, verified 118→13 frames).
+- [x] F10 subtree-active-timer index (committed 94b2ca1b).
+- [ ] after-F10 measurement + remaining page evidence (inbox/analytics).
+- [ ] Final full gates + resource cleanup + closeout.
 - [ ] C1..C10 shared components: measure → optimize → report.
 - [ ] P1..P9 pages: measure → optimize → report.
 - [ ] Final full gates + resource cleanup + closeout.
@@ -250,9 +254,73 @@ Non-issues confirmed: `TaskSummaryRow`/`TaskIdentityRow` (pure value inputs, POD
 
 (chronological; append only)
 
+- 2026-08-05: `baseline-1` invalid — probe test had a heterogeneous-literal
+  compile error (`[String: Any]` annotation); app never launched; sampler
+  found no PID. Fixed the probe, reran as `baseline-2`.
+- 2026-08-05: `baseline-2` invalid — two causes: (1) my `make test` unit run
+  collided with the simulator xcodebuild on the shared DerivedData build.db
+  lock, aborting the UI build; (2) after restart, the sampler's PID matcher
+  anchored `timetracker.app/timetracker$` to the end of the command line, but
+  the app launches with args, so it never attached. The probe also skipped:
+  `home.view` did not appear within 10 s after the ready marker with the
+  dense fixture. Fixed sampler regex, raised the Today wait to 120 s with a
+  debug tree dump on timeout. Reran as `baseline-3`.
+- 2026-08-05: Lesson recorded: never run `make test` (or any xcodebuild)
+  concurrently with a simulator perf batch — both share DerivedData and the
+  second build aborts with "database is locked".
+
 ## Resource Ownership Log
 
 (UDIDs, PIDs, artifact paths; record before each batch, release after)
+
+- 2026-08-05: `baseline-5` partial — tasks tab tapped OK but inbox tab was
+  not found: `.tabBarMinimizeBehavior(.onScrollDown)` collapsed the tab bar
+  after the deep tasks scroll; 2 restore swipes were not enough for a
+  1,200-row list. Raised restore to 12 swipes. Data captured for
+  today-idle/today-scroll/tasks-scroll (sampler expired before the later
+  phases; fixed sampler duration to 900 s and kill-on-test-end).
+- 2026-08-05: `baseline-6` (before F9/F10) — full phases today-idle,
+  today-scroll, tasks-scroll. Main-thread busy: today-idle 25.5%,
+  today-scroll 31.7%, tasks-scroll 12.4%. Top app hotspot during idle:
+  HomeWeeklyGrossTimeSection 60 s recompute (weeklyGrossTimeSnapshot +
+  DailySummaryService). tasks-scroll showed Today's background clocks
+  (TimelineView/DurationLabel/AnimatedClockText frames) — TabView keeps all
+  tabs mounted → F9 finding. Swipe latency median ~2.7 s (AX-traversal
+  dominated, not app rendering).
+- 2026-08-05: `after-f9` — full dense run PASSED all six phases. Today clock
+  frames during tasks-scroll fell 118 → 13 sample lines (89%). Also
+  confirmed: elapsed labels render correct values after tab reselection
+  (test assertions + AX). New hotspot surfaced: TaskRowSwipeActions
+  hasActiveTimer(inTaskSubtree:) per row → F10.
+- 2026-08-05: unit-gate bug found: TodayTimelineSnapshotTests failed after
+  local midnight — segments at now-3600..now-1800 crossed into the previous
+  day, which the Today timeline correctly excludes. Fixed by anchoring
+  segments to the local day start (adaptive length near midnight). This was
+  a test bug, not a product bug.
+
+## Measurements and decisions (summary)
+
+| Metric | baseline-6 (before) | after-F9 | after-F10 (pending) |
+| --- | --- | --- | --- |
+| Main busy today-idle | 25.5% | 30.8%* | — |
+| Main busy today-scroll | 31.7% | 31.5% | — |
+| Main busy tasks-scroll | 12.4% | 17.2%* | — |
+| Today clock frames in tasks-scroll | 118 | 13 | — |
+| Dense scenario passes end-to-end | no | yes | — |
+
+*after-f9 idle window started ~20 s after launch (launch catch-up still
+running) — timing artifact, not a regression.
+
+Decisions:
+- D1: F9 — gate Today clock sources on tab selection (compact shell).
+- D2: F10 — revision-keyed subtree-active-timer index for Tasks rows.
+- D3: Analytics page background refresh NOT gated: its minute-bucket cache
+  already makes background ticks cheap; not in hotspot evidence.
+- D4: Countdown `Text(date, style: .relative)` timers left as-is (SwiftUI
+  coalesces them; gating would change the UI).
+- D5: Regular-shell Today clocks are not gated (Today unmounts when the
+  destination changes; a pushed task detail keeps clocks running behind it
+  — accepted, documented limit).
 
 ## Decisions
 

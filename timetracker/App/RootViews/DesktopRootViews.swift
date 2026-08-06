@@ -8,6 +8,7 @@ struct DesktopContentView: View {
     var body: some View {
         NavigationStack(path: $navigationPath) {
             destinationContent
+                .pageEntranceTransition()
         }
         .onChange(of: store.desktopDestination) { _, _ in
             navigationPath = NavigationPath()

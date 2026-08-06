@@ -80,6 +80,27 @@ Main-thread blocked duration during warm switches: 95–276 ms.
    cheaper than the projection) so switch animations that re-layout the
    chart at the same size stop re-projecting per pass.
 
+## Root cause of the Tasks first-mount cost: Swift type metadata
+
+Continuous host sampling finally caught the Tasks cold-switch window: ~96% of
+main-thread samples were in `swift_conformsToProtocolMaybeInstantiateSuper-
+classes` + `getContextDescriptor` — lazy Swift runtime protocol-conformance /
+type-metadata resolution, not layout, not row count, not row content (all
+three were ruled out by controlled experiments). It occurs in Debug AND
+Release (Release Tasks cold measured 531 ms). It is process-lifetime one-time
+per type, so it can be paid once at launch instead of at first switch.
+
+### Fix: off-screen view-type preheating (ViewTypePreheater)
+
+`ContentView` mounts `TasksNavigationView` once off-screen right after
+configuration (overlay in the real hierarchy so the environment — router,
+feedback router, shell — is complete; the earlier UIHostingController attempt
+crashed on a missing environment value, and a hidden standalone window never
+ran layout). `onAppear` removes it after one yield. First switch to Tasks:
+948 → 353 ms (Debug), 531 → 295 ms (Release). Warm switches unchanged
+(~70 ms). A multi-page preheat variant stalled the main thread under Release
+and was dropped; only the Tasks page (the dominant cost) is preheated.
+
 ## Experiments that bounded the remaining cost (no UI change possible)
 
 - Row-count experiment (`--perf-limit-rows`, 200 of 1,200 rows): Tasks cold
@@ -99,7 +120,7 @@ Main-thread blocked duration during warm switches: 95–276 ms.
 
 | Switch | Baseline cold | Final cold | Baseline warm | Final warm |
 | --- | --- | --- | --- | --- |
-| Tasks | 948 | 598 | 147/141 | 85/82 |
+| Tasks | 948 | 598 (295 Release+preheat) | 147/141 | 85/82 (70 Release) |
 | Inbox | 128 | 85 | 114/115 | 65/64 |
 | Pomodoro | 259 | 206 | 98/85 | 40/51 |
 | Analytics | 120 | 143* | 177/167 | 130/112 |
@@ -111,6 +132,15 @@ Warm improvement: 25–59% per page (Pomodoro −59%, Inbox −43%, Tasks −42%
 Analytics −27%, Today −25%). The ~20x target is reached for warm switching
 only in the best cases; the platform-fixed first-mount floor (~550 ms for the
 Tasks list) bounds cold switching at ~1.6x without a UI change.
+
+## Final number for the user-visible complaint
+
+- Tasks first switch: 948 → 295 ms in the shipping configuration (3.2x);
+  every later switch ~70 ms.
+- Other pages' warm switches: 40–140 ms (2–4x better than the 100–190 ms
+  baseline); their first switches are 90–230 ms (preheat covers only Tasks).
+- The remaining Tasks first-switch cost is SwiftUI List first-layout +
+  tab-switch scheduling; the metadata component is gone.
 
 ## Test record
 

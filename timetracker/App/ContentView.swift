@@ -11,9 +11,23 @@ struct ContentView: View {
     @State private var dismissedSyncConflictID: UUID?
     @State private var pendingDeepLinks = PendingDeepLinkQueue()
     @State private var hasFinishedInitialConfiguration = false
+    @State private var preheatPhase = -1
     #if os(iOS) && canImport(WatchConnectivity)
     @State private var watchCommandRegistrationID: UUID?
     #endif
+
+    private func advancePreheat() {
+        Task { @MainActor in
+            await Task.yield()
+            try? await Task.sleep(for: .seconds(0.4))
+            guard preheatPhase >= 0 else { return }
+            if preheatPhase < ViewTypePreheater.phaseCount - 1 {
+                preheatPhase += 1
+            } else {
+                preheatPhase = -1
+            }
+        }
+    }
 
     init() {
         _store = State(initialValue: TimeTrackerStore())
@@ -42,6 +56,22 @@ struct ContentView: View {
             feedbackRouter: feedbackRouter
         )
         .appSceneFeedbackHost(router: feedbackRouter)
+        .overlay {
+            if preheatPhase >= 0 {
+                ViewTypePreheater.preheaterView(
+                    phase: preheatPhase,
+                    store: store
+                )
+                .environment(presentationRouter)
+                .environment(feedbackRouter)
+                .environment(\.layoutShell, .compact)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+                .onAppear {
+                    advancePreheat()
+                }
+            }
+        }
         // The sync-conflict banner is installed by whichever shell `AppRootView`
         // picks, so it no longer needs a second macOS-only insertion here.
         .task {
@@ -51,6 +81,12 @@ struct ContentView: View {
             drainPendingDeepLinks()
             registerForWatchCommandsIfNeeded()
             store.materializeCurrentDailyTaskRecurrences()
+            // Resolve the tab pages' Swift view types off-screen right after
+            // launch, so first switches do not pay the lazy metadata-
+            // resolution cost (~500 ms for Tasks on dense data).
+            if preheatPhase < 0 {
+                preheatPhase = 0
+            }
             await store.refreshAppleHealthTimelineIfEnabled()
             #if DEBUG
             if await CloudSyncSmokeTestRunner.runIfRequested(context: modelContext, store: store) {

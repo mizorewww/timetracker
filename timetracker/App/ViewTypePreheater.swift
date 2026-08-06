@@ -1,40 +1,120 @@
 import SwiftUI
 
-/// Warms up Swift runtime type metadata for the Tasks page's view hierarchy
-/// after launch.
+/// Warms up Swift runtime type metadata AND SwiftUI layout descriptors for the
+/// Tasks page before the user first switches to it.
 ///
-/// Measured on the dense fixture (1,200 tasks): the first switch to Tasks
-/// spent ~500 ms of main-thread time in lazy Swift protocol-conformance and
-/// type-metadata resolution, independent of row count and row content, in
-/// Debug and Release. `ContentView` mounts the page once off-screen inside
-/// its own hierarchy and removes it right after; first switches then pay only
-/// layout, not metadata resolution.
+/// Measured on the dense fixture: the first switch to Tasks spent ~500 ms in
+/// lazy Swift protocol-conformance resolution and, after preheating that,
+/// another ~300-400 ms in AttributeGraph LayoutDescriptor construction (Swift
+/// metadata reflection over view fields), both one-time-per-process costs in
+/// Debug and Release, independent of row count and row content.
 ///
-/// Visibility requirements learned from failed variants:
-/// - opacity(0) alone: the system skips the fully invisible subtree's
-///   list-cell creation — nothing gets preheated.
-/// - Hidden standalone window: never runs SwiftUI layout.
-/// - Off-screen offset alone: one on-screen frame at mount (the overlay
-///   centers before the offset applies).
-/// The current variant combines a far off-screen offset with a near-zero
-/// (non-zero) opacity, so the mount frame cannot be perceived and the
-/// subtree still runs a real layout pass.
+/// The preheat mounts the Tasks tab inside a real TabView (same environment
+/// shape as the compact shell, Tasks pre-selected) off-screen and removes it
+/// after a layout pass. Earlier variants failed because:
+/// - hidden standalone windows never run SwiftUI layout;
+/// - an overlay-mounted page resolves metadata but not the TabView-path
+///   layout descriptors (different environment → cache miss);
+/// - opacity(0) makes the system skip the subtree entirely.
 enum ViewTypePreheater {
-    static func tasksPreheaterView(
-        store: TimeTrackerStore,
-        onFinished: @escaping @MainActor () -> Void
-    ) -> some View {
-        TasksNavigationView(store: store)
-            .frame(width: 390, height: 844)
-            .offset(y: 10000)
-            .opacity(0.001)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-            .onAppear {
-                Task { @MainActor in
-                    await Task.yield()
-                    onFinished()
+    /// A minimal TabView with one page pre-selected, mounted off-screen by
+    /// the caller. Mirrors the compact shell's environment so the layout
+    /// descriptors built here are the ones the real switch will hit.
+    struct PreheatTabHost: View {
+        let store: TimeTrackerStore
+        let preselected: TimeTrackerStore.DesktopDestination
+        @State private var selection: TimeTrackerStore.DesktopDestination
+
+        init(
+            store: TimeTrackerStore,
+            preselected: TimeTrackerStore.DesktopDestination
+        ) {
+            self.store = store
+            self.preselected = preselected
+            _selection = State(
+                initialValue: preselected
+            )
+        }
+
+        @ViewBuilder
+        private func pageContent(
+            _ destination: TimeTrackerStore.DesktopDestination
+        ) -> some View {
+            switch destination {
+            case .today:
+                Color.clear
+            case .inbox:
+                InboxView(store: store)
+            case .tasks:
+                TasksNavigationView(store: store)
+            case .pomodoro:
+                PomodoroView(store: store)
+            case .analytics:
+                AnalyticsView(store: store)
+            case .settings:
+                Color.clear
+            }
+        }
+
+        var body: some View {
+            TabView(selection: $selection) {
+                Tab(value: .tasks) {
+                    pageContent(.tasks)
+                } label: {
+                    Label(AppStrings.tasks, systemImage: "checklist")
+                }
+
+                Tab(value: .inbox) {
+                    pageContent(.inbox)
+                } label: {
+                    Label(AppStrings.inbox, systemImage: "tray")
+                }
+
+                Tab(value: .pomodoro) {
+                    pageContent(.pomodoro)
+                } label: {
+                    Label(AppStrings.focus, systemImage: "timer")
+                }
+
+                Tab(value: .analytics) {
+                    pageContent(.analytics)
+                } label: {
+                    Label(AppStrings.analytics, systemImage: "chart.bar.xaxis")
                 }
             }
+        }
+    }
+
+    @MainActor
+    static func preheatPage(
+        destination: TimeTrackerStore.DesktopDestination,
+        store: TimeTrackerStore,
+        presentationRouter: AppPresentationRouter,
+        feedbackRouter: AppSceneFeedbackRouter
+    ) {
+        #if os(iOS)
+        let host = UIHostingController(
+            rootView: PreheatTabHost(
+                store: store,
+                preselected: destination
+            )
+            .environment(presentationRouter)
+            .environment(feedbackRouter)
+            .environment(\.layoutShell, .compact)
+        )
+        host.view.frame = CGRect(x: 0, y: 10000, width: 390, height: 844)
+        host.view.isHidden = false
+        guard let window = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.keyWindow != nil })?
+            .keyWindow
+        else { return }
+        window.addSubview(host.view)
+        host.view.layoutIfNeeded()
+        DispatchQueue.main.async {
+            host.view.layoutIfNeeded()
+            host.view.removeFromSuperview()
+        }
+        #endif
     }
 }

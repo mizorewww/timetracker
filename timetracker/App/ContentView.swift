@@ -11,7 +11,6 @@ struct ContentView: View {
     @State private var dismissedSyncConflictID: UUID?
     @State private var pendingDeepLinks = PendingDeepLinkQueue()
     @State private var hasFinishedInitialConfiguration = false
-    @State private var isPreheatingTasksPage = false
     #if os(iOS) && canImport(WatchConnectivity)
     @State private var watchCommandRegistrationID: UUID?
     #endif
@@ -43,17 +42,6 @@ struct ContentView: View {
             feedbackRouter: feedbackRouter
         )
         .appSceneFeedbackHost(router: feedbackRouter)
-        .overlay {
-            if isPreheatingTasksPage {
-                ViewTypePreheater.tasksPreheaterView(store: store) {
-                    isPreheatingTasksPage = false
-                }
-                .environment(presentationRouter)
-                .environment(feedbackRouter)
-                .environment(\.layoutShell, .compact)
-            }
-        }
-
         // The sync-conflict banner is installed by whichever shell `AppRootView`
         // picks, so it no longer needs a second macOS-only insertion here.
         .task {
@@ -63,10 +51,32 @@ struct ContentView: View {
             drainPendingDeepLinks()
             registerForWatchCommandsIfNeeded()
             store.materializeCurrentDailyTaskRecurrences()
-            // Resolve the Tasks page's Swift view types off-screen right
-            // after launch, so the first switch to Tasks does not pay the
-            // lazy metadata-resolution cost (~500 ms on dense data).
-            isPreheatingTasksPage = true
+            // Resolve the pages' Swift view types and layout descriptors
+            // off-screen, so first switches do not pay the lazy resolution
+            // costs (~800 ms for Tasks on dense data before preheating).
+            // Tasks runs immediately (the dominant cost); the remaining pages
+            // preheat later and only while the user is still on Today, so a
+            // short background stall never interrupts an actual switch.
+            ViewTypePreheater.preheatPage(
+                destination: .tasks,
+                store: store,
+                presentationRouter: presentationRouter,
+                feedbackRouter: feedbackRouter
+            )
+            scheduleDeferredPreheat(
+                after: 2,
+                destination: .analytics,
+                store: store,
+                presentationRouter: presentationRouter,
+                feedbackRouter: feedbackRouter
+            )
+            scheduleDeferredPreheat(
+                after: 4,
+                destination: .pomodoro,
+                store: store,
+                presentationRouter: presentationRouter,
+                feedbackRouter: feedbackRouter
+            )
             await store.refreshAppleHealthTimelineIfEnabled()
             #if DEBUG
             if await CloudSyncSmokeTestRunner.runIfRequested(context: modelContext, store: store) {
@@ -137,6 +147,27 @@ struct ContentView: View {
         .onChange(of: store.taskDetailNavigationGuard.hasPendingNavigation) { _, hasPendingNavigation in
             guard hasPendingNavigation == false else { return }
             drainPendingDeepLinks()
+        }
+    }
+
+    private func scheduleDeferredPreheat(
+        after seconds: UInt64,
+        destination: TimeTrackerStore.DesktopDestination,
+        store: TimeTrackerStore,
+        presentationRouter: AppPresentationRouter,
+        feedbackRouter: AppSceneFeedbackRouter
+    ) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(seconds))
+            // Only preheat while the user is still on Today; an active switch
+            // takes priority over background warm-up.
+            guard store.desktopDestination == .today else { return }
+            ViewTypePreheater.preheatPage(
+                destination: destination,
+                store: store,
+                presentationRouter: presentationRouter,
+                feedbackRouter: feedbackRouter
+            )
         }
     }
 

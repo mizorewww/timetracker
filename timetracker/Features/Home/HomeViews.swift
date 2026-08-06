@@ -7,7 +7,7 @@ struct DesktopMainView: View {
 
     var body: some View {
         let layout = HomeLayoutPolicy(width: viewportMeasurement.layoutWidth)
-        let content = TodayHomeContent(store: store, quickStartLimit: 6)
+        let content = store.todayHomeContent(quickStartLimit: 6)
 
         ScrollView {
             DesktopTodayContent(

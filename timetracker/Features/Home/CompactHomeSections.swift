@@ -118,6 +118,7 @@ struct CompactTimelineSection: View {
     let segments: [TimeSegment]
     let openTask: (UUID) -> Void
     @State private var referenceDate = homeTimelineReferenceDate(liveDate: Date())
+    @Environment(\.pageLiveClocksActive) private var clockIsActive
 
     var body: some View {
         let snapshotReferenceDate = homeTimelineSnapshotReferenceDate(
@@ -170,7 +171,8 @@ struct CompactTimelineSection: View {
             Text(AppStrings.todayTimeline)
                 .accessibilityIdentifier("home.timeline")
         }
-        .task {
+        .task(id: clockIsActive) {
+            guard clockIsActive else { return }
             await runHomeTimelineReferenceClock(
                 referenceDate: $referenceDate
             )

@@ -51,6 +51,32 @@ struct ContentView: View {
             drainPendingDeepLinks()
             registerForWatchCommandsIfNeeded()
             store.materializeCurrentDailyTaskRecurrences()
+            // Resolve the pages' Swift view types and layout descriptors
+            // off-screen, so first switches do not pay the lazy resolution
+            // costs (~800 ms for Tasks on dense data before preheating).
+            // Tasks runs immediately (the dominant cost); the remaining pages
+            // preheat later and only while the user is still on Today, so a
+            // short background stall never interrupts an actual switch.
+            ViewTypePreheater.preheatPage(
+                destination: .tasks,
+                store: store,
+                presentationRouter: presentationRouter,
+                feedbackRouter: feedbackRouter
+            )
+            scheduleDeferredPreheat(
+                after: 2,
+                destination: .analytics,
+                store: store,
+                presentationRouter: presentationRouter,
+                feedbackRouter: feedbackRouter
+            )
+            scheduleDeferredPreheat(
+                after: 4,
+                destination: .pomodoro,
+                store: store,
+                presentationRouter: presentationRouter,
+                feedbackRouter: feedbackRouter
+            )
             await store.refreshAppleHealthTimelineIfEnabled()
             #if DEBUG
             if await CloudSyncSmokeTestRunner.runIfRequested(context: modelContext, store: store) {
@@ -121,6 +147,27 @@ struct ContentView: View {
         .onChange(of: store.taskDetailNavigationGuard.hasPendingNavigation) { _, hasPendingNavigation in
             guard hasPendingNavigation == false else { return }
             drainPendingDeepLinks()
+        }
+    }
+
+    private func scheduleDeferredPreheat(
+        after seconds: UInt64,
+        destination: TimeTrackerStore.DesktopDestination,
+        store: TimeTrackerStore,
+        presentationRouter: AppPresentationRouter,
+        feedbackRouter: AppSceneFeedbackRouter
+    ) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(seconds))
+            // Only preheat while the user is still on Today; an active switch
+            // takes priority over background warm-up.
+            guard store.desktopDestination == .today else { return }
+            ViewTypePreheater.preheatPage(
+                destination: destination,
+                store: store,
+                presentationRouter: presentationRouter,
+                feedbackRouter: feedbackRouter
+            )
         }
     }
 

@@ -1,5 +1,49 @@
 import Foundation
 
+nonisolated struct TodayHomeContentCacheKey: Equatable, Sendable {
+    let analyticsRevision: UInt
+    let taskReadModelRevision: UInt64
+    let selectedTaskID: UUID?
+    let quickStartTaskIDs: [UUID]
+    let countdownEventIDs: [UUID]
+    let quickStartLimit: Int
+    let forecastLimit: Int
+}
+
+extension TimeTrackerStore {
+    /// Today's page read model, cached by its observable inputs.
+    ///
+    /// The compact shell re-evaluates every tab's body on tab switches, so
+    /// Today's body (which builds `TodayHomeContent`, including per-task
+    /// ledger activity ranking) used to pay its full cost on every switch.
+    /// The cache key covers every store value the content reads; body
+    /// evaluations only compare the key (a few revision reads + UUID arrays).
+    func todayHomeContent(
+        quickStartLimit: Int = 4,
+        forecastLimit: Int = 3
+    ) -> TodayHomeContent {
+        let key = TodayHomeContentCacheKey(
+            analyticsRevision: analyticsRevision,
+            taskReadModelRevision: taskReadModelRevision,
+            selectedTaskID: selectedTaskID,
+            quickStartTaskIDs: preferences.quickStartTaskIDs,
+            countdownEventIDs: countdownEvents.map(\.id),
+            quickStartLimit: quickStartLimit,
+            forecastLimit: forecastLimit
+        )
+        if let cached = todayHomeContentCache, cached.key == key {
+            return cached.content
+        }
+        let content = TodayHomeContent(
+            store: self,
+            quickStartLimit: quickStartLimit,
+            forecastLimit: forecastLimit
+        )
+        todayHomeContentCache = (key: key, content: content)
+        return content
+    }
+}
+
 struct TodayHomeContent {
     let activeSegments: [TimeSegment]
     let quickStartTasks: [TaskNode]
@@ -101,9 +145,33 @@ struct WeeklyGrossTimeSnapshot {
 }
 
 extension TimeTrackerStore {
+    /// Today's gross/wall totals, cached by ledger revision + minute bucket.
+    ///
+    /// Tab switches re-evaluate every mounted page, and the metrics row's
+    /// static branch plus the 30 s timeline can both query in the same
+    /// minute; the cache collapses those into one interval projection.
     func todayMetricsSnapshot(
         now: Date,
         calendar: Calendar = .current
+    ) -> TodayMetricsSnapshot {
+        let minuteBucket = Int(now.timeIntervalSinceReferenceDate / 60)
+        if let cached = todayMetricsSnapshotCache,
+           cached.key.revision == analyticsRevision,
+           cached.key.minuteBucket == minuteBucket
+        {
+            return cached.snapshot
+        }
+        let snapshot = computeTodayMetricsSnapshot(now: now, calendar: calendar)
+        todayMetricsSnapshotCache = (
+            key: (revision: analyticsRevision, minuteBucket: minuteBucket),
+            snapshot: snapshot
+        )
+        return snapshot
+    }
+
+    private func computeTodayMetricsSnapshot(
+        now: Date,
+        calendar: Calendar
     ) -> TodayMetricsSnapshot {
         guard let todayInterval = calendar.dateInterval(of: .day, for: now),
               let previousDate = calendar.date(byAdding: .day, value: -1, to: now),

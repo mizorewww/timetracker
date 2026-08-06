@@ -6,30 +6,38 @@ struct HomeWeeklyGrossTimeSection: View {
 
     @Environment(\.calendar) private var calendar
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.pageLiveClocksActive) private var clockIsActive
     @State private var snapshot: WeeklyGrossTimeSnapshot?
     @State private var clockRevision: UInt = 0
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 60)) { context in
-            let request = HomeWeeklyGrossTimeRefreshRequest(
-                store: store,
-                snapshot: snapshot,
-                now: context.date,
-                clockRevision: clockRevision,
-                calendar: calendar
-            )
-            Group {
-                section(
-                    snapshot: snapshot?.interval == request.evaluationKey.interval
-                        ? snapshot
-                        : nil
-                )
-            }
-            .task(id: request) {
-                snapshot = store.weeklyGrossTimeSnapshot(
-                    now: context.date,
-                    calendar: calendar
-                )
+        Group {
+            if clockIsActive {
+                TimelineView(.periodic(from: .now, by: 60)) { context in
+                    let request = HomeWeeklyGrossTimeRefreshRequest(
+                        store: store,
+                        snapshot: snapshot,
+                        now: context.date,
+                        clockRevision: clockRevision,
+                        calendar: calendar
+                    )
+                    Group {
+                        section(
+                            snapshot: snapshot?.interval == request.evaluationKey.interval
+                                ? snapshot
+                                : nil
+                        )
+                    }
+                    .task(id: request) {
+                        snapshot = store.weeklyGrossTimeSnapshot(
+                            now: context.date,
+                            calendar: calendar
+                        )
+                    }
+                }
+            } else {
+                // Static render while the Today tab is not selected.
+                section(snapshot: snapshot)
             }
         }
         .onChange(of: scenePhase) { _, phase in

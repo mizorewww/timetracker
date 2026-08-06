@@ -82,6 +82,17 @@ extension EnvironmentValues {
     /// `.regular` so a view rendered outside the app shell (a preview, a
     /// standalone sheet) gets the roomier treatment rather than the phone one.
     @Entry var layoutShell: RootLayoutPolicy.Shell = .regular
+
+    /// Whether this page's live clock sources (1 Hz duration labels and
+    /// countdowns, 30 s metrics, 60 s visualizations) should run.
+    ///
+    /// The compact shell keeps every tab mounted, so a page's clocks would
+    /// otherwise keep ticking (and recomputing snapshots) while the user sits
+    /// on another tab. The shell publishes `false` for each non-selected tab;
+    /// consumers then render their last value statically. Defaults to `true`
+    /// so standalone hosts (previews, sheets, the regular shell's content)
+    /// keep their clocks.
+    @Entry var pageLiveClocksActive: Bool = true
 }
 
 nonisolated struct WidthLayoutPolicy {

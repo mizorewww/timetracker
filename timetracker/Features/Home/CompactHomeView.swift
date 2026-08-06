@@ -10,7 +10,7 @@ struct CompactHomeView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        let content = TodayHomeContent(store: store)
+        let content = store.todayHomeContent()
 
         List {
             CompactNowSection(

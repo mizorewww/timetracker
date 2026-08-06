@@ -118,17 +118,49 @@ extension TimeTrackerStore {
     }
 
     func hasActiveTimer(inTaskSubtree taskID: UUID) -> Bool {
-        let subtreeIDs = taskAndDescendantIDs(for: taskID)
-        if activeSegments.contains(where: { subtreeIDs.contains($0.taskID) }) {
-            return true
+        taskIDsWithActiveTimerInSubtree().contains(taskID)
+    }
+
+    /// Task IDs whose subtree contains an active timer or active pomodoro run.
+    ///
+    /// Rows evaluate this per body pass (swipe-action availability), so the
+    /// per-task ancestor walk is cached and keyed by both the task-tree
+    /// revision and the ledger revision; either invalidates the index.
+    func taskIDsWithActiveTimerInSubtree() -> Set<UUID> {
+        if let cached = taskIDsWithActiveTimerInSubtreeCache,
+           cached.taskRevision == taskReadModelRevision,
+           cached.analyticsRevision == analyticsRevision
+        {
+            return cached.taskIDs
         }
-        return pomodoroRuns.contains { run in
-            subtreeIDs.contains(run.taskID) &&
-                run.deletedAt == nil &&
-                run.endedAt == nil &&
-                run.state != .completed &&
-                run.state != .cancelled
+        let activeRunTaskIDs = Set(activeSegments.map(\.taskID))
+            .union(
+                pomodoroRuns
+                    .filter {
+                        $0.deletedAt == nil &&
+                            $0.endedAt == nil &&
+                            $0.state != .completed &&
+                            $0.state != .cancelled
+                    }
+                    .map(\.taskID)
+            )
+        var taskIDs = Set<UUID>()
+        taskIDs.reserveCapacity(activeRunTaskIDs.count * 3)
+        for activeTaskID in activeRunTaskIDs {
+            // A task has an active timer in its subtree iff it is the running
+            // task itself or one of its ancestors.
+            var currentID: UUID? = activeTaskID
+            while let id = currentID {
+                taskIDs.insert(id)
+                currentID = taskByID[id]?.parentID
+            }
         }
+        taskIDsWithActiveTimerInSubtreeCache = (
+            taskRevision: taskReadModelRevision,
+            analyticsRevision: analyticsRevision,
+            taskIDs: taskIDs
+        )
+        return taskIDs
     }
 
     func taskTreeRows(expandedTaskIDs: Set<UUID>) -> [TaskTreeRowModel] {
@@ -157,6 +189,28 @@ extension TimeTrackerStore {
             revision: revision,
             query: query
         ).taskIDs.compactMap { taskByID[$0] }
+    }
+
+    /// Tasks-page row supplements (recurrence role + quantity progress).
+    /// Built once per task-read-model revision: every input (recurrence
+    /// rules/occurrences, quantity goals/entries, visibility) changes only
+    /// through the task domain refresh, which bumps `taskReadModelRevision`.
+    /// Rebuilds cost a full pass over all visible tasks, so repeated body
+    /// evaluations of `TasksView` reuse the cached projection.
+    func taskManagementRowSupplementProjection()
+        -> TaskManagementRowSupplementProjection
+    {
+        if let cached = taskManagementRowSupplementProjectionCache,
+           cached.revision == taskReadModelRevision
+        {
+            return cached.projection
+        }
+        let projection = TaskManagementRowSupplementProjection(store: self)
+        taskManagementRowSupplementProjectionCache = (
+            revision: taskReadModelRevision,
+            projection: projection
+        )
+        return projection
     }
 
     func path(for task: TaskNode) -> String {

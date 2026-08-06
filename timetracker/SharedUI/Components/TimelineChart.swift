@@ -5,11 +5,25 @@ import SwiftUI
 /// Exact record values and actions stay in the adjacent feature-owned rows.
 /// This component owns only the shared axis, overlap lanes, bars, and omitted
 /// idle-gap presentation.
+nonisolated struct TimelineChartVerticalBarLayoutKey: Equatable, Sendable {
+    /// Full entry array (COW copy; equality is O(n) over ~600 entries, far
+    /// cheaper than the projection) plus the compression and axis length, so
+    /// any data or size change invalidates the memo.
+    let entries: [AnalyticsTimelineEntry]
+    let compression: TimelineAxisCompression
+    let axisLength: CGFloat
+}
+
 struct TimelineChart: View {
     let timeline: AnalyticsTimelineSnapshot
     var compactHeight: CGFloat = 360
     var exposesUITestingMarks = false
     @Environment(\.layoutShell) private var layoutShell
+    /// Vertical bar layout memo: tab-switch animations re-layout the chart at
+    /// the same size several times; projecting 600+ entries per pass stalls
+    /// the switch. Keyed by entry/gap identity and the axis length.
+    @State private var verticalBarLayoutCache:
+        (key: TimelineChartVerticalBarLayoutKey, layout: TimelineChartBarLayout)?
 
     var body: some View {
         Group {
@@ -153,12 +167,34 @@ extension TimelineChart {
         }
     }
 
+    private func verticalBarLayout(
+        entries: [AnalyticsTimelineEntry],
+        compression: TimelineAxisCompression,
+        height: CGFloat
+    ) -> TimelineChartBarLayout {
+        let key = TimelineChartVerticalBarLayoutKey(
+            entries: entries,
+            compression: compression,
+            axisLength: height
+        )
+        if let cached = verticalBarLayoutCache, cached.key == key {
+            return cached.layout
+        }
+        let layout = TimelineChartLayout.verticalBars(
+            entries: entries,
+            compression: compression,
+            height: height
+        )
+        verticalBarLayoutCache = (key: key, layout: layout)
+        return layout
+    }
+
     var verticalTimeline: some View {
         let height = TimelineChartLayout.verticalTimelineHeight(
             minimumHeight: compactHeight,
             gapLabelCount: axisCompression.omittedGaps.count
         )
-        let barLayout = TimelineChartLayout.verticalBars(
+        let barLayout = verticalBarLayout(
             entries: laneEntries,
             compression: axisCompression,
             height: height

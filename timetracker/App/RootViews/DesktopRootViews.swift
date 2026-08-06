@@ -7,7 +7,21 @@ struct DesktopContentView: View {
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            destinationContent
+            // The destination identity drives the transition: replacing the
+            // keyed content inside an animated container runs the insertion
+            // transition on every sidebar switch (works reliably on macOS,
+            // where onAppear-based entrance animations do not replay).
+            ZStack {
+                destinationContent
+                    .id(store.desktopDestination)
+                    .transition(
+                        .opacity.combined(with: .move(edge: .trailing))
+                    )
+            }
+            .animation(
+                .easeOut(duration: 0.2),
+                value: store.desktopDestination
+            )
         }
         .onChange(of: store.desktopDestination) { _, _ in
             navigationPath = NavigationPath()

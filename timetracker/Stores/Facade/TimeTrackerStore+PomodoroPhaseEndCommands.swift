@@ -40,13 +40,36 @@ extension TimeTrackerStore {
                     referencedTaskIDs: outcome.referencedTaskIDs
                 )
             } else {
-                refreshStoreScopedTimerReadModels()
+                // No expired focus needed fixing: converge only the live timer
+                // read models instead of running the full refresh pipeline.
+                // The full pipeline invalidates analytics caches and
+                // re-projects rollups, so every Pomodoro page appear used to
+                // pay that cost (visible as tab-switch latency).
+                try convergeLiveTimerReadModels()
             }
             return outcome.didMutate
         } catch {
             errorMessage = error.localizedDescription
             return false
         }
+    }
+
+    /// Lightweight convergence for page-appear paths: re-fetches pomodoro
+    /// runs and the active/today segment read models only, without touching
+    /// analytics revisions, rollups, or the timeline snapshot cache. The full
+    /// refresh pipeline still runs for actual mutations.
+    func convergeLiveTimerReadModels() throws {
+        guard let timeRepository, let pomodoroRepository else { return }
+        pomodoroRuns = try pomodoroRepository.runs().deduplicatedByID()
+        try ledgerDomainStore.refreshVisible(repository: timeRepository)
+        try refreshLedgerRelationshipVisibility()
+        schedulePomodoroReconciliation(now: Date())
+        // This path changes the visible ledger without bumping
+        // analyticsRevision, so the revision-keyed Today caches would serve
+        // stale active segments. Invalidate them explicitly.
+        todayHomeContentCache = nil
+        todayMetricsSnapshotCache = nil
+        todayTimelineSnapshotCache = nil
     }
 
     func schedulePomodoroReconciliation(now: Date = Date()) {

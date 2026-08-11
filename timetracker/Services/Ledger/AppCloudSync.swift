@@ -3,7 +3,7 @@ import OSLog
 
 enum AppCloudSync {
     static let logger = Logger(
-        subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
+        subsystem: AppIdentity.loggingSubsystem,
         category: "CloudSync"
     )
 

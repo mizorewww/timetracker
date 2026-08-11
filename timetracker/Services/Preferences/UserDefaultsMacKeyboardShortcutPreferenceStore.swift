@@ -3,21 +3,7 @@ import Foundation
 import MacKeyboardShortcuts
 
 @MainActor
-protocol MacKeyboardShortcutPreferenceStoring: AnyObject {
-    func shortcut(
-        for action: MacKeyboardShortcutAction
-    ) -> KeyboardShortcuts.Shortcut?
-    func setStoredShortcut(
-        _ shortcut: KeyboardShortcuts.Shortcut?,
-        for action: MacKeyboardShortcutAction
-    ) throws
-    func resetStoredShortcuts()
-}
-
-@MainActor
-final class UserDefaultsMacKeyboardShortcutPreferenceStore:
-    MacKeyboardShortcutPreferenceStoring
-{
+final class UserDefaultsMacKeyboardShortcutPreferenceStore {
     static let maximumPayloadByteCount = 4096
 
     private let defaults: UserDefaults

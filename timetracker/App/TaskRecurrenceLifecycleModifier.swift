@@ -16,6 +16,8 @@ extension View {
 }
 
 private struct TaskRecurrenceLifecycleModifier: ViewModifier {
+    private static let boundarySearchOffset: TimeInterval = 0.001
+
     @Environment(\.scenePhase) private var scenePhase
     @State private var clockRevision = UUID()
 
@@ -105,7 +107,7 @@ private struct TaskRecurrenceLifecycleModifier: ViewModifier {
             }
             let observedAt = max(Date(), deadline)
             store.materializeCurrentDailyTaskRecurrences(now: observedAt)
-            planningDate = observedAt.addingTimeInterval(0.001)
+            planningDate = observedAt.addingTimeInterval(Self.boundarySearchOffset)
         }
     }
 }

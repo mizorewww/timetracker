@@ -3,6 +3,9 @@ import SwiftData
 import SwiftUI
 
 struct ContentView: View {
+    private static let analyticsPreheatDelay: Duration = .seconds(2)
+    private static let pomodoroPreheatDelay: Duration = .seconds(4)
+
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @State private var store: TimeTrackerStore
@@ -64,14 +67,14 @@ struct ContentView: View {
                 feedbackRouter: feedbackRouter
             )
             scheduleDeferredPreheat(
-                after: 2,
+                after: Self.analyticsPreheatDelay,
                 destination: .analytics,
                 store: store,
                 presentationRouter: presentationRouter,
                 feedbackRouter: feedbackRouter
             )
             scheduleDeferredPreheat(
-                after: 4,
+                after: Self.pomodoroPreheatDelay,
                 destination: .pomodoro,
                 store: store,
                 presentationRouter: presentationRouter,
@@ -151,14 +154,18 @@ struct ContentView: View {
     }
 
     private func scheduleDeferredPreheat(
-        after seconds: UInt64,
+        after delay: Duration,
         destination: TimeTrackerStore.DesktopDestination,
         store: TimeTrackerStore,
         presentationRouter: AppPresentationRouter,
         feedbackRouter: AppSceneFeedbackRouter
     ) {
         Task { @MainActor in
-            try? await Task.sleep(for: .seconds(seconds))
+            do {
+                try await Task.sleep(for: delay)
+            } catch {
+                return
+            }
             // Only preheat while the user is still on Today; an active switch
             // takes priority over background warm-up.
             guard store.desktopDestination == .today else { return }

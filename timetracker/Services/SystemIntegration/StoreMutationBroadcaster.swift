@@ -10,7 +10,7 @@ enum StoreMutationBroadcaster {
     }
 
     private static let notificationName = Notification.Name(
-        "me.mezorewww.timetracker.storeMutationCommitted"
+        "\(AppIdentity.bundleIdentifier).storeMutationCommitted"
     )
     private static let syncConflictPromptNotificationName = Notification.Name(
         "TimeTrackerSyncConflictPromptChanged"

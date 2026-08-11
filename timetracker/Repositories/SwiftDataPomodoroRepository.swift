@@ -2,15 +2,15 @@ import Foundation
 import SwiftData
 
 @MainActor
-final class SwiftDataPomodoroRepository: PomodoroRepository {
+final class SwiftDataPomodoroRepository {
     private let context: ModelContext
-    private let timeRepository: TimeTrackingRepository
+    private let timeRepository: SwiftDataTimeTrackingRepository
     private let deviceID: String
     private let nowProvider: () -> Date
 
     init(
         context: ModelContext,
-        timeRepository: TimeTrackingRepository,
+        timeRepository: SwiftDataTimeTrackingRepository,
         deviceID: String? = nil,
         nowProvider: @escaping () -> Date = Date.init
     ) {

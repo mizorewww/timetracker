@@ -42,8 +42,8 @@ struct PomodoroCommandHandler {
         allowParallelTimers: Bool,
         activeSegments: [TimeSegment],
         pomodoroRuns: [PomodoroRun],
-        timeRepository: TimeTrackingRepository,
-        pomodoroRepository: PomodoroRepository,
+        timeRepository: SwiftDataTimeTrackingRepository,
+        pomodoroRepository: SwiftDataPomodoroRepository,
         context: ModelContext?
     ) throws -> PomodoroRun {
         let mutation = { () throws -> PomodoroRun in
@@ -77,7 +77,7 @@ struct PomodoroCommandHandler {
     func completeFocus(
         runID: UUID,
         expectedState: PomodoroState,
-        repository: PomodoroRepository
+        repository: SwiftDataPomodoroRepository
     ) throws -> Bool {
         guard expectedState == .focusing || expectedState == .interrupted else {
             return false
@@ -94,8 +94,8 @@ struct PomodoroCommandHandler {
         runID: UUID,
         expectedState: PomodoroState,
         allowParallelTimers: Bool,
-        timeRepository: TimeTrackingRepository,
-        repository: PomodoroRepository,
+        timeRepository: SwiftDataTimeTrackingRepository,
+        repository: SwiftDataPomodoroRepository,
         context: ModelContext
     ) throws -> PomodoroBreakResumeOutcome? {
         let mutation = { () throws -> PomodoroBreakResumeOutcome? in
@@ -182,11 +182,11 @@ struct PomodoroCommandHandler {
     }
 
     @discardableResult
-    func reconcile(run: PomodoroRun, now: Date, repository: PomodoroRepository) throws -> Bool {
+    func reconcile(run: PomodoroRun, now: Date, repository: SwiftDataPomodoroRepository) throws -> Bool {
         try repository.reconcileExpiredPhase(runID: run.id, now: now)
     }
 
-    func cancel(run: PomodoroRun, discardRecord: Bool = false, repository: PomodoroRepository) throws {
+    func cancel(run: PomodoroRun, discardRecord: Bool = false, repository: SwiftDataPomodoroRepository) throws {
         try repository.cancel(runID: run.id, discardRecord: discardRecord)
     }
 
@@ -296,7 +296,7 @@ struct PomodoroCommandHandler {
     }
 
     /// General timer commands can close a Pomodoro session without going
-    /// through `PomodoroRepository`. Preserve the same deadline semantics here
+    /// through `SwiftDataPomodoroRepository`. Preserve the same deadline semantics here
     /// so a stop from a widget, Watch, deep link, or ledger edit cannot record
     /// suspension time as focus time or incorrectly cancel a completed round.
     private func settleExpiredFocusIfNeeded(

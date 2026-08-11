@@ -15,7 +15,7 @@ struct LedgerCommandHandler {
     }
 
     @discardableResult
-    func addManualTime(draft: ManualTimeDraft, taskID: UUID, repository: TimeTrackingRepository) throws -> TimeSegment {
+    func addManualTime(draft: ManualTimeDraft, taskID: UUID, repository: SwiftDataTimeTrackingRepository) throws -> TimeSegment {
         try repository.addManualSegment(
             taskID: taskID,
             startedAt: draft.startedAt,
@@ -29,7 +29,7 @@ struct LedgerCommandHandler {
         taskID: UUID,
         activePomodoroSessionID: UUID? = nil,
         pomodoroRuns: [PomodoroRun] = [],
-        repository: TimeTrackingRepository,
+        repository: SwiftDataTimeTrackingRepository,
         context: ModelContext? = nil
     ) throws {
         let mutation = {
@@ -54,7 +54,7 @@ struct LedgerCommandHandler {
         taskID: UUID,
         activePomodoroSessionID: UUID?,
         pomodoroRuns: [PomodoroRun],
-        repository: TimeTrackingRepository,
+        repository: SwiftDataTimeTrackingRepository,
         context: ModelContext?
     ) throws {
         guard draft.wasActive || draft.isActive == false else {
@@ -94,7 +94,7 @@ struct LedgerCommandHandler {
         _ segmentID: UUID,
         activePomodoroSessionID: UUID? = nil,
         pomodoroRuns: [PomodoroRun] = [],
-        repository: TimeTrackingRepository,
+        repository: SwiftDataTimeTrackingRepository,
         context: ModelContext? = nil
     ) throws {
         let mutation = {

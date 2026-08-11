@@ -1,5 +1,13 @@
 import Foundation
 
+nonisolated enum AppIdentity {
+    static let bundleIdentifier = "me.mezorewww.timetracker"
+
+    static var loggingSubsystem: String {
+        Bundle.main.bundleIdentifier ?? bundleIdentifier
+    }
+}
+
 /// Describes whether the current process is the shipping app or a test host.
 ///
 /// The macOS target is deliberately unsandboxed, so an `xctest` host process and

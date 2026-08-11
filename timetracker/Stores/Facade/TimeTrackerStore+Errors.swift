@@ -7,21 +7,6 @@ extension TimeTrackerStore {
         return false
     }
 
-    func requiredTaskRepository() throws -> TaskRepository {
-        guard let taskRepository else { throw StoreError.notConfigured }
-        return taskRepository
-    }
-
-    func requiredTimeRepository() throws -> TimeTrackingRepository {
-        guard let timeRepository else { throw StoreError.notConfigured }
-        return timeRepository
-    }
-
-    func requiredPomodoroRepository() throws -> PomodoroRepository {
-        guard let pomodoroRepository else { throw StoreError.notConfigured }
-        return pomodoroRepository
-    }
-
     enum StoreError: LocalizedError {
         case notConfigured
         case taskSelectionRequired

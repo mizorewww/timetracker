@@ -3,7 +3,7 @@ import OSLog
 
 nonisolated enum PerformanceSignpost {
     private static let signposter = OSSignposter(
-        subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
+        subsystem: AppIdentity.loggingSubsystem,
         category: "Performance"
     )
 

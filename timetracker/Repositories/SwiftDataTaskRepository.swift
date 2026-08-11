@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-final nonisolated class SwiftDataTaskRepository: TaskRepository {
+final nonisolated class SwiftDataTaskRepository {
     let context: ModelContext
     let deviceID: String
 

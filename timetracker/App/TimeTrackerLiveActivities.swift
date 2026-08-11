@@ -75,7 +75,7 @@ final class LiveActivityCoordinator {
     )
 
     private static let logger = Logger(
-        subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
+        subsystem: AppIdentity.loggingSubsystem,
         category: "LiveActivity"
     )
 

@@ -3,10 +3,10 @@ import MacKeyboardShortcuts
 
 @MainActor
 struct MacKeyboardShortcutPreferenceCommand {
-    private let store: any MacKeyboardShortcutPreferenceStoring
+    private let store: UserDefaultsMacKeyboardShortcutPreferenceStore
 
     init(
-        store: (any MacKeyboardShortcutPreferenceStoring)? = nil
+        store: UserDefaultsMacKeyboardShortcutPreferenceStore? = nil
     ) {
         self.store =
             store ?? UserDefaultsMacKeyboardShortcutPreferenceStore()

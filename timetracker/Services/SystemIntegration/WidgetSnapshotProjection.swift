@@ -3,23 +3,7 @@ import Foundation
 import WidgetKit
 #endif
 
-nonisolated struct WidgetSnapshotCache {
-    let store: SharedWidgetSnapshotStore
-
-    init(store: SharedWidgetSnapshotStore = SharedWidgetSnapshotStore()) {
-        self.store = store
-    }
-
-    func persist(_ snapshot: WidgetSnapshot) throws {
-        try store.save(snapshot)
-    }
-
-    @MainActor
-    func save(_ snapshot: WidgetSnapshot) throws {
-        try persist(snapshot)
-        Self.reloadTimelines()
-    }
-
+nonisolated enum WidgetSnapshotProjection {
     @MainActor
     static func reloadTimelines() {
         #if canImport(WidgetKit)
@@ -120,7 +104,7 @@ actor WidgetSnapshotProjectionWriter {
         store = SharedWidgetSnapshotStore()
         persistSnapshot = nil
         reloadTimelines = {
-            WidgetSnapshotCache.reloadTimelines()
+            WidgetSnapshotProjection.reloadTimelines()
         }
     }
 

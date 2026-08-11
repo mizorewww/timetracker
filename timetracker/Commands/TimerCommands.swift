@@ -15,7 +15,7 @@ struct TimerCommandHandler {
         )
     }
 
-    func stop(segment: TimeSegment, pomodoroRuns: [PomodoroRun], timeRepository: TimeTrackingRepository, context: ModelContext?) throws {
+    func stop(segment: TimeSegment, pomodoroRuns: [PomodoroRun], timeRepository: SwiftDataTimeTrackingRepository, context: ModelContext?) throws {
         let mutation = {
             // Reconcile/cancel the business run before issuing the generic
             // ledger stop. An expired Pomodoro clips its session to the
@@ -39,7 +39,7 @@ struct TimerCommandHandler {
         excluding taskID: UUID,
         activeSegments: [TimeSegment],
         pomodoroRuns: [PomodoroRun],
-        timeRepository: TimeTrackingRepository,
+        timeRepository: SwiftDataTimeTrackingRepository,
         context: ModelContext?
     ) throws {
         for segment in activeSegments where segment.taskID != taskID {

@@ -12,14 +12,14 @@ struct TaskStore {
     private(set) var incompleteRecurrenceGeneratedTaskIDs = Set<UUID>()
     private(set) var incompleteQuantityProgressTaskIDs = Set<UUID>()
 
-    mutating func refresh(repository: TaskRepository) throws {
+    mutating func refresh(repository: SwiftDataTaskRepository) throws {
         tasks = try repository.allNodes().deduplicatedByID()
         categories = try repository.categories().deduplicatedByID()
         categoryAssignments = try repository.categoryAssignments().deduplicatedByID()
         try refreshAllTaskProgress(repository: repository)
     }
 
-    mutating func refreshTaskScoped(taskIDs: Set<UUID>, repository: TaskRepository) throws {
+    mutating func refreshTaskScoped(taskIDs: Set<UUID>, repository: SwiftDataTaskRepository) throws {
         guard taskIDs.isEmpty == false else { return }
         var fetchedTasks = try repository.tasks(ids: taskIDs)
             .deduplicatedByID()
@@ -64,7 +64,7 @@ struct TaskStore {
     }
 
     private mutating func refreshAllTaskProgress(
-        repository: TaskRepository
+        repository: SwiftDataTaskRepository
     ) throws {
         recurrenceRules = try repository.taskRecurrenceRules()
             .deduplicatedByID()
@@ -80,7 +80,7 @@ struct TaskStore {
     private mutating func refreshTaskProgress(
         queryTaskIDs: Set<UUID>,
         replacingTaskIDs: Set<UUID>,
-        repository: TaskRepository
+        repository: SwiftDataTaskRepository
     ) throws {
         let fetchedRules = try repository.taskRecurrenceRules(
             taskIDs: queryTaskIDs

@@ -29,7 +29,7 @@ final class WatchConnectivityBridge: NSObject {
     static let shared = WatchConnectivityBridge()
 
     private static let logger = Logger(
-        subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
+        subsystem: AppIdentity.loggingSubsystem,
         category: "WatchConnectivity"
     )
 

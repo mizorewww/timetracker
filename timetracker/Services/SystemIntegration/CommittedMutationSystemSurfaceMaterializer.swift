@@ -99,7 +99,7 @@ actor CommittedMutationSystemSurfaceMaterializer {
             now: now,
             calendar: calendar
         )
-        let widgetSnapshot = WidgetSnapshotCache.snapshot(
+        let widgetSnapshot = WidgetSnapshotProjection.snapshot(
             activeSegments: activeSegments,
             taskByID: tree.taskByID,
             taskParentPathByID: tree.taskParentPathByID,

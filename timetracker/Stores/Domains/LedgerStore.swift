@@ -26,14 +26,14 @@ struct LedgerStore {
     private(set) var hasLoadedHistory = false
     private var sessionIndex = LedgerSessionIndex()
 
-    mutating func refresh(repository: TimeTrackingRepository, now: Date = Date(), calendar: Calendar = .current) throws {
+    mutating func refresh(repository: SwiftDataTimeTrackingRepository, now: Date = Date(), calendar: Calendar = .current) throws {
         activeSegments = try repository.activeSegments().deduplicatedByID()
         let today = calendar.dateInterval(of: .day, for: now) ?? DateInterval(start: now, duration: 24 * 60 * 60)
         todaySegments = try repository.segments(from: today.start, to: today.end, now: now).deduplicatedByID()
         try refreshHistory(repository: repository, now: now, calendar: calendar)
     }
 
-    mutating func refreshVisible(repository: TimeTrackingRepository, now: Date = Date(), calendar: Calendar = .current) throws {
+    mutating func refreshVisible(repository: SwiftDataTimeTrackingRepository, now: Date = Date(), calendar: Calendar = .current) throws {
         let refreshedActive = try repository.activeSegments().deduplicatedByID()
         let today = calendar.dateInterval(of: .day, for: now) ?? DateInterval(start: now, duration: 24 * 60 * 60)
         let refreshedToday = try repository.segments(from: today.start, to: today.end, now: now).deduplicatedByID()
@@ -73,7 +73,7 @@ struct LedgerStore {
     }
 
     mutating func refreshHistory(
-        repository: TimeTrackingRepository,
+        repository: SwiftDataTimeTrackingRepository,
         now: Date = Date(),
         calendar: Calendar = .current
     ) throws {
@@ -85,7 +85,7 @@ struct LedgerStore {
     }
 
     mutating func refreshHistoryRanges(
-        repository: TimeTrackingRepository,
+        repository: SwiftDataTimeTrackingRepository,
         ranges: [StoreInvalidationRange],
         now: Date = Date()
     ) throws {

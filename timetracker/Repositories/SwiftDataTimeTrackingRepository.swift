@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @MainActor
-final class SwiftDataTimeTrackingRepository: TimeTrackingRepository {
+final class SwiftDataTimeTrackingRepository {
     let context: ModelContext
     let deviceID: String
     let nowProvider: () -> Date

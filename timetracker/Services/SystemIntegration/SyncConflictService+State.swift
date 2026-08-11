@@ -11,7 +11,7 @@ extension SyncConflictService {
     }
 
     private nonisolated static let stateLogger = Logger(
-        subsystem: Bundle.main.bundleIdentifier ?? "me.mezorewww.timetracker",
+        subsystem: AppIdentity.loggingSubsystem,
         category: "SyncConflictState"
     )
 

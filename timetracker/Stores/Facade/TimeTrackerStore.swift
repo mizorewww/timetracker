@@ -357,9 +357,9 @@ final class TimeTrackerStore {
     }
 
     var modelContext: ModelContext?
-    var taskRepository: TaskRepository?
-    var timeRepository: TimeTrackingRepository?
-    var pomodoroRepository: PomodoroRepository?
+    var taskRepository: SwiftDataTaskRepository?
+    var timeRepository: SwiftDataTimeTrackingRepository?
+    var pomodoroRepository: SwiftDataPomodoroRepository?
     let aggregationService = TimeAggregationService()
     let analyticsEngine = AnalyticsEngine()
     let taskTreeService = TaskTreeService()

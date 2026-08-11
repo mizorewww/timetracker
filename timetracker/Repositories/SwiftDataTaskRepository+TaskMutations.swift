@@ -22,7 +22,7 @@ nonisolated extension SwiftDataTaskRepository {
 
     /// Creates a task with an identity chosen by an enclosing idempotent
     /// command. This remains a concrete-repository API so ordinary callers
-    /// continue to receive repository-owned UUIDs through `TaskRepository`.
+    /// continue to receive repository-owned UUIDs.
     @discardableResult
     func createTask(
         proposedID: UUID,

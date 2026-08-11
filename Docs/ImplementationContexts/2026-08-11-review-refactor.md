@@ -52,12 +52,21 @@ Existing test cleanup is limited to parameterizing duplicate inputs, merging res
 - Prefer an available macOS VM for macOS UI automation; do not launch intrusive UI automation on the user's active desktop. If no VM path exists, report that gate separately instead of commandeering the desktop.
 - Record every created simulator UDID/result bundle, terminate the app and runners, delete owned simulators, and verify no owned Booted device or test process remains.
 
+### macOS UI acceptance checklist
+
+- A Debug `--uitesting` launch opens or adopts one content window after the next main-loop turn, without a timed retry or private selector.
+- Optional test width/height is applied before the window is centered and activated.
+- A Release build ignores the UI-testing bootstrap path.
+
+The build contracts above are verified in Phase 1E. Interactive macOS automation remains unrun because no configured VM runner is available; the active desktop is deliberately not used for that gate.
+
 ## Checkpoints
 
 - Phase 1A: direct repository calls replaced the 14 pass-through use cases; dead timer admission, Watch snapshot, and unused OpenAI stream assembler code were removed. The canonical Pomodoro admission path is covered for exclusive and parallel break resume. `make test` passed 190 tests in 33 suites; localization parity and SwiftFormat lint passed. Deleted sources remain recoverable in `/Users/aac6fef/.Trash/timetracker-phase1a-20260811.vY5Y87/`.
 - Phase 1B: Release-only UI-test entry points are excluded, AI workspace encoding and canonical re-lookup failures now propagate ordinary errors, catalog UUIDs are constructed without parsing traps, and the two bare 350 ms delays are named and cancellation-aware. The frozen Apple Health identity test caught and corrected the textual UUID suffixes `10`–`12` as hexadecimal bytes (`0x10`–`0x12`). Focused AI-overlay and catalog tests passed; `make test` passed 190 tests in 33 suites; the signed universal Release macOS build, localization parity, and SwiftFormat lint passed.
 - Phase 1C: zero-caller scheduler inspection/manual-retry APIs and their 512-entry receipt ledger were removed while preserving per-sink coalescing and next-relevant-mutation retry. Sync-conflict prompt delivery now shares `StoreMutationBroadcaster`; its synchronous locked file read runs through one structured `@concurrent` helper instead of a dedicated actor. The permanent routing test freezes the event-to-sink table. `make test` passed 191 tests in 34 suites; localization parity and SwiftFormat lint passed. The removed broadcaster source remains recoverable in `/Users/aac6fef/.Trash/timetracker-phase1-broadcast-20260811-1459/`.
 - Phase 1D: elapsed-clock string construction and hex normalization/component parsing now have one pure shared implementation compiled into the main app, Widget, and Watch targets; platform-specific presentation shapes and the main app's dynamic color adaptation remain at their existing callers. Focused tests passed 2 tests in 1 suite, `make test` passed 193 tests in 35 suites, and the signed generic iOS build (including embedded Watch and Widget validation) passed.
+- Phase 1E: the Debug-only macOS UI-test window bootstrap now uses one next-run-loop handoff and a public fallback window, with no fixed delay or string selector; Release compiles the hook as a no-op. Magic preheat/recurrence timings and the logging bundle fallback are named once. The misleading Widget cache became a stateless projection namespace, zero-caller repository requirements were removed, and four single-conformer protocols were replaced by their concrete stores while preserving startup-time optional configuration. The similarly named refresh entry points were intentionally retained because one runs scene post-refresh effects and Pomodoro reconciliation while recovery refresh must not. `make test` passed 193 tests in 35 suites; signed generic iOS Debug and universal macOS Release builds passed. Three empty directories and the removed protocol source remain recoverable in `/Users/aac6fef/.Trash/timetracker-empty-dirs-20260811.rQYU3N/`.
 
 ## Closeout checklist
 

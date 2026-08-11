@@ -6,7 +6,7 @@ struct TaskDraftCommandHandler {
     func save(
         draft: TaskEditorDraft,
         sanitizedTitle: String,
-        taskRepository: TaskRepository,
+        taskRepository: SwiftDataTaskRepository,
         saveChecklistDrafts: ([ChecklistEditorDraft], UUID) throws -> Void
     ) throws -> UUID {
         if let taskID = draft.taskID {
@@ -56,15 +56,15 @@ struct TaskDraftCommandHandler {
         return task.id
     }
 
-    func archive(taskID: UUID, repository: TaskRepository) throws {
+    func archive(taskID: UUID, repository: SwiftDataTaskRepository) throws {
         try repository.archiveTask(taskID: taskID)
     }
 
-    func unarchive(taskID: UUID, repository: TaskRepository) throws {
+    func unarchive(taskID: UUID, repository: SwiftDataTaskRepository) throws {
         try repository.unarchiveTask(taskID: taskID)
     }
 
-    private func update(taskID: UUID, draft: TaskEditorDraft, title: String, repository: TaskRepository) throws {
+    private func update(taskID: UUID, draft: TaskEditorDraft, title: String, repository: SwiftDataTaskRepository) throws {
         try repository.updateTask(
             taskID: taskID,
             title: title,

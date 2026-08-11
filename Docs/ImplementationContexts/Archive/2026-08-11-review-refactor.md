@@ -1,6 +1,6 @@
 # 2026-08-11 Review Refactor — Implementation Memory
 
-Status: active
+Status: Complete
 
 Task source: `Docs/Review-2026-08-11.md`
 
@@ -74,9 +74,10 @@ The build contracts above are verified in Phase 1E. Interactive macOS automation
 - Phase 3C: the review's exact 122 completed records (8 dated performance memories, 9 ProjectAudit files, 9 ProjectAuditRefactor files, 95 feedback task memories, and 1 design) moved under `ImplementationContexts/Archive` without deletion. Ninety-eight missing English status headers were added, the stale UI-performance header became Complete, and archive-relative references were repaired. The live tree now contains only the recurrence runtime reference and this active memory; all 99 Markdown-local links inside the archive resolve.
 - Phase 3D: zero-caller Apple Health, AI, route, analytics-delay, autosave-delay, fixed-clock, density, and historical timeline UI fixtures were removed instead of moved behind another support layer. `SeedData+DemoBuild.swift` shrank from 922 to 268 lines; the generic `--uitesting` launch and the actively called long-timer Live Activity fixture remain. The two removed source files are recoverable in `/Users/aac6fef/.Trash/timetracker-ui-fixtures-20260811.kJpRZu/`. `make test` passed 194 tests in 35 suites, the signed generic iOS build (including Watch, Widget, and Live Activity embedding) passed, SwiftFormat lint and localization parity passed, and the owned iOS simulator batch passed 2 adaptive-shell UI tests. Simulator `CBD264FA-53AA-4D34-8E0D-4B13204B9607` was automatically shut down and deleted; its 1.2 MB result bundle was recorded then moved to `/Users/aac6fef/.Trash/timetracker-ui-test-results-20260811.nAjHKY/`. The remaining multi-source demo selection is intentionally retained: standard UserDefaults launch overrides and Cloud smoke-test restart configuration are active harness contracts, so collapsing them would require redesigning callers rather than deleting dead configuration.
 
-## Closeout checklist
+## Closeout
 
-- Reconcile this test record with retained tests and verification evidence.
-- Confirm no `TEST-SCAFFOLD` marker remains in the changed scope.
-- Archive completed implementation memories and decision history according to the updated active-doc policy.
-- Mark this memory complete only after resource cleanup and final verification.
+- The permanent behavior, compatibility, security, and integration tests in the record remain. Two persistent-history cursor tests were retired with their superseded implementation contract; no temporary test was promoted. No `TEST-SCAFFOLD` marker remains in production or test targets.
+- Final verification passed: `make test` (194 tests / 35 suites), focused projection/Cloud/AI/catalog/presentation suites, `make test-ui-ios` (2 tests), signed generic iOS Debug, signed universal macOS Release, SwiftFormat lint, localization parity, hook verification, changed-link checks, and Git whitespace checks.
+- macOS UI automation was not run because no configured VM runner was available; the user's active desktop was not commandeered. Its compile-time Debug/Release contract is covered by the signed builds and the checklist above remains the explicit interactive gate.
+- The simulator created by this task was shut down and deleted, its result bundle was moved to the Trash, and no owned Booted simulator, `xcodebuild`, `xctest`, UI runner, or app process remains.
+- The snapshot envelope rewrite, facade scheduler extraction, live demo-configuration collapse, and removal of AI or Apple Health were deliberately not performed. They respectively require a new durable format, move coherent behavior without reducing it, replace active harness contracts, or make an owner product decision; doing them in this refactor would exceed the confirmed simplification scope.

@@ -64,11 +64,6 @@ struct AnalyticsView: View {
             isRefreshing: presentationPhase.isRefreshing
         )
         .task(id: request) {
-            guard await AnalyticsLoadUITestHook.pauseRangeReloadIfRequested(
-                hasLoadedSnapshot: loadedPresentation != nil
-            ) else {
-                return
-            }
             if let cachedSnapshot = store.cachedAnalyticsSnapshot(
                 for: range,
                 evaluation: evaluation
@@ -183,32 +178,5 @@ nonisolated enum AnalyticsSnapshotPresentationPhase: Equatable, Sendable {
 
     var obscuresLoadedMetrics: Bool {
         self == .loadingNewPeriod
-    }
-}
-
-nonisolated enum AnalyticsLoadUITestHook {
-    private static let slowRangeReloadArgument = "--uitesting-slow-analytics-range-reload"
-
-    static func pauseRangeReloadIfRequested(
-        hasLoadedSnapshot: Bool,
-        arguments: [String] = CommandLine.arguments
-    ) async -> Bool {
-        #if DEBUG
-        guard hasLoadedSnapshot,
-              arguments.contains("--uitesting"),
-              arguments.contains(slowRangeReloadArgument)
-        else {
-            return Task.isCancelled == false
-        }
-
-        do {
-            try await Task.sleep(for: .seconds(4))
-        } catch {
-            return false
-        }
-        return Task.isCancelled == false
-        #else
-        return Task.isCancelled == false
-        #endif
     }
 }

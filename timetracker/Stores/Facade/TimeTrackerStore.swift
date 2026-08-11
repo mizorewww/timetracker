@@ -52,12 +52,12 @@ final class TimeTrackerStore {
         self.inboxSuggestionService = inboxSuggestionService ?? LLMInboxSuggestionService()
         self.checklistVisualSuggestionService =
             checklistVisualSuggestionService ??
-            Self.defaultChecklistVisualSuggestionService()
+            LLMChecklistVisualSuggestionService()
         let resolvedAppleHealthReader =
             appleHealthDataReader ?? AppleHealthDataReaderFactory.platformDefault()
         let resolvedAppleHealthPreferences =
             appleHealthTimelinePreferenceStore
-                ?? Self.defaultAppleHealthTimelinePreferenceStore()
+                ?? UserDefaultsAppleHealthTimelinePreferenceStore()
         let resolvedAppleHealthReplica =
             appleHealthReplicaRepository
                 ?? AppleHealthReplicaModelContainerFactory
@@ -103,46 +103,10 @@ final class TimeTrackerStore {
             committedMutationSystemProjectionScheduler
     }
 
-    private static func defaultAppleHealthTimelinePreferenceStore()
-        -> any AppleHealthTimelinePreferenceStoring
-    {
-        #if DEBUG && os(iOS)
-        if let fixture =
-            UITestAppleHealthDataReader.preferenceStoreIfRequested()
-        {
-            return fixture
-        }
-        #endif
-        return UserDefaultsAppleHealthTimelinePreferenceStore()
-    }
-
     private static func defaultLLMCredentialStore()
         -> any LLMCredentialStoring
     {
-        #if DEBUG
-        if CommandLine.arguments.contains("--uitesting"),
-           CommandLine.arguments.contains("--uitesting-live-llm") ||
-           CommandLine.arguments.contains(
-               UITestChecklistVisualSuggestionFixture.enableArgument
-           )
-        {
-            return UITestLLMCredentialStore()
-        }
-        #endif
-        return KeychainLLMCredentialStore()
-    }
-
-    private static func defaultChecklistVisualSuggestionService()
-        -> LLMChecklistVisualSuggestionService
-    {
-        #if DEBUG
-        if let fixture =
-            UITestChecklistVisualSuggestionFixture.serviceIfRequested()
-        {
-            return fixture
-        }
-        #endif
-        return LLMChecklistVisualSuggestionService()
+        KeychainLLMCredentialStore()
     }
 
     deinit {

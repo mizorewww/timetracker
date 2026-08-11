@@ -51,7 +51,7 @@ struct TimelineSection: View {
     let store: TimeTrackerStore
     let segments: [TimeSegment]
     let openTask: (UUID) -> Void
-    @State private var referenceDate = homeTimelineReferenceDate(liveDate: Date())
+    @State private var referenceDate = Date()
     @Environment(\.pageLiveClocksActive) private var clockIsActive
 
     var body: some View {
@@ -129,24 +129,10 @@ struct TodayTimelineChart: View {
     var body: some View {
         TimelineChart(
             timeline: timeline,
-            compactHeight: compactHeight,
-            exposesUITestingMarks: exposesUITestingMarks
+            compactHeight: compactHeight
         )
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("home.timeline.chart")
-    }
-
-    private var exposesUITestingMarks: Bool {
-        #if DEBUG
-        CommandLine.arguments.contains("--uitesting-short-timeline") ||
-            CommandLine.arguments.contains("--uitesting-overlap-timeline") ||
-            CommandLine.arguments.contains("--uitesting-gap-label-collision") ||
-            CommandLine.arguments.contains(
-                "--uitesting-first-health-timeline"
-            )
-        #else
-        false
-        #endif
     }
 }
 
@@ -160,44 +146,17 @@ func runHomeTimelineReferenceClock(
         } catch {
             return
         }
-        let nextReferenceDate = homeTimelineReferenceDate(liveDate: Date())
+        let nextReferenceDate = Date()
         guard nextReferenceDate != referenceDate.wrappedValue else { continue }
         referenceDate.wrappedValue = nextReferenceDate
     }
-}
-
-var homeTimelineUsesFixedUITestReferenceDate: Bool {
-    #if DEBUG
-    CommandLine.arguments.contains("--uitesting-overlap-timeline") ||
-        CommandLine.arguments.contains("--uitesting-gap-label-collision") ||
-        CommandLine.arguments.contains("--uitesting-first-health-timeline")
-    #else
-    false
-    #endif
-}
-
-func homeTimelineReferenceDate(liveDate: Date) -> Date {
-    #if DEBUG
-    guard homeTimelineUsesFixedUITestReferenceDate else {
-        return liveDate
-    }
-    return Calendar.current.startOfDay(for: liveDate)
-        .addingTimeInterval(18 * 60 * 60)
-    #else
-    return liveDate
-    #endif
 }
 
 func homeTimelineSnapshotReferenceDate(
     clockDate: Date,
     liveDate: Date
 ) -> Date {
-    #if DEBUG
-    if homeTimelineUsesFixedUITestReferenceDate {
-        return clockDate
-    }
-    #endif
     // Ledger mutations can invalidate the view between minute-clock ticks.
     // Never interpret a just-written stop date as a future, still-open end.
-    return max(clockDate, liveDate)
+    max(clockDate, liveDate)
 }

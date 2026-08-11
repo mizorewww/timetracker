@@ -62,19 +62,7 @@ struct TodayHomeContent {
         forecastLimit: Int = 3
     ) {
         activeSegments = store.activeSegments
-        #if DEBUG
-        if homeTimelineUsesFixedUITestReferenceDate {
-            let referenceDate = homeTimelineReferenceDate(liveDate: Date())
-            timelineSegments = store.timelineSegments(
-                for: referenceDate,
-                now: referenceDate
-            )
-        } else {
-            timelineSegments = store.timelineSegments
-        }
-        #else
         timelineSegments = store.timelineSegments
-        #endif
 
         let pinnedTasks = store.preferences.quickStartTaskIDs
             .compactMap { store.task(for: $0) }

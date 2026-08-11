@@ -117,7 +117,7 @@ struct CompactTimelineSection: View {
     let store: TimeTrackerStore
     let segments: [TimeSegment]
     let openTask: (UUID) -> Void
-    @State private var referenceDate = homeTimelineReferenceDate(liveDate: Date())
+    @State private var referenceDate = Date()
     @Environment(\.pageLiveClocksActive) private var clockIsActive
 
     var body: some View {

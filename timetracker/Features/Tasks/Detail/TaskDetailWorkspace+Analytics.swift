@@ -101,9 +101,6 @@ private struct TaskDetailAnalyticsWorkspace: View {
             await waitForRefresh(refreshPlan)
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .background {
-                recordUITestAppleHealthBackgroundTransition()
-            }
             guard phase == .active else { return }
             liveNow = Date()
             refreshAfterSceneActivation()
@@ -188,10 +185,6 @@ private struct TaskDetailAnalyticsWorkspace: View {
     }
 
     private func retry() {
-        #if DEBUG && os(iOS)
-        (store.appleHealthDataReader as? UITestAppleHealthDataReader)?
-            .resolveExplicitRetryGate()
-        #endif
         let newRetryID = UUID()
         authorizationRetryID = newRetryID
         retryID = newRetryID
@@ -202,19 +195,8 @@ private struct TaskDetailAnalyticsWorkspace: View {
         // Returning from Settings or Health can change readable evidence even
         // when the selected day/week/month request identity is unchanged.
         // Refresh without presenting the authorization sheet automatically.
-        #if DEBUG && os(iOS)
-        (store.appleHealthDataReader as? UITestAppleHealthDataReader)?
-            .resolveSceneReactivationGate()
-        #endif
         authorizationRetryID = nil
         retryID = UUID()
-    }
-
-    private func recordUITestAppleHealthBackgroundTransition() {
-        #if DEBUG && os(iOS)
-        (store.appleHealthDataReader as? UITestAppleHealthDataReader)?
-            .recordBackgroundTransition()
-        #endif
     }
 
     @MainActor

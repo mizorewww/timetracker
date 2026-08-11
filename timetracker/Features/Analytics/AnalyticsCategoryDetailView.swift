@@ -55,11 +55,6 @@ struct AnalyticsCategoryDetailView: View {
             }
         }
         .task(id: request) {
-            guard await AnalyticsLoadUITestHook.pauseRangeReloadIfRequested(
-                hasLoadedSnapshot: loadedPresentation != nil
-            ) else {
-                return
-            }
             if let cachedSnapshot = store.cachedAnalyticsSnapshot(
                 for: range,
                 evaluation: evaluation

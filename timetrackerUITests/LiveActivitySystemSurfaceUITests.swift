@@ -41,7 +41,6 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
             "-TimeTrackerAutomaticDemoSeedingDisabled", "NO",
         ]
         app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
-        app.launchEnvironment["TIMETRACKER_UI_AUDIT_ROUTE"] = "today"
         app.launch()
 
         XCTAssertTrue(

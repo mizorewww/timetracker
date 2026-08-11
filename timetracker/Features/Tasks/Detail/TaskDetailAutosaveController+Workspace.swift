@@ -8,7 +8,7 @@ extension TaskDetailAutosaveController {
         returnDestination: TimeTrackerStore.DesktopDestination
     ) -> TaskDetailAutosaveController {
         TaskDetailAutosaveController(
-            delay: workspaceDelay
+            delay: .milliseconds(450)
         ) { [weak store, weak session] draft in
             guard let store, let session else {
                 return .failed(
@@ -39,23 +39,6 @@ extension TaskDetailAutosaveController {
                 return .failed(message: message)
             }
         }
-    }
-
-    private static var workspaceDelay: Duration {
-        #if DEBUG
-        let environment = ProcessInfo.processInfo.environment
-        if CommandLine.arguments.contains("--uitesting"),
-           let rawValue = environment[
-               "TIMETRACKER_UI_AUTOSAVE_DELAY_MILLISECONDS"
-           ],
-           let milliseconds = Int(rawValue),
-           milliseconds >= 0,
-           milliseconds <= 60000
-        {
-            return .milliseconds(milliseconds)
-        }
-        #endif
-        return .milliseconds(450)
     }
 
     @discardableResult

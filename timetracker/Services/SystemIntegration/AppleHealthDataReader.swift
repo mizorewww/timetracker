@@ -60,34 +60,8 @@ enum AppleHealthDataReaderFactory {
         #endif
     }()
 
-    #if DEBUG && os(iOS)
-    private static var sharedUITestReader: (
-        arguments: [String],
-        environment: [String: String],
-        reader: any AppleHealthDataReading
-    )?
-    #endif
-
-    static func platformDefault(
-        arguments: [String] = CommandLine.arguments,
-        environment: [String: String] = ProcessInfo.processInfo.environment
-    ) -> any AppleHealthDataReading {
-        #if DEBUG && os(iOS)
-        if let sharedUITestReader,
-           sharedUITestReader.arguments == arguments,
-           sharedUITestReader.environment == environment
-        {
-            return sharedUITestReader.reader
-        }
-        if let reader = UITestAppleHealthDataReader.makeIfRequested(
-            arguments: arguments,
-            environment: environment
-        ) {
-            sharedUITestReader = (arguments, environment, reader)
-            return reader
-        }
-        #endif
-        return sharedPlatformReader
+    static func platformDefault() -> any AppleHealthDataReading {
+        sharedPlatformReader
     }
 }
 

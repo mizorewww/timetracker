@@ -86,12 +86,6 @@ struct ContentView: View {
                 return
             }
             #endif
-            #if DEBUG
-            store.applyLiveLLMConfigurationIfRequested()
-            store.applyChecklistVisualSuggestionFixtureIfRequested()
-            store.applyFirstHealthTimelineFixtureIfRequested()
-            store.applyUIAuditRouteIfRequested()
-            #endif
         }
         .onChange(of: scenePhase) { _, phase in
             updateWatchCommandRoute(for: phase)

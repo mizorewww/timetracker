@@ -66,9 +66,10 @@ do not wrap the resulting list insertion, removal, or height change in a broad a
 
 App-owned motion uses the small `AppMotion` vocabulary and stays on opacity or render
 transforms. Keep it local, interruptible, and tied to the value that changed. Reduce
-Motion removes custom translation and scale, leaves at most a restrained opacity change,
-keeps numeric timers static, and disables Blossom's bloom/collapse choreography. Do not
-add custom motion to scrolling, row identity, charts, live resize, one-second page-wide
+Motion removes app-owned custom translation and scale, leaves at most a restrained
+opacity change, and keeps numeric timers static. BlossomColorPicker remains a
+package-owned exception and retains its original bloom/collapse choreography. Do not add
+custom motion to scrolling, row identity, charts, live resize, one-second page-wide
 refresh, Watch Always-On content, Widget, or Live Activity surfaces.
 
 ## Native-First Rules

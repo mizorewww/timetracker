@@ -28,15 +28,14 @@ This batch:
 - animate only disclosure chevrons instead of implicitly animating whole list
   height changes;
 - add restrained press/state feedback to the shared timer action and a local
-  entrance/exit transition to the rare sync-conflict notice;
-- disable the package-owned Blossom bloom/collapse motion when Reduce Motion is
-  enabled, including the macOS child-window close delay.
+  entrance/exit transition to the rare sync-conflict notice.
 
 Explicit non-goals: animating charts, scroll position, list identity, live
 resize, root-shell breakpoint changes, native navigation, every data refresh,
 Widget/Live Activity/Watch elapsed clocks, or adding a user animation setting,
 dependency, phase animator, keyframe animator, matched geometry, or custom
-animation coordinator.
+animation coordinator. Changing BlossomColorPicker's package-owned bloom,
+collapse, or macOS close timing is also out of scope.
 
 ## Acceptance checklist
 
@@ -51,8 +50,7 @@ animation coordinator.
 - A newly surfaced or dismissed sync-conflict notice preserves spatial context
   without affecting its review/dismiss behavior.
 - With Reduce Motion enabled, app-owned translation/scale motion is removed;
-  the sync notice uses opacity only, numeric timers remain static, and Blossom
-  petals do not bloom/collapse.
+  the sync notice uses opacity only and numeric timers remain static.
 - iPhone normal-text Today, Tasks, Inbox, timer picker, and the sync-conflict UI
   fixture remain readable and hittable. iPad regular-shell destination changes
   and hierarchy disclosure remain stable.
@@ -66,6 +64,14 @@ regression test was added. Animation quality and Reduce Motion are visual/system
 behavior covered by this acceptance checklist plus existing stable XCUITest
 paths; exact timing, pixels, and private SwiftUI hierarchy will not become
 automated contracts.
+
+After reviewing the result, the user chose to retain BlossomColorPicker's
+original bloom/collapse animation and the macOS presenter's 350 ms close delay.
+The app-level Reduce Motion override was removed without changing the other
+animation work; no timing or pixel-level regression contract was added. The
+follow-up passed formatting and localization checks, all 194 unit tests, and
+signed iOS and macOS builds. It did not create a simulator or run macOS UI
+automation on the user's active desktop.
 
 A temporary `TEST-SCAFFOLD` method,
 `AdaptiveShellUITests.testAnimationReviewFlow`, drove system-tab switching, task
@@ -125,7 +131,7 @@ files are recoverable under
 - `make build-ios`: passed, including embedded Watch, Widget, and Live Activity
   products under automatic signing.
 - `make build-macos`: passed under automatic signing, including the AppKit
-  Blossom presenter adaptation.
+  Blossom presenter.
 - `make test`: 194 tests in 35 suites passed.
 - `make format-check`: 0/720 files require formatting.
 - `make localization-check`: 9/9 resources passed parity.

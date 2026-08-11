@@ -67,7 +67,7 @@ extension TimeTrackerStore {
             return result
         }
         replacePendingSyncConflict(nil)
-        SyncConflictPromptChangeBroadcaster.publish()
+        StoreMutationBroadcaster.publishSyncConflictPromptChange()
         if hasCompletedStartupConfiguration {
             try refresh()
             enqueueCommittedMutationSystemProjections(

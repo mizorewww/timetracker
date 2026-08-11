@@ -257,7 +257,7 @@ final class CommittedMutationSystemProjectionWorker {
             )
             let result = try await worker.record(events: events)
             if case .recorded = result {
-                SyncConflictPromptChangeBroadcaster.publish()
+                StoreMutationBroadcaster.publishSyncConflictPromptChange()
             }
         }
         materializer = { _ in
@@ -671,7 +671,6 @@ final class CommittedMutationSystemProjectionSchedulerRegistry {
                                 CommittedMutationSystemProjectionWork(
                                     generation: work.generation,
                                     targetSinks: work.targetSinks,
-                                    receiptIDs: work.receiptIDs,
                                     events: invocation.events
                                 ),
                                 expectedContainerRevision:

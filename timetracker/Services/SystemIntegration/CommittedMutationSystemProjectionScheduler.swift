@@ -30,30 +30,19 @@ nonisolated enum CommittedMutationSystemProjectionSink:
     }
 }
 
-nonisolated struct CommittedMutationSystemProjectionFailure:
+nonisolated struct CommittedMutationSystemProjectionRequest:
     Equatable,
     Sendable
 {
-    let generation: UInt
-    let message: String
-}
-
-nonisolated struct CommittedMutationSystemProjectionReceipt:
-    Equatable,
-    Sendable
-{
-    let id: UUID
     let events: Set<StoreDomainEvent>
     let forcedSystemSinks:
         Set<CommittedMutationSystemProjectionSink>
 
     init(
-        id: UUID = UUID(),
         events: Set<StoreDomainEvent>,
         forcedSystemSinks:
         Set<CommittedMutationSystemProjectionSink> = []
     ) {
-        self.id = id
         self.events = events
         self.forcedSystemSinks = forcedSystemSinks.intersection(
             CommittedMutationSystemProjectionSink.systemSurfaceCases
@@ -67,20 +56,17 @@ nonisolated struct CommittedMutationSystemProjectionWork:
 {
     let generation: UInt
     let targetSinks: Set<CommittedMutationSystemProjectionSink>
-    let receiptIDs: Set<UUID>
     let events: Set<StoreDomainEvent>
     let forceCurrentStateProjection: Bool
 
     init(
         generation: UInt,
         targetSinks: Set<CommittedMutationSystemProjectionSink>,
-        receiptIDs: Set<UUID>,
         events: Set<StoreDomainEvent>,
         forceCurrentStateProjection: Bool = false
     ) {
         self.generation = generation
         self.targetSinks = targetSinks
-        self.receiptIDs = receiptIDs
         self.events = events
         self.forceCurrentStateProjection =
             forceCurrentStateProjection
@@ -102,14 +88,9 @@ final class CommittedMutationSystemProjectionScheduler {
     private struct SinkState {
         var pending: CommittedMutationSystemProjectionWork?
         var inFlight: CommittedMutationSystemProjectionWork?
-        var acknowledgedReceiptIDs: Set<UUID> = []
-        var acknowledgedReceiptOrder: [UUID] = []
-        var receiptGenerationByID: [UUID: UInt] = [:]
-        var acknowledgedGeneration: UInt?
-        var failure: CommittedMutationSystemProjectionFailure?
+        var isPausedAfterFailure = false
     }
 
-    private static let receiptRetentionLimit = 512
     private let worker: Worker
     private var generation: UInt = 0
     private var states = Dictionary(
@@ -125,94 +106,42 @@ final class CommittedMutationSystemProjectionScheduler {
         self.worker = worker
     }
 
-    var latestGeneration: UInt {
-        generation
-    }
-
-    var failedSinks: Set<CommittedMutationSystemProjectionSink> {
-        Set(states.compactMap { sink, state in
-            state.failure == nil ? nil : sink
-        })
-    }
-
-    func failure(
-        for sink: CommittedMutationSystemProjectionSink
-    ) -> CommittedMutationSystemProjectionFailure? {
-        states[sink]?.failure
-    }
-
-    func acknowledgedGeneration(
-        for sink: CommittedMutationSystemProjectionSink
-    ) -> UInt? {
-        states[sink]?.acknowledgedGeneration
-    }
-
-    func acknowledgedReceiptCount(
-        for sink: CommittedMutationSystemProjectionSink
-    ) -> Int {
-        states[sink]?.acknowledgedReceiptIDs.count ?? 0
-    }
-
-    func pendingReceiptCount(
-        for sink: CommittedMutationSystemProjectionSink
-    ) -> Int {
-        states[sink]?.pending?.receiptIDs.count ?? 0
-    }
-
-    func pendingEvents(
-        for sink: CommittedMutationSystemProjectionSink
-    ) -> Set<StoreDomainEvent> {
-        states[sink]?.pending?.events ?? []
-    }
-
-    func trackedReceiptCount(
-        for sink: CommittedMutationSystemProjectionSink
-    ) -> Int {
-        states[sink]?.receiptGenerationByID.count ?? 0
-    }
-
-    func enqueue(_ receipt: CommittedMutationSystemProjectionReceipt) {
+    func enqueue(_ request: CommittedMutationSystemProjectionRequest) {
         let targetedSinks = Self.targetedSinks(
-            for: receipt.events
+            for: request.events
         )
         let eligibleSinks = targetedSinks
-            .union(receipt.forcedSystemSinks)
-            .filter {
-                contains(receipt.id, in: $0) == false
-            }
+            .union(request.forcedSystemSinks)
         guard eligibleSinks.isEmpty == false else {
             return
         }
         generation &+= 1
-        let receiptGeneration = generation
+        let requestGeneration = generation
         let targetSinks = Set(eligibleSinks)
 
         for sink in eligibleSinks {
             let events = Self.events(
-                receipt.events,
+                request.events,
                 for: sink
             )
             let forceCurrentStateProjection =
-                receipt.forcedSystemSinks.contains(sink)
+                request.forcedSystemSinks.contains(sink)
             guard var state = states[sink] else { continue }
 
-            state.receiptGenerationByID[receipt.id] = receiptGeneration
             state.pending = Self.merging(
                 state.pending,
                 with: CommittedMutationSystemProjectionWork(
-                    generation: receiptGeneration,
+                    generation: requestGeneration,
                     targetSinks: targetSinks,
-                    receiptIDs: [receipt.id],
                     events: events,
                     forceCurrentStateProjection:
                     forceCurrentStateProjection
                 )
             )
-            Self.trimPendingReceiptTracking(&state)
             // A later committed mutation is also a safe retry trigger. Keep
             // the failed work in the merged batch, then let this sink catch up
             // without repeating siblings that already succeeded.
-            state.failure = nil
+            state.isPausedAfterFailure = false
             states[sink] = state
             startDrainIfNeeded(for: sink)
         }
@@ -270,61 +199,12 @@ final class CommittedMutationSystemProjectionScheduler {
         )
     }
 
-    private func contains(
-        _ receiptID: UUID,
-        in sink: CommittedMutationSystemProjectionSink
-    ) -> Bool {
-        guard let state = states[sink] else { return false }
-        return state.acknowledgedReceiptIDs.contains(receiptID)
-            || state.pending?.receiptIDs.contains(receiptID) == true
-            || state.inFlight?.receiptIDs.contains(receiptID) == true
-    }
-
-    /// Retries only sinks whose previous attempt failed. Successfully
-    /// acknowledged siblings retain their receipt deduplication state.
-    func retryFailedSinks() {
-        let retrySinks = failedSinks
-        var retrySinksByGeneration: [
-            UInt: Set<CommittedMutationSystemProjectionSink>
-        ] = [:]
-        for sink in retrySinks {
-            if let generation = states[sink]?.pending?.generation {
-                retrySinksByGeneration[generation, default: []]
-                    .insert(sink)
-            }
-        }
-        for sink in retrySinks {
-            guard var state = states[sink] else { continue }
-            if let pending = state.pending {
-                let generationSinks =
-                    retrySinksByGeneration[pending.generation] ?? []
-                state.pending = CommittedMutationSystemProjectionWork(
-                    generation: pending.generation,
-                    targetSinks: generationSinks,
-                    receiptIDs: pending.receiptIDs,
-                    events: pending.events,
-                    forceCurrentStateProjection:
-                    pending.forceCurrentStateProjection
-                )
-            }
-            state.failure = nil
-            states[sink] = state
-            startDrainIfNeeded(for: sink)
-        }
-    }
-
-    func waitUntilIdle() async {
-        while let task = drainTasks.values.first {
-            await task.value
-        }
-    }
-
     private func startDrainIfNeeded(
         for sink: CommittedMutationSystemProjectionSink
     ) {
         guard drainTasks[sink] == nil,
               let state = states[sink],
-              state.failure == nil,
+              state.isPausedAfterFailure == false,
               state.pending != nil
         else {
             return
@@ -357,36 +237,7 @@ final class CommittedMutationSystemProjectionScheduler {
                     continue
                 }
                 completedState.inFlight = nil
-                let orderedReceiptIDs = work.receiptIDs.sorted {
-                    completedState.receiptGenerationByID[$0, default: 0]
-                        < completedState.receiptGenerationByID[$1, default: 0]
-                }
-                for receiptID in orderedReceiptIDs
-                    where completedState.acknowledgedReceiptIDs
-                    .insert(receiptID).inserted
-                {
-                    completedState.acknowledgedReceiptOrder.append(receiptID)
-                }
-                let overflow = completedState.acknowledgedReceiptOrder.count
-                    - Self.receiptRetentionLimit
-                if overflow > 0 {
-                    let expiredReceiptIDs =
-                        completedState.acknowledgedReceiptOrder.prefix(overflow)
-                    completedState.acknowledgedReceiptIDs.subtract(
-                        expiredReceiptIDs
-                    )
-                    for receiptID in expiredReceiptIDs {
-                        completedState.receiptGenerationByID[receiptID] = nil
-                    }
-                    completedState.acknowledgedReceiptOrder.removeFirst(
-                        overflow
-                    )
-                }
-                completedState.acknowledgedGeneration = max(
-                    completedState.acknowledgedGeneration ?? 0,
-                    work.generation
-                )
-                completedState.failure = nil
+                completedState.isPausedAfterFailure = false
                 states[sink] = completedState
             } catch {
                 guard var failedState = states[sink],
@@ -399,11 +250,7 @@ final class CommittedMutationSystemProjectionScheduler {
                     work,
                     with: failedState.pending
                 )
-                Self.trimPendingReceiptTracking(&failedState)
-                failedState.failure = CommittedMutationSystemProjectionFailure(
-                    generation: work.generation,
-                    message: error.localizedDescription
-                )
+                failedState.isPausedAfterFailure = true
                 states[sink] = failedState
                 return
             }
@@ -426,7 +273,6 @@ final class CommittedMutationSystemProjectionScheduler {
         return CommittedMutationSystemProjectionWork(
             generation: max(lhs.generation, rhs.generation),
             targetSinks: targetSinks,
-            receiptIDs: lhs.receiptIDs.union(rhs.receiptIDs),
             events: StoreDomainEventBatchLimiter.bounded(
                 lhs.events.union(rhs.events)
             ),
@@ -434,46 +280,5 @@ final class CommittedMutationSystemProjectionScheduler {
             lhs.forceCurrentStateProjection ||
                 rhs.forceCurrentStateProjection
         )
-    }
-
-    private static func trimPendingReceiptTracking(
-        _ state: inout SinkState
-    ) {
-        guard let pending = state.pending,
-              pending.receiptIDs.count > receiptRetentionLimit
-        else {
-            return
-        }
-
-        let orderedReceiptIDs = pending.receiptIDs.sorted { lhs, rhs in
-            let lhsGeneration = state.receiptGenerationByID[lhs, default: 0]
-            let rhsGeneration = state.receiptGenerationByID[rhs, default: 0]
-            if lhsGeneration == rhsGeneration {
-                return lhs.uuidString < rhs.uuidString
-            }
-            return lhsGeneration < rhsGeneration
-        }
-        let retainedReceiptIDs = Set(
-            orderedReceiptIDs.suffix(receiptRetentionLimit)
-        )
-        let discardedReceiptIDs =
-            pending.receiptIDs.subtracting(retainedReceiptIDs)
-        state.pending = CommittedMutationSystemProjectionWork(
-            generation: pending.generation,
-            targetSinks: pending.targetSinks,
-            receiptIDs: retainedReceiptIDs,
-            // Surface materialization reads the complete current committed
-            // state. Collapse an unusually long failure backlog to full sync
-            // so associated IDs cannot make the event set grow without bound.
-            events: pending.events.isEmpty ? [] : [.fullSync],
-            forceCurrentStateProjection:
-            pending.forceCurrentStateProjection
-        )
-        for receiptID in discardedReceiptIDs
-            where state.inFlight?.receiptIDs.contains(receiptID) != true
-            && state.acknowledgedReceiptIDs.contains(receiptID) == false
-        {
-            state.receiptGenerationByID[receiptID] = nil
-        }
     }
 }

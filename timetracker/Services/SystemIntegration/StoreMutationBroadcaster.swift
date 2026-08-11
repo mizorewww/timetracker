@@ -12,6 +12,9 @@ enum StoreMutationBroadcaster {
     private static let notificationName = Notification.Name(
         "me.mezorewww.timetracker.storeMutationCommitted"
     )
+    private static let syncConflictPromptNotificationName = Notification.Name(
+        "TimeTrackerSyncConflictPromptChanged"
+    )
     private static let eventsUserInfoKey = "events"
     private static let pendingBroadcastRetentionLimit = 64
     private static var pendingBroadcasts: [PendingBroadcast] = []
@@ -51,12 +54,6 @@ enum StoreMutationBroadcaster {
         }
     }
 
-    static func waitUntilIdle() async {
-        while let task = drainTask {
-            await task.value
-        }
-    }
-
     private static func drainPendingBroadcasts() {
         while pendingBroadcasts.isEmpty == false {
             let batch = pendingBroadcasts
@@ -72,21 +69,22 @@ enum StoreMutationBroadcaster {
         drainTask = nil
     }
 
-    static var pendingBroadcastCount: Int {
-        pendingBroadcasts.count
-    }
-
-    static var pendingBroadcastEvents: Set<StoreDomainEvent> {
-        pendingBroadcasts.reduce(into: []) { result, broadcast in
-            result.formUnion(broadcast.events)
-        }
-    }
-
     static func events(from notification: Notification) -> Set<StoreDomainEvent>? {
         notification.userInfo?[eventsUserInfoKey] as? Set<StoreDomainEvent>
     }
 
     static var notification: Notification.Name {
         notificationName
+    }
+
+    static func publishSyncConflictPromptChange() {
+        NotificationCenter.default.post(
+            name: syncConflictPromptNotificationName,
+            object: nil
+        )
+    }
+
+    static var syncConflictPromptNotification: Notification.Name {
+        syncConflictPromptNotificationName
     }
 }

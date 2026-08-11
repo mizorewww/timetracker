@@ -232,7 +232,7 @@ extension TimeTrackerStore {
             }
         }
         scheduler.enqueue(
-            CommittedMutationSystemProjectionReceipt(
+            CommittedMutationSystemProjectionRequest(
                 events: events,
                 forcedSystemSinks: forcedSystemSinks
             )

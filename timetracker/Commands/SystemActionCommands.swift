@@ -39,7 +39,7 @@ struct SystemActionPostCommitEffects {
         do {
             let scheduler = try schedulerProvider(container)
             scheduler.enqueue(
-                CommittedMutationSystemProjectionReceipt(events: events)
+                CommittedMutationSystemProjectionRequest(events: events)
             )
         } catch {
             Self.logger.error(

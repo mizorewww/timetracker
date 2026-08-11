@@ -3,6 +3,16 @@ import Foundation
 import Observation
 import SwiftData
 
+@concurrent
+private func loadSyncConflictPrompt(
+    from service: SyncConflictService
+) async throws -> SyncConflictPrompt? {
+    try Task.checkCancellation()
+    let prompt = try service.prompt()
+    try Task.checkCancellation()
+    return prompt
+}
+
 @MainActor
 @Observable
 final class TimeTrackerStore {
@@ -80,11 +90,10 @@ final class TimeTrackerStore {
             self.syncConflictPromptLoader =
                 syncConflictPromptLoader
         } else {
-            let promptReader = SyncConflictPromptReader(
-                service: resolvedSyncConflictService
-            )
             self.syncConflictPromptLoader = {
-                try await promptReader.load()
+                try await loadSyncConflictPrompt(
+                    from: resolvedSyncConflictService
+                )
             }
         }
         taskDraftRecoveryController = TaskDraftRecoveryController(

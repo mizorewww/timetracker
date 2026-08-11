@@ -127,7 +127,7 @@ extension TimeTrackerStore {
             return SyncNotificationObserverToken(token)
         }
         let promptToken = center.addObserver(
-            forName: SyncConflictPromptChangeBroadcaster.notification,
+            forName: StoreMutationBroadcaster.syncConflictPromptNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in

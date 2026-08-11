@@ -32,6 +32,10 @@ extension TaskHierarchyPicker {
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
                     .rotationEffect(.degrees(item.isExpanded ? 90 : 0))
+                    .animation(
+                        reduceMotion ? nil : AppMotion.stateChange,
+                        value: item.isExpanded
+                    )
                     .foregroundStyle(.secondary)
                     .frame(width: 14, height: 18)
             }

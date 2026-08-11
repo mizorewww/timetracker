@@ -44,7 +44,7 @@ struct InboxItemRow: View {
             suggestionBar
         }
         .animation(
-            reduceMotion ? nil : .snappy(duration: 0.22),
+            reduceMotion ? nil : AppMotion.stateChange,
             value: suggestionPresentationKey
         )
         .onAppear {
@@ -239,7 +239,7 @@ struct InboxItemRow: View {
     }
 
     private func performAnimated(_ action: () -> Void) {
-        withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) {
+        withAnimation(reduceMotion ? nil : AppMotion.stateChange) {
             action()
         }
     }

@@ -22,6 +22,7 @@ struct SidebarTaskTreeRow: View {
     let task: TaskNode
     let row: TaskTreeRowModel
     @Binding var expansionState: TaskExpansionState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 8) {
@@ -31,11 +32,6 @@ struct SidebarTaskTreeRow: View {
         .frame(minHeight: minimumRowHeight)
         .padding(.leading, CGFloat(min(row.depth, 6)) * 14)
         .contentShape(Rectangle())
-        .taskSelectionPulse(
-            selectedID: store.selectedTaskPulseID,
-            itemID: task.id,
-            pulseToken: store.selectedTaskPulseToken
-        )
         .contextMenu {
             TaskMenuContent(
                 store: store,
@@ -59,6 +55,10 @@ struct SidebarTaskTreeRow: View {
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
                     .rotationEffect(.degrees(row.isExpanded ? 90 : 0))
+                    .animation(
+                        reduceMotion ? nil : AppMotion.stateChange,
+                        value: row.isExpanded
+                    )
                     .foregroundStyle(.secondary)
                     .frame(width: 14, height: 18)
             }

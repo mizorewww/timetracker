@@ -8,6 +8,7 @@ struct ContentView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var store: TimeTrackerStore
     @State private var presentationRouter = AppPresentationRouter()
     @State private var feedbackRouter = AppSceneFeedbackRouter()
@@ -224,26 +225,43 @@ struct ContentView: View {
         }
     }
 
-    @ViewBuilder
     private var syncConflictNotice: some View {
-        if store.effectivePersistenceWriteSafety == .ready,
-           let conflict = store.pendingSyncConflict,
-           dismissedSyncConflictID != conflict.id
-        {
-            SyncConflictNotice(
-                onReview: {
-                    store.taskDetailNavigationGuard.requestNavigation(
-                        dismissingActiveDetail: true
-                    ) {
+        Group {
+            if let conflict = visibleSyncConflict {
+                SyncConflictNotice(
+                    onReview: {
+                        store.taskDetailNavigationGuard.requestNavigation(
+                            dismissingActiveDetail: true
+                        ) {
+                            dismissedSyncConflictID = conflict.id
+                            store.closeTaskDetailNavigation()
+                            store.desktopDestination = .settings
+                        }
+                    },
+                    onDismiss: {
                         dismissedSyncConflictID = conflict.id
-                        store.closeTaskDetailNavigation()
-                        store.desktopDestination = .settings
                     }
-                },
-                onDismiss: {
-                    dismissedSyncConflictID = conflict.id
-                }
-            )
+                )
+                .transition(
+                    reduceMotion
+                        ? .opacity
+                        : .opacity.combined(with: .move(edge: .top))
+                )
+            }
         }
+        .animation(
+            reduceMotion ? AppMotion.opacity : AppMotion.stateChange,
+            value: visibleSyncConflict?.id
+        )
+    }
+
+    private var visibleSyncConflict: SyncConflictPrompt? {
+        guard store.effectivePersistenceWriteSafety == .ready,
+              let conflict = store.pendingSyncConflict,
+              dismissedSyncConflictID != conflict.id
+        else {
+            return nil
+        }
+        return conflict
     }
 }

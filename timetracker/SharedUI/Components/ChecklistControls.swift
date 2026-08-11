@@ -76,7 +76,7 @@ struct ChecklistCompletionMark: View {
         .frame(width: visualSize, height: visualSize)
         .contentShape(Circle())
         .animation(
-            reduceMotion ? nil : .snappy(duration: 0.22),
+            reduceMotion ? nil : AppMotion.stateChange,
             value: isCompleted
         )
         .accessibilityHidden(true)

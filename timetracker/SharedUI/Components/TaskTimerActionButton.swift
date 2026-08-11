@@ -57,13 +57,17 @@ enum TaskPickerIndicatorMetrics {
 }
 
 private struct TaskPickerIconButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .opacity(opacity(isPressed: configuration.isPressed))
+            .scaleEffect(
+                configuration.isPressed && !reduceMotion ? 0.96 : 1
+            )
             .animation(
-                .easeOut(duration: 0.12),
+                reduceMotion ? nil : AppMotion.press,
                 value: configuration.isPressed
             )
     }
@@ -82,6 +86,7 @@ struct TaskTimerActionButton: View {
     let labelStyle: TaskTimerActionLabelStyle
     let action: () -> Void
     let accessibilityIdentifier: String
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var usesIconOnly: Bool {
         labelStyle == .iconOnly
@@ -110,6 +115,15 @@ struct TaskTimerActionButton: View {
             configuredButton {
                 Image(systemName: actionKind.compactSystemImage)
                     .symbolRenderingMode(.monochrome)
+                    .contentTransition(
+                        reduceMotion
+                            ? .identity
+                            : .symbolEffect(.replace)
+                    )
+                    .animation(
+                        reduceMotion ? nil : AppMotion.stateChange,
+                        value: actionKind
+                    )
                     .font(.title2.weight(.semibold))
                     .imageScale(.large)
                     .foregroundStyle(actionColor)

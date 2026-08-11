@@ -74,7 +74,7 @@ struct QuickStartEditorSheet: View {
     }
 
     private func withSelectionAnimation(_ updates: () -> Void) {
-        withAnimation(reduceMotion ? nil : .snappy(duration: 0.28)) {
+        withAnimation(reduceMotion ? nil : AppMotion.structuralChange) {
             updates()
         }
     }

@@ -25,9 +25,7 @@ struct InboxCompletedSection: View {
             }
         } header: {
             Button {
-                withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) {
-                    isExpanded.toggle()
-                }
+                isExpanded.toggle()
             } label: {
                 HStack(spacing: 8) {
                     Text(completedLabel)
@@ -35,6 +33,10 @@ struct InboxCompletedSection: View {
                     Image(systemName: "chevron.forward")
                         .font(.caption.weight(.semibold))
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                        .animation(
+                            reduceMotion ? nil : AppMotion.stateChange,
+                            value: isExpanded
+                        )
                 }
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .contentShape(Rectangle())

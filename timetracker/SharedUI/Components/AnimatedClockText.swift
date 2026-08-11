@@ -19,7 +19,7 @@ struct AnimatedClockText: View {
                     : .numericText(value: Double(value))
             )
             .animation(
-                reduceMotion ? nil : .snappy(duration: 0.22),
+                reduceMotion ? nil : AppMotion.stateChange,
                 value: value
             )
     }

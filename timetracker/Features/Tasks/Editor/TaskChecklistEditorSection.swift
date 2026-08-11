@@ -20,7 +20,7 @@ struct TaskChecklistEditorSection: View {
             Text(.app("editor.checklist.footer"))
         }
         .animation(
-            reduceMotion ? nil : .snappy(duration: 0.28),
+            reduceMotion ? nil : AppMotion.structuralChange,
             value: rowPlacements
         )
     }
@@ -40,7 +40,7 @@ struct TaskChecklistEditorSection: View {
                     deleteChecklistItem(placement.id)
                 },
                 toggleCompletion: {
-                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.28)) {
+                    withAnimation(reduceMotion ? nil : AppMotion.structuralChange) {
                         toggleChecklistItem(placement.id)
                     }
                 },

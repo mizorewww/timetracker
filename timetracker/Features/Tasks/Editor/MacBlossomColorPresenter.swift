@@ -12,11 +12,13 @@ final class MacBlossomColorPresenter: NSObject {
     private var model: BlossomColorPickerModel?
     private var localEventMonitor: Any?
     private var dismissTask: Task<Void, Never>?
+    private var reduceMotion = false
 
     func show(
         relativeTo anchorView: NSView,
         model: BlossomColorPickerModel,
-        layout: PetalLayout
+        layout: PetalLayout,
+        reduceMotion: Bool
     ) -> Bool {
         guard let ownerWindow = anchorView.window else {
             return false
@@ -25,6 +27,7 @@ final class MacBlossomColorPresenter: NSObject {
         dismissImmediately()
         self.ownerWindow = ownerWindow
         self.model = model
+        self.reduceMotion = reduceMotion
 
         let anchorRectInWindow = anchorView.convert(anchorView.bounds, to: nil)
         let anchorRectOnScreen = ownerWindow.convertToScreen(anchorRectInWindow)
@@ -40,6 +43,11 @@ final class MacBlossomColorPresenter: NSObject {
 
         let content = ExpandedBlossomView(model: model, layout: layout)
             .frame(width: totalSize, height: totalSize)
+            .transaction { transaction in
+                if reduceMotion {
+                    transaction.disablesAnimations = true
+                }
+            }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("symbol.picker.color.blossom")
         let window = NSWindow(
@@ -74,6 +82,11 @@ final class MacBlossomColorPresenter: NSObject {
         }
         removeDismissObservers()
 
+        if reduceMotion {
+            close(window)
+            return
+        }
+
         dismissTask = Task { @MainActor [weak self, weak window] in
             do {
                 try await Task.sleep(for: Self.collapseAnimationDuration)
@@ -107,6 +120,7 @@ final class MacBlossomColorPresenter: NSObject {
             model = nil
             ownerWindow = nil
             dismissTask = nil
+            reduceMotion = false
         }
     }
 

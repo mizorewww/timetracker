@@ -63,7 +63,7 @@ struct InboxListRow: View {
     }
 
     private func performAnimated(_ action: () -> Void) {
-        withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) {
+        withAnimation(reduceMotion ? nil : AppMotion.stateChange) {
             action()
         }
     }

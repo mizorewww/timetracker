@@ -17,6 +17,7 @@ enum SymbolBlossomTouchMetrics {
 struct SymbolColorWell: View {
     @Binding var selection: String
     let onSelect: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.self) private var environment
     @State private var isPresented = false
     @State private var model: BlossomColorPickerModel
@@ -85,6 +86,11 @@ struct SymbolColorWell: View {
                 .scaleEffect(SymbolBlossomTouchMetrics.scale)
                 .frame(width: Self.touchSize, height: Self.touchSize)
                 .padding(8)
+                .transaction { transaction in
+                    if reduceMotion {
+                        transaction.disablesAnimations = true
+                    }
+                }
                 .onAppear {
                     model.expand()
                 }
@@ -104,7 +110,8 @@ struct SymbolColorWell: View {
                   presenter.show(
                       relativeTo: anchorView,
                       model: model,
-                      layout: Self.defaultLayout
+                      layout: Self.defaultLayout,
+                      reduceMotion: reduceMotion
                   )
             else {
                 return

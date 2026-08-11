@@ -12,8 +12,6 @@ extension TimeTrackerStore {
             todayTaskRoute = nil
             desktopDestination = .today
         }
-        selectedTaskPulseID = taskID
-        selectedTaskPulseToken = UUID()
     }
 
     func openTaskDetail(_ taskID: UUID) {

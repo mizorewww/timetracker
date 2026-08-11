@@ -28,7 +28,6 @@ struct CompactShellRootView<SyncConflictContent: View>: View {
                     \.pageLiveClocksActive,
                     store.desktopDestination == .today
                 )
-                .pageEntranceTransition()
             } label: {
                 Label(AppStrings.today, systemImage: "house")
                     .accessibilityIdentifier("phone.tab.today")
@@ -38,7 +37,6 @@ struct CompactShellRootView<SyncConflictContent: View>: View {
                 NavigationStack {
                     InboxView(store: store)
                 }
-                .pageEntranceTransition()
             } label: {
                 Label(AppStrings.inbox, systemImage: "tray")
                     .accessibilityIdentifier("phone.tab.inbox")
@@ -46,7 +44,6 @@ struct CompactShellRootView<SyncConflictContent: View>: View {
 
             Tab(value: .tasks) {
                 TasksNavigationView(store: store)
-                    .pageEntranceTransition()
             } label: {
                 Label(AppStrings.tasks, systemImage: "checklist")
                     .accessibilityIdentifier("phone.tab.tasks")
@@ -60,7 +57,6 @@ struct CompactShellRootView<SyncConflictContent: View>: View {
                     \.pageLiveClocksActive,
                     store.desktopDestination == .pomodoro
                 )
-                .pageEntranceTransition()
             } label: {
                 Label(AppStrings.focus, systemImage: "timer")
                     .accessibilityIdentifier("phone.tab.focus")
@@ -70,7 +66,6 @@ struct CompactShellRootView<SyncConflictContent: View>: View {
                 NavigationStack {
                     AnalyticsView(store: store)
                 }
-                .pageEntranceTransition()
             } label: {
                 Label(AppStrings.analytics, systemImage: "chart.bar.xaxis")
                     .accessibilityIdentifier("phone.tab.analytics")

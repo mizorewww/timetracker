@@ -10,6 +10,7 @@ struct TaskManagementFlatRow: View {
     var toggleExpansion: (() -> Void)?
     var identityContext: TaskIdentityPresentation.Context = .hierarchical
     let openTaskDetail: (TaskNode) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
@@ -79,8 +80,13 @@ struct TaskManagementFlatRow: View {
             Button {
                 toggleExpansion?()
             } label: {
-                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    .animation(
+                        reduceMotion ? nil : AppMotion.stateChange,
+                        value: isExpanded
+                    )
                     .foregroundStyle(.secondary)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())

@@ -22,6 +22,13 @@ enum AppLayout {
     #endif
 }
 
+enum AppMotion {
+    static let stateChange = Animation.snappy(duration: 0.22)
+    static let structuralChange = Animation.snappy(duration: 0.28)
+    static let opacity = Animation.easeOut(duration: 0.16)
+    static let press = Animation.easeOut(duration: 0.12)
+}
+
 struct AppCardBackground: ViewModifier {
     var padding: CGFloat = AppLayout.cardPadding
     var stroke: Bool = true

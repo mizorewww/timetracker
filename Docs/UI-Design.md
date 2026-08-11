@@ -2,7 +2,7 @@
 
 Status: current UI guardrails
 
-Reviewed: 2026-08-01
+Reviewed: 2026-08-11
 
 Current user behavior is documented in [User Guide](UserGuide.md); verification rules are maintained in [Testing](Testing.md). This document defines how UI work should move toward native Apple components and away from fragile custom drawing. Check it before redesigning or adding any screen.
 
@@ -54,6 +54,22 @@ scale, `minimumScaleFactor` compression, or third-party typography framework to
 compensate for a local semantic mistake. SF Symbols that identify the same row or
 header inherit its semantic font; charts and dense transient pickers retain their
 deliberately compact metadata styles.
+
+## Motion
+
+Motion explains a local state change or preserves spatial context; it is not page
+decoration. System tabs, navigation, sheets, popovers, menus, and window resizing own
+their transitions. Compact tab content must not replay a second custom entrance, and
+regular-sidebar destinations are peers, so they may crossfade briefly but must not slide
+as if each selection were forward navigation. Disclosure controls rotate their chevron;
+do not wrap the resulting list insertion, removal, or height change in a broad animation.
+
+App-owned motion uses the small `AppMotion` vocabulary and stays on opacity or render
+transforms. Keep it local, interruptible, and tied to the value that changed. Reduce
+Motion removes custom translation and scale, leaves at most a restrained opacity change,
+keeps numeric timers static, and disables Blossom's bloom/collapse choreography. Do not
+add custom motion to scrolling, row identity, charts, live resize, one-second page-wide
+refresh, Watch Always-On content, Widget, or Live Activity surfaces.
 
 ## Native-First Rules
 

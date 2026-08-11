@@ -136,7 +136,7 @@ struct InboxView: View {
 
     @discardableResult
     private func submitDraft() -> Bool {
-        let didAdd = withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) {
+        let didAdd = withAnimation(reduceMotion ? nil : AppMotion.stateChange) {
             draft.submit(using: store.addInboxItem(title:))
         }
         focusCaptureField()

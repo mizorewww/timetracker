@@ -393,7 +393,7 @@ struct AITaskPlanGeneratorSheet: View {
                     }
                 }
                 withAnimation(
-                    reduceMotion ? nil : .snappy(duration: 0.22)
+                    reduceMotion ? nil : AppMotion.stateChange
                 ) {
                     reviewDraft = AITaskWorkspaceReviewDraft(
                         baseline: baseline,
@@ -474,7 +474,7 @@ struct AITaskPlanGeneratorSheet: View {
         case .returnToRequest:
             errorMessage = nil
             withAnimation(
-                reduceMotion ? nil : .snappy(duration: 0.22)
+                reduceMotion ? nil : AppMotion.stateChange
             ) {
                 reviewDraft = nil
             }

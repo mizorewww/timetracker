@@ -86,9 +86,7 @@ struct TaskCategorySectionHeader: View {
            let disclosureAccessibilityIdentifier
         {
             Button {
-                withAnimation(reduceMotion ? nil : .snappy(duration: 0.22)) {
-                    toggleExpansion()
-                }
+                toggleExpansion()
             } label: {
                 categoryIdentityLabel(
                     isExpanded: isExpanded,
@@ -122,15 +120,16 @@ struct TaskCategorySectionHeader: View {
     ) -> some View {
         HStack(spacing: 8) {
             if let isExpanded {
-                Image(
-                    systemName: isExpanded
-                        ? "chevron.down"
-                        : "chevron.forward"
-                )
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .frame(minWidth: 14, alignment: .center)
-                .accessibilityHidden(true)
+                Image(systemName: "chevron.forward")
+                    .font(.caption.weight(.semibold))
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    .animation(
+                        reduceMotion ? nil : AppMotion.stateChange,
+                        value: isExpanded
+                    )
+                    .foregroundStyle(.secondary)
+                    .frame(minWidth: 14, alignment: .center)
+                    .accessibilityHidden(true)
             }
 
             categorySymbol

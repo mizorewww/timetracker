@@ -266,8 +266,6 @@ final class TimeTrackerStore {
     var tasksRoute: TasksRoute?
     var todayTaskRoute: TasksRoute?
     @ObservationIgnored let taskDetailNavigationGuard = TaskDetailNavigationGuard()
-    var selectedTaskPulseID: UUID?
-    var selectedTaskPulseToken = UUID()
     var cloudAccountCheck: CloudAccountCheckOutcome?
     @ObservationIgnored var cloudAccountCheckRequestID: UUID?
     var lastSyncActivity: SyncActivityOutcome?

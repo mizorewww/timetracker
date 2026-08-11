@@ -3,23 +3,20 @@ import SwiftUI
 /// The detail column's content, shared by both shells.
 struct DesktopContentView: View {
     let store: TimeTrackerStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var navigationPath = NavigationPath()
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            // The destination identity drives the transition: replacing the
-            // keyed content inside an animated container runs the insertion
-            // transition on every sidebar switch (works reliably on macOS,
-            // where onAppear-based entrance animations do not replay).
+            // Sidebar destinations are peers, not forward navigation. A brief
+            // crossfade softens the replacement without implying direction.
             ZStack {
                 destinationContent
                     .id(store.desktopDestination)
-                    .transition(
-                        .opacity.combined(with: .move(edge: .trailing))
-                    )
+                    .transition(.opacity)
             }
             .animation(
-                .easeOut(duration: 0.2),
+                reduceMotion ? nil : AppMotion.opacity,
                 value: store.desktopDestination
             )
         }

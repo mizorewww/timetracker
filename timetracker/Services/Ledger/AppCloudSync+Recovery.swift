@@ -94,12 +94,6 @@ extension AppCloudSync {
             let durableRoot = storeURL.deletingLastPathComponent()
             let localFile = DurableLocalFile()
             try localFile.withExclusiveAccess(through: durableRoot) {
-                try PersistentHistoryProjectionResetFence(
-                    scope: TimerStoreScope(
-                        persistentStoreURL: storeURL
-                    ),
-                    localFile: localFile
-                ).advanceForStoreReset()
                 try storeFileRemover(storeURL)
             }
         } catch {

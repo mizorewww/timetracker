@@ -15,18 +15,15 @@ nonisolated enum CommittedMutationSystemProjectionSink:
         .watch,
         .liveActivity,
     ]
+}
 
-    var persistentHistoryLane: PersistentHistoryProjectionLane {
-        switch self {
-        case .syncSnapshot:
-            .syncSnapshot
-        case .widget:
-            .widget
-        case .watch:
-            .watch
-        case .liveActivity:
-            .liveActivity
-        }
+nonisolated enum CommittedMutationSystemProjectionCause: Equatable, Sendable {
+    case localCommit
+    case startupCatchUp
+    case surfaceCatchUp
+
+    var recordsSyncSnapshot: Bool {
+        self != .surfaceCatchUp
     }
 }
 
@@ -35,15 +32,18 @@ nonisolated struct CommittedMutationSystemProjectionRequest:
     Sendable
 {
     let events: Set<StoreDomainEvent>
+    let cause: CommittedMutationSystemProjectionCause
     let forcedSystemSinks:
         Set<CommittedMutationSystemProjectionSink>
 
     init(
         events: Set<StoreDomainEvent>,
+        cause: CommittedMutationSystemProjectionCause,
         forcedSystemSinks:
         Set<CommittedMutationSystemProjectionSink> = []
     ) {
         self.events = events
+        self.cause = cause
         self.forcedSystemSinks = forcedSystemSinks.intersection(
             CommittedMutationSystemProjectionSink.systemSurfaceCases
         )
@@ -57,20 +57,6 @@ nonisolated struct CommittedMutationSystemProjectionWork:
     let generation: UInt
     let targetSinks: Set<CommittedMutationSystemProjectionSink>
     let events: Set<StoreDomainEvent>
-    let forceCurrentStateProjection: Bool
-
-    init(
-        generation: UInt,
-        targetSinks: Set<CommittedMutationSystemProjectionSink>,
-        events: Set<StoreDomainEvent>,
-        forceCurrentStateProjection: Bool = false
-    ) {
-        self.generation = generation
-        self.targetSinks = targetSinks
-        self.events = events
-        self.forceCurrentStateProjection =
-            forceCurrentStateProjection
-    }
 }
 
 /// Coalesces committed-mutation projection work without making a durable
@@ -107,11 +93,7 @@ final class CommittedMutationSystemProjectionScheduler {
     }
 
     func enqueue(_ request: CommittedMutationSystemProjectionRequest) {
-        let targetedSinks = Self.targetedSinks(
-            for: request.events
-        )
-        let eligibleSinks = targetedSinks
-            .union(request.forcedSystemSinks)
+        let eligibleSinks = Self.targetedSinks(for: request)
         guard eligibleSinks.isEmpty == false else {
             return
         }
@@ -124,8 +106,6 @@ final class CommittedMutationSystemProjectionScheduler {
                 request.events,
                 for: sink
             )
-            let forceCurrentStateProjection =
-                request.forcedSystemSinks.contains(sink)
             guard var state = states[sink] else { continue }
 
             state.pending = Self.merging(
@@ -133,13 +113,11 @@ final class CommittedMutationSystemProjectionScheduler {
                 with: CommittedMutationSystemProjectionWork(
                     generation: requestGeneration,
                     targetSinks: targetSinks,
-                    events: events,
-                    forceCurrentStateProjection:
-                    forceCurrentStateProjection
+                    events: events
                 )
             )
-            // A later committed mutation is also a safe retry trigger. Keep
-            // the failed work in the merged batch, then let this sink catch up
+            // A later relevant request is a safe retry trigger. Keep the
+            // failed work in the merged batch, then let this sink catch up
             // without repeating siblings that already succeeded.
             state.isPausedAfterFailure = false
             states[sink] = state
@@ -148,13 +126,20 @@ final class CommittedMutationSystemProjectionScheduler {
     }
 
     static func targetedSinks(
-        for events: Set<StoreDomainEvent>
+        for request: CommittedMutationSystemProjectionRequest
     ) -> Set<CommittedMutationSystemProjectionSink> {
-        Set(
-            CommittedMutationSystemProjectionSink.allCases.filter {
-                Self.events(events, for: $0).isEmpty == false
+        var sinks = Set(
+            CommittedMutationSystemProjectionSink.systemSurfaceCases.filter {
+                Self.events(request.events, for: $0).isEmpty == false
             }
         )
+        if request.cause.recordsSyncSnapshot,
+           request.events.isEmpty == false
+        {
+            sinks.insert(.syncSnapshot)
+        }
+        sinks.formUnion(request.forcedSystemSinks)
+        return sinks
     }
 
     private static func events(
@@ -275,10 +260,7 @@ final class CommittedMutationSystemProjectionScheduler {
             targetSinks: targetSinks,
             events: StoreDomainEventBatchLimiter.bounded(
                 lhs.events.union(rhs.events)
-            ),
-            forceCurrentStateProjection:
-            lhs.forceCurrentStateProjection ||
-                rhs.forceCurrentStateProjection
+            )
         )
     }
 }

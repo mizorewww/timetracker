@@ -44,7 +44,8 @@ extension TimeTrackerStore {
                     processingFailure = processingFailure ?? error
                 }
                 enqueueCommittedMutationSystemProjections(
-                    events: [.remoteImportCompleted]
+                    events: [.remoteImportCompleted],
+                    cause: .surfaceCatchUp
                 )
             }
             guard let activityReason = batch.activityReason else { return }

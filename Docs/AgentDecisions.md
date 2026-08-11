@@ -1935,6 +1935,26 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：活动文档链接与状态检查不再发现完成中的 memory、过期 Audit 入口或相互冲突的 Makefile/测试规则；一次性执行证据可从对应 Git 提交追溯。
 
+## AD-142：提交后投影按显式来源重放当前事实
+
+状态：Accepted
+
+替代关系：本决策完整替代 AD-137 的 persistent-history lane、cursor、attempt、reset epoch、store UUID 与 CAS 协议。AD-137 关于 durable command 不等待投影、四个 sink 独立失败、同 generation 共享 DTO、forced Watch、prompt-change 通知及系统框架边界的要求继续有效。
+
+背景：四套持久 history frontier 只用于跳过重复的当前状态发布，却引入 driver、分页 history reader、sidecar cursor/attempt、reset fence、跨进程 CAS 和两套事件筛选。实际投影仍会从 SwiftData 全量读取当前事实；App Intent 和扩展也不运行这些 lane。保留这套增量确认协议无法减少物化成本，却让一次 Widget/Watch/Live Activity 收敛依赖约 1,500 行恢复元数据代码。
+
+决策：
+
+- `CommittedMutationSystemProjectionRequest` 必须携带显式来源：`.localCommit`、`.startupCatchUp` 或 `.surfaceCatchUp`。只有 local commit 与 startup catch-up 可以记录 sync recovery snapshot；Cloud remote import、前台/冲突解决后的 surface catch-up 和 forced-only Watch 不得被推断成本机 mutation。
+- scheduler 继续按 sink 过滤 exact events、合并 generation、隔离失败并在下一次相关 generation 重试。三个系统表面每 generation 共享一次 fresh-context 当前事实物化；sync snapshot 使用原始事件独立记录。durable mutation、App Intent 与 Watch 终态都不等待这些 I/O。
+- 启动固定发送 `.startupCatchUp + .fullSync`，以一次幂等完整 snapshot 和全部系统表面重投影关闭“commit 已保存、进程在投影前退出”的窗口。前台、remote import、显式 sync resolution 只重投影系统表面；它们不会制造本地同步代次。
+- registry 仍按物理 `TimerStoreScope` 共享 scheduler，并在 container 替换时清空旧 materialization。框架发布前后各验证一次 container revision；不再维护与 physical store reset 并行的 history reset fence。
+- 删除 `PersistentHistoryProjectionDriver`、`PersistentHistoryLaneCursorStore`、`PersistentHistoryProjectionImpact` 及其 cursor/attempt/fence 测试。旧 sidecar 不再读取；以后若发生显式 store reset，会随既有 store-prefix 清理被移除，不增加一次性迁移。
+
+后果：投影恢复承诺变成简单的“每次相关 commit 重放、启动完整补偿”，不再声称逐 transaction 持久确认。最坏情况是重复发布幂等 DTO；单用户应用可以接受这一成本。history author 仍用于写入来源和其它同步安全边界，但不再驱动系统表面。SwiftData/CloudKit schema、snapshot/Widget/Watch/Live Activity DTO 和用户可见行为不变。
+
+验证：行为测试冻结三种来源到四个 sink 的映射、forced-only Watch、sync exact events、单 generation 单次物化和失败后的下一相关 generation 重试；Cloud recovery 测试继续证明 store 文件在共享 mutation lock 内删除。完整签名单元、iOS/macOS 构建、格式与本地化通过后才能提交。
+
 ## 2. Agent 工作清单
 
 开始 Apple 平台或 SwiftUI 工作前：

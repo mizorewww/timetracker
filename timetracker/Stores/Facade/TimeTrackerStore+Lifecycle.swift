@@ -197,6 +197,7 @@ extension TimeTrackerStore {
         )
         enqueueCommittedMutationSystemProjections(
             events: events,
+            cause: .localCommit,
             forcedSystemSinks: forcedSystemSinks
         )
 
@@ -210,6 +211,7 @@ extension TimeTrackerStore {
 
     func enqueueCommittedMutationSystemProjections(
         events: Set<StoreDomainEvent>,
+        cause: CommittedMutationSystemProjectionCause,
         forcedSystemSinks:
         Set<CommittedMutationSystemProjectionSink> = []
     ) {
@@ -233,6 +235,7 @@ extension TimeTrackerStore {
         scheduler.enqueue(
             CommittedMutationSystemProjectionRequest(
                 events: events,
+                cause: cause,
                 forcedSystemSinks: forcedSystemSinks
             )
         )

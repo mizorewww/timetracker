@@ -125,6 +125,7 @@ extension TimeTrackerStore {
             : .ready
         enqueueCommittedMutationSystemProjections(
             events: [.fullSync],
+            cause: .startupCatchUp,
             // A Watch command can have a terminal outcome without creating
             // SwiftData history (duplicate, missing, invalid, or failed).
             // Re-publish current state at startup so that forced-only work

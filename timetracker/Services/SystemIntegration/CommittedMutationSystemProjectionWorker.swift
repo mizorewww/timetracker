@@ -329,9 +329,6 @@ final class CommittedMutationSystemProjectionWorker {
         }
 
         do {
-            try requireCurrentContainerRegistration(
-                expectedContainerRevision
-            )
             try await publisher(sink, materialization)
             try requireCurrentContainerRegistration(
                 expectedContainerRevision
@@ -608,10 +605,6 @@ final class CommittedMutationSystemProjectionWorker {
 /// ModelContext, so short-lived test and recovery containers can disappear.
 @MainActor
 final class CommittedMutationSystemProjectionSchedulerRegistry {
-    typealias ProjectorFactory = @MainActor @Sendable (
-        ModelContainer
-    ) -> PersistentHistoryProjectionDriver.Effect
-
     static let shared =
         CommittedMutationSystemProjectionSchedulerRegistry()
 
@@ -620,12 +613,7 @@ final class CommittedMutationSystemProjectionSchedulerRegistry {
         let scheduler: CommittedMutationSystemProjectionScheduler
         let worker: CommittedMutationSystemProjectionWorker
 
-        init(
-            container: ModelContainer,
-            scope: TimerStoreScope,
-            localFile: DurableLocalFile,
-            projectorFactory: ProjectorFactory?
-        ) {
+        init(container: ModelContainer) {
             let containerProvider =
                 CommittedMutationModelContainerProvider(container)
             self.containerProvider = containerProvider
@@ -646,49 +634,10 @@ final class CommittedMutationSystemProjectionSchedulerRegistry {
                         throw CommittedMutationSystemProjectionWorkerError
                             .storeContainerReleased
                     }
-                    let registrationRevision = registration.revision
-                    let driver = PersistentHistoryProjectionDriver(
-                        container: registration.container,
-                        scope: scope,
-                        localFile: localFile
-                    ) { invocation in
-                        guard await containerProvider.isCurrent(
-                            revision: registrationRevision
-                        ) else {
-                            throw CommittedMutationSystemProjectionWorkerError
-                                .storeContainerRegistrationChanged
-                        }
-
-                        if let projectorFactory {
-                            let projector = await projectorFactory(
-                                registration.container
-                            )
-                            try await projector(invocation)
-                        } else {
-                            try await projectionWorker.perform(
-                                sink: sink,
-                                work:
-                                CommittedMutationSystemProjectionWork(
-                                    generation: work.generation,
-                                    targetSinks: work.targetSinks,
-                                    events: invocation.events
-                                ),
-                                expectedContainerRevision:
-                                registrationRevision
-                            )
-                        }
-
-                        guard await containerProvider.isCurrent(
-                            revision: registrationRevision
-                        ) else {
-                            throw CommittedMutationSystemProjectionWorkerError
-                                .storeContainerRegistrationChanged
-                        }
-                    }
-                    try await driver.run(
-                        sink.persistentHistoryLane,
-                        forceCurrentStateEffect:
-                        work.forceCurrentStateProjection
+                    try await projectionWorker.perform(
+                        sink: sink,
+                        work: work,
+                        expectedContainerRevision: registration.revision
                     )
                 }
             }
@@ -712,16 +661,6 @@ final class CommittedMutationSystemProjectionSchedulerRegistry {
     }
 
     private var entriesByScope: [TimerStoreScope: Entry] = [:]
-    private let localFile: DurableLocalFile
-    private let projectorFactory: ProjectorFactory?
-
-    init(
-        localFile: DurableLocalFile = DurableLocalFile(),
-        projectorFactory: ProjectorFactory? = nil
-    ) {
-        self.localFile = localFile
-        self.projectorFactory = projectorFactory
-    }
 
     func scheduler(
         for container: ModelContainer
@@ -736,12 +675,7 @@ final class CommittedMutationSystemProjectionSchedulerRegistry {
             return entry.scheduler
         }
 
-        let entry = Entry(
-            container: container,
-            scope: scope,
-            localFile: localFile,
-            projectorFactory: projectorFactory
-        )
+        let entry = Entry(container: container)
         entriesByScope[scope] = entry
         return entry.scheduler
     }

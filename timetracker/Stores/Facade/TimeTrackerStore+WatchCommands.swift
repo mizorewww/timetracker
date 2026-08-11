@@ -48,6 +48,7 @@ extension TimeTrackerStore {
     private func enqueueWatchCurrentStateProjection() {
         enqueueCommittedMutationSystemProjections(
             events: [],
+            cause: .surfaceCatchUp,
             forcedSystemSinks: [.watch]
         )
     }

@@ -586,9 +586,7 @@ struct CoreCloudRecoveryGateTests {
     }
 
     @Test @MainActor
-    func realStoreCleanupInvalidatesHistoryWorkAndPreservesResetFenceAndMutationLock()
-        throws
-    {
+    func realStoreCleanupRemovesStoreFilesAndPreservesMutationLock() throws {
         try withRecoveryDefaults {
             let storeURL = try makeTemporaryStoreURL()
             defer { removeTemporaryStoreDirectory(for: storeURL) }
@@ -603,35 +601,6 @@ struct CoreCloudRecoveryGateTests {
                     )
                 )
             }
-            let historyCursorURL = storeURL.deletingLastPathComponent()
-                .appendingPathComponent(
-                    storeURL.lastPathComponent
-                        + ".post-commit-history.widget.cursor.v1.json"
-                )
-            let historyAttemptURL = storeURL.deletingLastPathComponent()
-                .appendingPathComponent(
-                    storeURL.lastPathComponent
-                        + ".post-commit-history.widget.attempt.v1.json"
-                )
-            #expect(
-                FileManager.default.createFile(
-                    atPath: historyCursorURL.path,
-                    contents: Data("cursor".utf8)
-                )
-            )
-            #expect(
-                FileManager.default.createFile(
-                    atPath: historyAttemptURL.path,
-                    contents: Data("attempt".utf8)
-                )
-            )
-            let scope = TimerStoreScope(
-                persistentStoreURL: storeURL
-            )
-            let resetFence = PersistentHistoryProjectionResetFence(
-                scope: scope
-            )
-            #expect(try resetFence.currentEpoch() == 0)
             let lockURL = TimerStoreScope(
                 persistentStoreURL: storeURL
             ).mutationLockURL
@@ -655,111 +624,7 @@ struct CoreCloudRecoveryGateTests {
             for suffix in suffixes {
                 #expect(FileManager.default.fileExists(atPath: storeURL.path + suffix) == false)
             }
-            #expect(
-                FileManager.default.fileExists(
-                    atPath: historyCursorURL.path
-                ) == false
-            )
-            #expect(
-                FileManager.default.fileExists(
-                    atPath: historyAttemptURL.path
-                ) == false
-            )
-            #expect(try resetFence.currentEpoch() == 1)
             #expect(FileManager.default.fileExists(atPath: lockURL.path))
-        }
-    }
-
-    @Test(arguments: [Data("{".utf8), Data(repeating: 0x41, count: 64 * 1024 + 1)])
-    func corruptFullReconciliationAttemptCannotExposeAnOlderReadyCursor(
-        corruptAttempt: Data
-    ) throws {
-        let storeURL = try makeTemporaryStoreURL()
-        defer { removeTemporaryStoreDirectory(for: storeURL) }
-        let scope = TimerStoreScope(persistentStoreURL: storeURL)
-        let cursorStore = PersistentHistoryLaneCursorStore(
-            scope: scope,
-            storeIdentifier: "fixture-store",
-            registeredResetEpoch: 0
-        )
-
-        let baselineAttempt = try #require(
-            try cursorStore.beginFullReconciliation(for: .widget)
-        )
-        #expect(
-            try cursorStore.establishAfterFullReconciliation(
-                nil,
-                for: .widget,
-                attempt: baselineAttempt
-            )
-        )
-        _ = try #require(try cursorStore.beginFullReconciliation(for: .widget))
-        let attemptURL = historyAttemptURL(for: .widget, storeURL: storeURL)
-        try corruptAttempt.write(to: attemptURL)
-
-        #expect(
-            try cursorStore.load(for: .widget)
-                == .requiresFullReconciliation(.interruptedFullReconciliation)
-        )
-        #expect(try cursorStore.load(for: .widget) == .missing)
-    }
-
-    @Test(arguments: [Data("{".utf8), Data(repeating: 0x41, count: 4 * 1024 + 1)])
-    func explicitResetRepairsCorruptEpochAndInvalidatesEveryHistoryLane(
-        corruptEpoch: Data
-    ) throws {
-        let storeURL = try makeTemporaryStoreURL()
-        defer { removeTemporaryStoreDirectory(for: storeURL) }
-        let scope = TimerStoreScope(persistentStoreURL: storeURL)
-        let staleCursorStore = PersistentHistoryLaneCursorStore(
-            scope: scope,
-            storeIdentifier: "fixture-store",
-            registeredResetEpoch: 0
-        )
-
-        for lane in PersistentHistoryProjectionLane.allCases {
-            let baselineAttempt = try #require(
-                try staleCursorStore.beginFullReconciliation(for: lane)
-            )
-            #expect(
-                try staleCursorStore.establishAfterFullReconciliation(
-                    nil,
-                    for: lane,
-                    attempt: baselineAttempt
-                )
-            )
-            _ = try #require(
-                try staleCursorStore.beginFullReconciliation(for: lane)
-            )
-        }
-
-        let resetFence = PersistentHistoryProjectionResetFence(scope: scope)
-        let epochURL = historyResetEpochURL(storeURL: storeURL)
-        try corruptEpoch.write(to: epochURL)
-        #expect(throws: (any Error).self) {
-            _ = try resetFence.currentEpoch()
-        }
-        #expect(FileManager.default.fileExists(atPath: epochURL.path))
-
-        let recoveredEpoch = try StoreScopedTimerMutationLock()
-            .withExclusiveAccess(for: scope) {
-                try resetFence.advanceForStoreReset()
-            }
-
-        #expect(recoveredEpoch > 0)
-        #expect(try resetFence.currentEpoch() == recoveredEpoch)
-        for lane in PersistentHistoryProjectionLane.allCases {
-            let cursorURL = try #require(staleCursorStore.durableLocation(for: lane))
-            #expect(FileManager.default.fileExists(atPath: cursorURL.path) == false)
-            #expect(
-                FileManager.default.fileExists(
-                    atPath: historyAttemptURL(for: lane, storeURL: storeURL).path
-                ) == false
-            )
-            #expect(
-                try staleCursorStore.load(for: lane)
-                    == .requiresFullReconciliation(.resetEpochMismatch)
-            )
         }
     }
 
@@ -813,26 +678,6 @@ struct CoreCloudRecoveryGateTests {
     private func removeTemporaryStoreDirectory(for storeURL: URL) {
         try? FileManager.default.removeItem(
             at: storeURL.deletingLastPathComponent()
-        )
-    }
-
-    private func historyAttemptURL(
-        for lane: PersistentHistoryProjectionLane,
-        storeURL: URL
-    ) -> URL {
-        storeURL.deletingLastPathComponent().appendingPathComponent(
-            storeURL.lastPathComponent
-                + ".post-commit-history."
-                + lane.rawValue
-                + ".attempt.v1.json"
-        )
-    }
-
-    private func historyResetEpochURL(storeURL: URL) -> URL {
-        storeURL.deletingLastPathComponent().appendingPathComponent(
-            "."
-                + storeURL.lastPathComponent
-                + ".post-commit-history.reset-epoch.v1.json"
         )
     }
 

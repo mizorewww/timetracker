@@ -18,7 +18,8 @@ extension TimeTrackerStore {
         materializeCurrentDailyTaskRecurrences()
         reconcileActivePomodoro(now: Date())
         enqueueCommittedMutationSystemProjections(
-            events: [.fullSync]
+            events: [.fullSync],
+            cause: .surfaceCatchUp
         )
         appleHealthReplicaSyncService?.markNeedsSynchronization()
         await refreshAppleHealthTimelineIfEnabled()
@@ -71,7 +72,8 @@ extension TimeTrackerStore {
         if hasCompletedStartupConfiguration {
             try refresh()
             enqueueCommittedMutationSystemProjections(
-                events: [.fullSync]
+                events: [.fullSync],
+                cause: .surfaceCatchUp
             )
         } else {
             configureIfNeeded(context: modelContext)

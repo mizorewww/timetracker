@@ -18,7 +18,6 @@
 | AI 自动建议同意 | 本机 UserDefaults | 不同步；开启后才允许客户端自动向已配置 endpoint 发送必要字段 | 不导出 |
 | Widget 快照 | App Group 共享容器 | 同一设备的小组件扩展 | 不作为独立备份 |
 | Watch 快照和命令 | 主应用与 Watch 内存/队列 | 配对设备之间的 WatchConnectivity | 不作为独立备份 |
-| 系统投影恢复 metadata | 本机 Application Support 中的 opaque history cursor、store UUID、lane、reset epoch 与 full-reconciliation attempt | 不传输；仅用于本机 sync snapshot、Widget、Watch、Live Activity 失败恢复 | 不导出 |
 | Apple 健康运动与睡眠记录 | 独立、只读、device-local SwiftData replica；排除备份 | 不由 App 传输，不进入 CloudKit/iCloud | 用户主动 JSON 导出 |
 | Apple 健康任务模板 | SwiftData；模板内容与实际健康记录无关 | 作为普通任务定义进入用户的 CloudKit | JSON |
 | 诊断与测试截图 | 开发环境文件 | 仅在维护者主动分享时 | 不属于应用 JSON |
@@ -41,8 +40,6 @@ LLM API 密钥使用 Keychain generic password：
 新生成的 `DeviceIdentity` 仅由平台前缀和随机 UUID 组成，不使用 Mac 主机名、账户名、硬件标识或用户可读设备名称。Apple Watch 在自身 `UserDefaults` 持久化独立的 `watch-UUID` 并随新命令发送；该值不是认证凭据，命令去重仍使用随机 command UUID。
 
 iOS 的 `SyncConflictState.json`、pending forced-upload 恢复镜像和腐损状态隔离文件可能包含任务、偏好或账本快照。写入后都使用 `FileProtectionType.completeUntilFirstUserAuthentication`：设备本次启动首次解锁前不可读，首次解锁后即使再次锁屏也可供后台 Shortcuts/CloudKit 协调使用。macOS 不使用这项 iOS Data Protection 属性；普通 file lock 本身不被当成用户快照。权威 state 读写限 128 MiB，recovery mirror 限 64 MiB；metadata 预检后仍只通过 `FileHandle` 读取 `limit + 1`，防止文件增长 TOCTOU 造成无界内存占用。写端在解析路径或触盘前先编码并验证 state 与 mirror；任一超限都保留旧的有效文件，独立 mirror rewrite 也会在最终写入边界复检。损坏或超限的权威 state 会隔离并要求显式恢复；损坏或超限的 pending mirror 会单独隔离并忽略，既不覆盖权威 state，也不阻塞仍可使用的主库。超限文件隔离不会整份载入内存。
-
-四条后台投影 lane 分别持久化 SwiftData opaque history token、物理 store UUID、lane、format 与 reset epoch；full-reconciliation attempt 只增加 attempt UUID/epoch。每个 cursor/attempt 文件最大 64 KiB，reset epoch sidecar 最大 4 KiB；都通过既有 `DurableLocalFile` 原子替换、排除备份，并在 iOS 使用 `completeUntilFirstUserAuthentication`。损坏、超限、store/lane/epoch 不匹配会触发完整重建或隔离，不能伪装成已确认。此 metadata 不主动复制任务标题、备注、密钥或其它业务 payload，也不进入 CloudKit、Watch、Widget、Live Activity、AI 请求或 JSON 导出。
 
 ## 3. iCloud 与多设备
 
@@ -161,7 +158,7 @@ Watch payload 与 UserDefaults 恢复队列是不可信边界。Producer 对 sta
 
 ### App Intents
 
-App Intents 把系统提供的用户参数传入共享领域命令。Intent 结果不得回显密钥或内部诊断详情。持久 mutation 提交后只 enqueue exact events；sync snapshot、Widget、Watch 与 Live Activity 在后台从 persistent history 追赶，Intent 不等待或同步生成 payload。投影失败不会撤销事实，也不能把已提交动作伪装为失败并诱导系统重复执行。
+App Intents 把系统提供的用户参数传入共享领域命令。Intent 结果不得回显密钥或内部诊断详情。持久 mutation 提交后只 enqueue exact events；sync snapshot、Widget、Watch 与 Live Activity 在后台从 fresh context 重放当前事实，Intent 不等待或同步生成 payload。请求来源显式区分本地提交、启动补偿和表面补投影，remote import 不得被记录成本机 mutation。投影失败不会撤销事实，也不能把已提交动作伪装为失败并诱导系统重复执行。
 
 ### Deep links
 

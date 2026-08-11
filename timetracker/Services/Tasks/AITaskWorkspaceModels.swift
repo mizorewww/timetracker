@@ -63,12 +63,14 @@ nonisolated struct AITaskWorkspaceSnapshot: Codable, Equatable, Sendable {
     let tasks: [AITaskWorkspaceTask]
     let checklistItems: [AITaskWorkspaceChecklistItem]
     var contextFingerprint: String {
-        Self.contextFingerprint(
-            schemaVersion: schemaVersion,
-            categories: categories,
-            tasks: tasks,
-            checklistItems: checklistItems
-        )
+        get throws {
+            try Self.contextFingerprint(
+                schemaVersion: schemaVersion,
+                categories: categories,
+                tasks: tasks,
+                checklistItems: checklistItems
+            )
+        }
     }
 
     init(
@@ -115,7 +117,8 @@ nonisolated struct AITaskWorkspaceSnapshot: Codable, Equatable, Sendable {
                 forKey: .checklistItems
             )
         )
-        guard transmittedFingerprint == contextFingerprint else {
+        let expectedFingerprint = try contextFingerprint
+        guard transmittedFingerprint == expectedFingerprint else {
             throw DecodingError.dataCorruptedError(
                 forKey: .contextFingerprint,
                 in: container,
@@ -335,14 +338,11 @@ private nonisolated extension AITaskWorkspaceSnapshot {
         categories: [AITaskWorkspaceCategory],
         tasks: [AITaskWorkspaceTask],
         checklistItems: [AITaskWorkspaceChecklistItem]
-    ) -> String {
+    ) throws -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         encoder.dateEncodingStrategy = .iso8601
-        // Every value in FingerprintFacts uses app-owned, nonthrowing Codable
-        // synthesis. A failure here is an internal contract violation rather
-        // than a provider or user-data recovery path.
-        let data = try! encoder.encode(
+        let data = try encoder.encode(
             FingerprintFacts(
                 schemaVersion: schemaVersion,
                 categories: categories,

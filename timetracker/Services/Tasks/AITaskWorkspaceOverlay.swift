@@ -133,7 +133,9 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
             sortOrder: resolvedSortOrder
         )
         replaceSnapshot(categories: snapshot.categories + [category])
-        let canonical = self.category(id: id)!
+        guard let canonical = self.category(id: id) else {
+            throw AITaskWorkspaceOverlayError.categoryUnavailable(id)
+        }
         operations.append(.createCategory(canonical))
         return canonical
     }
@@ -171,7 +173,9 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
         replaceSnapshot(
             categories: replacing(snapshot.categories, id: id, with: proposed)
         )
-        let after = category(id: id)!
+        guard let after = category(id: id) else {
+            throw AITaskWorkspaceOverlayError.categoryUnavailable(id)
+        }
         operations.append(.updateCategory(before: before, after: after))
         return after
     }
@@ -258,7 +262,9 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
             dailyRecurrence: prepared.dailyRecurrence
         )
         replaceSnapshot(tasks: snapshot.tasks + [task])
-        let canonical = self.task(id: id)!
+        guard let canonical = self.task(id: id) else {
+            throw AITaskWorkspaceOverlayError.taskUnavailable(id)
+        }
         operations.append(.createTask(canonical))
         return canonical
     }
@@ -318,7 +324,9 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
         replaceSnapshot(
             tasks: replacing(snapshot.tasks, id: id, with: proposed)
         )
-        let after = task(id: id)!
+        guard let after = task(id: id) else {
+            throw AITaskWorkspaceOverlayError.taskUnavailable(id)
+        }
         operations.append(.updateTask(before: before, after: after))
         return after
     }
@@ -340,7 +348,9 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
         replaceSnapshot(
             tasks: replacing(snapshot.tasks, id: id, with: proposed)
         )
-        let after = task(id: id)!
+        guard let after = task(id: id) else {
+            throw AITaskWorkspaceOverlayError.taskUnavailable(id)
+        }
         operations.append(
             .archiveTask(
                 before: before,
@@ -383,7 +393,9 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
             sortOrder: resolvedSortOrder
         )
         replaceSnapshot(checklistItems: snapshot.checklistItems + [item])
-        let canonical = checklistItem(id: id)!
+        guard let canonical = checklistItem(id: id) else {
+            throw AITaskWorkspaceOverlayError.checklistItemUnavailable(id)
+        }
         operations.append(.createChecklistItem(canonical))
         return canonical
     }
@@ -420,7 +432,9 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
                 with: proposed
             )
         )
-        let after = checklistItem(id: id)!
+        guard let after = checklistItem(id: id) else {
+            throw AITaskWorkspaceOverlayError.checklistItemUnavailable(id)
+        }
         operations.append(.updateChecklistItem(before: before, after: after))
         return after
     }

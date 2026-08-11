@@ -54,6 +54,7 @@ Existing test cleanup is limited to parameterizing duplicate inputs, merging res
 ## Checkpoints
 
 - Phase 1A: direct repository calls replaced the 14 pass-through use cases; dead timer admission, Watch snapshot, and unused OpenAI stream assembler code were removed. The canonical Pomodoro admission path is covered for exclusive and parallel break resume. `make test` passed 190 tests in 33 suites; localization parity and SwiftFormat lint passed. Deleted sources remain recoverable in `/Users/aac6fef/.Trash/timetracker-phase1a-20260811.vY5Y87/`.
+- Phase 1B: Release-only UI-test entry points are excluded, AI workspace encoding and canonical re-lookup failures now propagate ordinary errors, catalog UUIDs are constructed without parsing traps, and the two bare 350 ms delays are named and cancellation-aware. The frozen Apple Health identity test caught and corrected the textual UUID suffixes `10`–`12` as hexadecimal bytes (`0x10`–`0x12`). Focused AI-overlay and catalog tests passed; `make test` passed 190 tests in 33 suites; the signed universal Release macOS build, localization parity, and SwiftFormat lint passed.
 
 ## Closeout checklist
 

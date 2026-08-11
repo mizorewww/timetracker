@@ -1,6 +1,8 @@
 import Foundation
 
 extension TimeTrackerStore {
+    private static let syncRefreshCoalescingDelay: Duration = .milliseconds(350)
+
     func scheduleQuietRefresh(reason: SyncRefreshReason) {
         if case let .cloudExportFinished(eventID, succeeded, _, _) = reason {
             completedCloudExportResults[eventID] = succeeded
@@ -10,7 +12,11 @@ extension TimeTrackerStore {
         scheduledSyncRefreshBatch = batch
         guard scheduledSyncRefreshTask == nil else { return }
         scheduledSyncRefreshTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 350_000_000)
+            do {
+                try await Task.sleep(for: Self.syncRefreshCoalescingDelay)
+            } catch {
+                return
+            }
             guard !Task.isCancelled else { return }
             guard let self else { return }
             scheduledSyncRefreshTask = nil

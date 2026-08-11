@@ -5,6 +5,8 @@ import SwiftUI
 
 @MainActor
 final class MacBlossomColorPresenter: NSObject {
+    private static let collapseAnimationDuration: Duration = .milliseconds(350)
+
     private weak var ownerWindow: NSWindow?
     private var window: NSWindow?
     private var model: BlossomColorPickerModel?
@@ -73,7 +75,11 @@ final class MacBlossomColorPresenter: NSObject {
         removeDismissObservers()
 
         dismissTask = Task { @MainActor [weak self, weak window] in
-            try? await Task.sleep(for: .milliseconds(350))
+            do {
+                try await Task.sleep(for: Self.collapseAnimationDuration)
+            } catch {
+                return
+            }
             guard Task.isCancelled == false, let self, let window else {
                 return
             }

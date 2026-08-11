@@ -4,6 +4,7 @@ import SwiftData
 extension timetrackerApp {
     static func makeModelContainer() -> ModelContainer {
         let schema = Self.schema
+        #if DEBUG
         if CommandLine.arguments.contains("--uitesting") {
             do {
                 return try makeUITestModelContainer()
@@ -11,6 +12,7 @@ extension timetrackerApp {
                 fatalError("Could not create UI test ModelContainer: \(error)")
             }
         }
+        #endif
         if isUnitTestHost() {
             do {
                 return try makeUnitTestHostModelContainer()

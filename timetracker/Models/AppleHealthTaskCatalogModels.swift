@@ -102,7 +102,7 @@ nonisolated enum AppleHealthTaskCatalog {
         case .exercise:
             AppleHealthTaskCategoryDefinition(
                 role: role,
-                id: id("A1100000-0000-4000-8000-000000000001"),
+                id: id(namespace: 0x10, suffix: 1),
                 titleLocalizationKey: "health.timeline.exerciseCategory",
                 iconName: "figure.run",
                 colorHex: "FF3B30",
@@ -111,7 +111,7 @@ nonisolated enum AppleHealthTaskCatalog {
         case .daily:
             AppleHealthTaskCategoryDefinition(
                 role: role,
-                id: id("A1100000-0000-4000-8000-000000000002"),
+                id: id(namespace: 0x10, suffix: 2),
                 titleLocalizationKey: "health.timeline.dailyCategory",
                 iconName: "calendar",
                 colorHex: "5856D6",
@@ -127,10 +127,11 @@ nonisolated enum AppleHealthTaskCatalog {
         let presentation = taskPresentation(for: role)
         return AppleHealthTaskDefinition(
             role: role,
-            id: id("A1200000-0000-4000-8000-\(presentation.idSuffix)"),
+            id: id(namespace: 0x20, suffix: presentation.idSuffix),
             categoryID: category.id,
             categoryAssignmentID: id(
-                "A1300000-0000-4000-8000-\(presentation.idSuffix)"
+                namespace: 0x30,
+                suffix: presentation.idSuffix
             ),
             titleLocalizationKey: presentation.titleLocalizationKey,
             iconName: presentation.iconName,
@@ -141,37 +142,43 @@ nonisolated enum AppleHealthTaskCatalog {
 
     private static func taskPresentation(
         for role: AppleHealthTaskRole
-    ) -> (idSuffix: String, sortIndex: Int, titleLocalizationKey: String, iconName: String) {
+    ) -> (idSuffix: UInt8, sortIndex: Int, titleLocalizationKey: String, iconName: String) {
         switch role {
         case .workout(.walking):
-            ("000000000001", 1, "health.timeline.workout.walking", "figure.walk")
+            (1, 1, "health.timeline.workout.walking", "figure.walk")
         case .workout(.running):
-            ("000000000002", 2, "health.timeline.workout.running", "figure.run")
+            (2, 2, "health.timeline.workout.running", "figure.run")
         case .workout(.cycling):
-            ("000000000003", 3, "health.timeline.workout.cycling", "bicycle")
+            (3, 3, "health.timeline.workout.cycling", "bicycle")
         case .workout(.swimming):
-            ("000000000004", 4, "health.timeline.workout.swimming", "figure.pool.swim")
+            (4, 4, "health.timeline.workout.swimming", "figure.pool.swim")
         case .workout(.strengthTraining):
-            ("000000000005", 5, "health.timeline.workout.strengthTraining", "dumbbell.fill")
+            (5, 5, "health.timeline.workout.strengthTraining", "dumbbell.fill")
         case .workout(.highIntensityIntervalTraining):
-            ("000000000006", 6, "health.timeline.workout.highIntensityIntervalTraining", "bolt.heart.fill")
+            (6, 6, "health.timeline.workout.highIntensityIntervalTraining", "bolt.heart.fill")
         case .workout(.yoga):
-            ("000000000007", 7, "health.timeline.workout.yoga", "figure.yoga")
+            (7, 7, "health.timeline.workout.yoga", "figure.yoga")
         case .workout(.hiking):
-            ("000000000008", 8, "health.timeline.workout.hiking", "figure.hiking")
+            (8, 8, "health.timeline.workout.hiking", "figure.hiking")
         case .workout(.rowing):
-            ("000000000009", 9, "health.timeline.workout.rowing", "figure.rower")
+            (9, 9, "health.timeline.workout.rowing", "figure.rower")
         case .workout(.dance):
-            ("000000000010", 10, "health.timeline.workout.dance", "figure.dance")
+            (0x10, 10, "health.timeline.workout.dance", "figure.dance")
         case .workout(.other):
-            ("000000000011", 11, "health.timeline.workout.other", "figure.mixed.cardio")
+            (0x11, 11, "health.timeline.workout.other", "figure.mixed.cardio")
         case .sleep:
-            ("000000000012", 1, "health.task.sleep", "bed.double.fill")
+            (0x12, 1, "health.task.sleep", "bed.double.fill")
         }
     }
 
-    private static func id(_ value: String) -> UUID {
-        UUID(uuidString: value)!
+    private static func id(namespace: UInt8, suffix: UInt8) -> UUID {
+        UUID(uuid: (
+            0xA1, namespace, 0x00, 0x00,
+            0x00, 0x00,
+            0x40, 0x00,
+            0x80, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, suffix
+        ))
     }
 }
 

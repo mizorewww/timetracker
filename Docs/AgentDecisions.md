@@ -1,9 +1,11 @@
 # TimeTracker Agent 决策文档
 
 状态：有效决策记录
-最近更新：2026-07-28
+最近更新：2026-08-11
 
 本文记录自动化 Agent 和维护者在实现、审核、重构时必须保持的工程边界。它不是待办清单，也不替代代码审核。一次性发现与验证证据写入对应 commit/PR；未来计划写入明确标记的计划文档。
+
+已替代的决策与历史测试说明保存在 [AgentDecisionsArchive](AgentDecisionsArchive.md)，不再充当当前指令。为控制增长，本文件只新增跨领域架构、数据安全、兼容性或系统集成决策；单一 UI 或 Analytics 展示细节写入对应当前功能文档。
 
 ## 1. 使用规则
 
@@ -14,8 +16,6 @@
 - Superseded：保留历史，但由新决策替代。
 
 修改 Accepted 决策时，应新增决策或明确标记替代关系，并同步更新受影响的用户、代码、隐私和版本文档。
-
-2026-07-25 说明：各决策“验证”中提到的源码扫描契约（`CoreSourceLayoutTests`、UIContracts 源码扫描层、各 “source contract/源码契约” 断言）已整体删除，相关表述是历史验证记录，不再对应现存测试；当前验证以领域行为、store/command 集成、accessibility identifier UI 与截图检查为准，且不得新增源码字符串扫描。AD-014 的“源码扫描只保留少量架构护栏”由本说明替代。
 
 ## AD-001：TimeSegment 是时间事实来源
 
@@ -115,7 +115,7 @@
 
 背景：测试套件大量读取 Swift 文件并匹配文本；等价的视图拆分、文案调整或导航重构会造成误报。
 
-决策：业务约束以领域/集成测试验证，UI 流程以 accessibility identifier 和可见行为验证。源码扫描只保留少量、稳定且确实属于架构护栏的断言。
+决策：业务约束以领域/集成测试验证，UI 流程以 accessibility identifier 和可见行为验证。不得通过读取 Swift 源文件并匹配字符串来约束实现；entitlement、Privacy Manifest 和迁移 store fixture 等产物契约不属于源码扫描。
 
 后果：重构测试时先补行为覆盖再删除字符串断言。测试必须隔离 UserDefaults、Keychain、locale、时区和临时数据。
 
@@ -640,17 +640,6 @@
 
 验证：单元测试覆盖 3,600 秒下限、7,200 秒并发上限、30 秒的 1.25pt fractional height、空值/非有限几何输入，以及 task slice 高度严格回收到目标柱高；UI source contract 固定共享尺度、`@ScaledMetric`、零 spacing、overlay separator、底部 target frame、辅助字号单列图例与既有 VoiceOver 语义。付费开发者签名的最终 macOS 定向套件 40/40 通过；默认字号和 Accessibility XXXL iPhone 截图此前均通过。AX 截图揭示双列图例换行过窄后，最终源代码改成单列并通过签名编译与契约测试；随后的两次新模拟器复验均被 iOS 27 XCTest runtime 在测试入口前以 `Timed out waiting for AX loaded notification` 拦截，不属于 App crash 或断言失败。所有成功与失败批次的专用模拟器都已关闭并删除，最终进程审计无 runner、`xcodebuild` 或诊断残留。
 
-## AD-049：iOS 根导航由稳定设备 idiom 选择
-
-状态：Superseded by AD-139
-
-背景：旧 `iOSRootView` 把 `horizontalSizeClass == .regular` 当成 iPad，其他宽度当成 iPhone。iPad 进入分屏、Stage Manager 窄窗口或中间宽度时会变为 compact，于是整个 `NavigationSplitView` 被替换成五标签 `TabView`；sidebar selection、detail navigation 和各根容器内部状态都可能被重建。大屏 iPhone 横屏也可以出现 regular width，size class 并不是设备类型。
-
-历史决策：`RootLayoutPolicy` 曾将 interface idiom 映射为 `.phone` 或 `.pad` shell，并要求根 shell 不随宽度改变。AD-139 已删除这条设备身份规则；本段只保留演进背景，不再约束当前实现。
-
-后果：本决策不再授权读取设备 idiom 或按设备固定根导航。当前宽度驱动 shell、状态所有权和平台 capability 边界以 AD-139 为准。
-
-验证：纯策略测试覆盖 phone、pad 和 unsupported 映射；源码契约确认 `iOSRootView` 使用 `UIDevice.current.userInterfaceIdiom`、不再读取 `horizontalSizeClass`。付费开发者签名的 macOS 策略/契约套件 31/31 通过，截图基础设施调整后的最终契约套件 8/8 通过。iPad Pro 11-inch 的串行 UI 用例使用系统 Show Sidebar，选择合并语义后的 task row，再在同一 scene 中竖屏→横屏→竖屏；三次都保留 `ipad.splitNavigation`、同一 task detail 和只读状态，三张屏幕级截图目视通过。Stage Manager 紧凑窗口仍保留在最终人工矩阵，不以旋转测试替代。所有专用模拟器都已终止、关闭并删除，最终进程与 Booted 设备审计为空。
 ## AD-050：辅助字号保留主动作文字与任务行完整事实
 
 状态：Accepted
@@ -722,18 +711,6 @@
 后果：明细与总览在任意并发度下守恒，不再把“发生并发的 1 小时”误报为“五路计时多出的 1 小时”。同一 task 的重复 segment 会增加并发度和 excess，但参与任务只出现一次。跨日与 DST 先在 bounded read boundary 裁剪，再按绝对 elapsed seconds 计算；UI 的时间范围只描述墙钟窗口，数值明确标为 excess。不得重新引入 title-based identity、只取前两个 segment 的 pair 模型，或隐藏剩余窗口却不公开其 excess。
 
 验证：覆盖五路同窗、三路交错、同 task 重复 segment、同名 task 仍按 UUID 分离、同边界替换并合并、隐藏 participant 替换不合并、仅边界相接不重叠、零/负时长排除、春秋 DST 跨午夜裁剪、稳定 tie 顺序、输入倒序和亚秒余数守恒；presentation 测试确认可见 excess 与隐藏 excess 合计不丢秒。source contract 固定 wall/excess 分离、UUID participant、明确 excess 文案与隐藏汇总。主 Agent 使用付费开发者身份执行 Analytics store、timeline 与 UI contract 签名定向套件，86/86 通过；正常字号的 Analytics 实机目视验收并入后续单设备 UI 批次，不另开辅助功能专项批次。
-
-## AD-056：定向停止链接不得回退到其他计时
-
-状态：Superseded by AD-080
-
-背景：Live Activity 的停止链接携带所属任务的 `taskID`，共享 system-action command 也接受可选任务 identity。两处旧处理逻辑都把“未找到该任务的活动 segment”和“动作没有 taskID”合并成 nil-coalescing 回退；如果用户延迟点击已结束任务的陈旧系统表面，而另一任务正在计时，就会误停后者。
-
-决策：本条首先确立“定向目标失效不得回退”的边界。AD-080 随后把目标从 task identity 收紧为 segment identity，并把无目标行为从“最近一条”改为“仅唯一活动时间片时兼容”。当前实现与新增入口必须遵守 AD-080；本条不再授权按最近顺序停止。
-
-后果：陈旧 Live Activity、Widget 或外部定向链接不会修改无关任务。历史上的 task-ID/no-target 规则只说明演进过程，不能覆盖 AD-080 的精确 segment 与唯一候选约束。
-
-验证：原始回归继续证明定向目标失效不修改其它时间片；当前完整矩阵和签名证据由 AD-080 与 dated Audit 记录。
 
 ## AD-057：正常字号、核心操作路径与 HIG 是默认审核主线
 
@@ -1001,18 +978,6 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 
 验证：同步活动、账户状态、冲突状态与 Settings 套件必须覆盖 event kind/result、优先级合并、remote-only 不成功、后处理失败、账户独立性与未来/过期时间。一次性结果见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
-## AD-079：Quick Start 整行只负责开始或打开，不按运行状态变成停止
-
-状态：Superseded by AD-102
-
-背景：Quick Start 的任务行原先在未运行时开始计时，却在运行中无提示地把同一整行改成停止；视觉只把播放符号换成红色停止符号。快速入口因此成为隐藏 toggle，误点会结束正在记录的上下文，并与“正在计时”区的显式停止操作重复。
-
-决策：未运行的 Quick Start 任务行执行开始/切换；运行中的任务行显示 `RunningStatusBadge`，再次点击打开该任务详情。整行不得按隐藏运行状态调用 `store.stop`，也不得用红色停止 glyph 暗示 toggle。停止只存在于“正在计时”、任务详情、任务选择器运行区和携带明确目标的系统表面。iPhone 通过 scene 导航闭包打开任务，iPad/macOS 通过 canonical task-detail router 打开同一详情。
-
-后果：Quick Start 的主语义稳定为“进入这项工作”：未运行时开始，已运行时查看；停止始终是单独、可发现且带目标的操作。新增 Quick Start 布局必须复用该语义，不得重新把整行写成 start/stop toggle。
-
-验证：本条的历史回归保留为“运行态不把整行变为停止”的边界。当前独立任务内容与计时命令的合同、平台一致性和更新后的正常字号回归由 AD-102 负责。
-
 ## AD-080：系统表面的停止操作固化具体时间片，绝不按数组顺序猜目标
 
 状态：Accepted；其中 Live Activity 可见停止入口由 AD-118 替代，Activity immutable segment ID 生命周期与其余精确停止语义保留
@@ -1221,20 +1186,6 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：付费自动签名的 macOS `CoreSourceLayoutTests`、`CoreAnalyticsStoreTests` 与 `AnalyticsTimelineTests` 通过；本批未启动模拟器，临时 DerivedData 与 owned build/test 进程已在退出时清理。
 
-## AD-097：Task Detail 标题只在系统导航栏出现一次
-
-状态：Superseded by AD-124
-
-替代关系：AD-124 替代“系统 navigation title 是任务标题唯一 owner”及 identity row 不显示标题的条款；本决策关于系统返回、正常字号底部余量和不重复运行状态的其余边界继续有效。
-
-背景：任务详情的 inline navigation title 已显示任务名称，但首个 identity card 又以更大的文字重复同一名称。运行中的任务首屏因此把垂直空间花在重复信息上，真正可执行的 Stop / Add Time 及 Forecast 被推低；长标题还会和状态 badge 竞争一行。
-
-决策：系统 navigation title 是任务标题唯一 owner。`TaskDetailIdentityRow` 只呈现任务图标、父级 path（根任务明确显示 root）与运行/业务状态；不得在 row 中恢复 `Text(task.title)`。iPhone inset list 为正常字号保留 16 pt 的显式 `scrollContent` bottom margin，让最后一个 section 不紧贴系统 Tab Bar glass。
-
-后果：首屏更快建立“这里是哪一个任务”的层级上下文，同时把直接操作与 Forecast 提前；同名子任务仍以父级路径区分，根任务不会留下空白 identity 文本。这个决定不改变 task route、计时命令、分析 request 或同步数据。
-
-验证：付费自动签名 macOS Task UI/Core architecture/refresh/source-layout 定向回归通过；generic iOS Debug 自动签名构建通过。iPhone 17 Pro / iOS 27 的 UI TestManager 在测试 host 构建后空转，直接 seeded launch 又显示空白系统画布，二者均未计为视觉通过；两次专属 UDID、App、DerivedData、result/screenshot 目录均已删除。
-
 ## AD-098：Inbox 主命令与 App Intent capture 必须共用 store-scoped lock
 
 状态：Accepted
@@ -1414,18 +1365,6 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：历史复盘的粒度始终明确，当前界面减少无效控件；navigation、缓存 identity 和日/周/月计算不变。这是 UI 术语的 breaking change，不触及 SwiftData、CloudKit 或用户数据。
 
 验证：Analytics period UI contract、架构行为和三语 localization parity 必须覆盖新的 day key、历史动作条件与无残留 duplicate range state；实际签名结果记录在 dated Audit。
-
-## AD-113：Analytics 仅在同一日历周期内保留刷新中的快照
-
-状态：Superseded by AD-131
-
-背景：Analytics request identity 同时包含 range、calendar period、revision、live day 和分钟 bucket。旧页面在任何 identity 变化时立即把整个 landing/category list 换成 spinner；一次普通的 minute refresh 或本机 mutation 因而产生明显闪烁。若反过来无条件保留旧 snapshot，又会在用户切换日期、周或月时把旧指标显示在新控制器下，造成更严重的统计语义错误。
-
-决策：`AnalyticsSnapshotRequest.canRemainVisible(whileLoading:)` 只在 `range` 和 cache key 的 calendar `interval` 同时相等时返回真。此时可以在 revision、live day 或 live bucket 刷新期间继续显示已有快照，并在 shared period controls 旁显示一个非交互的系统小型 progress indicator。range 或 interval 一旦变化，landing 仍使用全页 loading，category detail 仍只显示其 loading row；不得用旧 snapshot 充当新周期 placeholder。两个 snapshot task 都先 `Task.yield()`，让新的 loading/refresh UI 有机会提交，再进行保持在既有 main-actor 边界的有界计算。
-
-后果：活动当前 period 的读取更平稳，本机 mutation 不再打断用户正在看的相同 period；历史 navigation 和 day/week/month 切换始终保持内容与控件一致。此决定不声称把 analytics 计算移到后台；若 profile 证明它本身造成卡顿，必须以新的可取消 read-model 设计处理，不能扩大 stale-snapshot 规则。
-
-验证：纯 request 行为测试覆盖同日 revision/bucket 保留、跨日和跨 range 拒绝；架构/UI contract 固定 root/detail 的 request gate、yield 与 shared refresh indicator。付费签名定向 XCTest 结果和资源清理记录写入 dated Audit。
 
 ## AD-114：手工补录以锁内的任务可计时性作为最终准入
 
@@ -1706,7 +1645,7 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 后果：V13 先把 migration、iCloud 冲突、空数据覆盖和删除意图闭环，后续 materializer、累计命令与合并编辑 UI 可以建立在同一事实层上；当前 checkpoint 不宣称 recurrence 已可由用户创建，也不把 template 当作可计时的日常实例。
 
-验证：付费自动签名构建覆盖主 App、Widget、Live Activity 与 Watch；真实 V12 磁盘 store 迁移后保留旧 Task 并可写四表。定向测试覆盖 deterministic UUID anchor、full/task-domain capture、legacy nil 与 explicit empty、三方合并、完整 JSON restore、staged hierarchy repair 自洽、preflight 拒绝、future timestamp clear、demo generated child cleanup、expired graph purge、visible orphan 保留/隐藏、Task Store full/scoped convergence，以及 rapid-restart identity 未漂移。
+验证：付费自动签名构建覆盖主 App、Widget、Live Activity 与 Watch；真实 V12 磁盘 store 迁移后保留旧 Task 并可写四表。定向测试覆盖 deterministic UUID anchor、full/task-domain capture、legacy nil 与 explicit empty、三方合并、完整 JSON restore、staged hierarchy repair 自洽、preflight 拒绝、future timestamp clear、demo generated child cleanup、expired graph purge、visible orphan 保留/隐藏、Task Store full/scoped convergence，以及 rapid-restart identity 未漂移。实现边界记录在[重复任务运行时上下文](ImplementationContexts/2026-07-20-daily-recurrence-runtime.md)。
 
 ## AD-130：重复任务模板与当天工作实例使用两套任务资格
 
@@ -1725,7 +1664,7 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 后果：重复模板继续承担组织、说明和父级语义，但每天只有一个真实实例承担计时与任务量。多设备重试和生命周期触发不会制造重复，用户编辑不会被后台覆盖，分阶段同步与墓碑不会被“修复”成复活数据。当前决策只完成运行时；没有创建规则与任务量录入 UI 前，用户反馈项仍保持未完成。
 
-验证：纯日键和 store-scoped 回归覆盖未来开始日、当前日无回填、暂停重放、归档间隔、时钟偏移、非 canonical 规则、活动工作拒绝、每个原子 checkpoint 回滚、用户编辑保留、墓碑和 staged partial graph。入口回归覆盖 Timer/Pomodoro/manual/App Intent direct-work 拒绝、parent/content 保留和 picker 祖先容器。实现沟通与边界记录在 `Docs/ImplementationContexts/2026-07-20-daily-recurrence-runtime.md`。
+验证：纯日键和 store-scoped 回归覆盖未来开始日、当前日无回填、暂停重放、归档间隔、时钟偏移、非 canonical 规则、活动工作拒绝、每个原子 checkpoint 回滚、用户编辑保留、墓碑和 staged partial graph。入口回归覆盖 Timer/Pomodoro/manual/App Intent direct-work 拒绝、parent/content 保留和 picker 祖先容器。实现沟通与边界记录在[重复任务运行时上下文](ImplementationContexts/2026-07-20-daily-recurrence-runtime.md)。
 
 ## AD-131：Analytics 周期切换保留稳定壳并遮蔽旧指标
 
@@ -1979,5 +1918,5 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 - [代码文档](CodeGuide.md)
 - [隐私与安全](PrivacyAndSecurity.md)
-- 2026-07-14 审核（`Audit-2026-07-14.md` 已于 2026-07-25 退役，证据见 git 历史）
+- [已替代决策归档](AgentDecisionsArchive.md)
 - [版本与迁移](Versioning.md)

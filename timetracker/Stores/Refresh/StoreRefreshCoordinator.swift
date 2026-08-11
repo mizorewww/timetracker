@@ -28,24 +28,6 @@ struct StoreRefreshCoordinator {
         }
     }
 
-    /// Completes the scene-visible part of a committed mutation while keeping
-    /// Widget, Watch, and Live Activity I/O out of the caller's critical path.
-    func refreshCommittedMutationReadModels(
-        _ store: TimeTrackerStore,
-        plan: StoreRefreshPlan
-    ) throws {
-        guard store.taskRepository != nil, store.timeRepository != nil else { return }
-        try PerformanceSignpost.interval("mutation.visibleProjection") {
-            try refreshPrimaryDomains(
-                on: store,
-                plan: plan,
-                schedulesPomodoroReconciliation: true
-            )
-            refreshDerivedDomains(on: store, plan: plan)
-            applyScenePostRefreshEffects(on: store, plan: plan)
-        }
-    }
-
     private func refreshPrimaryDomains(
         on store: TimeTrackerStore,
         plan: StoreRefreshPlan,

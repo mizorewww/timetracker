@@ -185,7 +185,7 @@ extension TimeTrackerStore {
             refreshPlanner.plan(after: events)
         }
         do {
-            try refreshCoordinator.refreshCommittedMutationReadModels(
+            try refreshCoordinator.refresh(
                 self,
                 plan: plan
             )

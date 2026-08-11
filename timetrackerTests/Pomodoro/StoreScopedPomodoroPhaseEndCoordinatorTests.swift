@@ -190,6 +190,69 @@ struct StoreScopedPomodoroPhaseEndCoordinatorTests {
         #expect(segment.endedAt == startedAt.addingTimeInterval(60))
     }
 
+    @Test(arguments: [false, true])
+    func breakResumeReplacesSameTaskTimerAndHonorsParallelPreference(
+        allowParallelTimers: Bool
+    ) throws {
+        let context = try makeTestContext()
+        let task = try makeTask("Pomodoro", context: context)
+        let otherTask = try makeTask("Other", context: context)
+        let coordinator = makeCoordinator(context.container)
+        let started = try coordinator.start(
+            taskID: task.id,
+            focusSeconds: 600,
+            breakSeconds: 60,
+            longBreakSeconds: nil,
+            targetRounds: 2
+        )
+        _ = try coordinator.complete(phase: started.startedFocus.phaseToken)
+        let breakPhase = try phaseToken(
+            runID: started.startedFocus.runID,
+            container: context.container
+        )
+
+        let mutationContext = ModelContext(context.container)
+        let repository = SwiftDataTimeTrackingRepository(
+            context: mutationContext,
+            deviceID: "test"
+        )
+        let sameTaskSegment = try repository.startTask(
+            taskID: task.id,
+            source: .timer
+        )
+        let otherTaskSegment = try repository.startTask(
+            taskID: otherTask.id,
+            source: .timer
+        )
+        try PreferenceCommandHandler().set(
+            key: .allowParallelTimers,
+            valueJSON: PreferenceJSON.encode(allowParallelTimers),
+            context: mutationContext
+        )
+
+        guard case let .resumed(resumed) = try coordinator.resume(phase: breakPhase) else {
+            Issue.record("The current break phase should resume")
+            return
+        }
+
+        let stoppedIDs = Set(resumed.stoppedSegments.map(\.segmentID))
+        var expectedStoppedIDs: Set<UUID> = [sameTaskSegment.id]
+        if !allowParallelTimers {
+            expectedStoppedIDs.insert(otherTaskSegment.id)
+        }
+        #expect(stoppedIDs == expectedStoppedIDs)
+
+        let activeIDs = try Set(
+            timeRepository(context.container).activeSegments().map(\.id)
+        )
+        var expectedActiveIDs: Set<UUID> = [resumed.resumedFocus.segmentID]
+        if allowParallelTimers {
+            expectedActiveIDs.insert(otherTaskSegment.id)
+        }
+        #expect(activeIDs == expectedActiveIDs)
+        #expect(activeIDs.contains(sameTaskSegment.id) == false)
+    }
+
     private func makeCoordinator(
         _ container: ModelContainer,
         now: Date = Date()

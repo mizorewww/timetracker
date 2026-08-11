@@ -59,7 +59,7 @@ struct PomodoroCommandHandler {
                     context: context
                 )
             }
-            return try StartPomodoroUseCase(repository: pomodoroRepository).execute(
+            return try pomodoroRepository.startPomodoro(
                 taskID: taskID,
                 focusSeconds: focusSeconds,
                 breakSeconds: breakSeconds,
@@ -82,7 +82,7 @@ struct PomodoroCommandHandler {
         guard expectedState == .focusing || expectedState == .interrupted else {
             return false
         }
-        return try CompletePomodoroFocusUseCase(repository: repository).execute(
+        return try repository.completeFocus(
             runID: runID,
             expectedState: expectedState,
             endedAt: nowProvider()
@@ -113,14 +113,23 @@ struct PomodoroCommandHandler {
             }
             let activeSegments = try timeRepository.activeSegments()
             let pomodoroRuns = try repository.runs()
-            let admission = TimerStartAdmissionPolicy().evaluate(
+            let plan = TimerAdmissionPolicy().startPlan(
                 taskID: run.taskID,
-                allowParallelTimers: allowParallelTimers,
-                activeSegments: activeSegments,
-                existingTaskAdmission: .replaceExisting
+                mode: allowParallelTimers ? .parallel : .exclusive,
+                sameTaskBehavior: .replaceAll,
+                activeSegments: activeSegments.map {
+                    TimerActiveSegmentSnapshot(
+                        segmentID: $0.id,
+                        sessionID: $0.sessionID,
+                        taskID: $0.taskID,
+                        startedAt: $0.startedAt
+                    )
+                }
             )
-            guard admission.shouldStartNewSegment else { return nil }
-            let stoppedSegments = admission.segmentsToStop.map { segment in
+            let segmentsToStop = plan.segmentsToStop.compactMap { planned in
+                activeSegments.first { $0.id == planned.segmentID }
+            }
+            let stoppedSegments = segmentsToStop.map { segment in
                 StoppedTimerMutationOutcome(
                     segmentID: segment.id,
                     sessionID: segment.sessionID,
@@ -128,7 +137,7 @@ struct PomodoroCommandHandler {
                 )
             }
 
-            let didResume = try CompletePomodoroBreakUseCase(repository: repository).execute(
+            let didResume = try repository.completeBreak(
                 runID: run.id,
                 expectedState: expectedState
             )
@@ -148,7 +157,7 @@ struct PomodoroCommandHandler {
                 deviceID: deviceID,
                 nowProvider: nowProvider
             )
-            for segment in admission.segmentsToStop {
+            for segment in segmentsToStop {
                 try timerHandler.stop(
                     segment: segment,
                     pomodoroRuns: pomodoroRuns,
@@ -156,7 +165,7 @@ struct PomodoroCommandHandler {
                     context: context
                 )
             }
-            guard admission.segmentsToStop.allSatisfy({
+            guard segmentsToStop.allSatisfy({
                 $0.endedAt != nil || $0.deletedAt != nil
             }) else {
                 throw PomodoroCommandInvariantError.stoppedLedgerSegmentStillActive
@@ -178,7 +187,7 @@ struct PomodoroCommandHandler {
     }
 
     func cancel(run: PomodoroRun, discardRecord: Bool = false, repository: PomodoroRepository) throws {
-        try CancelPomodoroUseCase(repository: repository).execute(runID: run.id, discardRecord: discardRecord)
+        try repository.cancel(runID: run.id, discardRecord: discardRecord)
     }
 
     func cancelIfNeeded(

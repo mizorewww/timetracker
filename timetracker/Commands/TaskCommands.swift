@@ -15,7 +15,7 @@ struct TaskDraftCommandHandler {
             return taskID
         }
 
-        let task = try CreateTaskUseCase(repository: taskRepository).execute(
+        let task = try taskRepository.createTask(
             title: sanitizedTitle,
             parentID: draft.parentID,
             categoryID: draft.categoryID,
@@ -57,15 +57,15 @@ struct TaskDraftCommandHandler {
     }
 
     func archive(taskID: UUID, repository: TaskRepository) throws {
-        try ArchiveTaskUseCase(repository: repository).execute(taskID: taskID)
+        try repository.archiveTask(taskID: taskID)
     }
 
     func unarchive(taskID: UUID, repository: TaskRepository) throws {
-        try UnarchiveTaskUseCase(repository: repository).execute(taskID: taskID)
+        try repository.unarchiveTask(taskID: taskID)
     }
 
     private func update(taskID: UUID, draft: TaskEditorDraft, title: String, repository: TaskRepository) throws {
-        try UpdateTaskUseCase(repository: repository).execute(
+        try repository.updateTask(
             taskID: taskID,
             title: title,
             parentID: draft.parentID,

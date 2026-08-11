@@ -16,7 +16,7 @@ struct LedgerCommandHandler {
 
     @discardableResult
     func addManualTime(draft: ManualTimeDraft, taskID: UUID, repository: TimeTrackingRepository) throws -> TimeSegment {
-        try AddManualTimeUseCase(repository: repository).execute(
+        try repository.addManualSegment(
             taskID: taskID,
             startedAt: draft.startedAt,
             endedAt: draft.endedAt,
@@ -61,7 +61,7 @@ struct LedgerCommandHandler {
             throw TimeTrackingRepositoryError.closedSegmentCannotReopen
         }
         let endedAt = draft.isActive ? nil : draft.endedAt
-        try UpdateSegmentUseCase(repository: repository).execute(
+        try repository.updateSegment(
             segmentID: draft.segmentID,
             taskID: taskID,
             startedAt: draft.startedAt,
@@ -108,7 +108,7 @@ struct LedgerCommandHandler {
                     context: context
                 )
             }
-            try SoftDeleteSegmentUseCase(repository: repository).execute(segmentID: segmentID)
+            try repository.softDeleteSegment(segmentID: segmentID)
         }
         if let context {
             try context.performAtomicMutation(mutation)

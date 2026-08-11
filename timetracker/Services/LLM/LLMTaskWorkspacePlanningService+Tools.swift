@@ -418,7 +418,7 @@ extension LLMTaskWorkspacePlanningService {
                 )
 
             case .finalizePlan:
-                preconditionFailure("Finalize is handled before tool execution")
+                throw LLMTaskWorkspacePlanningError.invalidResponse
             }
         } catch let error as LLMTaskWorkspacePlanningError {
             if case .invalidToolArguments = error {

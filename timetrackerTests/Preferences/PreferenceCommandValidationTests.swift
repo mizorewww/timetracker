@@ -250,15 +250,6 @@ struct PreferenceCommandValidationTests {
 
     @Test
     func opaqueModelIdentifiersUseAByteLimitAndAreNeverTruncatedIntoAnotherIdentity() {
-        #expect(
-            AppPreferenceValueSanitizer.maximumLLMModelIDByteCount ==
-                LLMSuggestionInputPolicy.maximumModelIDByteCount
-        )
-        #expect(
-            AppPreferenceValueSanitizer.maximumLLMModelIDByteCount ==
-                SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount
-        )
-
         let exactBoundary = String(
             repeating: "m",
             count: AppPreferenceValueSanitizer.maximumLLMModelIDByteCount

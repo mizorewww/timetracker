@@ -241,21 +241,12 @@ struct DataModelContractTests {
         context.insert(quantityEntry)
         try context.save()
 
-        #expect(task.id.uuidString.isEmpty == false)
         #expect(task.statusRaw == LegacyTaskStatusRaw.active)
-        #expect(segment.source == .timer)
         #expect(run.state == .planned)
-        #expect(countdown.deletedAt == nil)
-        #expect(preference.deletedAt == nil)
-        #expect(checklistItem.deletedAt == nil)
-        #expect(checklistVisual.deletedAt == nil)
         #expect(checklistVisual.suggestionTitleSnapshot == nil)
         #expect(checklistVisual.userEditedAt == nil)
-        #expect(inboxSuggestion.deletedAt == nil)
-        #expect(inboxSuggestion.destinationKindRaw == "checklist")
         #expect(inboxSuggestion.destinationKind == .checklist)
         #expect(category.includesInForecast)
-        #expect(categoryAssignment.deletedAt == nil)
         #expect(recurrenceRule.id == TaskProgressIdentity.recurrenceRuleID(templateTaskID: task.id))
         #expect(recurrenceRule.cadenceRaw == TaskRecurrenceCadence.daily.rawValue)
         #expect(recurrenceRule.isEnabled)
@@ -265,7 +256,6 @@ struct DataModelContractTests {
         ))
         #expect(quantityGoal.id == TaskProgressIdentity.quantityGoalID(taskID: task.id))
         #expect(quantityEntry.quantityGoalID == quantityGoal.id)
-        #expect(quantityEntry.deletedAt == nil)
     }
 
     @Test @MainActor

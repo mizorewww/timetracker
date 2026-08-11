@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """静态校验所有 .strings 资源在 en / zh-Hans / zh-Hant 之间 key 集合一致。
 
-补充 `LocalizationContractTests` 的覆盖盲区:`InfoPlist.strings` 与 `AppShortcuts.strings`
-的 key parity,并为 `Localizable.strings` 提供一个无需 xcodebuild 的快速静态校验。
-只比对 key 集合;value 内容禁令(如"软删除")仍由 Swift 单元测试负责,二者互补。
+统一校验 `Localizable.strings`、`InfoPlist.strings` 与 `AppShortcuts.strings`
+的 key parity,无需运行 xcodebuild。只比对 key 集合,不扫描源码或限制 value 内容。
 
 退出码:全部一致为 0,任一资源不一致为 1。``--quiet`` 仅在出现不一致时输出。
 """

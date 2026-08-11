@@ -3,7 +3,7 @@
 状态：有效决策记录
 最近更新：2026-07-28
 
-本文记录自动化 Agent 和维护者在实现、审核、重构时必须保持的工程边界。它不是待办清单，也不替代代码审核。一次性发现写入带日期的 Audit 文档，未来计划写入 Plan 文档。
+本文记录自动化 Agent 和维护者在实现、审核、重构时必须保持的工程边界。它不是待办清单，也不替代代码审核。一次性发现与验证证据写入对应 commit/PR；未来计划写入明确标记的计划文档。
 
 ## 1. 使用规则
 
@@ -123,7 +123,7 @@
 
 ## AD-009：文档按“当前、未来、历史”分层
 
-状态：Accepted
+状态：Accepted；dated Audit 条款由 AD-141 替代
 
 背景：README 与多个计划曾混合当前实现和未来目标，导致 Watch、Widget、CSV 和 Inspector 状态失真。
 
@@ -131,7 +131,7 @@
 
 - README、UserGuide、CodeGuide、Architecture 和 ProjectMap 描述当前事实与所有权。
 - NextDevelopmentPlan 等明确标为 future 的文档描述未来，并写清前置条件和验收门禁。
-- 带日期的 Audit 记录该次审核的 baseline、实现结果与证据；它可以承载最终冻结工作树证据，但不替代当前用户/代码规范。
+- 进行中的较大工作可使用 implementation memory 记录范围、测试契约和临时证据；完成后移入 `Docs/ImplementationContexts/Archive/`。一次性结果只留在对应 commit/PR，不新增长期生效的 dated Audit。
 - 已归档或被替代的计划必须在顶部标明 superseded/historical，旧命令、绝对路径、未勾选项和临时 hard rule 均不得继续充当 Agent 指令或当前 backlog。CodeRefactorPlan 等标为 current status/guardrails 的文档则按当前工作树维护，不能因为名称含 Plan 就自动视为历史。
 
 后果：代码变更若影响用户行为、隐私、target 或迁移，必须在同一提交更新当前文档。
@@ -1920,6 +1920,20 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：iPhone、iPad、macOS 以及 compact/regular 宽度下，计时状态变化不再让唯一入口突然变成另一种控件；用户仍能从准确标题和图标区分开始、并行开始与切换。Home 删除两套重复按钮但不改变 ledger、并行准入、picker dismissal、Watch/Widget wire contract 或本地化键，也不需要第三方 UI 库。
 
 验证：纯展示测试固定三种 `TimerPickerMode` 的共享视觉语法；正常字号 iPhone、iPad 与 macOS XCUITest 在同一场景中记录 Start Another Timer，停止最后一个活动计时后确认同一入口变为 Start Timer、保持可命中并打开同一 picker，并保存两种状态截图。完整签名测试、格式、本地化、受影响平台构建、全设备 Release 安装与 owned resource 清理仍是关闭门禁。
+
+## AD-141：活动文档只保存当前规则，完成证据归档到 Git 历史
+
+状态：Accepted
+
+替代关系：本决策替代 AD-009 允许新建 dated Audit 的条款，并统一替代旧决策验证段落中“写入 dated Audit”的流程要求；那些段落仍是历史事实，不再授权创建新的审计快照。
+
+背景：一次性审计、实现记忆和当前工程规则长期并列后，活动文档数量膨胀，旧命令与已完成状态也容易重新被当作当前约束。
+
+决策：当前行为和所有权只写入 UserGuide、CodeGuide、Architecture、ProjectMap、Testing、PrivacyAndSecurity 等当前文档。一次性发现与验证证据写入交付该工作的 commit/PR；较大任务可以在 `Docs/ImplementationContexts/` 保存进行中的实现记忆，完成后移入 `Archive/`。AgentDecisions 只接收跨领域架构、数据安全、兼容性或系统集成决策；单一 UI/Analytics 展示细节写入对应当前功能文档。
+
+后果：不得新建长期生效的 dated Audit。归档内容保留历史可追溯性，但不能充当当前指令、待办或已验证声明。
+
+验证：活动文档链接与状态检查不再发现完成中的 memory、过期 Audit 入口或相互冲突的 Makefile/测试规则；一次性执行证据可从对应 Git 提交追溯。
 
 ## 2. Agent 工作清单
 

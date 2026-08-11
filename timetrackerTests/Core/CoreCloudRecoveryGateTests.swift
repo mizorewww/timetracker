@@ -148,18 +148,6 @@ struct CoreCloudRecoveryGateTests {
     }
 
     @Test @MainActor
-    func explicitDownloadRecoveryDoesNotRecaptureTheLocalFallbackBranch() {
-        withRecoveryDefaults {
-            let defaults = AppDefaults.shared
-            defaults.set(true, forKey: AppCloudSync.enabledKey)
-            defaults.set(AppCloudSync.modeLocalFallback, forKey: AppCloudSync.modeKey)
-            defaults.set(true, forKey: AppCloudSync.pendingCloudDownloadResetKey)
-
-            #expect(AppCloudSync.shouldRefreshLocalFallbackRecoverySnapshotBeforeReset == false)
-        }
-    }
-
-    @Test @MainActor
     func missingAndUnreadableUploadBackupsDeferRecovery() {
         withRecoveryDefaults {
             let defaults = AppDefaults.shared

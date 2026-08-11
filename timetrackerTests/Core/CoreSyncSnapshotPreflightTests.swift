@@ -256,11 +256,17 @@ struct CoreSyncSnapshotPreflightTests {
         try expectSentinelUnchanged(context: context, id: sentinelID)
     }
 
-    @Test @MainActor
-    func invalidTodayHeatmapPreferenceTypeIsRejectedBeforeExistingRowsChange() throws {
+    @Test(arguments: [
+        AppPreferenceKey.todayHeatmapTaskIDs.rawValue,
+        AppPreferenceKey.todayHeatmapPeriod.rawValue,
+    ])
+    @MainActor
+    func invalidTodayHeatmapPreferenceTypeIsRejectedBeforeExistingRowsChange(
+        key: String
+    ) throws {
         let (context, sentinelID) = try makeSentinelContext()
         let preference = SyncedPreference(
-            key: AppPreferenceKey.todayHeatmapTaskIDs.rawValue,
+            key: key,
             valueJSON: PreferenceJSON.encode(true),
             deviceID: "source"
         )
@@ -268,27 +274,7 @@ struct CoreSyncSnapshotPreflightTests {
 
         #expect(throws: SyncDataSnapshotPreflightError.invalidPreferenceValue(
             id: preferenceRecord.id,
-            key: AppPreferenceKey.todayHeatmapTaskIDs.rawValue
-        )) {
-            try SyncDataSnapshot(syncedPreferences: [preferenceRecord])
-                .restoreAsLocalWinner(context: context)
-        }
-        try expectSentinelUnchanged(context: context, id: sentinelID)
-    }
-
-    @Test @MainActor
-    func invalidTodayHeatmapPeriodPreferenceTypeIsRejectedBeforeExistingRowsChange() throws {
-        let (context, sentinelID) = try makeSentinelContext()
-        let preference = SyncedPreference(
-            key: AppPreferenceKey.todayHeatmapPeriod.rawValue,
-            valueJSON: PreferenceJSON.encode(true),
-            deviceID: "source"
-        )
-        let preferenceRecord = SyncedPreferenceRecord(preference)
-
-        #expect(throws: SyncDataSnapshotPreflightError.invalidPreferenceValue(
-            id: preferenceRecord.id,
-            key: AppPreferenceKey.todayHeatmapPeriod.rawValue
+            key: key
         )) {
             try SyncDataSnapshot(syncedPreferences: [preferenceRecord])
                 .restoreAsLocalWinner(context: context)

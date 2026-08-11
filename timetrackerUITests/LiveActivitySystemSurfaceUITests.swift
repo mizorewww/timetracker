@@ -427,10 +427,13 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
     ) {
         let leadingFrame = leading.frame
         let timerFrame = timer.frame
+        let leadingIsUsable = hasUsableFrame(leadingFrame, in: screenFrame)
+        let timerIsUsable = hasUsableFrame(timerFrame, in: screenFrame)
 
-        guard hasUsableFrame(leadingFrame, in: screenFrame),
-              hasUsableFrame(timerFrame, in: screenFrame)
-        else {
+        XCTAssertTrue(leadingIsUsable, "Compact leading surface must have a usable frame")
+        XCTAssertTrue(timerIsUsable, "Compact timer surface must have a usable frame")
+
+        guard leadingIsUsable, timerIsUsable else {
             return
         }
 

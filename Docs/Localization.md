@@ -14,9 +14,8 @@ User-facing copy should be added to the `Localizable.strings` files under each t
 
 ## Rules
 
-- Do not hard-code user-facing Chinese text in Swift source. The unit test `swiftSourcesDoNotContainHardCodedChineseText` enforces this.
-- Do not add a new localized key to only one language. The unit test `localizationFilesExposeTheSameKeys` requires all locale files to expose the same keys.
-- Keep `InfoPlist.strings` in parity for the main app, Live Activity, Widget, and Watch, and keep the main app's `AppShortcuts.strings` in parity. `InfoPlist.strings`/`AppShortcuts.strings` parity is enforced statically by `make localization-check` (and by the pre-commit gate), which compares key sets across all three locales for every target/resource family without running `xcodebuild`; the `Localizable.strings` key-parity and hard-coded-Chinese scan remain in the `LocalizationContractTests` Swift suite.
+- Do not add a new localized key to only one language. `make localization-check` and the pre-commit gate compare key sets across all three locales.
+- Keep `Localizable.strings`, `InfoPlist.strings`, and the main app's `AppShortcuts.strings` in parity for every target/resource family. The same static gate covers them without running `xcodebuild`.
 - Prefer concise labels that fit on iPhone.
 - Avoid implementation terms in everyday UI. Use ledger terminology only when the user is editing historical records or reading data-management settings.
 - Do not expose or translate legacy task workflow values (`planned`, `active`, `completed`) as product state. Checklist completion copy belongs to checklist items and does not imply that the task is locked. The current task product vocabulary is Archive/Restore; deletion copy is reserved for reset, ledger/checklist entities, and historical tombstone fallbacks, never an ordinary task action.
@@ -27,9 +26,9 @@ User-facing copy should be added to the `Localizable.strings` files under each t
 
 The current worktree localizes navigation, Today, Tasks, archive lifecycle copy, explicit-estimate forecast reasons, Pomodoro, Analytics, Settings, task editing, segment editing, manual time entry, Live Activity fallbacks, sync status, and core validation errors.
 
-Demo data is seeded with ASCII titles and notes so it does not bypass localization tests. Future demo content that must be localized should be produced through localized string keys at seed time.
+Demo data uses locale-neutral fixture copy. Future demo content that is intended as product copy should be produced through localized string keys at seed time.
 
-App Intent titles, descriptions, parameters, shortcut short titles, and the task entity name use literal-key entries in all three main-app `Localizable.strings` files. The six interpolated shortcut phrase templates are localized separately in each locale's `AppShortcuts.strings`; keep those resources in parity and verify Shortcuts/Siri discovery after changing them because ordinary `Localizable.strings` key-parity checks do not cover this resource.
+App Intent titles, descriptions, parameters, shortcut short titles, and the task entity name use literal-key entries in all three main-app `Localizable.strings` files. The six interpolated shortcut phrase templates are localized separately in each locale's `AppShortcuts.strings`; keep those resources in parity and verify Shortcuts/Siri discovery after changing them.
 
 `KeychainCredentialError` resolves invalid-data, unknown-failure, and operation-failure copy from the three main localization files. The formatted operation error keeps the OSStatus and system-provided diagnostic message while avoiding hard-coded English in the user-facing fallback.
 

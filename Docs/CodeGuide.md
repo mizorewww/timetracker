@@ -497,7 +497,7 @@ Today UI 测试以 `home.view` 判断根页面就绪，再滚动查找具体操�
 - 注释解释原因、不变量和失败模式，不复述语法。
 - 当前行为写入 UserGuide、CodeGuide 或 Architecture。
 - 决策与权衡写入 AgentDecisions。
-- 一次性审计事实写入提交该工作的 commit/PR；体量较大时可在 `Docs/` 下新建带日期的 `Audit-*.md` 并随该次工作提交（旧的 `Audit-2026-07-14.md` / `InteractionAudit-2026-07-18.md` 已于 2026-07-25 退役，证据改存 git 历史）。
+- 一次性审计与验证事实写入提交该工作的 commit/PR；实现记忆只服务进行中的工作，完成后移入 `Docs/ImplementationContexts/Archive/`。
 - 未来工作只写入计划文档，并明确状态。
 
 当前生产 Swift 文件尚无系统性的三斜线 API 文档，这是需要持续偿还的文档债务。

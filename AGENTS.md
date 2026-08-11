@@ -31,22 +31,7 @@ The `axiom-*` skills (including `axiom-testing` in item 2) come from the Axiom p
 
 Build, release, versioning, and hook commands enter through the Makefile. `scripts/*.sh` are thin `uv run` wrappers around the Python modules in `tools/timetracker_tools/`; do not call xcodebuild or edit the pbxproj version fields ad hoc — use the targets. Full layout, wrapper mechanism, and troubleshooting are in `Docs/DevelopmentTools.md`; per-script behavior and env vars are in `Docs/Scripts.md`.
 
-| Target | Use it to |
-| --- | --- |
-| `make help` | list all targets |
-| `make venv` | create/sync `.venv` via `uv sync` (optional; wrappers self-bootstrap) |
-| `make install-hooks` | install the pre-commit version hook once per clone |
-| `make check-hooks` | read-only verify the hook is installed |
-| `make test-versioning` | isolated integration test for the version hook — the versioning regression gate |
-| `make bump-version` | manual marketing/build bump only (normal commits bump automatically) |
-| `make build-ios` / `make build-macos` | build for `generic/platform=iOS` / `generic/platform=macOS` |
-| `make build-install-all` | build iOS+Watch and macOS, install to physical devices, copy macOS app to `/Applications` |
-| `make test` | signed macOS unit tests (`timetrackerTests`) — the default verification gate |
-| `make localization-check` | static check that every `.strings` resource exposes the same keys across `en`/`zh-Hans`/`zh-Hant` (no `xcodebuild`; also a pre-commit gate) |
-| `make format` / `make format-check` | run SwiftFormat in-place / lint-only over all Swift sources (config in `.swiftformat`; `brew install swiftformat`) |
-| `make export-artifacts` | archive and export signed IPA + macOS app/zip |
-| `make build-info` | write `AppBuildInfo.plist` (normally invoked by the Xcode build phase; standalone it skips) |
-| `make clean` | remove `build/Exports`, `build/Archives`, `build/Install` |
+Run `make help` for the authoritative target list. Keep target descriptions and variables in `Docs/DevelopmentTools.md` and `Docs/Scripts.md`; do not duplicate that table here.
 
 Conventions:
 
@@ -102,6 +87,7 @@ Follow this lifecycle for every task. Do not skip steps to move faster; narrow t
 - Reconcile the implementation memory's test record: remove every `TEST-SCAFFOLD` test whose removal condition has been met, promote only tests that now protect a documented durable contract, and confirm no unaccounted scaffolding marker remains in the changed scope.
 - Release every owned resource: terminate the tested app and runners, shut down and delete simulators created for the batch, remove temporary DerivedData/result/trace artifacts, and audit that no owned `xcodebuild`, `xctest`, UI runner, or Booted device remains. Never shut down a simulator or terminate a process another active agent explicitly owns. Drop ephemeral build outputs with `make clean` only once `build/Archives`/`build/Exports` are no longer needed as evidence.
 - Update the implementation memory and remove the active link for finished feedback tasks.
+- Move completed implementation memories to `Docs/ImplementationContexts/Archive/`; keep only active work and workflow indexes in the live tree.
 - Report: completed scope, validation performed, resource cleanup, cumulative progress, and remaining expected checkpoints.
 
 ## Parallel work and simulator ownership

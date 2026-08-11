@@ -373,11 +373,14 @@ timetracker/Services
   LLM/            OpenAI-compatible transport, validation, and suggestion decoding
   Ledger/         Cloud startup mode, persistence safety, timer DTO, duration and aggregation utilities
   Maintenance/    Database repair, export, and cleanup support
+  Sync/           Conflict state, snapshots, restore, and Cloud reconciliation
+  SystemProjection/
+                   Post-commit current-state scheduling and external surface publication
   SystemIntegration/
-                   Sync conflict orchestration/state/export, versioned snapshots,
-                   committed-mutation system projection scheduling,
-                   Widget/Watch handoff, credentials, and connectivity transport
+                   Apple Health integration, durable files, credentials, and export
   Tasks/          Task tree derivation and validation helpers
+  WatchConnectivity/
+                   iPhone Watch commands, state projection, codec, and transport
 timetracker/Features/Home
   Controls/       Start/new-task controls and task selection sheets
   Rows/           Active timer and timeline rows

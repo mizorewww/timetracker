@@ -157,7 +157,7 @@ struct ActiveTimerContent: View {
         case let .live(startedAt):
             Text(startedAt, style: .timer)
         case let .frozen(seconds):
-            Text(WidgetElapsedFormatter.clock(seconds))
+            Text(ElapsedClockFormatter.compact(seconds))
         }
     }
 
@@ -166,7 +166,7 @@ struct ActiveTimerContent: View {
         case let .live(startedAt):
             Text(startedAt, style: .timer)
         case let .frozen(seconds):
-            Text(WidgetElapsedFormatter.clock(seconds))
+            Text(ElapsedClockFormatter.compact(seconds))
         }
     }
 

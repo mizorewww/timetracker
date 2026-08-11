@@ -32,35 +32,15 @@ enum TaskColorPalette {
     ]
 
     nonisolated static func normalizedHex(_ value: String?) -> String? {
-        guard var value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
-              value.isEmpty == false
-        else {
-            return nil
-        }
-        if value.hasPrefix("#") {
-            value.removeFirst()
-        }
-        if value.count == 3 {
-            value = value.map { "\($0)\($0)" }.joined()
-        }
-        guard value.count == 6,
-              UInt32(value, radix: 16) != nil
-        else {
-            return nil
-        }
-        return value.uppercased()
+        HexColorParser.normalized(value)
     }
 
     nonisolated static func sRGBComponents(for hex: String?) -> AccessibleSRGB? {
-        guard let normalized = normalizedHex(hex),
-              let value = UInt64(normalized, radix: 16)
-        else {
-            return nil
-        }
+        guard let rgb = HexColorParser.components(for: hex) else { return nil }
         return AccessibleSRGB(
-            red: Double((value & 0xFF0000) >> 16) / 255,
-            green: Double((value & 0x00FF00) >> 8) / 255,
-            blue: Double(value & 0x0000FF) / 255
+            red: rgb.red,
+            green: rgb.green,
+            blue: rgb.blue
         )
     }
 

@@ -55,14 +55,7 @@ enum DurationFormatter {
     }
 
     nonisolated static func clock(_ seconds: Int) -> String {
-        let safeSeconds = max(0, seconds)
-        let hours = safeSeconds / 3600
-        let minutes = (safeSeconds % 3600) / 60
-        let second = safeSeconds % 60
-        if hours > 0 {
-            return String(format: "%02d:%02d:%02d", hours, minutes, second)
-        }
-        return String(format: "%02d:%02d", minutes, second)
+        ElapsedClockFormatter.padded(seconds)
     }
 
     nonisolated static func spoken(

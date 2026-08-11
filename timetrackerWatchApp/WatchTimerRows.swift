@@ -110,7 +110,7 @@ struct WatchActiveTimerRow: View {
         case let .live(startedAt):
             Text(startedAt, style: .timer)
         case let .frozen(seconds):
-            Text(WatchElapsedFormatter.clock(seconds))
+            Text(ElapsedClockFormatter.full(seconds))
         }
     }
 
@@ -119,7 +119,7 @@ struct WatchActiveTimerRow: View {
         case let .live(startedAt):
             Text(startedAt, style: .timer)
         case let .frozen(seconds):
-            Text(WatchElapsedFormatter.clock(seconds))
+            Text(ElapsedClockFormatter.full(seconds))
         }
     }
 
@@ -133,14 +133,6 @@ struct WatchActiveTimerRow: View {
     private var accessibilityLabel: String {
         commandState.accessibilityLabel(
             timer.path.isEmpty ? timer.title : "\(timer.title), \(timer.path)"
-        )
-    }
-}
-
-private enum WatchElapsedFormatter {
-    static func clock(_ seconds: Int) -> String {
-        Duration.seconds(max(0, seconds)).formatted(
-            .time(pattern: .hourMinuteSecond).locale(.autoupdatingCurrent)
         )
     }
 }

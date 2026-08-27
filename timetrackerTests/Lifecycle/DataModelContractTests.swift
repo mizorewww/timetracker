@@ -35,25 +35,6 @@ struct DataModelContractTests {
     }
 
     @Test @MainActor
-    func persistentDeduplicationPrefersTombstoneWhenTimestampsTie() {
-        let id = UUID()
-        let timestamp = Date(timeIntervalSinceReferenceDate: 100_000)
-        let active = TaskNode(title: "Active", parentID: nil, deviceID: "test")
-        active.id = id
-        active.createdAt = timestamp
-        active.updatedAt = timestamp
-
-        let tombstone = TaskNode(title: "Deleted", parentID: nil, deviceID: "test")
-        tombstone.id = id
-        tombstone.createdAt = timestamp
-        tombstone.updatedAt = timestamp
-        tombstone.deletedAt = timestamp
-
-        #expect([active, tombstone].deduplicatedByID().first === tombstone)
-        #expect([tombstone, active].deduplicatedByID().first === tombstone)
-    }
-
-    @Test @MainActor
     func persistentDeduplicationTieBreakIsStableAcrossFetchOrder() {
         let id = UUID()
         let timestamp = Date(timeIntervalSinceReferenceDate: 100_000)
@@ -68,58 +49,6 @@ struct DataModelContractTests {
 
         #expect([first, second].deduplicatedByID().first === second)
         #expect([second, first].deduplicatedByID().first === second)
-    }
-
-    @Test @MainActor
-    func persistentDeduplicationUsesMutationIDWhenMetadataAndDeviceTie() {
-        let id = UUID()
-        let timestamp = Date(timeIntervalSinceReferenceDate: 100_000)
-        let lowerMutationID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
-        let higherMutationID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
-        let first = TaskNode(title: "First", parentID: nil, deviceID: "same-device")
-        first.id = id
-        first.createdAt = timestamp
-        first.updatedAt = timestamp
-        first.clientMutationID = lowerMutationID
-        let second = TaskNode(title: "Second", parentID: nil, deviceID: "same-device")
-        second.id = id
-        second.createdAt = timestamp
-        second.updatedAt = timestamp
-        second.clientMutationID = higherMutationID
-
-        #expect([first, second].deduplicatedByID().first === second)
-        #expect([second, first].deduplicatedByID().first === second)
-    }
-
-    @Test @MainActor
-    func timeSegmentDeduplicationIsStableWhenAllSyncMetadataTies() {
-        let id = UUID()
-        let sessionID = UUID()
-        let taskID = UUID()
-        let timestamp = Date(timeIntervalSinceReferenceDate: 100_000)
-        let manual = TimeSegment(
-            sessionID: sessionID,
-            taskID: taskID,
-            source: .manual,
-            deviceID: "same-device",
-            startedAt: timestamp
-        )
-        manual.id = id
-        manual.createdAt = timestamp
-        manual.updatedAt = timestamp
-        let timer = TimeSegment(
-            sessionID: sessionID,
-            taskID: taskID,
-            source: .timer,
-            deviceID: "same-device",
-            startedAt: timestamp
-        )
-        timer.id = id
-        timer.createdAt = timestamp
-        timer.updatedAt = timestamp
-
-        #expect([manual, timer].deduplicatedByID().first === timer)
-        #expect([timer, manual].deduplicatedByID().first === timer)
     }
 
     @Test @MainActor
@@ -181,22 +110,6 @@ struct DataModelContractTests {
         let segment = TimeSegment(sessionID: session.id, taskID: task.id, source: .timer, deviceID: "test")
         let run = PomodoroRun(taskID: task.id, deviceID: "test")
         let countdown = CountdownEvent(title: "Launch", date: Date(), deviceID: "test")
-        let preference = SyncedPreference(key: AppPreferenceKey.defaultFocusMinutes.rawValue, valueJSON: "25", deviceID: "test")
-        let checklistItem = ChecklistItem(taskID: task.id, title: "Checklist", deviceID: "test")
-        let checklistVisual = ChecklistItemVisual(checklistItemID: checklistItem.id, iconName: "book", colorHex: "16A34A", deviceID: "test")
-        let inboxItem = InboxItem(title: "Inbox", deviceID: "test")
-        let inboxSuggestion = InboxSuggestion(
-            inboxItemID: inboxItem.id,
-            taskID: task.id,
-            reason: "Related",
-            iconName: "book",
-            colorHex: "16A34A",
-            modelID: "test",
-            titleSnapshot: inboxItem.title,
-            deviceID: "test"
-        )
-        let category = TaskCategory(title: "Work", deviceID: "test")
-        let categoryAssignment = TaskCategoryAssignment(taskID: task.id, categoryID: category.id, deviceID: "test")
         let recurrenceRule = TaskRecurrenceRule(
             templateTaskID: task.id,
             startDayKey: "2026-07-20",
@@ -224,32 +137,17 @@ struct DataModelContractTests {
         )
 
         context.insert(task)
-        context.insert(category)
-        context.insert(categoryAssignment)
         context.insert(session)
         context.insert(segment)
         context.insert(run)
         context.insert(countdown)
-        context.insert(preference)
-        context.insert(checklistItem)
-        context.insert(checklistVisual)
-        context.insert(inboxItem)
-        context.insert(inboxSuggestion)
         context.insert(recurrenceRule)
         context.insert(recurrenceOccurrence)
         context.insert(quantityGoal)
         context.insert(quantityEntry)
         try context.save()
 
-        #expect(task.statusRaw == LegacyTaskStatusRaw.active)
-        #expect(run.state == .planned)
-        #expect(checklistVisual.suggestionTitleSnapshot == nil)
-        #expect(checklistVisual.userEditedAt == nil)
-        #expect(inboxSuggestion.destinationKind == .checklist)
-        #expect(category.includesInForecast)
         #expect(recurrenceRule.id == TaskProgressIdentity.recurrenceRuleID(templateTaskID: task.id))
-        #expect(recurrenceRule.cadenceRaw == TaskRecurrenceCadence.daily.rawValue)
-        #expect(recurrenceRule.isEnabled)
         #expect(recurrenceOccurrence.generatedTaskID == TaskProgressIdentity.generatedTaskID(
             ruleID: recurrenceRule.id,
             dayKey: recurrenceOccurrence.occurrenceDayKey

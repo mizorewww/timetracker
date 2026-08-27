@@ -446,10 +446,17 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
     ) {
         let titleFrame = title.frame
         let timerFrame = timer.frame
-
-        guard hasUsableFrame(titleFrame, in: screenFrame),
-              hasUsableFrame(timerFrame, in: screenFrame)
-        else {
+        let titleHasUsableFrame = hasUsableFrame(titleFrame, in: screenFrame)
+        let timerHasUsableFrame = hasUsableFrame(timerFrame, in: screenFrame)
+        XCTAssertTrue(
+            titleHasUsableFrame,
+            "Lock Screen title must publish a usable frame."
+        )
+        XCTAssertTrue(
+            timerHasUsableFrame,
+            "Lock Screen timer must publish a usable frame."
+        )
+        guard titleHasUsableFrame, timerHasUsableFrame else {
             return
         }
 

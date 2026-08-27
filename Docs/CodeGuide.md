@@ -330,7 +330,7 @@ Snapshot restore 把历史/外部 transport 当作不可信输入。进入原子
 
 这个边界覆盖显式 `SyncDataSnapshot.restoreAsLocalWinner` 恢复路径；已被 SwiftData/CloudKit 直接 materialize 进 context 的初始 import 不会倒流经该 snapshot preflight，不得用此证据宣称所有 CloudKit 输入已被同等拦截。
 
-`PathProcessFileLock` 的 `flock` 与 `SyncConflictProcessFileLock` 的 `lockf` 都使用 `MonotonicFileLockDeadline`/`ContinuousClock` 计算五秒 retry budget。两者保留不同的 POSIX contention errno 与关闭 descriptor 路径；禁止用 `Date` 或其他可调 wall clock 计算 elapsed timeout。
+`PathProcessFileLock` 统一实现递归计数与 bounded backoff acquire，`ProcessFileLockMechanism`（`flock`/`lockf`）注入两种 POSIX 锁操作；两者都使用 `MonotonicFileLockDeadline`/`ContinuousClock` 计算五秒 retry budget，保留不同的 POSIX contention errno 与关闭 descriptor 路径；禁止用 `Date` 或其他可调 wall clock 计算 elapsed timeout。
 
 ### 演示与测试数据
 

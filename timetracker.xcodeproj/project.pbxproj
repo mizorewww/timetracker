@@ -24,6 +24,8 @@
 		E70200000000000000000001 /* timetracker/Shared/DeviceIdentity.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70200000000000000000002 /* timetracker/Shared/DeviceIdentity.swift */; };
 		E70300000000000000000001 /* timetracker/Shared/PresentationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70300000000000000000003 /* timetracker/Shared/PresentationSupport.swift */; };
 		E70300000000000000000002 /* timetracker/Shared/PresentationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70300000000000000000003 /* timetracker/Shared/PresentationSupport.swift */; };
+		E70400000000000000000001 /* timetracker/Shared/HexColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70400000000000000000003 /* timetracker/Shared/HexColor.swift */; };
+		E70400000000000000000002 /* timetracker/Shared/HexColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70400000000000000000003 /* timetracker/Shared/HexColor.swift */; };
 		E70100000000000000000001 /* timetrackerWatchApp.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = E70000000000000000000009 /* timetrackerWatchApp.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -105,6 +107,7 @@
 		E70000000000000000000007 /* timetracker/Services/WatchConnectivity/WatchConnectivityPayloadCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timetracker/Services/WatchConnectivity/WatchConnectivityPayloadCodec.swift; sourceTree = "<group>"; };
 		E70200000000000000000002 /* timetracker/Shared/DeviceIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timetracker/Shared/DeviceIdentity.swift; sourceTree = "<group>"; };
 		E70300000000000000000003 /* timetracker/Shared/PresentationSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timetracker/Shared/PresentationSupport.swift; sourceTree = "<group>"; };
+		E70400000000000000000003 /* timetracker/Shared/HexColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = timetracker/Shared/HexColor.swift; sourceTree = "<group>"; };
 		E70000000000000000000009 /* timetrackerWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = timetrackerWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -113,6 +116,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				Shared/HexColor.swift,
 			);
 			target = D41D8E8D2F9CC4B50024913B /* timetracker */;
 		};
@@ -236,6 +240,7 @@
 				E70000000000000000000007 /* timetracker/Services/WatchConnectivity/WatchConnectivityPayloadCodec.swift */,
 				E70200000000000000000002 /* timetracker/Shared/DeviceIdentity.swift */,
 				E70300000000000000000003 /* timetracker/Shared/PresentationSupport.swift */,
+				E70400000000000000000003 /* timetracker/Shared/HexColor.swift */,
 				E20000000000000000000006 /* timetrackerLiveActivityExtension */,
 				E60000000000000000000006 /* timetrackerWidgetExtension */,
 				E70000000000000000000008 /* timetrackerWatchApp */,
@@ -577,6 +582,7 @@
 				E6000000000000000000000F /* timetracker/Shared/WidgetSnapshotModels.swift in Sources */,
 				E60000000000000000000011 /* timetracker/Shared/WidgetSnapshotStore.swift in Sources */,
 				E70300000000000000000001 /* timetracker/Shared/PresentationSupport.swift in Sources */,
+				E70400000000000000000001 /* timetracker/Shared/HexColor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -590,6 +596,7 @@
 				E70000000000000000000004 /* timetracker/Services/WatchConnectivity/WatchConnectivityPayloadCodec.swift in Sources */,
 				E70200000000000000000001 /* timetracker/Shared/DeviceIdentity.swift in Sources */,
 				E70300000000000000000002 /* timetracker/Shared/PresentationSupport.swift in Sources */,
+				E70400000000000000000002 /* timetracker/Shared/HexColor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

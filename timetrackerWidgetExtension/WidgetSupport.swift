@@ -1,6 +1,5 @@
 import AppIntents
 import Foundation
-import SwiftUI
 
 func localized(_ key: String) -> String {
     NSLocalizedString(key, comment: "")
@@ -38,16 +37,5 @@ struct WidgetStopTimerIntent: AppIntent {
 
     func perform() async throws -> some IntentResult {
         .result(opensIntent: OpenURLIntent(WidgetDeepLinks.stopTimer(segmentID: segmentID)))
-    }
-}
-
-extension Color {
-    init?(hex: String?) {
-        guard let rgb = HexColorParser.components(for: hex) else { return nil }
-        self.init(
-            red: rgb.red,
-            green: rgb.green,
-            blue: rgb.blue
-        )
     }
 }

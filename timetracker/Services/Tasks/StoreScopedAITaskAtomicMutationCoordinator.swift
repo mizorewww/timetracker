@@ -153,7 +153,6 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
         _ operation: AITaskWorkspaceOperation,
         in overlay: inout AITaskWorkspaceOverlay
     ) throws {
-        let operationCount = overlay.operations.count
         switch operation {
         case let .useExistingCategory(categoryID):
             guard let category = overlay.category(id: categoryID) else {
@@ -272,46 +271,17 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
             }
             _ = try overlay.deleteChecklistItem(id: item.id)
         }
-
-        guard overlay.operations.count == operationCount + 1,
-              overlay.operations.last == operation
-        else {
-            throw AITaskAtomicMutationError.invalidOperation
-        }
     }
 
     func validateProtectedIdentities(
         in operation: AITaskWorkspaceOperation
     ) throws {
-        let protectedIDs = Self.protectedAppleHealthIDs
-        let mutatedIDs: Set<UUID> = switch operation {
-        case .useExistingCategory:
-            []
-        case let .createCategory(category):
-            [category.id]
-        case let .updateCategory(before, _):
-            [before.id]
-        case let .deleteCategory(category, _):
-            [category.id]
-        case let .createTask(task):
-            [task.id]
-        case let .updateTask(before, _):
-            [before.id]
-        case let .archiveTask(before, _, _):
-            [before.id]
-        case let .createChecklistItem(item):
-            [item.id]
-        case let .updateChecklistItem(before, _):
-            [before.id]
-        case let .deleteChecklistItem(item):
-            [item.id]
+        guard let affectedID = operation.affectedIdentity,
+              Self.protectedAppleHealthIDs.contains(affectedID)
+        else {
+            return
         }
-        if let protectedID = mutatedIDs.intersection(protectedIDs)
-            .sorted(by: Self.uuidOrder)
-            .first
-        {
-            throw AITaskAtomicMutationError.protectedIdentity(protectedID)
-        }
+        throw AITaskAtomicMutationError.protectedIdentity(affectedID)
     }
 
     func validateCreateIdentities(
@@ -324,6 +294,9 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
         guard Set(proposedIDs).count == proposedIDs.count else {
             throw AITaskAtomicMutationError.invalidOperation
         }
+        // Deliberately re-fetched instead of reusing the baseline snapshot:
+        // the workspace snapshot is `visibleDeduplicatedByID`-filtered, while
+        // a create must also not collide with soft-deleted persisted rows.
         let persistedIDs = try Set(
             context.fetch(FetchDescriptor<TaskCategory>()).map(\.id) +
                 context.fetch(FetchDescriptor<TaskNode>()).map(\.id) +
@@ -676,48 +649,72 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
 }
 
 private nonisolated extension AITaskWorkspaceOperation {
-    var mutatesTaskDomain: Bool {
+    enum MutatedDomain {
+        case task
+        case checklist
+    }
+
+    /// Each mutating operation touches exactly one domain;
+    /// `useExistingCategory` is a read-only admission and mutates neither.
+    var mutatedDomain: MutatedDomain? {
         switch self {
-        case .useExistingCategory,
-             .createChecklistItem,
-             .updateChecklistItem,
-             .deleteChecklistItem:
-            false
+        case .useExistingCategory:
+            nil
         case .createCategory,
              .updateCategory,
              .deleteCategory,
              .createTask,
              .updateTask,
              .archiveTask:
-            true
-        }
-    }
-
-    var mutatesChecklistDomain: Bool {
-        switch self {
+            .task
         case .createChecklistItem,
              .updateChecklistItem,
              .deleteChecklistItem:
-            true
-        case .useExistingCategory,
-             .createCategory,
-             .updateCategory,
-             .deleteCategory,
-             .createTask,
-             .updateTask,
-             .archiveTask:
-            false
+            .checklist
+        }
+    }
+
+    var mutatesTaskDomain: Bool {
+        mutatedDomain == .task
+    }
+
+    var mutatesChecklistDomain: Bool {
+        mutatedDomain == .checklist
+    }
+
+    /// The primary identity the operation writes: the proposed record for
+    /// creates, the existing record for updates, archives, and deletes.
+    var affectedIdentity: UUID? {
+        switch self {
+        case .useExistingCategory:
+            nil
+        case let .createCategory(category):
+            category.id
+        case let .updateCategory(before, _):
+            before.id
+        case let .deleteCategory(category, _):
+            category.id
+        case let .createTask(task):
+            task.id
+        case let .updateTask(before, _):
+            before.id
+        case let .archiveTask(before, _, _):
+            before.id
+        case let .createChecklistItem(item):
+            item.id
+        case let .updateChecklistItem(before, _):
+            before.id
+        case let .deleteChecklistItem(item):
+            item.id
         }
     }
 
     var createdIdentity: UUID? {
         switch self {
-        case let .createCategory(category):
-            category.id
-        case let .createTask(task):
-            task.id
-        case let .createChecklistItem(item):
-            item.id
+        case .createCategory,
+             .createTask,
+             .createChecklistItem:
+            affectedIdentity
         case .useExistingCategory,
              .updateCategory,
              .deleteCategory,

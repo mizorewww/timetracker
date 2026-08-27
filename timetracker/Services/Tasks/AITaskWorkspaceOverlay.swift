@@ -53,15 +53,6 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
     private(set) var snapshot: AITaskWorkspaceSnapshot
     private(set) var operations: [AITaskWorkspaceOperation] = []
 
-    init(snapshot: AITaskWorkspaceSnapshot) {
-        self.snapshot = AITaskWorkspaceSnapshot(
-            schemaVersion: snapshot.schemaVersion,
-            categories: snapshot.categories,
-            tasks: snapshot.tasks,
-            checklistItems: snapshot.checklistItems
-        )
-    }
-
     func category(id: UUID) -> AITaskWorkspaceCategory? {
         snapshot.categories.first { $0.id == id }
     }
@@ -133,11 +124,8 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
             sortOrder: resolvedSortOrder
         )
         replaceSnapshot(categories: snapshot.categories + [category])
-        guard let canonical = self.category(id: id) else {
-            throw AITaskWorkspaceOverlayError.categoryUnavailable(id)
-        }
-        operations.append(.createCategory(canonical))
-        return canonical
+        operations.append(.createCategory(category))
+        return category
     }
 
     @discardableResult
@@ -173,11 +161,8 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
         replaceSnapshot(
             categories: replacing(snapshot.categories, id: id, with: proposed)
         )
-        guard let after = category(id: id) else {
-            throw AITaskWorkspaceOverlayError.categoryUnavailable(id)
-        }
-        operations.append(.updateCategory(before: before, after: after))
-        return after
+        operations.append(.updateCategory(before: before, after: proposed))
+        return proposed
     }
 
     @discardableResult
@@ -262,11 +247,8 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
             dailyRecurrence: prepared.dailyRecurrence
         )
         replaceSnapshot(tasks: snapshot.tasks + [task])
-        guard let canonical = self.task(id: id) else {
-            throw AITaskWorkspaceOverlayError.taskUnavailable(id)
-        }
-        operations.append(.createTask(canonical))
-        return canonical
+        operations.append(.createTask(task))
+        return task
     }
 
     @discardableResult
@@ -324,11 +306,8 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
         replaceSnapshot(
             tasks: replacing(snapshot.tasks, id: id, with: proposed)
         )
-        guard let after = task(id: id) else {
-            throw AITaskWorkspaceOverlayError.taskUnavailable(id)
-        }
-        operations.append(.updateTask(before: before, after: after))
-        return after
+        operations.append(.updateTask(before: before, after: proposed))
+        return proposed
     }
 
     /// Product-facing task deletion is archive-only. The task and its stable ID
@@ -348,17 +327,14 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
         replaceSnapshot(
             tasks: replacing(snapshot.tasks, id: id, with: proposed)
         )
-        guard let after = task(id: id) else {
-            throw AITaskWorkspaceOverlayError.taskUnavailable(id)
-        }
         operations.append(
             .archiveTask(
                 before: before,
-                after: after,
+                after: proposed,
                 affectedDescendantIDs: affectedDescendantIDs
             )
         )
-        return after
+        return proposed
     }
 
     @discardableResult
@@ -393,11 +369,8 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
             sortOrder: resolvedSortOrder
         )
         replaceSnapshot(checklistItems: snapshot.checklistItems + [item])
-        guard let canonical = checklistItem(id: id) else {
-            throw AITaskWorkspaceOverlayError.checklistItemUnavailable(id)
-        }
-        operations.append(.createChecklistItem(canonical))
-        return canonical
+        operations.append(.createChecklistItem(item))
+        return item
     }
 
     @discardableResult
@@ -432,11 +405,8 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
                 with: proposed
             )
         )
-        guard let after = checklistItem(id: id) else {
-            throw AITaskWorkspaceOverlayError.checklistItemUnavailable(id)
-        }
-        operations.append(.updateChecklistItem(before: before, after: after))
-        return after
+        operations.append(.updateChecklistItem(before: before, after: proposed))
+        return proposed
     }
 
     @discardableResult

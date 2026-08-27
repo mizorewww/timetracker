@@ -144,7 +144,6 @@ struct AnalyticsView: View {
         } catch {
             return
         }
-        guard Task.isCancelled == false else { return }
         liveNow = Date()
     }
 }

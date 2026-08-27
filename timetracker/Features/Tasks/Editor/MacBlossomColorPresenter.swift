@@ -80,7 +80,7 @@ final class MacBlossomColorPresenter: NSObject {
             } catch {
                 return
             }
-            guard Task.isCancelled == false, let self, let window else {
+            guard let self, let window else {
                 return
             }
             close(window)

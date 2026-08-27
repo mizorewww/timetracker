@@ -69,7 +69,6 @@ final class TaskDetailAutosaveController {
             } catch {
                 return
             }
-            guard Task.isCancelled == false else { return }
             self?.commitScheduledRequest(id: requestID)
         }
     }

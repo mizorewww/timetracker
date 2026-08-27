@@ -36,7 +36,6 @@ extension TimeTrackerStore {
             } catch {
                 return
             }
-            guard Task.isCancelled == false else { return }
             self?.startScheduledChecklistVisualSuggestion(
                 itemID: item.id,
                 schedulingFingerprint: schedulingFingerprint

@@ -98,20 +98,6 @@ extension View {
     }
 }
 
-struct AppSection<Content: View>: View {
-    let title: String
-    var subtitle: String?
-    var systemImage: String?
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: AppLayout.sectionSpacing) {
-            AppSectionHeader(title: title, subtitle: subtitle, systemImage: systemImage)
-            content
-        }
-    }
-}
-
 struct AppRowIcon: View {
     let systemImage: String
     var tint: Color = .blue

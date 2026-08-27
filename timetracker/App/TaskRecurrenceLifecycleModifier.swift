@@ -99,8 +99,7 @@ private struct TaskRecurrenceLifecycleModifier: ViewModifier {
             } catch {
                 return
             }
-            guard Task.isCancelled == false,
-                  scenePhase == .active,
+            guard scenePhase == .active,
                   store.effectivePersistenceWriteSafety == .ready
             else {
                 return

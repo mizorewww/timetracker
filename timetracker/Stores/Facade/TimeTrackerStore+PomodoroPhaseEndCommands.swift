@@ -3,15 +3,6 @@ import SwiftData
 
 extension TimeTrackerStore {
     @discardableResult
-    func completeActivePomodoroFocus(
-        phase: PomodoroPhaseToken
-    ) -> Bool {
-        performStoreScopedPomodoroPhaseMutation { coordinator in
-            try coordinator.complete(phase: phase)
-        }
-    }
-
-    @discardableResult
     func cancelActivePomodoro(
         phase: PomodoroPhaseToken
     ) -> Bool {

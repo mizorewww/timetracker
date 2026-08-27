@@ -7,7 +7,7 @@ extension TimeTrackerStore {
         request: ChecklistVisualSuggestionRequest,
         requestID: UUID
     ) {
-        guard isCurrentChecklistVisualSuggestionRequest(
+        guard checklistVisualSuggestionLifecycle.isCurrentRequest(
             itemID: request.itemID,
             requestID: requestID
         ) else { return }
@@ -18,18 +18,13 @@ extension TimeTrackerStore {
             )
         }
 
-        guard matchesCurrentLLMConfiguration(
-            endpoint: request.endpoint,
-            apiKey: request.apiKey,
-            modelID: request.modelID,
-            reasoningEffort: request.reasoningEffort
-        ),
-            matchesCurrentLLMPrompt(
-                request.instructions,
-                kind: .checklistVisual
-            ),
-            preferences.llmAutomaticSuggestionsEnabled,
-            let modelContext
+        guard matchesCurrentLLMConfiguration(request.configuration),
+              matchesCurrentLLMPrompt(
+                  request.instructions,
+                  kind: .checklistVisual
+              ),
+              preferences.llmAutomaticSuggestionsEnabled,
+              let modelContext
         else {
             return
         }
@@ -59,7 +54,7 @@ extension TimeTrackerStore {
         showsErrors: Bool,
         wasCancelled: Bool
     ) {
-        guard isCurrentChecklistVisualSuggestionRequest(
+        guard checklistVisualSuggestionLifecycle.isCurrentRequest(
             itemID: request.itemID,
             requestID: requestID
         ) else { return }
@@ -78,20 +73,20 @@ extension TimeTrackerStore {
             )
         }
 
-        guard matchesCurrentLLMConfiguration(
-            endpoint: request.endpoint,
-            apiKey: request.apiKey,
-            modelID: request.modelID,
-            reasoningEffort: request.reasoningEffort
-        ), matchesCurrentLLMPrompt(request.instructions, kind: .checklistVisual),
-        showsErrors || preferences.llmAutomaticSuggestionsEnabled else {
+        guard matchesCurrentLLMConfiguration(request.configuration),
+              matchesCurrentLLMPrompt(request.instructions, kind: .checklistVisual),
+              showsErrors || preferences.llmAutomaticSuggestionsEnabled
+        else {
             return
         }
         if showsErrors {
             errorMessage = error.localizedDescription
         }
-        checklistVisualSuggestionFailureFingerprintByItemID[request.itemID] = request.fingerprint
-        checklistVisualSuggestionRetryAfterByItemID[request.itemID] = Date().addingTimeInterval(60)
+        checklistVisualSuggestionLifecycle.failureByItemID[request.itemID] =
+            ChecklistVisualSuggestionFailure(
+                fingerprint: request.fingerprint,
+                retryAfter: Date().addingTimeInterval(60)
+            )
     }
 
     private func finishChecklistVisualSuggestionRequest(
@@ -99,25 +94,14 @@ extension TimeTrackerStore {
         requestID: UUID,
         shouldAutoSuggest: Bool = true
     ) {
-        guard isCurrentChecklistVisualSuggestionRequest(
-            itemID: itemID,
-            requestID: requestID
-        ) else { return }
-        checklistVisualSuggestionTasksByItemID.removeValue(forKey: itemID)
-        checklistVisualSuggestionInFlightIDs.remove(itemID)
+        guard checklistVisualSuggestionLifecycle.finish(itemID: itemID, requestID: requestID)
+        else { return }
         checklistVisualSuggestionSchedulingFingerprintByItemID.removeValue(
             forKey: itemID
         )
         if shouldAutoSuggest {
             autoSuggestChecklistVisualsIfNeeded()
         }
-    }
-
-    private func isCurrentChecklistVisualSuggestionRequest(
-        itemID: UUID,
-        requestID: UUID
-    ) -> Bool {
-        checklistVisualSuggestionTasksByItemID[itemID]?.requestID == requestID
     }
 }
 
@@ -129,10 +113,7 @@ struct ChecklistVisualSuggestionRequest {
     let taskTitle: String
     let taskPath: String
     let instructions: String
-    let endpoint: String
-    let apiKey: String
-    let modelID: String
-    let reasoningEffort: LLMReasoningEffort
+    let configuration: LLMRequestConfiguration
 
     var fingerprint: String {
         [
@@ -140,10 +121,10 @@ struct ChecklistVisualSuggestionRequest {
             taskTitle,
             taskPath,
             instructions,
-            endpoint.trimmingCharacters(in: .whitespacesAndNewlines),
-            modelID.trimmingCharacters(in: .whitespacesAndNewlines),
-            reasoningEffort.rawValue,
-            String(apiKey.hashValue),
+            configuration.endpoint.trimmingCharacters(in: .whitespacesAndNewlines),
+            configuration.modelID.trimmingCharacters(in: .whitespacesAndNewlines),
+            configuration.reasoningEffort.rawValue,
+            String(configuration.apiKey.hashValue),
         ].joined(separator: "|")
     }
 

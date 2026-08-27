@@ -1,22 +1,17 @@
 import Foundation
 
 extension TimeTrackerStore {
-    private static let maximumInboxSuggestionConcurrency = 3
-
     func autoSuggestInboxItemsIfNeeded() {
-        guard canAutoSuggestInboxItems else { return }
+        guard canAutoSuggestLLMSuggestions else { return }
         let candidates = llmInboxSuggestionCandidates()
         guard !candidates.isEmpty else { return }
-        let availableSlots = max(
-            0,
-            Self.maximumInboxSuggestionConcurrency - inboxSuggestionInFlightIDs.count
-        )
-        guard availableSlots > 0 else { return }
+        guard inboxSuggestionLifecycle.availableSlots > 0 else { return }
 
         for item in openInboxItems
-            where shouldAutoSuggestInboxItem(item) && inboxSuggestionFailureByItemID[item.id] == nil
+            where shouldAutoSuggestInboxItem(item) &&
+            inboxSuggestionLifecycle.failureByItemID[item.id] == nil
         {
-            guard inboxSuggestionInFlightIDs.count < Self.maximumInboxSuggestionConcurrency else { break }
+            guard inboxSuggestionLifecycle.availableSlots > 0 else { break }
             startInboxSuggestion(item, candidates: candidates, showsErrors: false)
         }
     }
@@ -34,13 +29,10 @@ extension TimeTrackerStore {
             return
         }
 
-        guard !inboxSuggestionInFlightIDs.contains(item.id) else {
-            enqueueInboxSuggestion(itemID: item.id, showsErrors: showsErrors)
-            return
-        }
-
-        guard inboxSuggestionInFlightIDs.count < Self.maximumInboxSuggestionConcurrency else {
-            enqueueInboxSuggestion(itemID: item.id, showsErrors: showsErrors)
+        guard !inboxSuggestionLifecycle.inFlightIDs.contains(item.id),
+              inboxSuggestionLifecycle.availableSlots > 0
+        else {
+            inboxSuggestionLifecycle.enqueue(itemID: item.id, showsErrors: showsErrors)
             return
         }
 
@@ -56,114 +48,83 @@ extension TimeTrackerStore {
         candidates: LLMInboxSuggestionCandidates,
         showsErrors: Bool
     ) {
-        guard !inboxSuggestionInFlightIDs.contains(item.id),
-              inboxSuggestionInFlightIDs.count < Self.maximumInboxSuggestionConcurrency
+        guard !inboxSuggestionLifecycle.inFlightIDs.contains(item.id),
+              inboxSuggestionLifecycle.availableSlots > 0
         else {
-            enqueueInboxSuggestion(itemID: item.id, showsErrors: showsErrors)
+            inboxSuggestionLifecycle.enqueue(itemID: item.id, showsErrors: showsErrors)
             return
         }
-        let endpoint = preferences.llmEndpoint
-        let apiKey = preferences.llmAPIKey
-        let modelID = preferences.llmSelectedModel
-        let reasoningEffort = preferences.llmReasoningEffort
-        let instructions = preferences.llmInboxSuggestionInstructions
-        let itemID = item.id
-        let requestedTitle = item.title
-        let requestedIdentity = item.suggestionIdentity
-        let requestID = UUID()
+        let request = InboxSuggestionRequest(
+            itemID: item.id,
+            requestedTitle: item.title,
+            requestedIdentity: item.suggestionIdentity,
+            instructions: preferences.llmInboxSuggestionInstructions,
+            configuration: preferences.llmRequestConfiguration,
+            showsErrors: showsErrors
+        )
         let service = inboxSuggestionService
-        inboxSuggestionFailureByItemID[item.id] = nil
-        inboxSuggestionInFlightIDs.insert(item.id)
+        inboxSuggestionLifecycle.failureByItemID[item.id] = nil
 
-        let task = Task { @MainActor [weak self] in
-            do {
-                let result = try await service.suggest(
-                    inboxTitle: requestedTitle,
+        inboxSuggestionLifecycle.start(
+            itemID: item.id,
+            isAutomatic: !showsErrors,
+            perform: {
+                try await service.suggest(
+                    inboxTitle: request.requestedTitle,
                     taskCandidates: candidates.tasks,
                     categoryCandidates: candidates.categories,
-                    instructions: instructions,
-                    endpoint: endpoint,
-                    apiKey: apiKey,
-                    modelID: modelID,
-                    reasoningEffort: reasoningEffort
+                    instructions: request.instructions,
+                    configuration: request.configuration
                 )
-                try Task.checkCancellation()
+            },
+            onSuccess: { [weak self] result, requestID in
                 self?.completeInboxSuggestion(
                     result,
-                    itemID: itemID,
-                    requestID: requestID,
-                    requestedTitle: requestedTitle,
-                    requestedIdentity: requestedIdentity,
-                    endpoint: endpoint,
-                    apiKey: apiKey,
-                    modelID: modelID,
-                    reasoningEffort: reasoningEffort,
-                    instructions: instructions,
-                    showsErrors: showsErrors
+                    request: request,
+                    requestID: requestID
                 )
-            } catch {
+            },
+            onFailure: { [weak self] error, requestID, wasCancelled in
                 self?.completeInboxSuggestionFailure(
                     error,
-                    itemID: itemID,
+                    request: request,
                     requestID: requestID,
-                    requestedTitle: requestedTitle,
-                    requestedIdentity: requestedIdentity,
-                    endpoint: endpoint,
-                    apiKey: apiKey,
-                    modelID: modelID,
-                    reasoningEffort: reasoningEffort,
-                    instructions: instructions,
-                    showsErrors: showsErrors,
-                    wasCancelled: Task.isCancelled || error is CancellationError
+                    wasCancelled: wasCancelled
                 )
             }
-        }
-        inboxSuggestionTasksByItemID[itemID] = StoreLLMSuggestionTask(
-            requestID: requestID,
-            isAutomatic: !showsErrors,
-            task: task
         )
     }
 
     func startPendingInboxSuggestionsIfNeeded() {
-        while inboxSuggestionInFlightIDs.count < Self.maximumInboxSuggestionConcurrency,
-              inboxSuggestionPendingIDs.isEmpty == false
+        while inboxSuggestionLifecycle.availableSlots > 0,
+              let pending = inboxSuggestionLifecycle.dequeuePending()
         {
-            let itemID = inboxSuggestionPendingIDs.removeFirst()
-            let showsErrors = inboxSuggestionPendingShowsErrors.remove(itemID) != nil
-            guard let item = inboxItems.first(where: { $0.id == itemID }) else { continue }
-            requestInboxSuggestion(item, showsErrors: showsErrors)
+            guard let item = inboxItems.first(where: { $0.id == pending.itemID }) else { continue }
+            requestInboxSuggestion(item, showsErrors: pending.showsErrors)
         }
     }
 
     func cancelAllInboxSuggestionRequests() {
-        inboxSuggestionPendingIDs.removeAll(keepingCapacity: true)
-        inboxSuggestionPendingShowsErrors.removeAll(keepingCapacity: true)
-        cancelInboxSuggestionRequests { _ in true }
+        inboxSuggestionLifecycle.clearPending()
+        inboxSuggestionLifecycle.cancelInFlight { _, _ in true }
     }
 
     func cancelInboxSuggestionRequests(matching requestIDsByItemID: [UUID: UUID]) {
         guard !requestIDsByItemID.isEmpty else { return }
-        inboxSuggestionPendingIDs.removeAll(keepingCapacity: true)
-        inboxSuggestionPendingShowsErrors.removeAll(keepingCapacity: true)
-        cancelInboxSuggestionRequests { itemID, request in
-            requestIDsByItemID[itemID] == request.requestID
-        }
+        inboxSuggestionLifecycle.clearPending()
+        inboxSuggestionLifecycle.cancelInFlight(matching: requestIDsByItemID)
     }
 
     func cancelAutomaticInboxSuggestionRequests() {
-        inboxSuggestionPendingIDs.removeAll { itemID in
-            inboxSuggestionPendingShowsErrors.contains(itemID) == false
-        }
-        cancelInboxSuggestionRequests { $0.value.isAutomatic }
+        inboxSuggestionLifecycle.removeAutomaticPending()
+        inboxSuggestionLifecycle.cancelInFlight { _, request in request.isAutomatic }
         startPendingInboxSuggestionsIfNeeded()
     }
 
     func cancelInboxSuggestionRequests(for itemIDs: Set<UUID>) {
         guard !itemIDs.isEmpty else { return }
-        inboxSuggestionPendingIDs.removeAll { itemIDs.contains($0) }
-        inboxSuggestionPendingShowsErrors.subtract(itemIDs)
-        cancelInboxSuggestionRequests { itemIDs.contains($0.key) }
+        inboxSuggestionLifecycle.removePending(for: itemIDs)
+        inboxSuggestionLifecycle.cancelInFlight(for: itemIDs)
     }
 
     func cancelInvalidInboxSuggestionRequests() {
@@ -172,22 +133,12 @@ extension TimeTrackerStore {
                 .filter { $0.deletedAt == nil && $0.isCompleted == false }
                 .map(\.id)
         )
-        cancelInboxSuggestionRequests(for: inboxSuggestionInFlightIDs.subtracting(validItemIDs))
+        cancelInboxSuggestionRequests(
+            for: inboxSuggestionLifecycle.inFlightIDs.subtracting(validItemIDs)
+        )
     }
 
-    private func cancelInboxSuggestionRequests(
-        shouldCancel: (Dictionary<UUID, StoreLLMSuggestionTask>.Element) -> Bool
-    ) {
-        let requests = inboxSuggestionTasksByItemID.filter(shouldCancel)
-        for (itemID, request) in requests {
-            guard inboxSuggestionTasksByItemID[itemID]?.requestID == request.requestID else { continue }
-            inboxSuggestionTasksByItemID.removeValue(forKey: itemID)
-            inboxSuggestionInFlightIDs.remove(itemID)
-            request.task.cancel()
-        }
-    }
-
-    private var canAutoSuggestInboxItems: Bool {
+    var canAutoSuggestLLMSuggestions: Bool {
         preferences.llmAutomaticSuggestionsEnabled &&
             preferences.llmEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false &&
             preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false &&
@@ -198,28 +149,23 @@ extension TimeTrackerStore {
         inboxSuggestionStateService.shouldAutoSuggest(
             readModel: inboxItemReadModel(for: item),
             suggestion: inboxSuggestionByItemID[item.id],
-            isInFlight: inboxSuggestionInFlightIDs.contains(item.id)
+            isInFlight: inboxSuggestionLifecycle.inFlightIDs.contains(item.id)
         )
     }
 
     func retryInboxSuggestion(_ item: InboxItem) {
-        inboxSuggestionFailureByItemID[item.id] = nil
+        inboxSuggestionLifecycle.failureByItemID[item.id] = nil
         suggestInboxItem(item, showsErrors: true)
     }
 
-    func matchesCurrentLLMConfiguration(
-        endpoint: String,
-        apiKey: String,
-        modelID: String,
-        reasoningEffort: LLMReasoningEffort
-    ) -> Bool {
+    func matchesCurrentLLMConfiguration(_ configuration: LLMRequestConfiguration) -> Bool {
         preferences.llmEndpoint.trimmingCharacters(in: .whitespacesAndNewlines) ==
-            endpoint.trimmingCharacters(in: .whitespacesAndNewlines) &&
+            configuration.endpoint.trimmingCharacters(in: .whitespacesAndNewlines) &&
             preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines) ==
-            apiKey.trimmingCharacters(in: .whitespacesAndNewlines) &&
+            configuration.apiKey.trimmingCharacters(in: .whitespacesAndNewlines) &&
             preferences.llmSelectedModel.trimmingCharacters(in: .whitespacesAndNewlines) ==
-            modelID.trimmingCharacters(in: .whitespacesAndNewlines) &&
-            preferences.llmReasoningEffort == reasoningEffort
+            configuration.modelID.trimmingCharacters(in: .whitespacesAndNewlines) &&
+            preferences.llmReasoningEffort == configuration.reasoningEffort
     }
 
     func matchesCurrentLLMPrompt(

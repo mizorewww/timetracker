@@ -262,9 +262,12 @@ struct CoreLLMResponseTransportTests {
                 inboxTitle: "Polish spacing",
                 taskCandidates: [candidate],
                 categoryCandidates: [],
-                endpoint: "https://example.test/v1",
-                apiKey: "key",
-                modelID: "model"
+                configuration: LLMRequestConfiguration(
+                    endpoint: "https://example.test/v1",
+                    apiKey: "key",
+                    modelID: "model",
+                    reasoningEffort: .high
+                )
             )
         }
     }
@@ -278,9 +281,12 @@ struct CoreLLMResponseTransportTests {
                 checklistTitle: "Polish spacing",
                 taskTitle: "Design",
                 taskPath: "Work / Design",
-                endpoint: "https://example.test/v1",
-                apiKey: "key",
-                modelID: "model"
+                configuration: LLMRequestConfiguration(
+                    endpoint: "https://example.test/v1",
+                    apiKey: "key",
+                    modelID: "model",
+                    reasoningEffort: .high
+                )
             )
         }
     }

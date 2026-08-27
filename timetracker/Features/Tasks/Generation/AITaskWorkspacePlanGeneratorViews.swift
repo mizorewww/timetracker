@@ -357,12 +357,8 @@ struct AITaskPlanGeneratorSheet: View {
                         instructions:
                         store.preferences.llmTaskPlanInstructions,
                         workspace: baseline.snapshot,
-                        endpoint: store.preferences.llmEndpoint,
-                        apiKey: store.preferences.llmAPIKey,
-                        modelID:
-                        store.preferences.llmSelectedModel,
-                        reasoningEffort:
-                        store.preferences.llmReasoningEffort,
+                        configuration:
+                        store.preferences.llmRequestConfiguration,
                         onProgress: { progress in
                             guard generationRequestID == requestID,
                                   Task.isCancelled == false

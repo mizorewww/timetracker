@@ -100,10 +100,7 @@ struct LLMTaskWorkspacePlanningService {
         request: String,
         instructions: String,
         workspace: AITaskWorkspaceSnapshot,
-        endpoint: String,
-        apiKey: String,
-        modelID: String,
-        reasoningEffort: LLMReasoningEffort = .high,
+        configuration: LLMRequestConfiguration,
         makeID: @MainActor () -> UUID = UUID.init,
         onProgress: @escaping @MainActor (LLMGenerationProgress) -> Void = {
             _ in
@@ -112,9 +109,7 @@ struct LLMTaskWorkspacePlanningService {
         let prepared = try Self.prepareInputs(
             request: request,
             instructions: instructions,
-            endpoint: endpoint,
-            apiKey: apiKey,
-            modelID: modelID
+            configuration: configuration
         )
         let userPrompt = try Self.userPrompt(
             request: prepared.request,
@@ -150,7 +145,7 @@ struct LLMTaskWorkspacePlanningService {
                 apiKey: prepared.apiKey,
                 modelID: prepared.modelID,
                 messages: messages,
-                reasoningEffort: reasoningEffort
+                reasoningEffort: configuration.reasoningEffort
             )
             let data: Data
             let urlResponse: URLResponse
@@ -316,9 +311,7 @@ private extension LLMTaskWorkspacePlanningService {
     static func prepareInputs(
         request: String,
         instructions: String,
-        endpoint: String,
-        apiKey: String,
-        modelID: String
+        configuration: LLMRequestConfiguration
     ) throws -> PreparedInputs {
         let preparedRequest = request.trimmingCharacters(
             in: .whitespacesAndNewlines
@@ -341,41 +334,20 @@ private extension LLMTaskWorkspacePlanningService {
             throw LLMTaskPlanningError.invalidField
         }
 
-        let preparedEndpoint = endpoint.trimmingCharacters(
-            in: .whitespacesAndNewlines
+        let credentials = try configuration.validated(
+            requestTooLarge: LLMTaskPlanningError.requestTooLarge
         )
-        let preparedAPIKey = apiKey.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        )
-        guard preparedEndpoint.isEmpty == false else {
-            throw LLMModelServiceError.missingEndpoint
-        }
-        guard preparedAPIKey.isEmpty == false else {
-            throw LLMModelServiceError.missingAPIKey
-        }
-        guard preparedEndpoint.utf8.count <=
-            LLMSuggestionInputPolicy.maximumEndpointByteCount,
-            preparedAPIKey.utf8.count <=
-            LLMSuggestionInputPolicy.maximumAPIKeyByteCount
-        else {
-            throw LLMTaskPlanningError.requestTooLarge
-        }
-        guard let endpointURL = LLMInboxSuggestionService.chatCompletionsURL(
-            endpoint: preparedEndpoint
-        ) else {
-            throw LLMModelServiceError.invalidEndpoint
-        }
 
         let preparedModelID =
-            AppPreferenceValueSanitizer.llmModelID(modelID)
+            AppPreferenceValueSanitizer.llmModelID(configuration.modelID)
         guard preparedModelID.isEmpty == false else {
             throw LLMTaskPlanningError.missingModel
         }
         return PreparedInputs(
             request: preparedRequest,
             instructions: preparedInstructions,
-            endpointURL: endpointURL,
-            apiKey: preparedAPIKey,
+            endpointURL: credentials.chatCompletionsURL,
+            apiKey: credentials.apiKey,
             modelID: preparedModelID
         )
     }

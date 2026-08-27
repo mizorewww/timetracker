@@ -57,10 +57,12 @@ extension TimeTrackerStore {
         syncedPreferences = preferenceDomainStore.syncedPreferences
         preferences = preferenceDomainStore.preferences
         let configurationChanged = !matchesCurrentLLMConfiguration(
-            endpoint: previousEndpoint,
-            apiKey: previousAPIKey,
-            modelID: previousModelID,
-            reasoningEffort: previousReasoningEffort
+            LLMRequestConfiguration(
+                endpoint: previousEndpoint,
+                apiKey: previousAPIKey,
+                modelID: previousModelID,
+                reasoningEffort: previousReasoningEffort
+            )
         )
         if configurationChanged {
             cancelAllInboxSuggestionRequests()

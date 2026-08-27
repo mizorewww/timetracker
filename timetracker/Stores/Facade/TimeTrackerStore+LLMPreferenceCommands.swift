@@ -81,9 +81,9 @@ extension TimeTrackerStore {
                 for: kind
             )
             let changed = normalized != preferences.llmInstructions(for: kind)
-            let inboxRequestSnapshot = inboxSuggestionTasksByItemID.mapValues(\.requestID)
-            let checklistRequestSnapshot = checklistVisualSuggestionTasksByItemID
-                .mapValues(\.requestID)
+            let inboxRequestSnapshot = inboxSuggestionLifecycle.requestSnapshot()
+            let checklistRequestSnapshot = checklistVisualSuggestionLifecycle
+                .requestSnapshot()
             let preferenceKey: AppPreferenceKey = switch kind {
             case .inboxRouting:
                 .llmInboxSuggestionInstructions
@@ -140,10 +140,12 @@ extension TimeTrackerStore {
             return false
         }
         let configurationChanged = !matchesCurrentLLMConfiguration(
-            endpoint: normalizedEndpoint,
-            apiKey: normalizedAPIKey,
-            modelID: normalizedSelectedModel,
-            reasoningEffort: reasoningEffort
+            LLMRequestConfiguration(
+                endpoint: normalizedEndpoint,
+                apiKey: normalizedAPIKey,
+                modelID: normalizedSelectedModel,
+                reasoningEffort: reasoningEffort
+            )
         )
         let taskSnapshot = llmSuggestionTaskSnapshot()
 
@@ -191,10 +193,12 @@ extension TimeTrackerStore {
             }
             inboxSuggestionFailureByItemID.removeAll(keepingCapacity: true)
             if matchesCurrentLLMConfiguration(
-                endpoint: normalizedEndpoint,
-                apiKey: normalizedAPIKey,
-                modelID: normalizedSelectedModel,
-                reasoningEffort: reasoningEffort
+                LLMRequestConfiguration(
+                    endpoint: normalizedEndpoint,
+                    apiKey: normalizedAPIKey,
+                    modelID: normalizedSelectedModel,
+                    reasoningEffort: reasoningEffort
+                )
             ) {
                 autoSuggestInboxItemsIfNeeded()
                 autoSuggestChecklistVisualsIfNeeded()
@@ -205,8 +209,8 @@ extension TimeTrackerStore {
 
     private func llmSuggestionTaskSnapshot() -> LLMSuggestionTaskSnapshot {
         LLMSuggestionTaskSnapshot(
-            inboxRequestIDsByItemID: inboxSuggestionTasksByItemID.mapValues(\.requestID),
-            checklistRequestIDsByItemID: checklistVisualSuggestionTasksByItemID.mapValues(\.requestID)
+            inboxRequestIDsByItemID: inboxSuggestionLifecycle.requestSnapshot(),
+            checklistRequestIDsByItemID: checklistVisualSuggestionLifecycle.requestSnapshot()
         )
     }
 

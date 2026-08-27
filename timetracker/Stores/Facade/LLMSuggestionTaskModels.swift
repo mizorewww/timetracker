@@ -6,9 +6,14 @@ struct StoreLLMSuggestionTask {
     let task: Task<Void, Never>
 }
 
-struct StoreChecklistVisualSuggestionDebounceTask {
+struct StoreLLMSuggestionDebounceTask {
     let schedulingFingerprint: String
     let task: Task<Void, Never>
+}
+
+struct ChecklistVisualSuggestionFailure {
+    let fingerprint: String
+    let retryAfter: Date
 }
 
 struct LLMSuggestionTaskSnapshot {

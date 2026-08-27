@@ -19,16 +19,13 @@ struct LLMChecklistVisualSuggestionService {
         taskTitle: String,
         taskPath: String,
         instructions: String = LLMPromptKind.checklistVisual.defaultInstructions,
-        endpoint: String,
-        apiKey: String,
-        modelID: String,
-        reasoningEffort: LLMReasoningEffort = .high
+        configuration: LLMRequestConfiguration
     ) async throws -> LLMChecklistVisualSuggestionResult {
         let input = LLMSuggestionInputPolicy.prepareChecklistVisual(
             checklistTitle: checklistTitle,
             taskTitle: taskTitle,
             taskPath: taskPath,
-            modelID: modelID
+            modelID: configuration.modelID
         )
         guard !input.modelID.isEmpty else {
             throw LLMInboxSuggestionServiceError.missingModel
@@ -37,9 +34,7 @@ struct LLMChecklistVisualSuggestionService {
         let request = try suggestionRequest(
             input: input,
             instructions: instructions,
-            endpoint: endpoint,
-            apiKey: apiKey,
-            reasoningEffort: reasoningEffort
+            configuration: configuration
         )
         let (data, response) = try await transport(request)
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -65,16 +60,13 @@ struct LLMChecklistVisualSuggestionService {
         taskTitle: String,
         taskPath: String,
         instructions: String = LLMPromptKind.checklistVisual.defaultInstructions,
-        endpoint: String,
-        apiKey: String,
-        modelID: String,
-        reasoningEffort: LLMReasoningEffort = .high
+        configuration: LLMRequestConfiguration
     ) throws -> URLRequest {
         let input = LLMSuggestionInputPolicy.prepareChecklistVisual(
             checklistTitle: checklistTitle,
             taskTitle: taskTitle,
             taskPath: taskPath,
-            modelID: modelID
+            modelID: configuration.modelID
         )
         guard !input.modelID.isEmpty else {
             throw LLMInboxSuggestionServiceError.missingModel
@@ -82,38 +74,25 @@ struct LLMChecklistVisualSuggestionService {
         return try suggestionRequest(
             input: input,
             instructions: instructions,
-            endpoint: endpoint,
-            apiKey: apiKey,
-            reasoningEffort: reasoningEffort
+            configuration: configuration
         )
     }
 
     private func suggestionRequest(
         input: LLMChecklistVisualSuggestionPreparedInput,
         instructions: String,
-        endpoint: String,
-        apiKey: String,
-        reasoningEffort: LLMReasoningEffort
+        configuration: LLMRequestConfiguration
     ) throws -> URLRequest {
-        let trimmedEndpoint = endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedAPIKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedEndpoint.isEmpty else { throw LLMModelServiceError.missingEndpoint }
-        guard !trimmedAPIKey.isEmpty else { throw LLMModelServiceError.missingAPIKey }
-        guard trimmedEndpoint.utf8.count <= LLMSuggestionInputPolicy.maximumEndpointByteCount,
-              trimmedAPIKey.utf8.count <= LLMSuggestionInputPolicy.maximumAPIKeyByteCount
-        else {
-            throw LLMInboxSuggestionServiceError.requestTooLarge
-        }
-        guard let url = LLMInboxSuggestionService.chatCompletionsURL(endpoint: trimmedEndpoint) else {
-            throw LLMModelServiceError.invalidEndpoint
-        }
+        let credentials = try configuration.validated(
+            requestTooLarge: LLMInboxSuggestionServiceError.requestTooLarge
+        )
         let preparedInstructions = try AppPreferenceValueSanitizer
             .llmChecklistVisualInstructions(instructions)
 
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: credentials.chatCompletionsURL)
         request.httpMethod = "POST"
         request.timeoutInterval = 45
-        request.setValue("Bearer \(trimmedAPIKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(credentials.apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         let body = try JSONEncoder().encode(
@@ -142,7 +121,7 @@ struct LLMChecklistVisualSuggestionService {
                 ),
                 reasoningEffort: LLMChatRequestPolicy.reasoningEffort(
                     modelID: input.modelID,
-                    selected: reasoningEffort
+                    selected: configuration.reasoningEffort
                 )
             )
         )

@@ -122,15 +122,6 @@ final class TimeTrackerStore {
                 observer.stopObservingReplicaChanges()
             }
         }
-        for request in inboxSuggestionTasksByItemID.values {
-            request.task.cancel()
-        }
-        for request in checklistVisualSuggestionTasksByItemID.values {
-            request.task.cancel()
-        }
-        for request in checklistVisualSuggestionDebounceTasksByItemID.values {
-            request.task.cancel()
-        }
     }
 
     var tasks: [TaskNode] = [] {
@@ -205,18 +196,22 @@ final class TimeTrackerStore {
         }
     }
 
-    var inboxSuggestionInFlightIDs: Set<UUID> = []
-    var inboxSuggestionFailureByItemID: [UUID: String] = [:]
-    @ObservationIgnored var inboxSuggestionPendingIDs: [UUID] = []
-    @ObservationIgnored var inboxSuggestionPendingShowsErrors: Set<UUID> = []
-    @ObservationIgnored var inboxSuggestionTasksByItemID: [UUID: StoreLLMSuggestionTask] = [:]
-    var checklistVisualSuggestionInFlightIDs: Set<UUID> = []
-    @ObservationIgnored var checklistVisualSuggestionFailureFingerprintByItemID: [UUID: String] = [:]
-    @ObservationIgnored var checklistVisualSuggestionRetryAfterByItemID: [UUID: Date] = [:]
-    @ObservationIgnored var checklistVisualSuggestionTasksByItemID: [UUID: StoreLLMSuggestionTask] = [:]
+    @ObservationIgnored let inboxSuggestionLifecycle =
+        LLMSuggestionRequestLifecycle<UUID, String>(maximumConcurrency: 3)
+    @ObservationIgnored let checklistVisualSuggestionLifecycle =
+        LLMSuggestionRequestLifecycle<UUID, ChecklistVisualSuggestionFailure>(maximumConcurrency: 3)
     @ObservationIgnored var checklistVisualSuggestionSchedulingFingerprintByItemID: [UUID: String] = [:]
-    @ObservationIgnored var checklistVisualSuggestionDebounceTasksByItemID:
-        [UUID: StoreChecklistVisualSuggestionDebounceTask] = [:]
+    /// Forwarding accessors keep the observable in-flight/failure reads of
+    /// inbox commands, read models, and views working through the lifecycle.
+    var inboxSuggestionInFlightIDs: Set<UUID> {
+        inboxSuggestionLifecycle.inFlightIDs
+    }
+
+    var inboxSuggestionFailureByItemID: [UUID: String] {
+        get { inboxSuggestionLifecycle.failureByItemID }
+        set { inboxSuggestionLifecycle.failureByItemID = newValue }
+    }
+
     var preferences = AppPreferences.defaults
     var isAppleHealthTimelineEnabled: Bool
     var appleHealthTimelineItems: [AppleHealthTimelineItem] = []

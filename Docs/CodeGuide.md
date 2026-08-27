@@ -42,6 +42,8 @@
 
 目录级代码地图（每个路径的责任、何时打开、不应放入什么）维护在 [ProjectMap](ProjectMap.md)，此处不再重复。
 
+共享样式与控件只在至少两个 feature 使用（或明确即将使用）时才进入 `SharedUI`（second-caller 规则）；只有单一调用方的一次性布局、行内容或卡片留在所属 feature 内。跨表面的任务行语法、计时动作控件和 Settings 共享行的既有所有者见 [ProjectMap](ProjectMap.md) 的代码地图。
+
 `Features/Inspector`、`PhoneChromeViews`、Home 通用年月日进度卡、Pomodoro 自绘高刷新转场、`SettingsSectionsViews.swift` 和 `TimeTrackerServices.swift` 已不存在；不要继续把它们当作当前模块或扩展点。
 
 本轮已完成以下关键职责拆分：
@@ -67,7 +69,7 @@
 - Widget：entry/provider/config、active-timer family layouts、supplementary/error states 与 deep-link/localization/color support 分文件。
 - Watch：三页 dashboard orchestration、Active Timers page、共享 Quick Start/All Tasks 列表、失败问题页、timer/task rows、status/error/empty states、command presentation index 与 color support 分文件；`WatchAppStore.swift` 保留 observable state/安全恢复，`WatchAppStore+Commands.swift` 负责 queue/timeout/persistence，`WatchAppStore+Connectivity.swift` 负责 transport/payload/freshness，`WatchAppStore+SessionDelegate.swift` 独立承接 WCSession callbacks。
 - Ledger/Rollup index：ordered flat segment array mutation 独立到 `LedgerStore+FlatSegmentIndex.swift`；增量 rollup 的 scoped mutation/replacement 独立到 `RollupIncrementalIndex+Mutation.swift`。
-- Today：`HomeViews.swift` 只组合宽屏优先级，`PhoneHomeSections.swift` 组合紧凑屏顺序，各 section 文件拥有具体内容；`TodayHomeContent` 在一次组合中集中生成 active/timeline、Quick Start、forecast 和 countdown 读模型，避免各 section 重复查询与分组。Quick Start 的任务身份按钮始终路由详情；Today、Quick Start 与计时选择器的 Start/Switch/Stop 全部复用 `TaskTimerActionButton`，以 fresh `TimerPickerSelectionCommand` 显示 Start/Switch，并仅对当前 `TimeSegment` 显示精确 Stop。调用方不能复原状态相关的整行 toggle，也不能在 Stop 旁再堆一个 Running 标记。
+- Today：`HomeViews.swift`（`DesktopMainView`）组合宽屏优先级，`CompactHomeView.swift` 与 `CompactHomeSections.swift` 组合紧凑屏顺序，各 section 文件拥有具体内容；`TodayHomeContent` 在一次组合中集中生成 active/timeline、Quick Start、forecast 和 countdown 读模型，避免各 section 重复查询与分组。Quick Start 的任务身份按钮始终路由详情；Today、Quick Start 与计时选择器的 Start/Switch/Stop 全部复用 `TaskTimerActionButton`，以 fresh `TimerPickerSelectionCommand` 显示 Start/Switch，并仅对当前 `TimeSegment` 显示精确 Stop。调用方不能复原状态相关的整行 toggle，也不能在 Stop 旁再堆一个 Running 标记。
 - App presentation：`AppPresentationRouter` 由每个可呈现 UI 的 scene 自己持有，`AppPresentationHost` 是该 scene 唯一的 App 级 sheet owner；feature 只请求 typed content，不在共享 facade 中保存 sheet draft 或 `isPresented`。任务选择器转入新建任务使用 matching presentation ID 的原子替换，不经过异步 dismiss/yield 空窗。
 - App feedback：每个 scene 自己持有 `AppSceneFeedbackRouter` 与唯一 `AppSceneFeedbackHost`。队列按 FIFO 呈现，dismiss 必须匹配当前 feedback UUID；不得把 macOS Settings 的用户操作错误写回共享 Store 再由主窗口弹出。
 
@@ -496,20 +498,14 @@ Today UI 测试以 `home.view` 判断根页面就绪，再滚动查找具体操�
 - 注释解释原因、不变量和失败模式，不复述语法。
 - 当前行为写入 UserGuide、CodeGuide 或 Architecture。
 - 决策与权衡写入 AgentDecisions。
-- 一次性审计与验证事实写入提交该工作的 commit/PR；实现记忆只服务进行中的工作，完成后移入 `Docs/ImplementationContexts/Archive/`。
+- 一次性审计与验证事实写入提交该工作的 commit/PR；跨多会话任务的实现记忆只服务进行中的工作，完成后随收口清理，不再维护 Archive 目录。
 - 未来工作只写入计划文档，并明确状态。
 
 当前生产 Swift 文件尚无系统性的三斜线 API 文档，这是需要持续偿还的文档债务。
 
 ## 12. 签名与系统能力
 
-工程保持 `CODE_SIGN_STYLE = Automatic`，开发团队为 `LT98S43NKA`。主应用、Widget、Watch 与 Live Activity 需要真实 entitlement/profile 才能验证 CloudKit、App Group、WatchConnectivity 和 ActivityKit。
-
-- 不要通过 `CODE_SIGNING_ALLOWED=NO`、`CODE_SIGNING_REQUIRED=NO` 或清空 `DEVELOPMENT_TEAM` 把签名错误隐藏成构建成功。
-- Simulator 日志中的 `Sign to Run Locally` 是正常本机模拟器步骤；generic/device/Release 构建仍必须验证 Apple Development identity、team、profile 和 entitlements。
-- APS 的规范签名键是 `aps-environment`。不要写成 `com.apple.developer.aps-environment`：Automatic Signing 可能仍成功构建，却把未知键从生成 `.xcent` 与最终签名中静默移除。能力验收必须对比源 entitlement、embedded profile、`.xcent` 和 `codesign -d --entitlements` 的实际结果。
-- CLI 优先使用仓库 scheme 和自动签名；只有 CLI 无法表达的 Xcode 账户/profile 操作才需要 Xcode UI。
-- 模拟器可以验证布局、导航和大部分领域交互；不能证明 App Group、CloudKit 账户、Watch 往返、Live Activity 系统限制或发行 profile 在真机有效。
+签名与系统能力验证规则（`CODE_SIGN_STYLE = Automatic`、团队 `LT98S43NKA`、禁止用 `CODE_SIGNING_ALLOWED=NO` 等手段绕过、APS 规范键 `aps-environment`、CLI 优先、模拟器证据边界）的权威出处是 [Testing](Testing.md) 的签名段落；本节不再重复。
 
 ### FlowDown 参考与依赖边界
 

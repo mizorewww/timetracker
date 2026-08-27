@@ -20,7 +20,7 @@
 - Xcode 需匹配声明的 SDK:iOS/iPadOS 26.2、macOS 15.7、watchOS 26.2。
 - 自动签名,team `LT98S43NKA`。**不要**用 `CODE_SIGNING_ALLOWED=NO` 或空 team 让构建"通过"。
 - 格式化工具:`brew install swiftformat`(用于 `make format`)。
-- clone 后先安装版本钩子(每次 commit 自动递增版本号,并校验本地化 parity):
+- clone 后先安装 pre-commit 钩子(校验三语种本地化 parity;版本号发布前手动 `make bump-version`,见 [Versioning](Docs/Versioning.md)):
 
 ```sh
 make install-hooks

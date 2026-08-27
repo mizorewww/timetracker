@@ -71,10 +71,14 @@ make localization-check
 make format-check
 make build-ios
 make build-macos
-make test-versioning
 ```
 
-Keep `CODE_SIGN_STYLE=Automatic` and team `LT98S43NKA`. Never disable signing to make a gate pass.
+Keep `CODE_SIGN_STYLE=Automatic` and team `LT98S43NKA`. Never disable signing to make a gate pass:
+
+- Do not hide signing errors behind `CODE_SIGNING_ALLOWED=NO`, `CODE_SIGNING_REQUIRED=NO`, or an empty `DEVELOPMENT_TEAM`. Simulator logs showing `Sign to Run Locally` are the normal local-simulator step; generic/device/Release builds must still verify the Apple Development identity, team, profile, and entitlements.
+- The canonical APS key is `aps-environment`, not `com.apple.developer.aps-environment`: Automatic Signing can still build while silently stripping the unknown key from the generated `.xcent` and the final signature. Capability acceptance must compare the source entitlement, embedded profile, `.xcent`, and `codesign -d --entitlements` output.
+- Prefer the CLI with the repository scheme and automatic signing; use Xcode UI only for account/profile operations the CLI cannot express.
+- Simulators verify layout, navigation, and most domain interaction; they cannot prove App Group, CloudKit account, Watch round-trip, Live Activity system limits, or release profiles on real hardware.
 
 Unit tests construct the facade with `makeTestStore(...)`. The test host, defaults, sync state and widget snapshot storage must remain isolated from the installed app. `TestHostIsolationTests` is the safety gate for that boundary.
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Thin wrapper: 手动递增 marketing/build 版本(正常提交无需运行)。
+# Thin wrapper: 发布前手动递增 marketing/build 版本(见 Docs/Versioning.md)。
 # 实现见 tools/timetracker_tools/bump_marketing_version.py(经 uv run 调用)。
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

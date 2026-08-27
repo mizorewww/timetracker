@@ -9,11 +9,9 @@
 | 目标 | 作用 |
 | --- | --- |
 | `make venv` | 用 `uv sync` 创建/同步 `.venv`(也可由 wrapper 自举,非必须) |
-| `make install-hooks` | 安装 pre-commit 版本钩子(clone 后执行一次) |
+| `make install-hooks` | 安装 pre-commit 钩子(localization parity 闸门,clone 后执行一次) |
 | `make check-hooks` | 只读校验钩子是否就位 |
-| `make stage-version` | pre-commit 内部调用:把下一版本写入 index 与工作树 |
-| `make bump-version` | 手动递增 marketing/build 版本(正常提交无需运行) |
-| `make test-versioning` | 隔离临时仓库中跑版本钩子集成测试 |
+| `make bump-version` | 发布前手动递增 marketing/build 版本(规则见 [Versioning](Versioning.md)) |
 | `make build-ios` | 构建 iOS app(`generic/platform=iOS`) |
 | `make build-macos` | 构建 macOS app(`generic/platform=macOS`) |
 | `make build-install-all` | 构建 iOS+Watch 与 macOS(默认 Release),安装到设备并复制到 /Applications |
@@ -50,11 +48,9 @@ tools/timetracker_tools/    # Python 实现
   cli_utils.py              # 共享:subprocess 包装、git 辅助、pbxproj 版本读写
   build_install_all.py
   export_signed_artifacts.py
-  stage_commit_version.py
   bump_marketing_version.py
   install_git_hooks.py
   write_build_info_plist.py
-  test_versioning_hooks.py
   localization_check.py        # .strings 三语种 key parity 静态校验
   format.py                    # 定位 swiftformat 二进制并传播退出码(逻辑在外部 swiftformat)
 scripts/*.sh                # 薄 wrapper:补 PATH + exec uv run python -m timetracker_tools.<name>
@@ -87,7 +83,7 @@ PATH 兜底是为了应对 **Xcode 构建阶段**环境 PATH 受限的情况(见
 两处外部调用方写死了 `scripts/` 路径,刻意保留不改,经由 wrapper 间接调 Python:
 
 - **Xcode 构建阶段**:`timetracker.xcodeproj/project.pbxproj` 的 "Write Build Info" 阶段 `shellScript = "$SRCROOT/scripts/write_build_info_plist.sh"`。该 wrapper 再 `uv run` 调 `write_build_info_plist.py`,后者从 Xcode 注入的 `TARGET_BUILD_DIR` / `UNLOCALIZED_RESOURCES_FOLDER_PATH` 定位资源目录并写入 `AppBuildInfo.plist`。
-- **pre-commit hook**:`.githooks/pre-commit` 先调 `scripts/localization_check.sh --quiet`(三语种 `.strings` key parity 闸门,失败即中止提交),再调 `scripts/stage_commit_version.sh`,后者调 `stage_commit_version.py`,改写 Git index 中的 pbxproj blob 并同步工作树版本字段(不带入其它未暂存改动)。
+- **pre-commit hook**:`.githooks/pre-commit` 只调 `scripts/localization_check.sh --quiet`(三语种 `.strings` key parity 闸门,失败即中止提交)。版本号不再随提交自动递增;发布前手动 bump,规则见 [Versioning](Versioning.md)。
 
 ### 排错:uv 不在 Xcode 构建阶段的 PATH
 
@@ -105,7 +101,7 @@ Xcode 构建环境的 PATH 通常不含 `/opt/homebrew/bin`,wrapper 已自动补
 uv 为 Rust 实现,每次 `uv run` 的 sync 检查很快(约数十毫秒)。若仍嫌每次 commit 有开销,可把 `.githooks/pre-commit` 改为直调 venv python:
 
 ```sh
-"$REPO_ROOT/.venv/bin/python" -m timetracker_tools.stage_commit_version
+"$REPO_ROOT/.venv/bin/python" -m timetracker_tools.localization_check --quiet
 ```
 
 代价是要求 `.venv` 已存在(不再自举)。默认保持 `uv run` 以保留自举能力。
@@ -119,13 +115,13 @@ uv 为 Rust 实现,每次 `uv run` 的 sync 检查很快(约数十毫秒)。若�
 
 ## 六、验证
 
-迁移后的回归门禁:
+工具链的回归门禁:
 
 ```sh
 make venv              # 建环境(可选,wrapper 会自举)
 make help              # 列出目标
 make check-hooks       # 校验钩子
-make test-versioning   # 版本钩子集成测试:连续/空提交/amend/重试幂等/12 组一致/未暂存不泄漏/异常拒绝
+make localization-check
 ```
 
-`make test-versioning` 在隔离 HOME 的临时 git 仓库中安装真实 pre-commit 钩子(直调本 venv 的 Python 模块),覆盖原 bash 测试的全部断言,是版本逻辑的端到端门禁。Xcode 构建阶段与真实 commit 的端到端验证见 [Testing](Testing.md)。
+Xcode 构建阶段与真实 commit 的端到端验证见 [Testing](Testing.md)。

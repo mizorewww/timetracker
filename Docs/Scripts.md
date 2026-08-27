@@ -4,7 +4,7 @@
 
 ## `make bump-version`(`bump_marketing_version.sh`)
 
-递增 `timetracker.xcodeproj/project.pbxproj` 中全部 target 的版本信息：`MARKETING_VERSION` 的 patch 加一，`CURRENT_PROJECT_VERSION` 加一。例如 `1.1.33 (88)` 变为 `1.1.34 (89)`。
+递增 `timetracker.xcodeproj/project.pbxproj` 中全部 target 的版本信息：`MARKETING_VERSION` 的 patch 加一，`CURRENT_PROJECT_VERSION` 加一。例如 `1.1.33 (88)` 变为 `1.1.34 (89)`。版本规则与发布节奏见 [Versioning](Versioning.md)。
 
 ```sh
 make bump-version
@@ -15,8 +15,6 @@ make bump-version
 ```sh
 PROJECT_FILE=/tmp/timetracker.pbxproj make bump-version
 ```
-
-该脚本保留给显式手动递增或临时副本验证。正常提交由 `.githooks/pre-commit` 调用下文的 `make stage-version`，以免暂存无关工程修改。
 
 ## `make install-hooks`(`install_git_hooks.sh`)
 
@@ -30,18 +28,6 @@ make install-hooks
 
 ```sh
 make check-hooks
-```
-
-## `make stage-version`(`stage_commit_version.sh`)
-
-由 pre-commit hook 调用。下一版本始终按 `HEAD + 1 patch/build` 计算，因此同一次失败提交反复重试不会继续累加。脚本直接更新 Git index 中的 project blob，只同步工作树的版本字段，不会把其他未暂存的 Xcode 工程改动带入提交。
-
-## `make test-versioning`(`test_versioning_hooks.sh`)
-
-在隔离 HOME 的临时 Git 仓库中安装真实 hook，验证连续提交与 `--allow-empty`/`--amend` 递增、commit-msg 失败重试幂等、12 组版本一致、未暂存 project 修改不会泄漏进 commit，以及异常版本状态会在修改前被拒绝。测试结束自动删除临时仓库：
-
-```sh
-make test-versioning
 ```
 
 ## `make build-info`(`write_build_info_plist.sh`)

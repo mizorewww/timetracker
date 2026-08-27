@@ -55,36 +55,6 @@ def git_text(repo: str | Path, *args: str, default: str | None = None) -> str:
     return result.stdout.strip()
 
 
-def git_bytes(repo: str | Path, *args: str, check: bool = True) -> bytes:
-    """运行 git 并返回原始 stdout 字节(用于 pbxproj 等二进制安全读取)。"""
-    result = subprocess.run(
-        ["git", "-C", str(repo), *args],
-        check=check,
-        capture_output=True,
-    )
-    return result.stdout
-
-
-def unique_marketing_version(project_bytes: bytes, *, source_label: str = "project file") -> str:
-    """校验 pbxproj 字节中 MARKETING_VERSION 唯一,返回该值。"""
-    values = {m.group(1).decode() for m in MARKETING_VALUE_RE.finditer(project_bytes)}
-    if len(values) != 1:
-        raise SystemExit(
-            f"Expected one consistent MARKETING_VERSION in {source_label}; found {len(values)}."
-        )
-    return next(iter(values))
-
-
-def unique_build_version(project_bytes: bytes, *, source_label: str = "project file") -> str:
-    """校验 pbxproj 字节中 CURRENT_PROJECT_VERSION 唯一,返回该值。"""
-    values = {m.group(1).decode() for m in BUILD_VALUE_RE.finditer(project_bytes)}
-    if len(values) != 1:
-        raise SystemExit(
-            f"Expected one consistent CURRENT_PROJECT_VERSION in {source_label}; found {len(values)}."
-        )
-    return next(iter(values))
-
-
 def read_pbxproj(path: str | Path) -> bytes:
     return Path(path).read_bytes()
 
@@ -94,13 +64,6 @@ def set_project_version_bytes(project_bytes: bytes, marketing_version: str, buil
     new = MARKETING_FIELD_RE.sub(f"MARKETING_VERSION = {marketing_version};".encode(), project_bytes)
     new = BUILD_FIELD_RE.sub(f"CURRENT_PROJECT_VERSION = {build_version};".encode(), new)
     return new
-
-
-def write_project_version(path: str | Path, marketing_version: str, build_version: str) -> None:
-    """读 pbxproj、替换版本字段、写回(原地)。"""
-    data = read_pbxproj(path)
-    new = set_project_version_bytes(data, marketing_version, build_version)
-    Path(path).write_bytes(new)
 
 
 def split_marketing(version: str) -> tuple[str, str, str]:
@@ -113,7 +76,7 @@ def split_marketing(version: str) -> tuple[str, str, str]:
 
 
 def next_version(marketing: str, build: str) -> tuple[str, str]:
-    """按 HEAD+1 patch/build 计算下一版本。"""
+    """计算下一版本:marketing patch +1,build +1(发布前手动 bump 用)。"""
     major, minor, patch = split_marketing(marketing)
     next_marketing = f"{major}.{minor}.{int(patch) + 1}"
     next_build = str(int(build) + 1)

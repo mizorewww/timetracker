@@ -1,11 +1,11 @@
 # TimeTracker Agent 决策文档
 
 状态：有效决策记录
-最近更新：2026-08-11
+最近更新：2026-08-27
 
 本文记录自动化 Agent 和维护者在实现、审核、重构时必须保持的工程边界。它不是待办清单，也不替代代码审核。一次性发现与验证证据写入对应 commit/PR；未来计划写入明确标记的计划文档。
 
-已替代的决策与历史测试说明保存在 [AgentDecisionsArchive](AgentDecisionsArchive.md)，不再充当当前指令。为控制增长，本文件只新增跨领域架构、数据安全、兼容性或系统集成决策；单一 UI 或 Analytics 展示细节写入对应当前功能文档。
+收录门槛：本文件只收录跨领域架构、数据安全、兼容性或系统集成决策。单一功能内的 UI/展示细节（布局、文案、卡片结构、对齐、样式、字号）不收录为 AD——它们写入对应功能文档，或直接由代码与行为测试表达。历史上误收的此类条目已于 2026-08-27 移出本文件，原文见 git 历史。已替代的决策与历史测试说明保存在 [AgentDecisionsArchive](AgentDecisionsArchive.md)，不再充当当前指令。
 
 ## 1. 使用规则
 
@@ -131,7 +131,7 @@
 
 - README、UserGuide、CodeGuide、Architecture 和 ProjectMap 描述当前事实与所有权。
 - NextDevelopmentPlan 等明确标为 future 的文档描述未来，并写清前置条件和验收门禁。
-- 进行中的较大工作可使用 implementation memory 记录范围、测试契约和临时证据；完成后移入 `Docs/ImplementationContexts/Archive/`。一次性结果只留在对应 commit/PR，不新增长期生效的 dated Audit。
+- 跨多会话的较大工作可使用 implementation memory 记录范围、测试契约和临时证据，保存在 `Docs/ImplementationContexts/`；一次性结果只留在对应 commit/PR，不新增长期生效的 dated Audit，也不再维护 Archive 目录（2026-08-27 起，历史记录由 git 历史承载）。
 - 已归档或被替代的计划必须在顶部标明 superseded/historical，旧命令、绝对路径、未勾选项和临时 hard rule 均不得继续充当 Agent 指令或当前 backlog。CodeRefactorPlan 等标为 current status/guardrails 的文档则按当前工作树维护，不能因为名称含 Plan 就自动视为历史。
 
 后果：代码变更若影响用户行为、隐私、target 或迁移，必须在同一提交更新当前文档。
@@ -518,44 +518,6 @@
 
 验证：同 ID 与不同 ID sibling 都覆盖“newer 内容字段 + exact-revision dismissal”，另测跨 revision 不传播；覆盖相同标题独立 context、revision 轮换、suggestion index、discard/delete/reorder sibling 清理、A→B→A 的 stale success/failure、canonical apply 的墓碑/旧 sibling/旧刷新 ID/标题不匹配、V9 磁盘迁移、缺字段旧 JSON 恢复、opaque 字段导出和 tombstone sibling restore。所有签名构建保留团队 `LT98S43NKA`。
 
-## AD-039：Today 采用单一计时主动作与有界自适应层级
-
-状态：Accepted
-
-背景：旧 Today 把摘要、通用新建任务、计时入口、预测和时间线放在相近视觉层级，手机上首屏目的不明确，宽屏又把卡片无限拉长。各 section 独立查询和分组同一批数据，还会让一次 view composition 重复扫描账本。辅助功能字号下保留横向密集行则会截断任务名、趋势和操作。
-
-决策：Today 的信息优先级固定为 Now、Overview、Quick Start、Timeline，再到 Forecast 和 Countdown。无活动计时时只有一个突出的 Start Timer；已有活动计时时根据 `allowParallelTimers` 显示次级 Start Another Timer 或 Switch Timer。通用新建任务不与 Today 计时操作并列，只保留在任务域和任务选择器。iPhone 使用单栏顺序；iPad/macOS 的 Now/Overview 双栏用原生 ideal-height 行同时对齐标题、首张卡片顶部和卡片底部，较高内容决定行高，较短 Overview 在同一卡片边界内居中指标，不用固定高度或 magic spacing。iPad/macOS 先从详情 viewport 扣除两侧 page padding，再以 1180 pt 为内容宽度上限。实际内容宽度不足 1000 pt 时，所有后续 section 保持单栏阅读顺序；达到 1000 pt 时，Weekly Time/Activity Heatmaps 可视化组以 678...748 pt 主列和 Quick Start 的 300...410 pt 尾列组成第一行，Timeline 在下一行占弹性主列，存在 Forecast/Countdown 时后者占固定 360 pt 尾列。Weekly Time 复用每天 Gross/Wall 读模型，以固定 Gross→Wall 顺序的非堆叠 grouped bars 比较二者。根组合每次只构造一个 `TodayHomeContent`，向各 section 传入稳定、去重的预计算数组。摘要先规范化一次候选 segment，再用单个循环同时聚合今日与前一日；Wall 只在各自区间列表上做合并。每秒 `TimelineView` 只包住活动时长，结束记录保持静态，摘要每 30 秒刷新。辅助功能字号使用纵向指标、可换行任务操作和更高的任务选择器 presentation。
-
-后果：可以打破旧 Today 顺序、按钮名称和宽屏排版，但所有平台共享同一计时命令、任务可用性、读模型事实与可访问性标识。新增 Today 卡片必须说明它属于主工作流还是辅助信息，不得重新引入第二个竞争主动作、无界宽度或 section 内重复全量查询。第三方列表/布局库不能仅为这个原生层级引入；FlowDown 继续只作模式参考。
-
-验收要求：Home read-model/布局/UI contract 覆盖稳定去重、单次 segment 遍历、动作语义、扣除 page padding 后的 1000 pt 双栏边界、678/748 pt 可视化列、300/410 pt Quick Start 列、1180/360 pt 上限和辅助字号重排；iPhone Large 与 Accessibility、iPad 横竖屏和 macOS 窗口截图检查真实层级。UI 测试先等待 `home.view`，再滚动并操作 `home.startTimer`，只有任务选择器真实打开才算通过；模拟器结束后恢复字号/方向并关闭设备。contract 与 regression 的提交本身不代表运行通过，必须另外保留成功的 signed test/result bundle。构建保留 Automatic signing、团队 `LT98S43NKA` 和付费开发者能力。
-
-## AD-040：Focus 展示采用显式会话层级与有限倒计时刷新
-
-状态：Accepted
-
-背景：旧 Focus 设置页没有“下一次会话”层级或最近记录上下文，Plan/Task 被包装成卡片式自绘选择，长任务只显示标题，计划摘要还遗漏长休息。活动页把整个滚动页面放进每秒 `TimelineView`，导致任务查询、操作和布局一起失效；break 过期后仍无限轮询，而且命令虽允许明确提前继续，界面却强制等待归零。
-
-决策：Focus 设置以一个“下一次专注”主面板和一个最近记录面板组成；空间足够时双栏，窄屏单栏。页面必须从外层有限 viewport 只选择一棵布局树，辅助字号强制单栏；不得让嵌套 `ViewThatFits` 同时测量包含 Menu、Picker 与账本的完整双栏/单栏子树。Plan/Task 保持两个带标签的原生 `Menu`，Task 展示派生标题路径，只保留一个紧跟选择器的 prominent“开始专注”，方案摘要随后公开 focus、short break、long break 与 rounds。iOS 滚动内容必须为浮动标签栏保留末端余量；section accessibility identifier 只附着在标题或明确容器元素，不能从整张卡片覆盖 Menu/Button 的稳定标识。iPhone tab、iPad/macOS sidebar 与页面标题统一使用独立的 `nav.focus`；`nav.pomodoro` 保留给账本来源、设置和分析领域。活动页仅让 `PomodoroActiveCountdownView` 进入 timeline；`PomodoroCountdownSchedule` 从当前 entry 有限推进到 deadline，低频模式按 60 秒推进，deadline 不存在或已过时不继续轮询。break 未归零时显式操作为“跳过休息”，归零后改为“开始下一轮专注”，两者调用同一带 run ID/expected state 的 resume 命令，后台仍不得自动创建 focus segment；Task 不可工作时 UI 禁用恢复入口。停止确认保存发起时的 run ID，active run 被替换或结束时撤销旧确认，禁止旧 UI 状态停止另一条 run。Timer face 合并阶段、完整任务路径和本地化剩余时长的 VoiceOver 语义，重复的视觉进度条从辅助功能树隐藏。
-
-后果：不得恢复标题/计时器隐藏点击、卡片内嵌卡片选择器、只显示任务短标题、遗漏长休息的摘要、根页面 periodic timeline 或 break 归零后的无限刷新。UI 可以改变布局与提前继续的操作时机，但 deadline、reconcile、run/session/segment 写入及停止确认仍由既有领域命令负责。
-
-验证：行为测试覆盖内建 plan identity、有限 schedule 精确包含 fractional deadline、nil/past deadline 单 entry、break action 文案切换和可朗读 duration；source contracts 固化自适应布局、单一主操作、局部 timeline、完整路径、Dynamic Type 与三语键。Focus UI test 必须按当前系统 TabBar 的真实 frame 把主操作完整滚到其上方，不能以部分可点的 `isHittable` 代替无遮挡。最终发布前仍需保留付费开发者签名，完成受影响平台的正常字号、长同名任务、break 边界和宽窄窗口验收；只有文本重排/语义发生变化时才增加最大辅助字号或 VoiceOver 专项。每次使用后释放模拟器资源。
-
-## AD-041：Analytics 首页先复盘，再渐进披露图表与指标
-
-状态：Accepted
-
-替代关系：本决策的 `Metrics` 用户命名、首页行呈现和对应验证条款由 AD-126 部分替代；Review-first、系统 List、typed navigation 和完整覆盖原则继续有效。
-
-背景：旧首页在摘要后继续以一个“分类”列表平铺概览、时间、任务、番茄钟、决策和质量。首两行重复摘要的 gross/wall 值，真正帮助用户判断下一步的决策与质量信号被埋在下方。
-
-决策：保留系统 `List`、typed `NavigationLink(value:)` 和六个既有详情目的地，但首页分成两个显式顺序：`reviewCategories` 先展示 Decisions/Quality，`exploreCategories` 再展示 Time/Tasks/Pomodoro/Metrics。原 Overview 用户文案改为 Metrics，避免与首页摘要同名。两组必须不重不漏地覆盖 `AnalyticsCategory.allCases`，不引入新的自绘导航或第三方 dashboard 容器。
-
-后果：首屏优先呈现可行动的复盘入口，详细趋势、分布、专注记录和术语继续渐进披露；路由值、快照数据和详情内容不变。任何新 category 都必须显式归入一组，不能因 `allCases` 自动追加到意外位置。
-
-验证：单元测试固定两组顺序与完整性；source contract 固定分组、三语键与稳定 accessibility identifier；iPhone 正常字号 UI 测试滚动到最后的 Metrics 入口，并按真实 Tab Bar frame 验证整行无遮挡。深色、iPad/macOS 宽屏按对应视觉变更选择；最大 Dynamic Type 仅在文本布局风险触发时加入。
-
 ## AD-042：Analytics 刷新由数据截止时间驱动
 
 状态：Accepted
@@ -592,30 +554,6 @@
 
 验证：行为测试覆盖当前日排除昨日下午、当前周与月的同日序/同钟点、夏令时跳时日的本地 noon 对齐、3 月 31 日映射到 2 月末、完整历史月 full-to-full，以及未来月的双零长度窗口；三语本地化 parity 继续通过。
 
-## AD-045：Analytics 月导航保留原始日号锚点
-
-状态：Accepted
-
-背景：直接对当前参考日期执行 `Calendar.date(byAdding: .month, ...)` 会把不存在的日期夹到短月末，并把这个临时结果误当成下一步锚点。因此 Jan 31 → Feb 28 后继续前进会落在 Mar 28，而不是恢复到 Mar 31。单纯改用月份 interval start 又会丢失用户选择的日号与日内时间；把锚点放在 `ViewThatFits` 的某个分支或 landing 页面局部状态，还会在宽窄布局切换或进入详情时再次丢失。
-
-决策：月份身份只通过所选月份的 `Calendar.dateInterval(of: .month).start` 做月位移。`AnalyticsMonthNavigationAnchor` 独立保存连续导航开始时的本地 day/hour/minute/second；把锚点映射到目标月时，日号只对该月的有效 day range clamp，锚点自身不变，并使用 Calendar 的匹配策略处理本地时区与 DST。根 `AnalyticsView` 持有该状态，landing、category detail 和 `ViewThatFits` 的所有 period control 共享同一 binding。直接日期选择、range 变化和 Today 操作清除旧锚点；目标月份为当前或未来时返回 `liveNow` 并清除锚点。
-
-后果：Jan 31 可以稳定往返 Feb 28/29 与 Mar 31，反向导航和 DST 偏移变化也保留原本地时分秒。用户明确选择新日期后会以新日期建立下一段导航语义；进入当前月后重新跟随真实时间。任何新增 Analytics 月导航入口都必须复用根锚点，不能自行从短月结果推导下一步日号。
-
-验证：行为测试覆盖非闰年 Jan 31 → Feb 28 → Mar 31、闰年 Feb 29、Mar 31 → Feb 28 → Jan 31、跨 DST offset 的本地时分秒，以及进入当前月返回 `liveNow` 并清除锚点。源码契约确认锚点由根页面持有、由 landing/detail 共享，日期选择与 Today 会重置它；统一签名/build/UI 验证由主 Agent 在付费开发者配置下执行。
-
-## AD-046：Analytics 日趋势只发布已开始日期并保留秒级精度
-
-状态：Accepted
-
-背景：DailySummary 会为完整周/月生成 bucket。旧趋势把当前月尚未到来的日期也映射成零值，折线因此在“今天”之后人为跌到零；同时 View 直接用 `Int seconds / 60`，不足一分钟的真实记录也会画成零。Wall 柱与 Gross 线只靠蓝绿颜色区分，没有可见图例。
-
-决策：完整 calendar period 的 daily buckets 继续留在 `LedgerBucketCache`，确保 key 与局部失效稳定；只有向 read model 映射时才用 `DailySummaryService.visibleSummaries` 过滤 `date < clamp(cutoff, period.start...end)`。当前周/月包含正在进行的本地日、排除未来日；完整历史周期包含全部日；未来周期为空。`DailyAnalyticsPoint` 在模型层以 `Double(seconds) / 60` 提供分钟值，Chart 不得做整数除法。Swift Charts 使用 blue Wall bar、green Gross line、可见原生图例，并保留每个 mark 的日期与完整 duration VoiceOver 值。
-
-后果：趋势线不会把未来误表示为低产出，也不会把 1...59 秒误表示为零；缓存仍可跨 cutoff 复用完整周期的固定日 bucket。颜色不是唯一解释渠道，mark 类型、文字图例和辅助语义共同区分 Wall/Gross。任何新增趋势筛选都必须发生在 cache lookup 之后，不能让展示 cutoff 改变 bucket identity。
-
-验证：当前 4 月 28 日只生成 1...28，完整历史 4 月生成 1...30，未来月生成空数组；相同缓存仍保留 30 个 bucket；30 秒与 15 秒分别得到 0.5 与 0.25 分钟。source contract 固定 fractional properties、foreground scale、底部图例与逐点 VoiceOver；三语键和 iPhone 周/月趋势截图必须通过。
-
 ## AD-047：UI 测试 runner 单目标串行，验证矩阵显式并行
 
 状态：Accepted
@@ -627,30 +565,6 @@
 后果：这是资源所有权和测试确定性约束，不是单 Agent 或低负载策略。每个模拟器批次结束时必须 terminate App、shutdown/delete 本批自建设备、关闭 Simulator/Problem Reporter，并确认没有 Booted 设备、`xcodebuild`、`xctest`、UI runner 或 App 扩展残留；不得关闭其他 agent 明确拥有的设备。不得为了让 UI 测试通过而禁用付费开发者签名或 entitlement。
 
 验证：源码契约固定 unit target 为 `parallelizable=YES`、UI target 为 `parallelizable=NO`。iPhone 17 Pro 月导航用例在禁用并行克隆后只创建一个 runner，完整 xcresult 通过并输出两张截图；清理后 CoreSimulator 与进程审计为空。
-
-## AD-048：Analytics 小时活动采用全日共享 gross 尺度
-
-状态：Accepted
-
-背景：Today 的小时活动图曾把完整 plot 高度交给每个非空小时的 task stack。于是 30 秒与 60 分钟都会画成同样满高，用户无法比较小时强弱；若直接把单小时固定夹到 3,600 秒，并发计时产生的 gross 又可能超过一小时。旧 stack 还把层间 spacing 算在切片之外，导致“task 高度之和”和最终柱高使用不同口径。
-
-决策：`HourActivityScale` 在同一日的 24 个 `HourTaskActivity.totalSeconds` 上建立共享尺度，上限为 `max(3_600, maxHourlyGrossSeconds)`。每小时以秒级比例映射到有限 plot 高度，零值保持零高，30 秒等亚分钟值保留 fractional height；并发 gross 超过 3,600 秒时，整日所有柱使用同一个扩展上限。`HourStackLayoutEngine` 只接收该小时的目标高度，按每个正时长 task 的秒数分配全部 slice，并校正浮点残差，使所有 slice 高度守恒。层间视觉分隔使用不参与布局的单像素 overlay，极薄 slice 不叠加 separator；图高随 Dynamic Type 缩放，辅助字号横轴只保留 0/12/24 三个刻度并把图例收敛成单列。三语 subtitle 明说“柱高比较时长、颜色区分任务”，每小时仍以本地化 VoiceOver value 报告真实总时长和完整 task 明细。
-
-后果：非空小时不再自动满高，同一天的柱高可直接比较；并发不会被错误截断为一小时，亚分钟记录也不会消失。背景槽仍提供 24 小时位置参照，颜色、分隔和 VoiceOver 共同表达 task 分层。任何新增小时图都必须复用共享尺度，禁止在单个 bar 内按自身最大值重新归一化，或用分钟整数除法计算高度。
-
-验证：单元测试覆盖 3,600 秒下限、7,200 秒并发上限、30 秒的 1.25pt fractional height、空值/非有限几何输入，以及 task slice 高度严格回收到目标柱高；UI source contract 固定共享尺度、`@ScaledMetric`、零 spacing、overlay separator、底部 target frame、辅助字号单列图例与既有 VoiceOver 语义。付费开发者签名的最终 macOS 定向套件 40/40 通过；默认字号和 Accessibility XXXL iPhone 截图此前均通过。AX 截图揭示双列图例换行过窄后，最终源代码改成单列并通过签名编译与契约测试；随后的两次新模拟器复验均被 iOS 27 XCTest runtime 在测试入口前以 `Timed out waiting for AX loaded notification` 拦截，不属于 App crash 或断言失败。所有成功与失败批次的专用模拟器都已关闭并删除，最终进程审计无 runner、`xcodebuild` 或诊断残留。
-
-## AD-050：辅助字号保留主动作文字与任务行完整事实
-
-状态：Accepted
-
-背景：iPhone Today 在已有活动计时且进入 Accessibility Dynamic Type 后，把 Start Another Timer / Switch Timer 从 Now 内容流移到 section header，并只留下图标。视觉用户需要猜测这个唯一计时入口的含义；VoiceOver 虽有补充 label，仍不能弥补可见操作文字消失。Tasks 的专用辅助字号行则只保留标题、异常状态和运行状态，删除了普通/紧凑行已有的完整路径、已工作时长、清单进度、预测和子任务数，导致放大文字反而降低信息完整性。
-
-决策：Today 的已有计时主动作始终是 Now section 内的带文字原生 `Button`；文字允许纵向生长，section header 只承担标题，不承载仅图标主操作。Tasks 的辅助字号布局按标题、去重后的完整路径、状态/运行中、已工作时长、清单/预测和子任务数纵向展示，与普通布局共享同一个 `TaskManagementRowPresentation`。任务详情按钮继续保持一个原生 Button、稳定 identifier 和 hint；`TaskManagementRowAccessibilitySnapshot` 以有序组件生成完整 label/value，禁止通过 `accessibilityRepresentation` 或 `.accessibilityElement(children: .ignore)` 覆盖后只手工补回部分字段。
-
-后果：Accessibility 字号会使用更多垂直空间，但不会把关键动作变成谜语，也不会以“简化”为名删除任务事实。视觉布局和 VoiceOver 投影可以分别优化呈现方式，字段集合必须保持同步；新增任务行元数据时必须同时更新普通/紧凑/辅助布局、语义快照和测试。
-
-验证：源码契约固定 Today 完整文字操作、Tasks 各布局的同一事实集，单元测试固定语义快照的字段顺序、阻塞状态和重复路径消除。默认回归以正常字号和常规路径为主；只在 AD-057 的风险触发条件下重跑极端字号。一次性结果见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
 ## AD-051：系统表面把“打开”与“修改”分离并冻结陈旧计时
 
@@ -760,30 +674,6 @@
 
 验证：核心测试固定目录创建中断重放、发布前旧文件不变、崩溃临时文件回收、普通文件类型、保留锁路径、符号链接与 dangling symlink、跨 prefix 数量/字节/时间预算、超限删除、隔离回滚与回滚失败、硬链接别名互斥、写入/隔离共享 root 锁，以及每个生产文件不超过 160 行的职责合同。macOS 行为与结构套件、generic iOS 设备 SDK 自动签名构建都必须通过；iOS 构建还要保持主 App、Widget、Live Activity、Watch 的付费开发者签名及 APS、CloudKit、App Group 能力。一次性 xcresult 与路径记录在 dated Audit。
 
-## AD-061：iPhone 长页面使用系统 Tab Bar 下滚收起行为
-
-状态：Accepted
-
-背景：iOS 27 的 Liquid Glass Tab Bar 浮在滚动内容之上。正常字号截图证明 Focus 主动作和 Analytics 最后一组都可以滚到系统栏上方，但默认 `.automatic` 在 iOS 不会收起五项 Tab Bar，长页面浏览时持续占据较大的底部视觉层。给每个页面叠加固定 safe-area padding 会与动态系统 chrome 和既有 List/ScrollView inset 重复，且不能解决内容本身的信息层级问题。
-
-决策：仅 iPhone 的根 `TabView` 使用系统 `.tabBarMinimizeBehavior(.onScrollDown)`。首屏保留 Today、Inbox、Tasks、Focus、Analytics 五个顶级导航项；向下浏览长内容时由系统缩成当前标签，点按或回到顶部时按系统规则恢复。页面继续使用原生 List/ScrollView 安全区，不增加全局自制底栏或固定 bottom safe-area 补偿。Focus 首屏重排、任务身份去重等内容问题另行修复，不能用收起 Tab Bar 掩盖。
-
-后果：长页面获得更多可读空间，同时保持 Apple 平台原生导航、滚动与恢复动画。iPad 继续使用 Sidebar/Detail shell，不套用 iPhone 收起行为。以后若引入 `tabViewBottomAccessory`，必须重新验证 accessory placement 与收起后的内容边界，不能同时叠加固定底部空白。
-
-验证：正常字号 iPhone UI 测试必须让 Focus 主动作和 Analytics 最后一项完整位于当前系统 chrome 顶部至少 8 pt；截图同时确认首屏五项 Tab Bar 完整、下滚后缩为当前标签。generic iOS 设备 SDK 自动签名构建继续保留主 App、Widget、Live Activity、Watch 的付费签名与 APS、CloudKit、App Group。一次性设备与结果路径只记录在 dated Audit。
-
-## AD-062：Focus 首屏优先完成设置与启动
-
-状态：Accepted
-
-背景：正常字号 iPhone 的 Focus 首屏把计时器、计划、任务、主操作和四项计划摘要排成过高的纵向卡片。任务选择又同时显示标题和包含该标题的完整路径，造成重复；四项计划摘要固定为 2×2 网格，进一步把“开始专注”后的必要上下文推到浮动 Tab Bar 下方。此前 112 pt 固定底部 content margin 还与系统滚动安全区和可收起 Tab Bar 重复。
-
-决策：紧凑宽度使用 18 pt 卡片内边距、20 pt section spacing 和 16 pt 页面垂直边距；常规宽度保留 24 pt 节奏。任务选择主行只显示任务标题，第二行显示不重复标题的父级路径；Picker 菜单继续使用完整路径区分同名任务。四项计划指标优先在一行展示，宽度不足时由 `ViewThatFits` 回退到 2×2 Grid。正常字号滚动末端只保留 16 pt 内容节奏并依赖系统 safe-area/tab chrome inset；不得再用大块固定空白掩盖首屏层级问题。
-
-后果：正常字号 iPhone 首屏可以同时看到完整设置卡、开始专注和全部四项计划事实，最近记录仍作为次级可滚动内容。Mac、iPad 和宽窗口继续使用更宽松间距；同名任务的区分能力保留在父级路径和完整 Picker 项中。后续新增 setup 信息必须先判断是否属于启动前必要事实，不能继续纵向堆叠到主操作之前。
-
-验证：布局策略与源码契约固定紧凑/常规间距、页面垂直边距和“标题 + 父级路径”任务身份。付费签名的 macOS 合并定向回归 72/72 通过；正常字号 iPhone 17 Pro / iOS 27 Focus UI 1/1 通过，截图确认完整设置、主操作及四项摘要都位于系统 Tab Bar 上方。generic iOS 设备 SDK 自动签名构建 0 error/0 warning，主 App、Widget、Live Activity、Watch 均保留 Team `LT98S43NKA` 与付费 Apple Development 身份，主 App 保留 APS、CloudKit 和 App Group。一次性证据路径与设备清理记录见 dated Audit。
-
 ## AD-063：LLM 模型发现于解码阶段保持固定上限
 
 状态：Accepted
@@ -832,30 +722,6 @@
 
 验证：12 项纯策略测试覆盖 exclusive/parallel、reuse/replaceAll、同任务重复段、四种输入排列、同刻 UUID tie-break、精确 segment 不回退、task stop all、current latest、逻辑重复输入和应用后的幂等收敛。付费签名 macOS 定向运行 12/12、0 error/0 warning；本批未启动模拟器。一次性 xcresult 见 dated Audit。
 
-## AD-067：iOS 编辑器子流程在同一个外层导航栈内推进
-
-状态：Accepted
-
-背景：任务、分类和 checklist 的符号/颜色入口位于本身已经由 sheet 承载的编辑器中。旧 iOS 实现再次打开带独立 `NavigationStack` 和 Done 按钮的 sheet，形成 sheet 叠 sheet、两套导航与一个没有提交语义的伪确认；返回外层页面时，新建任务标题的自动聚焦任务还会再次运行并重新弹出键盘。macOS 的 popover 没有这一层级问题。
-
-决策：iOS 的 `SymbolColorPickerButton` 使用 `NavigationLink`，把 `SymbolAndColorPicker` 推入 `TaskEditorPanel` 已有的外层 `NavigationStack`；macOS 继续使用轻量 popover。符号和颜色仍通过 binding 即时更新编辑草稿，子页面的 Back 只负责导航，不表示保存或提交；唯一持久提交和取消边界仍是外层编辑器的 Save/Cancel。新建任务标题只在本次编辑会话首次出现时自动聚焦，键盘支持 Done 提交与交互式滚动收起，页面从子流程返回时不得再次抢占焦点。
-
-后果：iPhone 不再叠加 modal、重复导航标题或显示无意义 Done；用户可以选择符号后返回继续填写同一草稿，最终仍能整体保存或取消。以后在 sheet 编辑器中增加父任务、分类、日期等多步子流程时，应优先复用同一个导航栈；只有独立、可单独取消且有明确事务边界的任务才新开 sheet。macOS 小型选择器继续遵循 popover 习惯。
-
-验证：源码合同固定 iOS push、macOS popover 和不存在内层 sheet/Done；付费签名 macOS `TaskUIContractTests` 34/34、0 error/0 warning。正常字号 iPhone 17 Pro / iOS 27 UI 回归完成“新建任务 → 输入草稿 → 搜索并选择 calendar → Back”，确认 sheet 数不增加、草稿和选择保留、返回后键盘不重弹，1/1、0 warning。generic iOS 设备 SDK 自动签名构建 0 error/0 warning，主 App、Widget、Live Activity、Watch 均保持 Team `LT98S43NKA` 与付费 Apple Development 身份，主 App 保留 development APS、CloudKit 和 App Group。一次性证据与模拟器清理记录见 dated Audit。
-
-## AD-068：独立任务表面显示标题与父级上下文，动作图标不冒充身份
-
-状态：Accepted
-
-背景：Quick Start 在 iPhone 同时显示任务标题和包含该标题的完整路径，造成重复；iPad/macOS tile 则只显示标题，并把任务自己的 symbol 替换成播放或停止图标。结果是同名子任务无法区分，用户也无法稳定识别任务本身，三个平台和编辑器使用了不同的身份表达。View 直接调用 `path(for:)` 还让展示规则分散，并可能诱使后续代码通过拆分带 `/` 的可变标题来推导父级。
-
-决策：`TaskIdentityPresentation` 是脱离任务树上下文的统一展示投影，由既有 `TaskTreeIndexes` 使用 task、parent path 和 full path 索引 O(1) 构造。`.hierarchical`、`.standard`、`.compact` 分别表达只有标题、标题加父级路径、单行完整路径三种明确上下文；根任务的空父路径规范为 nil。`TaskVisualPresentation` 在 SwiftUI 边界前把未知 symbol 和颜色规范为 canonical fallback。Quick Start 的 iPhone 行、iPad/macOS tile 和编辑器使用 `.standard`：任务 symbol 始终表达身份，尾部动作或状态始终是独立元素，不得替换任务 symbol；当前未运行项显示 play，运行项按 AD-079 显示 Running badge。路径仅作展示，不从字符串反向解析层级。
-
-后果：同名子任务可通过父级路径区分，根任务不再重复标题，标题中包含 `/` 也不会破坏身份推导；三个平台和编辑器共享一致信息层级。以后迁移任务选择器、Pomodoro、Widget 或 Watch 时可以按所在表面选 context，但必须继续消费索引投影，不在 View 中重造路径或视觉 fallback。该投影不改变持久模型或 iCloud schema。
-
-验证：纯值与索引测试覆盖根/子任务、同名任务、标题内 `/`、三个 context 和无效视觉 fallback；源码合同固定 Quick Start 不调用 `store.path(for:)`，并把任务身份与尾部动作/状态分离。当前运行态行为与证据见 AD-079 和 dated Audit。
-
 ## AD-069：计时事务先按持久 store 串行化，再创建 fresh context
 
 状态：Accepted
@@ -893,18 +759,6 @@ Deep link 返回 `handled`、`deferred` 或 `rejected`。需要导航或 modal �
 后果：同一 scene 只有一个 App 级 sheet，脏编辑器不会被其他 feature 的 modal 请求覆盖；独立 Settings 不会把 UI 弹到主窗口。保存命令只返回业务成功，presentation 的关闭由 sheet 自己的 `dismiss` 负责；失败保持原草稿。新增 App 级 sheet 必须扩展 typed content 和唯一 host，不得在 feature 或共享 Store 重建平行 `.sheet` 状态。局部确认对话、文件 exporter 和真正属于单个控件的 popover 可以保留局部 owner，但必须与 App 级 slot 的职责区分。
 
 验证：presentation/deep-link 套件固定 matching-ID 仲裁与有界排队；正常字号 UI 覆盖任务编辑→Focus 和 Today→任务选择器。一次性结果、签名与资源清理证据见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
-
-## AD-072：任务行的菜单与滑动删除共用一个确认 owner
-
-状态：Accepted
-
-背景：Tasks 与 Sidebar 的每个任务行都在 row 内为 context menu 保存删除确认 Bool、附加 `confirmationDialog`，随后 `TaskRowSwipeActions` 又保存第二个同名 Bool 并附加第二个相同 dialog。同一视图分支因此存在两个互不仲裁的删除 modal owner，可能竞争 presentation 或重复发起删除；同一动作在菜单又叫 “Soft Delete/软删除”，在滑动和确认中叫 “Delete/删除”，把持久实现细节暴露成了用户概念。
-
-决策：`TaskRowSwipeActions` 只负责操作发现与转发，删除按钮调用必传的 `requestDelete`；它不持有确认 state，也不附加 dialog。`TaskManagementFlatRow` 与 `SidebarTaskTreeRow` 分别让 context menu 和 swipe 接到本 row 唯一的 `isDeleteConfirmationPresented`，确认时继续传显式 `task.id`，不从可变化的全局 selection 推断目标。Task Detail 作为不同页面保留自己唯一的确认 owner。菜单、滑动和确认统一使用 Delete/删除；未使用的 soft-delete 三语键删除。
-
-后果：一行一次只能有一个删除确认，取消与确认路径一致；共享 swipe modifier 不再暗中引入 modal 状态。后续新增任务行入口必须复用 `requestDelete`，不得为了入口便利再在 modifier 中叠加 confirmation。领域层仍保留 tombstone 和历史账本，这不需要成为用户操作名称。
-
-验证：`TaskUIContractTests` 固定 swipe modifier 无独立确认状态、两个 row 各只有一个 dialog、两入口共用 callback，并固定用户文案不暴露 soft-delete 术语。一次性结果见 Audit §7（原 `Audit-2026-07-14.md`，已于 2026-07-25 退役，证据见 git 历史）。
 
 ## AD-073：同步覆盖确认绑定精确 conflict token，并在 state lock 内 CAS
 
@@ -1042,18 +896,6 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：跨 scene 套件覆盖 stale edit/delete、删除后 edit、assignment 两种提交顺序、并发 create 排序和 repository missing 错误；原 Category、Task Draft、presentation、本地化与 model source-layout 套件必须继续通过。
 
-## AD-085：Task Editor 层级控件使用轻量投影和完整路径，不用空格模拟树
-
-状态：Accepted
-
-背景：`TaskEditorInfoSection` 同时拥有标题/状态/符号校验、分类、继承提示、父级锁定、父级 picker 和层级文案，超过 section 文件预算；父选项又以 ASCII 空格缩进，无法可靠区分同名深层任务或表达 RTL/菜单层级。继承分类提示还把整段小字号文字染成任意用户颜色，正常浅色/深色界面可能失去可读性。
-
-决策：信息 section 只负责组合；`TaskParentPickerRow`、`TaskCategoryPickerRow` 和 `TaskHierarchyEditorHints` 位于独立文件并只接收轻量 option/hint 值和 Binding。父选项显示 `TaskIdentityPresentation.fullPath`；当前不可用或缺失父项继续保留用于恢复，非当前不可用项禁用，parent-change blocker 继续锁定选择。继承分类文字固定 secondary，仅 icon 使用分类色。同一 body 只计算一次 active-subtree completion blocker。
-
-后果：层级规则与字段校验可独立修改，Store 观察面缩小；同名任务可辨识，不再把字符串缩进当成数据结构。`SymbolColorPickerRow` 同时从 231 行 picker 聚合文件拆出，使 editor 全部职责文件回到既定预算内。后续共享 TaskChooser 应复用相同 identity projection，不退回裸标题或空格缩进。
-
-验证：完整 Task UI 源码契约覆盖 unavailable/current-missing/lock/full-path 与字段校验；Task editor source-layout 契约要求普通文件不超过 180 行、picker 聚合不超过 230 行。
-
 ## AD-086：Task 草稿冲突必须可在当前编辑会话显式重载
 
 状态：Accepted
@@ -1102,18 +944,6 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：重复 Cloud row 的快照测试同时核对 overview、daily、task breakdown、rhythm 与 timeline 只出现一个 winner；完整 AnalyticsStore/Timeline 回归继续通过。
 
-## AD-090：完整时间编辑表单不提供不可完成流程的半高 detent
-
-状态：Accepted
-
-背景：Manual Time sheet 同时包含任务归属、开始/结束日期时间、派生时长、验证反馈和 3–8 行备注，却允许 `.medium` detent。正常 iPhone 高度下，半高状态只能看到表单片段，用户必须先理解并拖动 sheet 才能完成核心任务；Segment Editor 已经只使用 large，两个同类编辑器行为也不一致。
-
-决策：Manual Time 与 Segment Editor 在 iOS 都只声明 `.presentationDetents([.large])`。Mac 继续使用既有 platform frame。除非未来提供字段和完成动作都能在半高内独立闭环的真正 quick-entry 界面，否则不得把 `.medium` 加回完整表单。
-
-后果：打开补录后立即获得可完成的完整编辑空间，日期选择器、验证和备注不会藏在一个看似可用但实际需要二次扩展的状态里。这个决定不禁止其它内容更少、半高即可完成的 sheet 使用 medium。
-
-验证：Task UI source contract 同时要求 Manual Time/Segment Editor 只有 large，并明确拒绝 Manual Time 的 `.medium`；presentation 合同继续验证保存成功后才关闭。
-
 ## AD-091：无目标的 Analytics comparison 不做价值判断
 
 状态：Accepted
@@ -1161,18 +991,6 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：所有遵守共享 store lock 的进程都不能在最终 snapshot 与删库之间插入 commit；第一次 mutation 后立即崩溃、已有旧 mirror 后崩溃和显式 upload 都能保护最新数据。Fallback 重连会做一次 O(全量事实) capture；超过 snapshot 上限或文件保护/IO 失败时安全停留本地，而不是继续恢复。该保证不覆盖仍绕过共享锁的 legacy writer，Inbox/App Intent 等入口必须继续迁移，不能把本决策描述为任意 writer 的全局 ACID。
 
 验证：真实磁盘 fixture 先保存旧保护快照，再提交未记录的新标题；启动 preflight 捕获最新标题后真实删除 SQLite。竞争线程在 reset hook 中无法取得同一 store lock，只有 reset 完成后才进入。CloudRecovery Gate、SyncConflict、StateWrite、StoreSerialization、ResolutionIdentity 与 SnapshotPreflight 六个付费签名套件 102/102 通过，无源码或运行时 warning。
-
-## AD-095：Task Detail 的可执行核心不等待分析快照
-
-状态：Accepted
-
-背景：旧详情把整个 `List` 放进 `TimelineView`，初次 task analytics snapshot 尚未生成时以全页 `ProgressView` 替代所有内容。分析即使已经有有界索引，仍可能需要读取当前/上一周期、计算预测与投影；用户在这段时间看不到开始、停止、重新打开、清单或添加时间。周期性 `TimelineView` 也让详情页为时钟而持续重组整棵 UI，且在后台没有明确的取消/恢复边界。
-
-决策：`TaskDetailView` 始终先组合 `TaskDetailList` 的身份、动作、清单、预测与备注。当前 `TaskAnalyticsSnapshotRequest` 通过 `.task(id:)` 载入，只有 `loadedRequest == request` 才把概览、分析与近期记录传入；否则该 section 单独显示系统 loading row，绝不复用旧 request 的快照。详情自行复用 `AnalyticsRefreshPlan`：仅 active scene 计划下一活动分钟或本地日边界，scene reactivation、日历日、系统时钟和时区改变重新取样。不得恢复全页 `TimelineView`，也不得把每秒/每分钟 tick 写入共享 Store。
-
-后果：打开详情的第一帧先提供可执行操作；分析可能随后出现，但 task/range/revision 更新期间不会闪现错误范围的数据。静态当前周期只在真正跨本地日时重算，活动任务只在真实分钟边界刷新，后台不保留详情时钟任务。这个决定不把同步 analytics 计算移出 `@MainActor`；其成本仍由 AD-092/093 的有界 query 限制，若 profile 显示计算本身造成首帧卡顿，应另行设计可取消的 read-model 计算边界，而不是重新隐藏操作区。
-
-验证：Core architecture、Task UI contract 与 refresh-plan 的付费签名 macOS 定向回归 48/48 通过；generic iOS Debug 自动签名构建通过，主 App、Widget、Live Activity 与 Watch 均为 Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)`，主 App 保留 development APS、CloudKit 与 App Group。iPhone 17 Pro / iOS 27 默认字号的“运行中 Quick Start → Task Detail”UI 用例 1/1 通过，导出的截图目视确认首屏 Stop/Add Time/Forecast 可用。两轮专用 UDID `149E80D2-4DF1-413C-B797-0A8413571DB7`、`89E77671-60BA-4490-A563-012849D04222`、result bundle、截图与 DerivedData 均已删除。
 
 ## AD-096：Analytics 源文件按稳定计算边界拆分
 
@@ -1234,18 +1052,6 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：timer、Pomodoro、Segment coordinator/system action/Watch suite 覆盖 canonical false preference 下的 exclusive reconcile、App Intent/handler 不再接收 caller Bool、Watch router 发布 actual outcome events。2026-07-17 的 Pomodoro/Segment 定向签名回归 71/71 通过，签名身份为 Team `LT98S43NKA` / `Apple Development: ZEXUAN GAO (PX46M259V3)`；本切片未创建模拟器，结束后删除结果包并确认无 owned 测试进程。
 
-## AD-102：Quick Start 将任务导航与计时命令分为稳定的独立控件
-
-状态：Accepted
-
-背景：AD-079 消除了运行态整行的隐藏停止，但未运行项仍让任务标题同时承担“识别任务”和“开始/切换计时”。正常字号 iPhone 截图显示播放 glyph 是唯一提示，桌面 tile 也因状态改变整张卡片的点击含义；这与其它任务行始终进入详情的规则不一致，且不利于快速判断动作后果。
-
-决策：Quick Start 的任务图标、标题、父级路径和 Running badge 组成单独的任务导航控件，始终进入 canonical task detail。相邻 `QuickStartTimerAction` 使用明确可见的原生 bordered Start、Switch 或 Stop label，最小高度 44 pt；Start/Switch 只通过 `performTimerPickerSelection(_:)` 进入共享准入边界，Stop 只捕获并停止当前显示的 `TimeSegment`。iPhone、iPad 与 macOS 复用同一计时控件；不得嵌套按钮、把状态藏在 glyph 中，或让任务导航手势写入账本。
-
-后果：任务身份的点击结果在所有状态下稳定，计时写入也有可发现的文字、目标和 destructive role。Quick Start 仍可在一眼内完成开始、切换或停止，但详情、编辑和计时不再竞争同一 hit target。此变更有意替代 AD-079 的“未运行整行开始”历史语义。
-
-验证：行为回归覆盖任务身份、显式 Start → Running → 显式 Stop，以及运行中点击任务身份进入详情且不停止；source contract 只固定 stable component/command boundary。正常字号 iPhone/iPad/macOS 截图确认任务文本与 Start/Switch/Stop 不遮挡系统 chrome；一次性签名、设备和清理证据写入 dated Audit。
-
 ## AD-103：App Intent 提交后让同进程的已配置 scene 只收敛读模型
 
 状态：Accepted
@@ -1281,18 +1087,6 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：控件不再伪装为 extension 内立即写入，用户会预期切回 App；并行计时的目标精度和已有的 deep-link 安全解析保持不变。真正的 in-place system surface mutation 需要独立设计共享持久化、entitlement、并发锁和恢复语义，不能通过改一个 Intent 偷渡。
 
 验证：source contract 固定两种 extension 都使用 app-opening copy/symbol、Intent description 与精确 `segmentID` URL；付费签名 macOS 定向回归覆盖 deep-link 路由只停止目标 segment。iPhone 正常字号模拟路径确认系统会先显示“Open in Time Tracker?”确认，故没有把未能在本机点击确认的路径伪报为已完成的实机 mutation。一次性模拟器、截图、result 与 owned process 清理记录写入 dated Audit。
-
-## AD-106：Focus 任务选择使用场景归属的可搜索表
-
-状态：Accepted（替代 AD-062 中“任务 Picker 菜单”的选择机制；不改变其标题/父级路径层级规则）
-
-背景：Focus 可选任务随库增长而增长，嵌套在按钮中的 `Menu` 不支持稳定搜索、取消或当前选择反馈；把 `focusTaskID` 接到全局任务选择又会让一次准备动作改变不相关页面的上下文。
-
-决策：计划数量小且稳定，继续使用原生 `Menu`。任务控件请求 scene-owned `AppPresentationRouter` 的 typed `pomodoroTaskPicker` sheet；sheet 搜索标题和完整路径、行展示标题与不重复的父级路径，并以勾选标出当前 task ID。匹配行的选择 callback 只更新触发它的 Focus view 的局部 `focusTaskID`，随后以 matching presentation ID 关闭 sheet；它不得开始 Pomodoro、写入账本或改写 `selectedTaskID`。
-
-后果：同名任务仍可被路径搜索区分，长任务库不再依赖菜单滚动；多个 scene 的选择不会互相覆盖。picker 仍依赖 `TaskTrackingAvailabilityService` 投影出的可跟踪集合，任务在 sheet 打开后失效时不会进入 setup selection；实际 start 命令继续在 transaction 内重新验证。
-
-验证：router 行为测试固定 scene callback、snapshot selected ID 和 matching dismiss；UI 流程搜索 seeded task、选择后确认 sheet 消失、Focus 标题更新且没有 active run。付费签名结果和资源清理写入 dated Audit。
 
 ## AD-107：Inbox 外部 capture 只能以调用方提供的稳定 key 获得回执
 
@@ -1353,18 +1147,6 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：已记录 mutation 避免一次重复 manifest/slot 读取，同时 UI 看到的 prompt 恰是本次提交的版本。未记录路径的可见错误边界不变；这不是新锁或新的同步协议，也不改变 CloudKit、SwiftData 或恢复数据结构。
 
 验证：付费自动签名 macOS SyncConflict、state-write、store serialization、System Action、Watch 与 source-layout 定向批次覆盖 returned prompt 和 manifest-backed Watch state；准确结果、首次失败重跑和资源清理记录在 dated Audit。
-
-## AD-112：Analytics 的范围名称表达日历单位，而非相对日期
-
-状态：Accepted
-
-背景：`AnalyticsRange.today` 的实现名沿用 Today，但它实际表示“按所选参考日期的一日”。当用户浏览历史日期时，range segmented control 仍显示“今天/本周/本月”，让当前标题与所选范围产生冲突；当前 period 还占用一个已禁用的“回到今天”按钮。
-
-决策：范围选择固定显示“日 / 周 / 月”（英文 Day / Week / Month），`today` 只保留为内部 case 名和 `AnalyticsPeriodText` 的当前日期标题。`AnalyticsPeriodNavigator` 仅在所选 period 不是当前 period 时显示“回到今天”；它是恢复当前位置的动作而不是第四个 range，返回后清除月导航锚点。删除未被消费者使用、与 `AnalyticsRange` 重复的 `TimeTrackerStore.RangePreset/selectedRange`，禁止再维护第二套 range 文案或状态。
-
-后果：历史复盘的粒度始终明确，当前界面减少无效控件；navigation、缓存 identity 和日/周/月计算不变。这是 UI 术语的 breaking change，不触及 SwiftData、CloudKit 或用户数据。
-
-验证：Analytics period UI contract、架构行为和三语 localization parity 必须覆盖新的 day key、历史动作条件与无残留 duplicate range state；实际签名结果记录在 dated Audit。
 
 ## AD-114：手工补录以锁内的任务可计时性作为最终准入
 
@@ -1501,94 +1283,6 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：共享组件、Task、Home 与 picker source contracts 固定复用边界、两行标题、metadata 顺序、无 `RunningStatusBadge` 和精确 Stop。行为测试固定 timer mode 把运行任务移出可选 rows、single-selection 仍允许选择运行任务。2026-07-19 冻结范围的 macOS contracts 为 92/92；正常字号 iPhone 17 Pro 与 iPad Pro 11-inch 各自通过 Tasks 长标题/被动 timer metadata 和 picker Stop-only/停止后继续选择两条路径，共 4/4。后续真人反馈收口再以 30/30 macOS 定向回归和 iPhone/iPad 各 1/1 的同屏 Start/Switch/Stop、Stop→Start 尺寸/尾缘断言冻结 54/28 pt 操作槽。generic iOS 与 macOS Debug 自动签名构建及严格 codesign 通过；截图、失败诊断边界和资源清理记录在 dated Audit。
 
-## AD-122：Analytics 定义由文字本身承担语义
-
-状态：Accepted
-
-背景：Gross Time、Wall Time 与 Overlap Excess 的 Definitions 卡片在每行放置了 `info.circle`，但图标既不能点击也没有补充弹层。它让解释内容看起来像三个未实现的帮助按钮，同时短句没有把三个指标的计算关系或并发场景讲清楚。
-
-决策：
-
-- Definitions 是原生 section 内的非交互说明，不使用暗示按钮或详情入口的装饰性信息图标。区块标题和开场句负责建立上下文，每个定义直接拥有名称、白话含义和计算口径。
-- Gross Time 是所有任务计时器的累计，Wall Time 是重叠区间合并后的真实经过时间，Overlap Excess 固定为 `Gross Time − Wall Time`。三者必须共享一个并发计时的数值示例，让用户能在同一场景内核对守恒关系。
-- 说明保持 leading alignment 与系统文字层级；不得为这些静态内容添加 popover、隐藏手势或另一套自绘卡片。每个语义块持有稳定 accessibility identifier，三语本地化必须保持键和值结构一致。
-
-后果：用户不需要猜图标是否可点，也能从一个具体场景理解并行计时为什么让 Gross 大于 Wall。以后新增分析术语应先把问题、定义、计算和示例写清楚；只有确实存在独立目标页面或动作时才显示 disclosure 或按钮 affordance。
-
-验证：source contract 禁止 Analytics 定义重新出现 `info.circle`，并固定介绍、三个定义、公式与示例的 identifiers 和三语键。付费签名 macOS contracts 45/45；正常字号 iPhone 17 Pro 与 iPad Pro 11-inch 定义路径各通过 1/1 并完成截图目视复核。macOS UI runner 两次在进入测试前启用 automation mode 超时，不冒充 UI 通过；完整证据和资源清理记录在 dated Audit。
-
-## AD-123：Inbox 推荐卡片按“原文、目标、决定”分成三行
-
-状态：Accepted（第二行缩进规则由 AD-125 替代）
-
-替代关系：AD-125 只替代本决策第二条中“Suggested 行与正文列一致缩进”的几何条款；三行信息架构、全宽决定行、动作尺寸与辅助功能边界继续有效。
-
-背景：原 Inbox ready suggestion 会按宽度在横排与纵排之间切换，目标任务、生成图标和两个文字动作相互争夺空间。用户需要先辨认 Inbox 原文，再判断推荐去向，最后做接受或放弃；把三件事压在一个自适应横排中既破坏扫读顺序，也让 iPhone 上的动作像一段拥挤文字。
-
-决策：
-
-- 第一行继续复用 `EditableChecklistTextRow`，让完成圆圈与 Inbox 原文同行；更多菜单保持尾部上下文动作。
-- 第二行只表达建议目标：本地化的 Suggested 标签、共享 `ChecklistItemIcon` 生成预览和目标任务名称。只给这一行增加与正文列一致的 leading inset，不能给最后一行继承缩进。
-- 第三行始终占用整张卡片宽度，以 `Spacer` 把 Discard 与 Apply 锚定到左右两端。紧凑宽度使用中性的圆形 × 与强调色圆形 ✓；常规宽度仍使用同一行，只扩展为图标加文字，不重新创建 iPad/Mac 专用卡片。
-- 两个动作是独立按钮且触控目标至少 44 pt；Apply 在目标不可用时禁用，Discard 保持可用且不使用破坏性红色。建议目标合成一个辅助功能元素，生成图标不单独朗读内部符号或颜色值。
-- Ready suggestion 不再使用 `ViewThatFits` 把目标和动作重新压回同一行，也不添加嵌套卡片、分隔线或第二个 sparkle 图标。
-
-后果：视觉顺序与真实工作流一致——先看捕获内容、再看建议去向、最后决定；iPhone 和 iPad 复用同一个组件与语义结构，只由可用宽度改变动作标签。以后新增 Inbox 建议类型也必须先保持这三层信息架构，不能为单个状态再造一套卡片或任务选择控件。
-
-验证：Ready source contract 固定三行结构、左右 action row、× / ✓、44 pt 与三语 Suggested key；付费签名 macOS 定向 contracts 27/27。正常字号 iPhone 17 Pro 与 iPad Pro 11-inch 同一 Apply 路径各 1/1，分别截图确认紧凑符号和常规文字动作；generic iOS 主 App、Widget、Live Activity 与 Watch 自动签名构建和严格 codesign 通过。完整证据与资源清理记录在 dated Audit。
-
-## AD-124：Task Detail 身份卡必须直接显示任务名称
-
-状态：Accepted
-
-替代关系：本决策替代 AD-097 的“系统 navigation title 是任务标题唯一 owner”及 identity row 禁止 `Text(task.title)` 条款，也替代 AD-121 对该唯一性的保留。AD-097 的系统返回、底部滚动余量，以及 AD-121 不重复 Running/Stop 的规则不变。
-
-背景：把任务名完全交给 inline navigation title 后，iPhone 的 Back、Edit、More 和 iPad/macOS 的自适应栏位会压缩或弱化唯一的任务身份；详情内容首张卡只剩图标与 `Study` 之类的父级路径，用户会把路径误认为当前对象，甚至直接判断“任务详情没有任务名称”。系统标题属于导航 chrome，不能替代内容区持久可扫读的对象身份。
-
-决策：`TaskDetailIdentityRow` 在共享的 iPhone、iPad 和 macOS 详情内容中直接显示任务标题，使用 primary headline、正常字号最多两行、辅助功能字号自然增长；下一行继续用 secondary subheadline 显示父级路径或 Root。系统 navigation title 继续提供页面导航上下文，但不再是唯一标题 owner。身份卡不得恢复 workflow status 或与动作区 Stop 重复的 Running。`task.detail.identity` 必须标记实际组合后的身份行，使 UI 回归能验证可见卡片本身同时含有任务名和父级路径，而不是误用 navigation bar 或全页面的同名文字。
-
-后果：用户从 Today、Tasks、Sidebar 或深链进入详情时，都能在内容首屏确认“当前任务是什么”和“它属于哪里”；同名子任务仍由父级路径区分。导航栏与身份卡的重复是有意的跨 chrome/content 冗余，不增加第二套路由、任务投影或编辑状态。
-
-验证：Task workspace/source contracts 要求 identity owner 包含标题、headline 和标题/路径两套正常字号换行策略。直接 fixture 路由的正常字号 iPhone 17 Pro 与 iPad Pro 11-inch UI 回归分别 1/1，断言 `task.detail.identity` 同时包含 `Read Apple HIG` 与 `Study`、纵向位于详情 viewport 内，并导出截图目视通过。付费签名 macOS Task UI/Workspace contracts 40/40；一次按单个 Swift Testing 方法名过滤的诊断实际执行 0 项，明确不计作通过。generic iOS 自动签名构建的 xcresult 为 0 error/warning/analyzer warning；Watch metadata extraction 的工具提示不属于源码诊断。主 App、Widget、Live Activity 与 Watch 严格签名通过，资源清理记录在 dated Audit。
-
-## AD-125：Inbox 原文与建议使用可见完成圆作为对齐基准
-
-状态：Accepted
-
-替代关系：本决策只替代 AD-123 第二条中“Suggested 行与正文列一致缩进”的规则；AD-123 的三行阅读顺序、全宽决定行、紧凑/常规动作变体、44 pt 触控目标和辅助功能语义继续有效。
-
-背景：首轮三行卡片把 Inbox 原文放在 44 pt 完成按钮之后，却让单行文字沿按钮顶部开始，因此文字中心明显高于可见圆圈。Suggested 行又跟随正文列缩进，视觉起点落在圆圈右侧；用户无法把两行快速识别为同一条 Inbox 记录的身份和建议。
-
-决策：
-
-- `EditableChecklistTextRow` 继续是完成按钮与可编辑原文的共享 owner，并保留 `.top` 作为其它多行 checklist 调用方的默认行为。Inbox 显式选择 `.center`，让普通单行原文与完成按钮共享垂直中心，不复制另一套输入行。
-- 对齐基准是 24 pt 的可见完成圆，不是其 44 pt iOS/iPadOS 触控框。`InboxItemLayout` 同时拥有圆圈尺寸和由 `(minimumInteractiveTarget - completionVisualSize) / 2` 导出的 leading inset；Ready Suggested 行复用该 inset，使其左缘与可见圆圈左缘一致。macOS 由同一公式适配较小的系统目标。
-- Discard/Apply 行继续占满卡片内容宽度，不继承 Suggested inset。完成按钮与原文字段各自保留 leaf accessibility identifier，UI 回归直接比较原文/按钮 `midY` 和 Suggested/可见圆 `minX`，不能只检查源码中是否存在某个 padding。
-
-后果：第一行在普通字号下形成稳定的“圆圈—正文”水平轴，第二行从同一可见圆左缘开始，第三行仍提供左右分离的决定动作。共享 checklist 的多行编辑布局不受 Inbox 专用选择影响，圆圈尺寸或平台点击目标变化时也只有一个几何来源。
-
-验证：冻结暂存范围的付费签名 Inbox/shared contracts 通过 20/20，0 failed/skipped/runtime warning。正常字号 iPhone 17 Pro 首次 runner 在测试方法进入前因等待 AX loaded notification 超时，不计 UI 结果；清除专属模拟器中的 App/runner 后 warm retry 通过 1/1，iPad Pro 11-inch (M4) 首次通过 1/1，两端均由几何断言固定 `midY` 与可见圆 `minX` 并完成 ready/apply 截图目视复核。generic iOS Debug 自动签名构建的 xcresult 为 0 error/warning/analyzer warning；主 App、Widget、Live Activity 与 Watch 通过严格 codesign/embedded validation，Team `LT98S43NKA`，保留 development APS、CloudKit 与 App Group。完整截图和资源清理证据记录在 dated Audit。
-
-## AD-126：Analytics 用“复盘 / 深入查看”说明导航层级
-
-状态：Accepted
-
-替代关系：本决策只替代 AD-041 中 Overview 的 `Metrics` 用户命名和首页行展示规则；AD-041 的系统 `List`、typed `NavigationLink(value:)`、两组顺序及完整覆盖要求继续有效。
-
-背景：问题式 Analytics 首页能说明每个入口回答什么，却在一次扁平化调整中丢失了“先判断下一步，再按主题看证据”的 Review/Explore 层级。用户仍需要猜整行能否点按；Tasks 入口只强调单个 Top Task，也没有提前说明其中包含 Category Distribution。
-
-决策：
-
-- 首页在当前范围摘要后使用两个原生 `Section`：`reviewCategories` 固定为 Decisions、Quality，`exploreCategories` 固定为 Time、Tasks、Pomodoro、Overview。后者的用户目的地名称是 `Totals & Definitions`，不再沿用与详情内容不一致的 `Metrics`。
-- 每个目的地继续是完整行的系统 `NavigationLink`。行内依次显示它回答的问题、当前范围的直接答案，以及强调色的“查看详情：目的地”；系统 disclosure 与文字共同表达可导航性，不增加卡片点击手势、隐藏热区或另一套路由。
-- Tasks 的问题和目的地命名为“任务与分类”，有数据时的直接答案同时说明可以查看分类分布；进入详情后依次显示 Category Distribution、Task Distribution、Root Task Distribution。
-- Category Distribution 的 bucket 当前只是统计分解，不显示 disclosure、按钮色或点击手势。未来只有在存在真实 category 详情目的地和返回路径后，才可以把 bucket 改成可导航元素，不能用假 affordance 冒充尚未实现的 drill-down。
-- 两组合并必须对 `AnalyticsCategory.allCases` 完整且无重复；新增 category 必须显式归组。
-
-后果：首页重新建立“先复盘、再探索”的阅读顺序，并让用户在点击前知道目的地和其中的分类内容。该规则不会改变 Analytics 数值、范围语义或详情数据来源，也不会把只读图表切片误导成按钮。
-
-验证：presentation 测试固定分组顺序、完整覆盖和 Tasks 答案；source contract 固定两个 section identifier、原生 typed navigation、三语键及分类分布优先顺序。正常字号 iPhone 与 iPad UI 回归必须读取两个 section 的标题/说明、检查六行问题/答案/目的地，进入 Tasks & Categories 后确认 Category Distribution 位于首个分析区块并截图；实际签名、截图和资源清理证据写入 dated Audit。
-
 ## AD-127：普通任务只保留可恢复的归档，不再提供删除命令
 
 状态：Accepted
@@ -1666,25 +1360,6 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：纯日键和 store-scoped 回归覆盖未来开始日、当前日无回填、暂停重放、归档间隔、时钟偏移、非 canonical 规则、活动工作拒绝、每个原子 checkpoint 回滚、用户编辑保留、墓碑和 staged partial graph。入口回归覆盖 Timer/Pomodoro/manual/App Intent direct-work 拒绝、parent/content 保留和 picker 祖先容器。实现沟通与边界记录在[重复任务运行时上下文](ImplementationContexts/2026-07-20-daily-recurrence-runtime.md)。
 
-## AD-131：Analytics 周期切换保留稳定壳并遮蔽旧指标
-
-状态：Accepted
-
-背景：AD-113 通过跨 range/interval 卸载数据 section 来避免旧指标冒充新周期，但这会把已经显示的 Summary、Review、Explore 和 detail 内容整组换成大块 loading row。period controls 虽然常驻，数据区高度仍先坍缩再恢复，独立 heatmap 也随之跳动；`Task.yield()` 还保证用户能看到这次空载帧。条件插入的 spinner 同时会改变 `ViewThatFits` 的理想尺寸，在临界宽度放大横竖布局切换。
-
-决策：
-
-- landing 与 category detail 将 `AnalyticsSnapshot` 和对应 request 作为一个 atomic loaded presentation 发布。取消或过期任务不得先写 snapshot 再写 request。
-- 精确 `AnalyticsEvaluationCacheKey` 命中可以在启动异步任务前同步呈现；不得为了展示 loading UI 强制先让出一个空帧。只按 range 判断的缓存不够安全。
-- 首次进入且没有任何 presentation 时可以使用原生 loading row。已经显示过内容后，跨 range/interval 的冷缓存切换保留相同 section、card 和 period-control 布局，但数据内容使用系统 redaction，并从辅助功能树隐藏、禁止 hit testing；旧数值、旧可访问性值和旧导航不能冒充新周期。section 标题与当前所选周期说明可以继续可见。
-- 同一 range/interval 的 revision、live-day 或 live-minute refresh 继续显示真实当前 snapshot，因为其日历语义未改变。跨周期 placeholder 的分支判断必须使用其 loaded request，不能把 Today 专属图表套到 Week/Month 控件下。
-- refresh indicator 始终占用固定尺寸布局槽，只有刷新时才可见、可被辅助功能与 UI 测试识别；它不得改变 `ViewThatFits` 的 fit 结果。独立 heatmap 不参与 snapshot loading replacement。
-- 根页与 category detail 共用上述 presentation phase；不引入全量预取、人工 debounce、第三方动画或图表框架。
-
-后果：Day、Week、Month 切换期间仍能明确看到正在刷新，但页面结构、滚动上下文和周期控件不再闪白或上下跳。缓存命中直接呈现目标数据；冷缓存则只展示稳定的无语义占位，不泄露旧周期统计。AD-113 的“跨周期必须卸载内容”被本决定取代，其 request identity 与同周期保留规则继续有效。
-
-验证：纯 presentation-phase 测试覆盖首屏、精确 request、同周期刷新、跨日和跨 range；带受控 test-only 延迟的 XCUITest 在刷新中断言 period controls 与 Review shell 持续存在且垂直位置变化不超过 2pt，分别截取 Week/Month 中途画面，并验证返回精确缓存的 Day 不出现 loading frame。生产与 Release 不接受该延迟参数时的任何行为变化。
-
 ## AD-132：AI 任务计划使用完整工作区工具提案与全量 CAS
 
 状态：Accepted（请求预算与模型生成验收条款由 AD-133 取代）
@@ -1721,24 +1396,6 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 后果：请求可能明显大于旧 64 KiB，完整 SF Symbols 目录本身也会增加 token/网络成本；若 endpoint 无法接收完整上下文，应用返回真实 provider 错误，不发送删减版。用户可以在配置中用官方 high/max 权衡速度与思考强度，三个 AI 功能使用同一选择。AD-027 的 Test→Save、Keychain 和自动发送单独同意仍有效，但其 48/12/24/64/78 投影被本决定取代；AD-132 的完整 workspace、严格 overlay 和原子 CAS 仍有效，但其 4 KiB/固定回合调用预算和 fake provider 作为生成验收的表述被本决定取代。
 
 验证：本地测试读取实际编码的 `URLRequest`，证明 Inbox/Checklist 在 DeepSeek V4 下发送所选 `max`、thinking enabled、无 temperature，并覆盖 effort 同步/规范化、配置原子保存、切换取消与迟到结果拒绝。真实 gate 必须使用生产 service 让 DeepSeek V4 在 `max` 下完成 Inbox、Checklist、prompt28 和 prompt150；prompt150 还要通过生产 coordinator Apply 后重新读取 150 条持久事实。UI gate 截图真实 token progress、完整 Preview、reasoning/raw response 与 Apply 结果，不接受 fixture。
-
-## AD-134：Apple Health 任务详情使用三段只读分析组合
-
-状态：Accepted
-
-背景：canonical Apple Health Task/Category 是同步维护且不可编辑的导航元数据，但旧 Task Detail 仍把它们放进普通任务组合：identity、sync-only 说明、任务量、Heatmap、编辑器、预测、More/Archive 和草稿恢复都会出现；Health 分析自己的周期控件又占据第四个 Section。这既暴露无效操作，也让“同步维护的只读目录”与屏幕行为相互矛盾。AD-124 对普通任务 identity 的要求不能因此被整体删除。
-
-决策：
-
-- 只按 `AppleHealthTaskCatalog.taskRole(for:)` 的 canonical task ID 进入 Health 详情特例；不可计时、sync-only 或 Health 祖先的普通后代不构成该判定。
-- 有 Health snapshot 时，顶层内容固定为 Summary、Task Analysis、Recent Records。Day/Week/Month、前后周期和 Today 控件是 Task Analysis 的首项，不再创建独立 Section；周期标题仍显示在分析标题区域。
-- 有旧 snapshot 的 refresh failure/unavailable 状态内联到 Task Analysis。空 snapshot 继续用同一三段组合表达；完全没有 snapshot 的 loading/failure/unavailable 可以显示单一原生状态 Section。
-- Health 分支不显示普通 identity/editor、tracking availability 说明、quantity、heatmap tracking、forecast、Add Time、More/Archive、autosave failure 或 draft-recovery UI。系统 navigation title 与返回行为保留。
-- 普通任务组合不变，继续满足 AD-095 的非分析内容独立加载和 AD-124 的 identity row；三个 Apple 平台共享同一语义分支，不新增按设备型号的布局。
-
-后果：Apple Health 详情只承载可读分析与必要状态，不再暗示目录可编辑或可归档；周期分析能力和 HealthKit 只读投影语义不受影响。Task 77 后续把投影的数据源迁移到独立的设备本地 replica，但没有改变本决策的可见组合。普通任务仍拥有完整编辑、执行、预测和记录能力。该裁剪只复用原生 SwiftUI `List`/`Section`/`Picker` 和现有投影，不引入新的第三方依赖。
-
-验证：正常字号 Health 历史 fixture 验证三段顺序、周期控件位于 Task Analysis 之后、跨日/周/月与历史导航不变；逐 viewport 扫描 lazy `List`，证明所有普通任务 identifier 缺席。保留 failure/retry、empty/reactivation、iPhone/iPad 方向截图和 macOS unavailable 截图。既有普通 Task Detail identity、heatmap、icon、timer/Add Time/More 测试保护未改分支。
 
 ## AD-135：macOS Blossom 从所属颜色控件换算屏幕坐标
 
@@ -1841,25 +1498,6 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 验证：`RootLayoutPolicy` 行为测试覆盖 compact size class、719/720 pt 边界和首次测量；`AdaptiveShellUITests` 从可见 Tab Bar/Sidebar 判断实际 shell，并在普通字号的紧凑/常规宽度保存截图。代码审查逐项分类生产 UI 的平台分支，确认没有设备/屏幕身份布局读取；格式、本地化、完整签名测试和全设备安装仍是关闭门禁。
 
-## AD-140：Home 全局计时选择入口保持同一原生整行样式
-
-状态：Accepted
-
-替代关系：本决策替代 AD-039 中“空闲 Start Timer 使用突出样式、已有计时的 Start Another Timer / Switch Timer 使用次级样式”的视觉层级差异。AD-039 的单一主动作、状态文案、宽度布局与性能边界，以及 AD-050 的可见文字和 AD-053 的选择/停止命令分离继续有效。
-
-背景：Today 的同一个 `home.startTimer` 全局入口在无活动计时时由 `HomeNowEmptyStartButton` 渲染为 prominent 胶囊，在有活动计时时又由 `HomeNowActiveContent` 渲染为 leading 整行按钮。空 Quick Start 还复制了第三套 Start Timer 按钮。状态改变因此同时改变控件结构、视觉层级、图标和尺寸，并让 compact 与 regular 宿主必须分别维护分支。
-
-决策：
-
-- `TimerPickerMode` 是 Home 全局计时选择入口的唯一展示与命令模式来源：无活动为 `.start`，允许并行且已有活动为 `.startAnother`，独占模式已有活动为 `.switchTimer`。三个标题必须准确保留 Start Timer、Start Another Timer、Switch Timer。
-- `HomeTimerPickerButton` 是这一全局入口唯一的 SwiftUI owner。它复用原有 Start Another Timer 的原生 `Button` + `Label`、leading 整行、`body.medium`、可换行文字、至少 44 pt 高度和同一内边距；状态只能改变标题和系统图标，不得改变 prominence、组件树或 hit target。
-- `.start` 与 `.startAnother` 共享 `plus.circle` 视觉语法；`.switchTimer` 使用 `arrow.left.arrow.right.circle` 明确表达切换。Now 空闲、Now 已运行和空 Quick Start 都调用该组件并打开同一个 scene-owned task picker。
-- 任务级 `TaskTimerActionButton`、任务菜单/滑动动作、App Intent、Watch task row、Widget Link 和 Live Activity 不属于这个全局 picker launcher。它们继续按指定任务与系统表面语义使用各自的原生容器，不得为了源码复用制造虚假的全局选择动作。
-
-后果：iPhone、iPad、macOS 以及 compact/regular 宽度下，计时状态变化不再让唯一入口突然变成另一种控件；用户仍能从准确标题和图标区分开始、并行开始与切换。Home 删除两套重复按钮但不改变 ledger、并行准入、picker dismissal、Watch/Widget wire contract 或本地化键，也不需要第三方 UI 库。
-
-验证：纯展示测试固定三种 `TimerPickerMode` 的共享视觉语法；正常字号 iPhone、iPad 与 macOS XCUITest 在同一场景中记录 Start Another Timer，停止最后一个活动计时后确认同一入口变为 Start Timer、保持可命中并打开同一 picker，并保存两种状态截图。完整签名测试、格式、本地化、受影响平台构建、全设备 Release 安装与 owned resource 清理仍是关闭门禁。
-
 ## AD-141：活动文档只保存当前规则，完成证据归档到 Git 历史
 
 状态：Accepted
@@ -1868,7 +1506,7 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 背景：一次性审计、实现记忆和当前工程规则长期并列后，活动文档数量膨胀，旧命令与已完成状态也容易重新被当作当前约束。
 
-决策：当前行为和所有权只写入 UserGuide、CodeGuide、Architecture、ProjectMap、Testing、PrivacyAndSecurity 等当前文档。一次性发现与验证证据写入交付该工作的 commit/PR；较大任务可以在 `Docs/ImplementationContexts/` 保存进行中的实现记忆，完成后移入 `Archive/`。AgentDecisions 只接收跨领域架构、数据安全、兼容性或系统集成决策；单一 UI/Analytics 展示细节写入对应当前功能文档。
+决策：当前行为和所有权只写入 UserGuide、CodeGuide、Architecture、ProjectMap、Testing、PrivacyAndSecurity 等当前文档。一次性发现与验证证据写入交付该工作的 commit/PR；跨多会话的较大任务可以在 `Docs/ImplementationContexts/` 保存进行中的实现记忆，完成后随收口清理，不再维护 Archive 目录（历史由 git 承载）。AgentDecisions 只接收跨领域架构、数据安全、兼容性或系统集成决策；单一 UI/Analytics 展示细节写入对应当前功能文档。
 
 后果：不得新建长期生效的 dated Audit。归档内容保留历史可追溯性，但不能充当当前指令、待办或已验证声明。
 
@@ -1896,23 +1534,7 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 ## 2. Agent 工作清单
 
-开始 Apple 平台或 SwiftUI 工作前：
-
-1. 完整阅读 [AGENTS.md](../AGENTS.md) 指定的仓库本地 skills。
-2. 读取任务相关的 HIG 与 SwiftUI reference，不凭记忆猜 API。
-3. 检查工作树，保留用户和其他 Agent 的现有改动。
-4. 明确当前事实、计划目标和历史记录，不混写。
-5. 优先读取领域模型、命令和测试，再改 UI。
-6. 把可独立复验的小批变更及时提交；只 stage 自己已核对的文件，不把其他 Agent 或用户的并行改动夹带进 commit。
-
-完成前：
-
-1. 运行与风险相称的 build/test。
-2. 验证 iPhone、iPad、Mac 以及受影响的扩展。
-3. 检查正常字号下的 HIG、本地化、隐私、迁移和同步；保留低成本基础语义，但除非用户明确要求，不启动极端动态字号、VoiceOver 或专项 Accessibility 截图/trace 批次。
-4. 更新对应文档和决策。
-5. 按批次清理所有自有资源：终止受测 App 与扩展、等待或停止当批 `xcodebuild`/`xctest`/UI runner/trace，关闭并删除当批创建的 UDID；只在当批打开且无其他 owner 时退出 Simulator、Xcode DeviceHub 和 Problem Reporter。最后审计无自有进程且无自有 Booted 设备，不得终止其他 Agent 的资源。
-6. 报告仍为红色的测试与未验证环境，不宣称未获得的通过状态。
+工作流、验证门禁、签名规则与模拟器/进程资源清理的权威出处是 [AGENTS.md](../AGENTS.md) 与 [Testing](Testing.md)；本节不再重复维护一份清单。
 
 ## 3. 相关文档
 

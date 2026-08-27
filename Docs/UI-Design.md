@@ -33,7 +33,7 @@ Custom drawing is allowed only when the product concept requires it, such as ana
 - Horizontal iPad/macOS Today action buttons should align to the metric panel height. If a metric card and action stack sit in the same row, their top and bottom edges should match.
 - Expensive derived values are passed into rows, not recalculated by them.
 - User-facing copy explains outcomes, not internal model names.
-- Repeated cards, metric cells, chart containers, checklist controls, and layout breakpoints belong in `SharedUI` or layout policy types before a second feature copies them.
+- Shared styling and controls follow the SharedUI second-caller rule in [CodeGuide](CodeGuide.md).
 
 ## Typography
 

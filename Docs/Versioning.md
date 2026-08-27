@@ -4,19 +4,25 @@ The app version is intentionally handled by the repository instead of memory in 
 
 ## User-Facing Version
 
-`MARKETING_VERSION` is the version shown in Settings > About. Every normal `git commit` should increase the patch component by `0.0.1`.
+`MARKETING_VERSION` is the version shown in Settings > About. `CURRENT_PROJECT_VERSION` is the build number.
 
-Example:
+Versions no longer advance on every commit. Bump manually before a release (or whenever a distinct build number is needed):
 
-```text
-1.0.1 -> 1.0.2
+```sh
+make bump-version
 ```
 
-`CURRENT_PROJECT_VERSION` is the build number. It increments by `1` at the same time.
+This increments the patch component of `MARKETING_VERSION` by `0.0.1` and `CURRENT_PROJECT_VERSION` by `1` across all targets in `timetracker.xcodeproj/project.pbxproj`:
+
+```text
+1.0.1 (88) -> 1.0.2 (89)
+```
+
+Commit the bumped project file together with the release change. To bump by more than a patch (e.g. a minor or major release), edit the `MARKETING_VERSION` fields in `timetracker.xcodeproj/project.pbxproj` directly and keep them identical across all targets.
 
 ## Local Git Hook
 
-The repository includes `.githooks/pre-commit`. Install it once per clone:
+The repository includes `.githooks/pre-commit`, which runs only the localization parity gate (`scripts/localization_check.sh --quiet`): every commit must keep `.strings` keys identical across `en`, `zh-Hans`, and `zh-Hant`. It no longer touches version fields. Install it once per clone:
 
 ```sh
 make install-hooks
@@ -27,16 +33,6 @@ Git intentionally does not activate hooks from tracked files after a clone. The 
 ```sh
 make check-hooks
 ```
-
-The hook runs `scripts/stage_commit_version.sh` (a thin wrapper around the `timetracker_tools.stage_commit_version` Python module; see [DevelopmentTools](DevelopmentTools.md)). It derives the next version from `HEAD`, so repeating a failed commit attempt is idempotent. It updates only the version fields in the index and working copy: already staged project changes stay staged, while unrelated unstaged project changes remain unstaged.
-
-Run the isolated Git integration test with:
-
-```sh
-make test-versioning
-```
-
-Every `git commit`, including `--allow-empty` and `--amend`, advances the version. The standard Git `--no-verify` escape can bypass client-side hooks, so release verification must still confirm the installed bundle version.
 
 ## Build Metadata
 

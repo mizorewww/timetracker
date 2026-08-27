@@ -3,5 +3,5 @@ set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 # 提交闸门:三语种 .strings key 一致(毫秒级,无需 xcodebuild)。
+# 版本号不再随提交自动递增;发布前手动运行 `make bump-version`(见 Docs/Versioning.md)。
 "$REPO_ROOT/scripts/localization_check.sh" --quiet
-"$REPO_ROOT/scripts/stage_commit_version.sh"

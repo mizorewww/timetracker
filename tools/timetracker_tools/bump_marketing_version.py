@@ -2,7 +2,7 @@
 """手动递增 pbxproj 中全部 target 的版本信息。
 
 MARKETING_VERSION 的 patch 加一,CURRENT_PROJECT_VERSION 加一。
-正常提交由 pre-commit 钩子经 stage_commit_version 自动处理;本模块用于显式手动递增或临时副本验证。
+版本号不再随提交自动递增;发布前运行 `make bump-version`(见 Docs/Versioning.md)。
 """
 
 from __future__ import annotations

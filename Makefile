@@ -35,24 +35,16 @@ venv: ## 用 uv 创建/同步 .venv(也可由 wrapper 自举)
 
 # ── Hooks & 版本 ──────────────────────────────────────────────
 .PHONY: install-hooks
-install-hooks: ## 安装 pre-commit 版本钩子(clone 后执行一次)
+install-hooks: ## 安装 pre-commit localization 闸门钩子(clone 后执行一次)
 	@$(SCRIPTS)/install_git_hooks.sh
 
 .PHONY: check-hooks
 check-hooks: ## 只读校验钩子是否就位
 	@$(SCRIPTS)/install_git_hooks.sh --check
 
-.PHONY: stage-version
-stage-version: ## pre-commit 内部调用:把下一版本写入 index 与工作树
-	@$(SCRIPTS)/stage_commit_version.sh
-
 .PHONY: bump-version
-bump-version: ## 手动递增 marketing/build 版本(正常提交无需运行)
+bump-version: ## 发布前手动递增 marketing/build 版本(见 Docs/Versioning.md)
 	@$(SCRIPTS)/bump_marketing_version.sh
-
-.PHONY: test-versioning
-test-versioning: ## 隔离临时仓库中跑版本钩子集成测试
-	@$(SCRIPTS)/test_versioning_hooks.sh
 
 # ── 构建 / 测试 ────────────────────────────────────────────────
 .PHONY: build-ios

@@ -421,11 +421,9 @@ The macOS app root separately owns one application-level `MacKeyboardShortcutSet
 
 `SyncConflictService.swift` owns bootstrap and prompt assembly. Focused extensions own local mutation, Cloud import/export, recovery/resolution, state persistence, POSIX lock/locations, and filtered export encoding. `SyncDataSnapshot` plus capture, preflight structure/content/semantics, and task/ledger/planning/checklist/Inbox restore files own one validated atomic domain mapping, while organization and domain record files own versioned transport DTOs. Record DTOs are transport/restore representations only; business truth remains the SwiftData domain model and ledger facts.
 
-Pure layout, formatting, and derivation logic belongs in `Services`, `Shared`, or `SharedUI` with unit tests. SwiftUI feature files should render state and collect input; durable writes go through store facade methods and command handlers.
+Layer placement rules (what belongs in `Commands` / `Repositories` / `Services` / `Features` / `SharedUI`, the facade boundary, and directory-split policy) are owned by [ProjectMap](ProjectMap.md#placement-rules).
 
 Within `Stores/Facade`, `TimeTrackerStore+Configuration.swift` owns full first-run configuration and startup projection catch-up; `TimeTrackerStore+Lifecycle.swift` owns mutation boundaries and current-scene refresh, `TimeTrackerStore+RefreshLifecycle.swift` owns launch/foreground recovery triggers, and `TimeTrackerStore+SyncRefreshPipeline.swift` owns remote-import recovery triggers. Closed-app App Intents enqueue directly through `SystemActionPostCommitEffects`; they must not attach facade repositories or run migrations, demo seeding, observers, or automatic LLM work.
-
-Avoid root-level "miscellaneous" folders that collect unrelated files. If a file name needs a `+` extension suffix, it should usually live under the owning facade or feature directory instead of being left beside unrelated domain stores. If a directory grows beyond one ownership concept, split it by domain before adding more files.
 
 Visual and interaction guardrails — native-first control choices, responsive checks, timeline and task-list rules — are maintained in [UI Design Notes](UI-Design.md). User-facing copy rules are maintained in [Localization](Localization.md). Task Detail is currently the canonical selected-task surface; adding an inspector requires an explicit product decision rather than being a default layout assumption.
 
@@ -464,4 +462,4 @@ Future work should preserve the ledger contract: every timer, pomodoro, manual e
 
 Settings includes an About section with the app icon, `MARKETING_VERSION`, build number, Git branch, short commit hash, and build date. The app target writes `AppBuildInfo.plist` during the build via a build phase that runs `scripts/write_build_info_plist.sh` (a thin wrapper around the `timetracker_tools.write_build_info_plist` Python module; see [DevelopmentTools](DevelopmentTools.md)); do not hard-code Git metadata in Swift source.
 
-Version bumping is automated through `.githooks/pre-commit`. See `Docs/Versioning.md` before changing release or commit automation.
+Versions are bumped manually before a release with `make bump-version`; the pre-commit hook only enforces localization parity. See `Docs/Versioning.md` before changing release or commit automation.

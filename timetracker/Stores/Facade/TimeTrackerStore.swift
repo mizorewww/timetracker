@@ -124,22 +124,20 @@ final class TimeTrackerStore {
         }
     }
 
-    var tasks: [TaskNode] = [] {
-        didSet {
-            rebuildTaskIndexes()
-        }
+    /// Domain-store passthroughs: the facade keeps no array copies of its own.
+    /// Reads forward to the owning domain store, so Observation tracks the
+    /// domain store property as the dependency; refresh functions rebuild the
+    /// derived facade indexes explicitly (see TimeTrackerStore+DomainRefreshes).
+    var tasks: [TaskNode] {
+        taskDomainStore.tasks
     }
 
-    var taskCategories: [TaskCategory] = [] {
-        didSet {
-            rebuildTaskCategoryIndexes()
-        }
+    var taskCategories: [TaskCategory] {
+        taskDomainStore.categories
     }
 
-    var taskCategoryAssignments: [TaskCategoryAssignment] = [] {
-        didSet {
-            rebuildTaskCategoryIndexes()
-        }
+    var taskCategoryAssignments: [TaskCategoryAssignment] {
+        taskDomainStore.categoryAssignments
     }
 
     var activeSegments: [TimeSegment] = [] {
@@ -163,37 +161,24 @@ final class TimeTrackerStore {
     var pomodoroRuns: [PomodoroRun] = []
     @ObservationIgnored var pomodoroReconciliationTask: Task<Void, Never>?
     var countdownEvents: [CountdownEvent] = []
-    var syncedPreferences: [SyncedPreference] = []
-    var checklistItems: [ChecklistItem] = [] {
-        didSet {
-            if !suppressChecklistIndexRebuild {
-                rebuildChecklistIndexes()
-            }
-        }
+    var syncedPreferences: [SyncedPreference] {
+        preferenceDomainStore.syncedPreferences
     }
 
-    var checklistItemVisuals: [ChecklistItemVisual] = [] {
-        didSet {
-            if !suppressChecklistVisualIndexRebuild {
-                rebuildChecklistVisualIndexes()
-            }
-        }
+    var checklistItems: [ChecklistItem] {
+        checklistDomainStore.items
     }
 
-    var inboxItems: [InboxItem] = [] {
-        didSet {
-            if !suppressInboxSuggestionIndexRebuild {
-                rebuildInboxSuggestionIndexes()
-            }
-        }
+    var checklistItemVisuals: [ChecklistItemVisual] {
+        checklistDomainStore.visuals
     }
 
-    var inboxSuggestions: [InboxSuggestion] = [] {
-        didSet {
-            if !suppressInboxSuggestionIndexRebuild {
-                rebuildInboxSuggestionIndexes()
-            }
-        }
+    var inboxItems: [InboxItem] {
+        inboxDomainStore.items
+    }
+
+    var inboxSuggestions: [InboxSuggestion] {
+        inboxDomainStore.suggestions
     }
 
     @ObservationIgnored let inboxSuggestionLifecycle =
@@ -212,7 +197,14 @@ final class TimeTrackerStore {
         set { inboxSuggestionLifecycle.failureByItemID = newValue }
     }
 
-    var preferences = AppPreferences.defaults
+    /// Preference passthrough. The setter forwards the device-local optimistic
+    /// mutations in Cloud/LLM preference commands to the domain store, keeping
+    /// a single owner; the next preference refresh overwrites it either way.
+    var preferences: AppPreferences {
+        get { preferenceDomainStore.preferences }
+        set { preferenceDomainStore.preferences = newValue }
+    }
+
     var isAppleHealthTimelineEnabled: Bool
     var appleHealthTimelineItems: [AppleHealthTimelineItem] = []
     var appleHealthTimelineState: AppleHealthTimelineState
@@ -334,9 +326,6 @@ final class TimeTrackerStore {
     var taskDomainStore = TaskStore()
     var ledgerDomainStore = LedgerStore()
     var checklistDomainStore = ChecklistStore()
-    @ObservationIgnored var suppressChecklistIndexRebuild = false
-    @ObservationIgnored var suppressChecklistVisualIndexRebuild = false
-    @ObservationIgnored var suppressInboxSuggestionIndexRebuild = false
     var inboxDomainStore = InboxStore()
     var preferenceDomainStore = PreferenceStore()
     var syncObservers: [SyncNotificationObserverToken] = []

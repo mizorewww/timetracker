@@ -8,9 +8,10 @@ extension TimeTrackerStore {
         } else {
             try taskDomainStore.refreshTaskScoped(taskIDs: plan.affectedTaskIDs, repository: taskRepository)
         }
-        tasks = taskDomainStore.tasks
-        taskCategories = taskDomainStore.categories
-        taskCategoryAssignments = taskDomainStore.categoryAssignments
+        // Domain-store arrays are the single owner; the facade exposes them as
+        // passthroughs, so only the derived facade indexes need rebuilding.
+        rebuildTaskIndexes()
+        rebuildTaskCategoryIndexes()
         try refreshLedgerRelationshipVisibility()
         cancelInvalidChecklistVisualSuggestionRequests()
     }
@@ -54,8 +55,6 @@ extension TimeTrackerStore {
                 forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
             )
         )
-        syncedPreferences = preferenceDomainStore.syncedPreferences
-        preferences = preferenceDomainStore.preferences
         let configurationChanged = !matchesCurrentLLMConfiguration(
             LLMRequestConfiguration(
                 endpoint: previousEndpoint,
@@ -88,8 +87,8 @@ extension TimeTrackerStore {
                 items: fetchChecklistItems(),
                 visuals: fetchChecklistItemVisuals()
             )
-            checklistItems = checklistDomainStore.items
-            checklistItemVisuals = checklistDomainStore.visuals
+            rebuildChecklistIndexes()
+            rebuildChecklistVisualIndexes()
         } else {
             let previousItemIDs = Set(
                 scopedTaskIDs.flatMap { checklistDomainStore.items(for: $0) }.map(\.id)
@@ -104,16 +103,9 @@ extension TimeTrackerStore {
                 scopedTaskIDs.flatMap { checklistDomainStore.items(for: $0) }.map(\.id)
             )
 
-            // The domain store already maintains scoped indexes. Publish its
-            // arrays without immediately regrouping every checklist item in
-            // the facade, then update only the affected read-model buckets.
-            suppressChecklistIndexRebuild = true
-            suppressChecklistVisualIndexRebuild = true
-            checklistItems = checklistDomainStore.items
-            checklistItemVisuals = checklistDomainStore.visuals
-            suppressChecklistIndexRebuild = false
-            suppressChecklistVisualIndexRebuild = false
-
+            // The domain store already maintains scoped indexes. Update only
+            // the affected facade read-model buckets instead of regrouping
+            // every checklist item in the facade.
             for taskID in scopedTaskIDs {
                 let taskItems = checklistDomainStore.items(for: taskID)
                 if taskItems.isEmpty {
@@ -147,13 +139,9 @@ extension TimeTrackerStore {
                 suggestions: fetchInboxSuggestions(inboxItemIDs: plan.affectedInboxItemIDs)
             )
         }
-        suppressInboxSuggestionIndexRebuild = true
         inboxItemReadModelByItemID = Dictionary(
             uniqueKeysWithValues: inboxDomainStore.itemReadModels.map { ($0.item.id, $0) }
         )
-        inboxItems = inboxDomainStore.items
-        inboxSuggestions = inboxDomainStore.suggestions
-        suppressInboxSuggestionIndexRebuild = false
         rebuildInboxSuggestionIndexes()
         cancelInvalidInboxSuggestionRequests()
     }

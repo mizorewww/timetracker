@@ -145,6 +145,7 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
         )
         try validateArchiveAdmission(
             operations: operations,
+            replayedOperations: overlay.operations,
             context: context
         )
     }
@@ -312,9 +313,17 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
 
     func validateArchiveAdmission(
         operations: [AITaskWorkspaceOperation],
+        replayedOperations: [AITaskWorkspaceOperation],
         context: ModelContext
     ) throws {
-        let archivedTaskIDs = operations.reduce(into: Set<UUID>()) {
+        // The recorded `affectedDescendantIDs` payload is untrusted plan
+        // data: replay recomputes the true descendant set at each archive's
+        // position in the sequence. Check the union of recorded and replayed
+        // IDs so a forged plan cannot shrink the admission scope below the
+        // branch Apply actually archives.
+        let archivedTaskIDs = (operations + replayedOperations).reduce(
+            into: Set<UUID>()
+        ) {
             result, operation in
             guard case let .archiveTask(
                 before,

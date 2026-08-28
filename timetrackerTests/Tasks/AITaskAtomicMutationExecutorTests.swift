@@ -119,6 +119,68 @@ struct AITaskAtomicMutationExecutorTests {
         #expect(persistedTitles == ["Task 0", "Task 1"])
     }
 
+    @Test
+    func applyRejectsArchivePlanWhoseRecordedDescendantsHideActiveWork() async throws {
+        let context = try makeTestContext()
+        let parent = TaskNode(
+            title: "Parent",
+            parentID: nil,
+            deviceID: "ai-archive-test",
+            sortOrder: 0
+        )
+        let child = TaskNode(
+            title: "Child",
+            parentID: parent.id,
+            deviceID: "ai-archive-test",
+            sortOrder: 0
+        )
+        context.insert(parent)
+        context.insert(child)
+        context.insert(
+            TimeSegment(
+                sessionID: UUID(),
+                taskID: child.id,
+                source: .timer,
+                deviceID: "ai-archive-test",
+                startedAt: Date(),
+                endedAt: nil
+            )
+        )
+        try context.save()
+
+        let coordinator = try StoreScopedAITaskAtomicMutationCoordinator(
+            container: context.container,
+            writeAuthorization: .isolatedTestHarness,
+            deviceID: "ai-archive-test"
+        )
+        let baseline = try await coordinator.captureBaseline()
+        let before = try #require(
+            baseline.snapshot.tasks.first { $0.id == parent.id }
+        )
+        var after = before
+        after.isArchived = true
+        // Forged payload: the plan records no descendants although the
+        // replayed overlay recomputes the child under the archived branch.
+        let forgedOperation = AITaskWorkspaceOperation.archiveTask(
+            before: before,
+            after: after,
+            affectedDescendantIDs: []
+        )
+
+        await #expect(throws: AITaskAtomicMutationError.activeWorkMustStop) {
+            try await coordinator.apply(
+                AITaskAtomicMutationPlan(
+                    baseline: baseline,
+                    operations: [forgedOperation]
+                )
+            )
+        }
+        #expect(
+            try persistedTask(parent.id, container: context.container)?
+                .archivedAt == nil
+        )
+    }
+
     private func seedTasks(
         count: Int,
         in context: ModelContext

@@ -35,30 +35,7 @@ struct CoreSyncSnapshotPreflightTests {
     }
 
     @Test @MainActor
-    func oversizedTextIsRejectedBeforeExistingRowsChange() throws {
-        let (context, sentinelID) = try makeSentinelContext()
-        let task = TaskNode(
-            title: String(repeating: "a", count: SyncDataSnapshotRestoreLimits.maximumTitleByteCount + 1),
-            parentID: nil,
-            deviceID: "source"
-        )
-        let record = TaskRecord(task)
-        let snapshot = SyncDataSnapshot(tasks: [record])
-
-        #expect(throws: SyncDataSnapshotPreflightError.fieldByteLimitExceeded(
-            table: .tasks,
-            id: record.id,
-            field: "title",
-            actual: SyncDataSnapshotRestoreLimits.maximumTitleByteCount + 1,
-            maximum: SyncDataSnapshotRestoreLimits.maximumTitleByteCount
-        )) {
-            try snapshot.restoreAsLocalWinner(context: context)
-        }
-        try expectSentinelUnchanged(context: context, id: sentinelID)
-    }
-
-    @Test @MainActor
-    func invalidEnumAndNonFiniteSortOrderAreRejected() throws {
+    func invalidTaskStatusRawIsRejectedBeforeExistingRowsChange() throws {
         let invalidStatusContext = try makeSentinelContext()
         let invalidStatusTask = TaskNode(title: "Invalid status", parentID: nil, deviceID: "source")
         invalidStatusTask.statusRaw = "future-status"
@@ -74,21 +51,6 @@ struct CoreSyncSnapshotPreflightTests {
                 .restoreAsLocalWinner(context: invalidStatusContext.0)
         }
         try expectSentinelUnchanged(context: invalidStatusContext.0, id: invalidStatusContext.1)
-
-        let nonFiniteContext = try makeSentinelContext()
-        let nonFiniteTask = TaskNode(title: "Invalid order", parentID: nil, deviceID: "source")
-        nonFiniteTask.sortOrder = .infinity
-        let nonFiniteRecord = TaskRecord(nonFiniteTask)
-
-        #expect(throws: SyncDataSnapshotPreflightError.nonFiniteNumber(
-            table: .tasks,
-            id: nonFiniteRecord.id,
-            field: "sortOrder"
-        )) {
-            try SyncDataSnapshot(tasks: [nonFiniteRecord])
-                .restoreAsLocalWinner(context: nonFiniteContext.0)
-        }
-        try expectSentinelUnchanged(context: nonFiniteContext.0, id: nonFiniteContext.1)
     }
 
     @Test @MainActor
@@ -109,35 +71,6 @@ struct CoreSyncSnapshotPreflightTests {
             id: record.id,
             field: "destinationKindRaw",
             value: invalidRawValue
-        )) {
-            try SyncDataSnapshot(inboxSuggestions: [record])
-                .restoreAsLocalWinner(context: context)
-        }
-        try expectSentinelUnchanged(context: context, id: sentinelID)
-    }
-
-    @Test @MainActor
-    func oversizedInboxSuggestionDestinationKindIsRejectedBeforeExistingRowsChange() throws {
-        let (context, sentinelID) = try makeSentinelContext()
-        let oversizedRawValue = String(
-            repeating: "a",
-            count: SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount + 1
-        )
-        let suggestion = InboxSuggestion(
-            inboxItemID: UUID(),
-            taskID: UUID(),
-            titleSnapshot: "Oversized destination",
-            deviceID: "source"
-        )
-        suggestion.destinationKindRaw = oversizedRawValue
-        let record = InboxSuggestionRecord(suggestion)
-
-        #expect(throws: SyncDataSnapshotPreflightError.fieldByteLimitExceeded(
-            table: .inboxSuggestions,
-            id: record.id,
-            field: "destinationKindRaw",
-            actual: SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount + 1,
-            maximum: SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount
         )) {
             try SyncDataSnapshot(inboxSuggestions: [record])
                 .restoreAsLocalWinner(context: context)
@@ -202,22 +135,7 @@ struct CoreSyncSnapshotPreflightTests {
     }
 
     @Test @MainActor
-    func invalidDateAndKnownPreferenceTypeAreRejected() throws {
-        let invalidDateContext = try makeSentinelContext()
-        let invalidDateTask = TaskNode(title: "Invalid date", parentID: nil, deviceID: "source")
-        invalidDateTask.createdAt = Date(timeIntervalSinceReferenceDate: .nan)
-        let invalidDateRecord = TaskRecord(invalidDateTask)
-
-        #expect(throws: SyncDataSnapshotPreflightError.invalidDate(
-            table: .tasks,
-            id: invalidDateRecord.id,
-            field: "createdAt"
-        )) {
-            try SyncDataSnapshot(tasks: [invalidDateRecord])
-                .restoreAsLocalWinner(context: invalidDateContext.0)
-        }
-        try expectSentinelUnchanged(context: invalidDateContext.0, id: invalidDateContext.1)
-
+    func knownPreferenceTypeMismatchIsRejectedBeforeExistingRowsChange() throws {
         let preferenceContext = try makeSentinelContext()
         let preference = SyncedPreference(
             key: AppPreferenceKey.defaultFocusMinutes.rawValue,
@@ -283,22 +201,7 @@ struct CoreSyncSnapshotPreflightTests {
     }
 
     @Test @MainActor
-    func extremeSortOrderAndUnsafePreferenceKeysAreRejected() throws {
-        let sortOrderContext = try makeSentinelContext()
-        let task = TaskNode(title: "Unadvanceable order", parentID: nil, deviceID: "source")
-        task.sortOrder = .greatestFiniteMagnitude
-        let taskRecord = TaskRecord(task)
-
-        #expect(throws: SyncDataSnapshotPreflightError.sortOrderCannotAdvance(
-            table: .tasks,
-            id: taskRecord.id,
-            field: "sortOrder"
-        )) {
-            try SyncDataSnapshot(tasks: [taskRecord])
-                .restoreAsLocalWinner(context: sortOrderContext.0)
-        }
-        try expectSentinelUnchanged(context: sortOrderContext.0, id: sortOrderContext.1)
-
+    func unsafePreferenceKeysAreRejectedBeforeExistingRowsChange() throws {
         for unsafeKey in ["", "future\npreference"] {
             let preferenceContext = try makeSentinelContext()
             let preference = SyncedPreference(

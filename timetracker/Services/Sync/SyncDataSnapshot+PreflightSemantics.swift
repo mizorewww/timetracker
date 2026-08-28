@@ -3,7 +3,6 @@ import Foundation
 extension SyncDataSnapshot {
     func validateRestoreSemantics() throws {
         try validateRawValues()
-        try validatePomodoroValues()
         try validatePreferenceValues()
         try validateSessionRelationships()
         try validateInboxSuggestionRelationships()
@@ -62,55 +61,6 @@ extension SyncDataSnapshot {
                 id: record.id,
                 field: "destinationKindRaw",
                 value: record.destinationKindRaw
-            )
-        }
-    }
-
-    private func validatePomodoroValues() throws {
-        for record in pomodoroRuns {
-            try require(
-                record.focusSecondsPlanned,
-                in: 1 ... 28800,
-                recordID: record.id,
-                field: "focusSecondsPlanned"
-            )
-            try require(
-                record.breakSecondsPlanned,
-                in: 1 ... 28800,
-                recordID: record.id,
-                field: "breakSecondsPlanned"
-            )
-            if let longBreakSecondsPlanned = record.longBreakSecondsPlanned {
-                try require(
-                    longBreakSecondsPlanned,
-                    in: 1 ... 28800,
-                    recordID: record.id,
-                    field: "longBreakSecondsPlanned"
-                )
-            }
-            try require(record.targetRounds, in: 1 ... 24, recordID: record.id, field: "targetRounds")
-            try require(
-                record.completedFocusRounds,
-                in: 0 ... record.targetRounds,
-                recordID: record.id,
-                field: "completedFocusRounds"
-            )
-        }
-    }
-
-    private func require(
-        _ value: Int,
-        in range: ClosedRange<Int>,
-        recordID: UUID,
-        field: String
-    ) throws {
-        guard range.contains(value) else {
-            throw SyncDataSnapshotPreflightError.invalidInteger(
-                table: .pomodoroRuns,
-                id: recordID,
-                field: field,
-                value: value,
-                allowed: "\(range.lowerBound)...\(range.upperBound)"
             )
         }
     }

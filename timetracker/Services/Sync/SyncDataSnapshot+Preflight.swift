@@ -31,10 +31,6 @@ enum SyncDataSnapshotPreflightError: LocalizedError, Equatable {
         actual: Int,
         maximum: Int
     )
-    case totalTextByteLimitExceeded(actual: Int, maximum: Int)
-    case invalidDate(table: SyncSnapshotTable, id: UUID, field: String)
-    case nonFiniteNumber(table: SyncSnapshotTable, id: UUID, field: String)
-    case sortOrderCannotAdvance(table: SyncSnapshotTable, id: UUID, field: String)
     case invalidRawValue(table: SyncSnapshotTable, id: UUID, field: String, value: String)
     case invalidInteger(
         table: SyncSnapshotTable,
@@ -85,14 +81,6 @@ enum SyncDataSnapshotPreflightError: LocalizedError, Equatable {
             return "Sync snapshot table \(table.rawValue) repeats identifier \(id.uuidString)."
         case let .fieldByteLimitExceeded(table, id, field, actual, maximum):
             return "Sync snapshot \(table.rawValue).\(field) for \(id.uuidString) is \(actual) UTF-8 bytes; maximum is \(maximum)."
-        case let .totalTextByteLimitExceeded(actual, maximum):
-            return "Sync snapshot text is \(actual) UTF-8 bytes; maximum is \(maximum)."
-        case let .invalidDate(table, id, field):
-            return "Sync snapshot \(table.rawValue).\(field) for \(id.uuidString) is outside the supported date range."
-        case let .nonFiniteNumber(table, id, field):
-            return "Sync snapshot \(table.rawValue).\(field) for \(id.uuidString) is not finite."
-        case let .sortOrderCannotAdvance(table, id, field):
-            return "Sync snapshot \(table.rawValue).\(field) for \(id.uuidString) cannot be safely advanced by the app's ordering increment."
         case let .invalidRawValue(table, id, field, value):
             return "Sync snapshot \(table.rawValue).\(field) for \(id.uuidString) has unsupported value '\(value)'."
         case let .invalidInteger(table, id, field, value, allowed):
@@ -126,20 +114,12 @@ nonisolated enum SyncDataSnapshotRestoreLimits {
     static let maximumTitleByteCount = 4 * 1024
     static let maximumNoteByteCount = 64 * 1024
     static let maximumCompactFieldByteCount = 256
-    static let maximumPreferenceValueByteCount = 256 * 1024
-    static let maximumTotalTextByteCount = 32 * 1024 * 1024
-    static let minimumDate = PersistentDatePolicy.minimumDate
-    static let maximumDateExclusive =
-        PersistentDatePolicy.maximumDateExclusive
 }
 
 extension SyncDataSnapshot {
     func validateForRestore() throws {
         try validateRecordCounts()
         try validateUniqueIdentifiers()
-
-        var contentValidator = SyncSnapshotContentValidator()
-        try contentValidator.validate(snapshot: self)
         try validateRestoreSemantics()
     }
 

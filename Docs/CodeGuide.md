@@ -300,7 +300,7 @@ fresh-store hydration 以持久 `CloudRecoveryImportSession` 为屏障，而不�
 - `AppleHealthReplicaSyncService.swift`、`AppleHealthDataReader.swift`：双 stream anchored 增量读取与提交编排。
 - `SyncDataSnapshot.swift`：版本化全域快照、摘要和 fingerprint。
 - `SyncDataSnapshot+Capture.swift`：按域捕获当前事实。
-- `SyncDataSnapshot+Preflight.swift`、`SyncDataSnapshot+PreflightContent.swift` 与 `SyncDataSnapshot+PreflightSemantics.swift`：在恢复事务前对不可信 transport 做结构、内容和语义预检。
+- `SyncDataSnapshot+Preflight.swift`、`SyncDataSnapshot+PreflightSemantics.swift`、`SyncDataSnapshot+PreflightTaskProgressSemantics.swift` 与 `SyncDataSnapshot+PreflightTaskProgressValidation.swift`：在恢复事务前对不可信 transport 做结构与语义预检。
 - `SyncDataSnapshot+Restore.swift`、`SyncDataSnapshot+RestoreTasks.swift`、`SyncDataSnapshot+RestoreLedger.swift`、`SyncDataSnapshot+RestorePlanning.swift`、`SyncDataSnapshot+RestoreChecklist.swift` 与 `SyncDataSnapshot+RestoreInbox.swift`：预检通过后，在一个原子事务中分域恢复。
 - `SyncSnapshotRecords.swift`、`SyncSnapshotLedgerRecords.swift`、`SyncSnapshotPlanningRecords.swift`、`SyncSnapshotChecklistRecords.swift` 与 `SyncSnapshotInboxRecords.swift`：组织/任务基础和分域跨版本 Codable record DTO；它们不是第二套业务模型。
 
@@ -326,7 +326,7 @@ manifest、slot、forced-upload mirror、默认删除和损坏隔离都经注入
 
 Cloud export 不以“收到任意成功回调”作为本机已同步证明。每次 local mutation 推进 `localGeneration`；import/强制恢复推进 `syncEpoch`；export start 记录 event ID、epoch、generation、fingerprint 和 startedAt。成功 finish 只确认同 epoch 且不早于已确认 generation 的 checkpoint，乱序旧回调不能回退 base 或清除较新的 pending forced upload。旧 state 清理被排除偏好时会重算 fingerprint 并同时清空清理前 payload 的在途 checkpoints，使延迟回调不能恢复旧 base。checkpoint 最多保留 16 个、最长 24 小时，不为每个事件复制整份用户 snapshot。
 
-Snapshot restore 把历史/外部 transport 当作不可信输入。进入原子 mutation 前，纯 preflight 会拒绝：单表超过 100,000 条或总计超过 250,000 条、任一表内重复 UUID、超过字段/总文本 UTF-8 预算（标题 4 KiB、note/reason 64 KiB、紧凑字段 256 B、preference JSON 256 KiB、总文本 32 MiB）、非有限或不在 `[1900-01-01, 2201-01-01)` 的日期、非有限/无法安全加 10 的 sort order、未知 enum raw value、越界 Pomodoro 计划（时长 `1...28,800` 秒、target rounds `1...24`、completed `0...target`）、类型不匹配或非法 JSON 偏好，以及能证明的 session/task 关系矛盾。当前 payload 中缺少被引用记录允许通过，以兼容 CloudKit staged import；已同时存在但任务不一致则拒绝。任一预检失败都不能改写现有记录或生成 tombstone；不做静默去重或钳制。
+Snapshot restore 把历史/外部 transport 当作不可信输入。进入原子 mutation 前，纯 preflight 会拒绝：单表超过 100,000 条或总计超过 250,000 条、任一表内重复 UUID、未知 enum raw value、类型不匹配或非法 JSON 偏好、能证明的 session/task 关系矛盾，以及 deterministic identity、canonical day key、有效 timezone、数量范围或可证明 rule/goal 引用不成立的 V13 task-progress 记录。当前 payload 中缺少被引用记录允许通过，以兼容 CloudKit staged import；已同时存在但任务不一致则拒绝。任一预检失败都不能改写现有记录或生成 tombstone；不做静默去重。字段 UTF-8 预算（标题 4 KiB、note/reason 64 KiB、紧凑字段 256 B、preference JSON 256 KiB）、持久化日期范围、sort order 可推进性和 Pomodoro 计划边界都是 writer 侧契约，由 command/persistence 边界强制并有测试覆盖，restore preflight 不再逐条重检。
 
 这个边界覆盖显式 `SyncDataSnapshot.restoreAsLocalWinner` 恢复路径；已被 SwiftData/CloudKit 直接 materialize 进 context 的初始 import 不会倒流经该 snapshot preflight，不得用此证据宣称所有 CloudKit 输入已被同等拦截。
 

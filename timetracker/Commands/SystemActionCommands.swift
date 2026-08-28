@@ -77,19 +77,6 @@ struct SystemActionCommandHandler {
         ))
     }
 
-    @discardableResult
-    func startTimer(
-        taskID: UUID,
-        source: TimeSessionSource = .timer,
-        context: ModelContext
-    ) throws -> UUID? {
-        try startTimerMutation(
-            taskID: taskID,
-            source: source,
-            container: context.container
-        ).subjectSegmentID
-    }
-
     func startTimerMutation(
         taskID: UUID,
         source: TimeSessionSource = .timer,
@@ -102,19 +89,6 @@ struct SystemActionCommandHandler {
             taskID: taskID,
             source: source
         )
-    }
-
-    @discardableResult
-    func stopTimer(
-        segmentID: UUID? = nil,
-        taskID: UUID? = nil,
-        context: ModelContext
-    ) throws -> UUID? {
-        try stopTimerMutation(
-            segmentID: segmentID,
-            taskID: taskID,
-            container: context.container
-        ).subjectSegmentID
     }
 
     func stopTimerMutation(

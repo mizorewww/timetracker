@@ -178,12 +178,10 @@ struct StoreScopedInboxCommandCoordinator {
     func withFreshLockedContext<Outcome>(
         _ operation: (ModelContext) throws -> Outcome
     ) throws -> Outcome {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        return try StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        ).withFreshContext(author: .localMutation, operation)
+        try StoreScopedMutationSession(
+            container: container,
+            writeAuthorization: writeAuthorization
+        ).withFreshMutationContext(operation)
     }
 
     private func mutateItem(

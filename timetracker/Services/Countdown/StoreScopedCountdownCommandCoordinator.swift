@@ -49,13 +49,7 @@ struct StoreScopedCountdownCommandCoordinator {
     }
 
     func add() throws {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        )
-        try transaction.withFreshContext(author: .localMutation) { context in
+        try mutationSession().withFreshMutationContext { context in
             _ = try CountdownCommandHandler().add(
                 context: context,
                 deviceID: deviceID
@@ -95,13 +89,7 @@ struct StoreScopedCountdownCommandCoordinator {
         baseline: CountdownMutationBaseline,
         operation: (CountdownEvent, ModelContext) throws -> Void
     ) throws {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        )
-        try transaction.withFreshContext(author: .localMutation) { context in
+        try mutationSession().withFreshMutationContext { context in
             let eventID = baseline.eventID
             let descriptor = FetchDescriptor<CountdownEvent>(
                 predicate: #Predicate { $0.id == eventID }
@@ -118,5 +106,12 @@ struct StoreScopedCountdownCommandCoordinator {
             }
             try operation(event, context)
         }
+    }
+
+    private func mutationSession() -> StoreScopedMutationSession {
+        StoreScopedMutationSession(
+            container: container,
+            writeAuthorization: writeAuthorization
+        )
     }
 }

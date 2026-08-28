@@ -161,13 +161,10 @@ struct StoreScopedChecklistCommandCoordinator {
         taskID: UUID,
         operation: (ModelContext, [TaskNode]) throws -> (itemID: UUID?, didMutate: Bool)
     ) throws -> ChecklistMutationOutcome {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        )
-        return try transaction.withFreshContext(author: .localMutation) { context in
+        try StoreScopedMutationSession(
+            container: container,
+            writeAuthorization: writeAuthorization
+        ).withFreshMutationContext { context in
             let tasks = try SwiftDataTaskRepository(
                 context: context,
                 deviceID: deviceID

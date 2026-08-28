@@ -4,43 +4,31 @@ import SwiftData
 extension TimeTrackerStore {
     @discardableResult
     func toggleChecklistItem(_ item: ChecklistItem) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try StoreScopedChecklistCommandCoordinator(
-                container: modelContext.container,
+        performStoreCommand(
+            eventsForOutcome: { $0.events },
+            onError: handleStoreScopedChecklistError
+        ) { container in
+            try StoreScopedChecklistCommandCoordinator(
+                container: container,
                 writeAuthorization: writeAuthorization
             ).setCompletion(
                 baseline: ChecklistMutationBaseline(item: item),
                 isCompleted: !item.isCompleted
             )
-            finishStoreScopedMutation(events: outcome.events)
-            return true
-        } catch {
-            handleStoreScopedChecklistError(error)
-            return false
-        }
+        } != nil
     }
 
     @discardableResult
     func addChecklistItem(taskID: UUID, title: String) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try StoreScopedChecklistCommandCoordinator(
-                container: modelContext.container,
+        performStoreCommand(
+            eventsForOutcome: { $0.events },
+            onError: handleStoreScopedChecklistError
+        ) { container in
+            try StoreScopedChecklistCommandCoordinator(
+                container: container,
                 writeAuthorization: writeAuthorization
             ).add(taskID: taskID, title: title)
-            finishStoreScopedMutation(events: outcome.events)
-            return true
-        } catch {
-            handleStoreScopedChecklistError(error)
-            return false
-        }
+        } != nil
     }
 
     @discardableResult
@@ -65,13 +53,12 @@ extension TimeTrackerStore {
             return false
         }
 
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try StoreScopedChecklistCommandCoordinator(
-                container: modelContext.container,
+        return performStoreCommand(
+            eventsForOutcome: { $0.events },
+            onError: handleStoreScopedChecklistError
+        ) { container in
+            try StoreScopedChecklistCommandCoordinator(
+                container: container,
                 writeAuthorization: writeAuthorization
             ).reorder(
                 baseline: ChecklistOrderMutationBaseline(
@@ -80,12 +67,7 @@ extension TimeTrackerStore {
                 ),
                 orderedItemIDs: orderedIDs
             )
-            finishStoreScopedMutation(events: outcome.events)
-            return true
-        } catch {
-            handleStoreScopedChecklistError(error)
-            return false
-        }
+        } != nil
     }
 
     private func handleStoreScopedChecklistError(_ error: Error) {
@@ -93,10 +75,7 @@ extension TimeTrackerStore {
             do {
                 try refresh(plan: StoreRefreshPlan(scopes: [.tasks, .checklist]))
             } catch {
-                errorMessage = String(
-                    format: AppStrings.localized("error.savedRefreshFailed"),
-                    error.localizedDescription
-                )
+                errorMessage = savedRefreshFailedMessage(error)
                 return
             }
         }

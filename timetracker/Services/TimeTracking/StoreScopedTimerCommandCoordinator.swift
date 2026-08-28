@@ -154,19 +154,19 @@ struct StoreScopedTimerCommandCoordinator {
         self.nowProvider = nowProvider
     }
 
+    private func mutationSession() -> StoreScopedMutationSession {
+        StoreScopedMutationSession(
+            container: container,
+            writeAuthorization: writeAuthorization
+        )
+    }
+
     func start(
         taskID: UUID,
         sameTaskBehavior: TimerSameTaskStartBehavior = .reuseOldest,
         source: TimeSessionSource = .timer
     ) throws -> StoreScopedTimerCommandOutcome {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        )
-
-        return try transaction.withFreshContext(author: .localMutation) { context in
+        try mutationSession().withFreshMutationContext { context in
             let mutationDate = nowProvider()
             let taskRepository = SwiftDataTaskRepository(
                 context: context,
@@ -260,14 +260,7 @@ struct StoreScopedTimerCommandCoordinator {
         segmentID: UUID? = nil,
         taskID: UUID? = nil
     ) throws -> StoreScopedTimerCommandOutcome {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        )
-
-        return try transaction.withFreshContext(author: .localMutation) { context in
+        try mutationSession().withFreshMutationContext { context in
             let mutationDate = nowProvider()
             guard segmentID == nil || taskID == nil else {
                 return Self.noOpOutcome

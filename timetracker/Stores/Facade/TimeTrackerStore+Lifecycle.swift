@@ -67,6 +67,79 @@ extension TimeTrackerStore {
         return outcome
     }
 
+    /// The configured store container, or `StoreError.notConfigured` when the
+    /// store has not been configured yet.
+    func requireStoreContainer() throws -> ModelContainer {
+        guard let modelContext else { throw StoreError.notConfigured }
+        return modelContext.container
+    }
+
+    /// Formats the standard post-commit refresh failure message.
+    func savedRefreshFailedMessage(_ error: Error) -> String {
+        String(
+            format: AppStrings.localized("error.savedRefreshFailed"),
+            error.localizedDescription
+        )
+    }
+
+    /// Shared tail for store-scoped command methods: resolves the configured
+    /// container, runs the command, applies `finish` to the committed outcome,
+    /// and maps any thrown error to `errorMessage`. Pass `onError` when the
+    /// domain must converge stale read models before the message is assigned;
+    /// it then owns the whole failure path, including the final assignment.
+    @discardableResult
+    func performStoreCommand<Outcome>(
+        onError: ((Error) -> Void)? = nil,
+        command: (ModelContainer) throws -> Outcome,
+        finish: (Outcome) throws -> Void
+    ) -> Outcome? {
+        performStoreCommand(
+            onError: onError,
+            command: command,
+            finishResult: { outcome in
+                try finish(outcome)
+                return outcome
+            }
+        )
+    }
+
+    /// `performStoreCommand` variant whose committed outcome maps to the
+    /// command's own result (for example a timer command's subject lookup).
+    @discardableResult
+    func performStoreCommand<Outcome, Result>(
+        onError: ((Error) -> Void)? = nil,
+        command: (ModelContainer) throws -> Outcome,
+        finishResult: (Outcome) throws -> Result
+    ) -> Result? {
+        guard let modelContext else {
+            errorMessage = StoreError.notConfigured.localizedDescription
+            return nil
+        }
+        do {
+            return try finishResult(command(modelContext.container))
+        } catch {
+            if let onError {
+                onError(error)
+            } else {
+                errorMessage = error.localizedDescription
+            }
+            return nil
+        }
+    }
+
+    /// Common store-scoped finish: publish the events carried by the
+    /// committed outcome.
+    @discardableResult
+    func performStoreCommand<Outcome>(
+        eventsForOutcome: (Outcome) -> Set<StoreDomainEvent>,
+        onError: ((Error) -> Void)? = nil,
+        command: (ModelContainer) throws -> Outcome
+    ) -> Outcome? {
+        performStoreCommand(onError: onError, command: command) { outcome in
+            finishStoreScopedMutation(events: eventsForOutcome(outcome))
+        }
+    }
+
     /// Applies the result of a timer transaction that already committed in a
     /// fresh sibling context under the store-scoped timer lock.
     ///
@@ -96,17 +169,11 @@ extension TimeTrackerStore {
             do {
                 try refresh(plan: refreshPlanner.plan(after: refreshEvents))
             } catch {
-                errorMessage = String(
-                    format: AppStrings.localized("error.savedRefreshFailed"),
-                    error.localizedDescription
-                )
+                errorMessage = savedRefreshFailedMessage(error)
             }
         }
         if let missingTaskRefreshError {
-            errorMessage = String(
-                format: AppStrings.localized("error.savedRefreshFailed"),
-                missingTaskRefreshError.localizedDescription
-            )
+            errorMessage = savedRefreshFailedMessage(missingTaskRefreshError)
         }
         return outcome.subjectSegmentID != nil
     }
@@ -141,10 +208,7 @@ extension TimeTrackerStore {
                 validateSelectedTask()
             }
         } catch {
-            errorMessage = String(
-                format: AppStrings.localized("error.savedRefreshFailed"),
-                error.localizedDescription
-            )
+            errorMessage = savedRefreshFailedMessage(error)
         }
     }
 
@@ -202,10 +266,7 @@ extension TimeTrackerStore {
         )
 
         if let postCommitError {
-            errorMessage = String(
-                format: AppStrings.localized("error.savedRefreshFailed"),
-                postCommitError.localizedDescription
-            )
+            errorMessage = savedRefreshFailedMessage(postCommitError)
         }
     }
 

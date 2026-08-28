@@ -5,11 +5,8 @@ extension TimeTrackerStore {
     func captureAITaskWorkspaceBaseline() async throws
         -> AITaskAtomicMutationBaseline
     {
-        guard let modelContext else {
-            throw StoreError.notConfigured
-        }
-        return try await StoreScopedAITaskAtomicMutationCoordinator(
-            container: modelContext.container,
+        try await StoreScopedAITaskAtomicMutationCoordinator(
+            container: requireStoreContainer(),
             writeAuthorization: writeAuthorization
         ).captureBaseline()
     }

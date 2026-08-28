@@ -4,79 +4,58 @@ import SwiftData
 extension TimeTrackerStore {
     @discardableResult
     func addCountdownEvent() -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
+        performStoreCommand(
+            eventsForOutcome: { _ in [.countdownChanged] }
+        ) { container in
             try StoreScopedCountdownCommandCoordinator(
-                container: modelContext.container,
+                container: container,
                 writeAuthorization: writeAuthorization
             ).add()
-            finishStoreScopedMutation(events: [.countdownChanged])
-            return true
-        } catch {
-            errorMessage = error.localizedDescription
-            return false
-        }
+        } != nil
     }
 
     @discardableResult
     func updateCountdownEvent(_ event: CountdownEvent, title: String? = nil, date: Date? = nil) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
+        performStoreCommand(
+            eventsForOutcome: { _ in [.countdownChanged] },
+            onError: handleStoreScopedCountdownError
+        ) { container in
             try StoreScopedCountdownCommandCoordinator(
-                container: modelContext.container,
+                container: container,
                 writeAuthorization: writeAuthorization
             ).update(
                 baseline: CountdownMutationBaseline(event: event),
                 title: title,
                 date: date
             )
-            finishStoreScopedMutation(events: [.countdownChanged])
-            return true
-        } catch {
-            if error is StoreScopedCountdownMutationError {
-                refreshStoreScopedCountdownReadModels()
-            }
-            errorMessage = error.localizedDescription
-            return false
-        }
+        } != nil
     }
 
     @discardableResult
     func deleteCountdownEvent(_ event: CountdownEvent) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
+        performStoreCommand(
+            eventsForOutcome: { _ in [.countdownChanged] },
+            onError: handleStoreScopedCountdownError
+        ) { container in
             try StoreScopedCountdownCommandCoordinator(
-                container: modelContext.container,
+                container: container,
                 writeAuthorization: writeAuthorization
             ).delete(baseline: CountdownMutationBaseline(event: event))
-            finishStoreScopedMutation(events: [.countdownChanged])
-            return true
-        } catch {
-            if error is StoreScopedCountdownMutationError {
-                refreshStoreScopedCountdownReadModels()
-            }
-            errorMessage = error.localizedDescription
-            return false
+        } != nil
+    }
+
+    private func handleStoreScopedCountdownError(_ error: Error) {
+        if error is StoreScopedCountdownMutationError {
+            refreshStoreScopedCountdownReadModels()
         }
+        errorMessage = error.localizedDescription
     }
 
     private func refreshStoreScopedCountdownReadModels() {
         do {
             try refresh(plan: StoreRefreshPlan(scopes: [.countdown]))
         } catch {
-            errorMessage = String(
-                format: AppStrings.localized("error.savedRefreshFailed"),
-                error.localizedDescription
-            )
+            errorMessage = savedRefreshFailedMessage(error)
         }
     }
 }

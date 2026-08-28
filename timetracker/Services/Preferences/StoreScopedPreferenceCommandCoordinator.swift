@@ -43,13 +43,10 @@ struct StoreScopedPreferenceCommandCoordinator {
     /// the device-only LLM credential, with a concurrent full configuration
     /// save. It deliberately creates a fresh read context without saving it.
     func withLockedStoreAccess(_ operation: () throws -> Void) throws {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        )
-        try transaction.withFreshReadContext { _ in
+        try StoreScopedMutationSession(
+            container: container,
+            writeAuthorization: writeAuthorization
+        ).withFreshReadContext { _ in
             try operation()
         }
     }
@@ -57,12 +54,9 @@ struct StoreScopedPreferenceCommandCoordinator {
     private func withFreshMutationContext(
         _ operation: (ModelContext) throws -> Void
     ) throws {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        )
-        try transaction.withFreshContext(author: .localMutation, operation)
+        try StoreScopedMutationSession(
+            container: container,
+            writeAuthorization: writeAuthorization
+        ).withFreshMutationContext(operation)
     }
 }

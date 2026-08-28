@@ -16,33 +16,29 @@ extension TimeTrackerStore {
     /// never backdates a new focus segment.
     @discardableResult
     func reconcileActivePomodoro(now: Date = Date()) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try StoreScopedPomodoroCommandCoordinator(
-                container: modelContext.container,
-                writeAuthorization: writeAuthorization
-            ).reconcileExpiredFocuses(observedAt: now)
-            if outcome.didMutate {
-                finishStoreScopedPomodoroMutation(
-                    events: outcome.events,
-                    referencedTaskIDs: outcome.referencedTaskIDs
-                )
-            } else {
-                // No expired focus needed fixing: converge only the live timer
-                // read models instead of running the full refresh pipeline.
-                // The full pipeline invalidates analytics caches and
-                // re-projects rollups, so every Pomodoro page appear used to
-                // pay that cost (visible as tab-switch latency).
-                try convergeLiveTimerReadModels()
+        performStoreCommand(
+            command: { container in
+                try StoreScopedPomodoroCommandCoordinator(
+                    container: container,
+                    writeAuthorization: writeAuthorization
+                ).reconcileExpiredFocuses(observedAt: now)
+            },
+            finish: { outcome in
+                if outcome.didMutate {
+                    finishStoreScopedPomodoroMutation(
+                        events: outcome.events,
+                        referencedTaskIDs: outcome.referencedTaskIDs
+                    )
+                } else {
+                    // No expired focus needed fixing: converge only the live
+                    // timer read models instead of running the full refresh
+                    // pipeline. The full pipeline invalidates analytics caches
+                    // and re-projects rollups, so every Pomodoro page appear
+                    // used to pay that cost (visible as tab-switch latency).
+                    try convergeLiveTimerReadModels()
+                }
             }
-            return outcome.didMutate
-        } catch {
-            errorMessage = error.localizedDescription
-            return false
-        }
+        )?.didMutate ?? false
     }
 
     /// Lightweight convergence for page-appear paths: re-fetches pomodoro
@@ -100,31 +96,28 @@ extension TimeTrackerStore {
             StoreScopedPomodoroCommandCoordinator
         ) throws -> StoreScopedPomodoroPhaseMutationOutcome
     ) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try mutation(
-                StoreScopedPomodoroCommandCoordinator(
-                    container: modelContext.container,
-                    writeAuthorization: writeAuthorization
+        performStoreCommand(
+            command: { container in
+                try mutation(
+                    StoreScopedPomodoroCommandCoordinator(
+                        container: container,
+                        writeAuthorization: writeAuthorization
+                    )
                 )
-            )
-            switch outcome {
-            case let .mutated(snapshot):
-                finishStoreScopedPomodoroMutation(
-                    events: snapshot.events,
-                    referencedTaskIDs: snapshot.referencedTaskIDs
-                )
-                return true
-            case .rejected:
-                refreshStoreScopedTimerReadModels()
-                return false
+            },
+            finishResult: { outcome in
+                switch outcome {
+                case let .mutated(snapshot):
+                    finishStoreScopedPomodoroMutation(
+                        events: snapshot.events,
+                        referencedTaskIDs: snapshot.referencedTaskIDs
+                    )
+                    return true
+                case .rejected:
+                    refreshStoreScopedTimerReadModels()
+                    return false
+                }
             }
-        } catch {
-            errorMessage = error.localizedDescription
-            return false
-        }
+        ) ?? false
     }
 }

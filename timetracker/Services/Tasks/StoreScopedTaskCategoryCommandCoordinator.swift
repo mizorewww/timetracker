@@ -152,12 +152,10 @@ struct StoreScopedTaskCategoryCommandCoordinator {
     private func withFreshRepository<Result>(
         _ operation: (SwiftDataTaskRepository) throws -> Result
     ) throws -> Result {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        return try StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        ).withFreshContext(author: .localMutation) { context in
+        try StoreScopedMutationSession(
+            container: container,
+            writeAuthorization: writeAuthorization
+        ).withFreshMutationContext { context in
             try operation(
                 SwiftDataTaskRepository(context: context, deviceID: deviceID)
             )

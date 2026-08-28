@@ -41,17 +41,17 @@ struct StoreScopedAppleHealthTaskCatalogCommandCoordinator {
         )
         let reconciliationRoles = roles.union(recoveryRoles)
         guard reconciliationRoles.isEmpty == false else { return .noChanges }
+        // Authorization must reject a read-only store before the catalog
+        // planning above runs; the session re-checks it before taking the lock.
         try writeAuthorization.requireUserWritesAllowed()
         let creationPlan = AppleHealthTaskCatalog.plan(for: roles)
         let reconciliationPlan = AppleHealthTaskCatalog.plan(
             for: reconciliationRoles
         )
-        let transaction = try StoreScopedTimerMutationTransaction(
-            scope: TimerStoreScope(container: container),
-            container: container
-        )
-
-        return try transaction.withFreshContext(author: .localMutation) { context in
+        return try StoreScopedMutationSession(
+            container: container,
+            writeAuthorization: writeAuthorization
+        ).withFreshMutationContext { context in
             let repository = SwiftDataTaskRepository(
                 context: context,
                 deviceID: deviceID ?? DeviceIdentity.current

@@ -59,11 +59,10 @@ struct StoreScopedTaskQuantityEntryCommandCoordinator {
             TaskQuantityEntryPersistenceState
         ) throws -> Result
     ) throws -> Result {
-        try writeAuthorization.requireUserWritesAllowed()
-        return try StoreScopedTimerMutationTransaction(
-            scope: TimerStoreScope(container: container),
-            container: container
-        ).withFreshContext(author: .localMutation) { context in
+        try StoreScopedMutationSession(
+            container: container,
+            writeAuthorization: writeAuthorization
+        ).withFreshMutationContext { context in
             try operation(
                 context,
                 TaskQuantityEntryPersistenceState(context: context)

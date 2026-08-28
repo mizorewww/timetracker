@@ -80,37 +80,29 @@ private extension TimeTrackerStore {
             StoreScopedTaskRecurrenceCommandCoordinator
         ) throws -> TaskRecurrenceMutationOutcome
     ) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try operation(
-                StoreScopedTaskRecurrenceCommandCoordinator(
-                    container: modelContext.container,
-                    writeAuthorization: writeAuthorization
-                )
-            )
-            finishStoreScopedMutation(events: outcome.events)
-            return true
-        } catch {
-            if error is TaskRecurrenceMutationError {
-                do {
-                    try refresh(
-                        plan: StoreRefreshPlan(scopes: [.tasks])
-                    )
-                } catch {
-                    errorMessage = String(
-                        format: AppStrings.localized(
-                            "error.savedRefreshFailed"
-                        ),
-                        error.localizedDescription
-                    )
-                    return false
+        performStoreCommand(
+            eventsForOutcome: { $0.events },
+            onError: { error in
+                if error is TaskRecurrenceMutationError {
+                    do {
+                        try self.refresh(
+                            plan: StoreRefreshPlan(scopes: [.tasks])
+                        )
+                    } catch {
+                        self.errorMessage = self.savedRefreshFailedMessage(error)
+                        return
+                    }
                 }
+                self.errorMessage = error.localizedDescription
+            },
+            command: { container in
+                try operation(
+                    StoreScopedTaskRecurrenceCommandCoordinator(
+                        container: container,
+                        writeAuthorization: writeAuthorization
+                    )
+                )
             }
-            errorMessage = error.localizedDescription
-            return false
-        }
+        ) != nil
     }
 }

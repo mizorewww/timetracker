@@ -8,6 +8,8 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
         proposedTaskID: UUID? = nil,
         now: Date = Date()
     ) throws -> TaskDraftMutationOutcome {
+        // Authorization must reject a read-only store before any draft
+        // validation work; the session re-checks it before taking the lock.
         try writeAuthorization.requireUserWritesAllowed()
         let preparedProgress = try TaskProgressDraftPersistencePolicy
             .prepare(
@@ -16,13 +18,7 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
                 confirmsQuantityProgressReset:
                 draft.confirmsQuantityProgressReset
             )
-        let scope = try TimerStoreScope(container: container)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        )
-
-        return try transaction.withFreshContext(author: .localMutation) { context in
+        return try mutationSession().withFreshMutationContext { context in
             let resolvedDeviceID = deviceID ?? DeviceIdentity.current
             let taskRepository = SwiftDataTaskRepository(
                 context: context,

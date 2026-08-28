@@ -80,48 +80,38 @@ extension TimeTrackerStore {
 
     func performStoreScopedInboxMutation<Outcome>(
         refreshScopes: Set<StoreRefreshScope>,
-        eventsForOutcome: (Outcome) -> Set<StoreDomainEvent>,
+        eventsForOutcome: @escaping (Outcome) -> Set<StoreDomainEvent>,
         _ action: (StoreScopedInboxCommandCoordinator) throws -> Outcome
     ) -> Outcome? {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return nil
-        }
-
-        do {
-            let outcome = try action(
-                StoreScopedInboxCommandCoordinator(
-                    container: modelContext.container,
-                    writeAuthorization: writeAuthorization
-                )
-            )
-            finishStoreScopedMutation(events: eventsForOutcome(outcome))
-            return outcome
-        } catch {
-            if error is StoreScopedInboxMutationError {
-                do {
-                    try refresh(plan: StoreRefreshPlan(scopes: refreshScopes))
-                } catch {
-                    errorMessage = String(
-                        format: AppStrings.localized("error.savedRefreshFailed"),
-                        error.localizedDescription
-                    )
-                    return nil
+        performStoreCommand(
+            eventsForOutcome: eventsForOutcome,
+            onError: { error in
+                if error is StoreScopedInboxMutationError {
+                    do {
+                        try self.refresh(plan: StoreRefreshPlan(scopes: refreshScopes))
+                    } catch {
+                        self.errorMessage = self.savedRefreshFailedMessage(error)
+                        return
+                    }
                 }
+                self.errorMessage = error.localizedDescription
+            },
+            command: { container in
+                try action(
+                    StoreScopedInboxCommandCoordinator(
+                        container: container,
+                        writeAuthorization: writeAuthorization
+                    )
+                )
             }
-            errorMessage = error.localizedDescription
-            return nil
-        }
+        )
     }
 
     func refreshStoreScopedInboxReadModels(scopes: Set<StoreRefreshScope>) {
         do {
             try refresh(plan: StoreRefreshPlan(scopes: scopes))
         } catch {
-            errorMessage = String(
-                format: AppStrings.localized("error.savedRefreshFailed"),
-                error.localizedDescription
-            )
+            errorMessage = savedRefreshFailedMessage(error)
         }
     }
 }

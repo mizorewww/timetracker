@@ -5,14 +5,7 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
     func restoreArchivedHierarchy(
         taskID: UUID
     ) throws -> TaskHierarchyRestoreMutationOutcome {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        )
-
-        return try transaction.withFreshContext(author: .localMutation) { context in
+        try mutationSession().withFreshMutationContext { context in
             let repository = SwiftDataTaskRepository(
                 context: context,
                 deviceID: deviceID

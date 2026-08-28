@@ -136,13 +136,7 @@ extension StoreScopedPomodoroCommandCoordinator {
             SwiftDataPomodoroRepository
         ) throws -> Result
     ) throws -> Result {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        )
-        return try transaction.withFreshContext(author: .localMutation) { context in
+        try mutationSession().withFreshMutationContext { context in
             let now = nowProvider()
             let timeRepository = SwiftDataTimeTrackingRepository(
                 context: context,

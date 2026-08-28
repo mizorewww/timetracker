@@ -88,12 +88,9 @@ extension TimeTrackerStore {
         guard !sanitizedTitle.isEmpty else {
             return .failed(message: AppStrings.localized("task.nameRequired"))
         }
-        guard let modelContext else {
-            return .failed(message: StoreError.notConfigured.localizedDescription)
-        }
         do {
             let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
-                container: modelContext.container,
+                container: requireStoreContainer(),
                 writeAuthorization: writeAuthorization
             ).save(
                 draft: draft,
@@ -136,54 +133,49 @@ extension TimeTrackerStore {
 
     @discardableResult
     func unarchiveTask(taskID: UUID) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
-                container: modelContext.container,
-                writeAuthorization: writeAuthorization
-            ).unarchive(taskID: taskID)
-            if outcome.didMutate {
-                finishStoreScopedMutation(events: outcome.events)
-            } else {
-                try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
+        performStoreCommand(
+            onError: handleStoreScopedTaskLifecycleError,
+            command: { container in
+                try StoreScopedTaskLifecycleCommandCoordinator(
+                    container: container,
+                    writeAuthorization: writeAuthorization
+                ).unarchive(taskID: taskID)
+            },
+            finish: { outcome in
+                if outcome.didMutate {
+                    finishStoreScopedMutation(events: outcome.events)
+                } else {
+                    try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
+                }
             }
-            return true
-        } catch {
-            if error is TaskLifecycleMutationError {
-                refreshStoreScopedTaskLifecycleReadModels()
-            }
-            errorMessage = error.localizedDescription
-            return false
-        }
+        ) != nil
     }
 
     private func performStoreScopedTaskArchive(taskID: UUID) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
-                container: modelContext.container,
-                writeAuthorization: writeAuthorization
-            ).archive(taskID: taskID)
-            if outcome.didMutate {
-                finishStoreScopedMutation(events: outcome.events)
-            } else {
-                try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
+        performStoreCommand(
+            onError: handleStoreScopedTaskLifecycleError,
+            command: { container in
+                try StoreScopedTaskLifecycleCommandCoordinator(
+                    container: container,
+                    writeAuthorization: writeAuthorization
+                ).archive(taskID: taskID)
+            },
+            finish: { outcome in
+                if outcome.didMutate {
+                    finishStoreScopedMutation(events: outcome.events)
+                } else {
+                    try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
+                }
+                refreshStoreScopedTimerReadModels()
             }
-            refreshStoreScopedTimerReadModels()
-            return true
-        } catch {
-            if error is TaskLifecycleMutationError {
-                refreshStoreScopedTaskLifecycleReadModels()
-            }
-            errorMessage = error.localizedDescription
-            return false
+        ) != nil
+    }
+
+    private func handleStoreScopedTaskLifecycleError(_ error: Error) {
+        if error is TaskLifecycleMutationError {
+            refreshStoreScopedTaskLifecycleReadModels()
         }
+        errorMessage = error.localizedDescription
     }
 
     /// Converges every read model used by a task-lifecycle admission check
@@ -198,10 +190,7 @@ extension TimeTrackerStore {
             )
             return nil
         } catch {
-            let message = String(
-                format: AppStrings.localized("error.savedRefreshFailed"),
-                error.localizedDescription
-            )
+            let message = savedRefreshFailedMessage(error)
             errorMessage = message
             return message
         }

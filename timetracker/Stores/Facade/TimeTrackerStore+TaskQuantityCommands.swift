@@ -110,31 +110,28 @@ extension TimeTrackerStore {
             StoreScopedTaskQuantityEntryCommandCoordinator
         ) throws -> TaskQuantityEntryMutationOutcome
     ) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try operation(
-                StoreScopedTaskQuantityEntryCommandCoordinator(
-                    container: modelContext.container,
-                    writeAuthorization: writeAuthorization
-                )
-            )
-            if outcome.didMutate {
-                finishStoreScopedMutation(events: outcome.events)
-            } else {
-                try refresh(
-                    plan: refreshPlanner.plan(
-                        after: outcome.convergenceEvents
+        performStoreCommand(
+            onError: handleTaskQuantityCommandError,
+            command: { container in
+                try operation(
+                    StoreScopedTaskQuantityEntryCommandCoordinator(
+                        container: container,
+                        writeAuthorization: writeAuthorization
                     )
                 )
+            },
+            finish: { outcome in
+                if outcome.didMutate {
+                    finishStoreScopedMutation(events: outcome.events)
+                } else {
+                    try refresh(
+                        plan: refreshPlanner.plan(
+                            after: outcome.convergenceEvents
+                        )
+                    )
+                }
             }
-            return true
-        } catch {
-            handleTaskQuantityCommandError(error)
-            return false
-        }
+        ) != nil
     }
 
     private func handleTaskQuantityCommandError(
@@ -144,12 +141,7 @@ extension TimeTrackerStore {
             do {
                 try refreshTaskQuantityConvergence()
             } catch {
-                errorMessage = String(
-                    format: AppStrings.localized(
-                        "error.savedRefreshFailed"
-                    ),
-                    error.localizedDescription
-                )
+                errorMessage = savedRefreshFailedMessage(error)
                 return
             }
         }

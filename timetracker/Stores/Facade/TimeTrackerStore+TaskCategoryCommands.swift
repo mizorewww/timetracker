@@ -17,24 +17,18 @@ extension TimeTrackerStore {
         orderedCategoryIDs: [UUID],
         baseline: TaskCategoryOrderMutationBaseline
     ) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try StoreScopedTaskCategoryCommandCoordinator(
-                container: modelContext.container,
+        performStoreCommand(
+            eventsForOutcome: { $0.events },
+            onError: handleStoreScopedTaskCategoryError
+        ) { container in
+            try StoreScopedTaskCategoryCommandCoordinator(
+                container: container,
                 writeAuthorization: writeAuthorization
             ).reorder(
                 orderedCategoryIDs: orderedCategoryIDs,
                 baseline: baseline
             )
-            finishStoreScopedMutation(events: outcome.events)
-            return true
-        } catch {
-            handleStoreScopedTaskCategoryError(error)
-            return false
-        }
+        } != nil
     }
 
     @discardableResult
@@ -44,23 +38,17 @@ extension TimeTrackerStore {
             return fail(.taskCategoryNameRequired)
         }
 
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
         var preparedDraft = draft
         preparedDraft.title = sanitizedTitle
-        do {
-            let outcome = try StoreScopedTaskCategoryCommandCoordinator(
-                container: modelContext.container,
+        return performStoreCommand(
+            eventsForOutcome: { $0.events },
+            onError: handleStoreScopedTaskCategoryError
+        ) { container in
+            try StoreScopedTaskCategoryCommandCoordinator(
+                container: container,
                 writeAuthorization: writeAuthorization
             ).save(draft: preparedDraft)
-            finishStoreScopedMutation(events: outcome.events)
-            return true
-        } catch {
-            handleStoreScopedTaskCategoryError(error)
-            return false
-        }
+        } != nil
     }
 
     @discardableResult
@@ -70,21 +58,15 @@ extension TimeTrackerStore {
 
     @discardableResult
     func deleteTaskCategory(baseline: TaskCategoryMutationBaseline) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try StoreScopedTaskCategoryCommandCoordinator(
-                container: modelContext.container,
+        performStoreCommand(
+            eventsForOutcome: { $0.events },
+            onError: handleStoreScopedTaskCategoryError
+        ) { container in
+            try StoreScopedTaskCategoryCommandCoordinator(
+                container: container,
                 writeAuthorization: writeAuthorization
             ).delete(baseline: baseline)
-            finishStoreScopedMutation(events: outcome.events)
-            return true
-        } catch {
-            handleStoreScopedTaskCategoryError(error)
-            return false
-        }
+        } != nil
     }
 
     private func handleStoreScopedTaskCategoryError(_ error: Error) {
@@ -94,10 +76,7 @@ extension TimeTrackerStore {
             do {
                 try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
             } catch {
-                errorMessage = String(
-                    format: AppStrings.localized("error.savedRefreshFailed"),
-                    error.localizedDescription
-                )
+                errorMessage = savedRefreshFailedMessage(error)
                 return
             }
         }

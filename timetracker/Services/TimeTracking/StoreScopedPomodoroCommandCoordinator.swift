@@ -28,6 +28,13 @@ struct StoreScopedPomodoroCommandCoordinator {
         self.nowProvider = nowProvider
     }
 
+    func mutationSession() -> StoreScopedMutationSession {
+        StoreScopedMutationSession(
+            container: container,
+            writeAuthorization: writeAuthorization
+        )
+    }
+
     func start(
         taskID: UUID,
         focusSeconds: Int,
@@ -35,14 +42,7 @@ struct StoreScopedPomodoroCommandCoordinator {
         longBreakSeconds: Int?,
         targetRounds: Int
     ) throws -> StoreScopedPomodoroStartOutcome {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        )
-
-        return try transaction.withFreshContext(author: .localMutation) { context in
+        try mutationSession().withFreshMutationContext { context in
             let now = nowProvider()
             let resolvedDeviceID = deviceID ?? DeviceIdentity.current
             let taskRepository = SwiftDataTaskRepository(
@@ -119,14 +119,7 @@ struct StoreScopedPomodoroCommandCoordinator {
     func resume(
         phase: PomodoroPhaseToken
     ) throws -> StoreScopedPomodoroResumeOutcome {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        )
-
-        return try transaction.withFreshContext(author: .localMutation) { context in
+        try mutationSession().withFreshMutationContext { context in
             let now = nowProvider()
             let resolvedDeviceID = deviceID ?? DeviceIdentity.current
             let timeRepository = SwiftDataTimeTrackingRepository(

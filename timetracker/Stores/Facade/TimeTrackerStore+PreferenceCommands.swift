@@ -22,20 +22,13 @@ extension TimeTrackerStore {
 
     @discardableResult
     func setPreference(_ key: AppPreferenceKey, valueJSON: String) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
+        performStoreCommand(
+            eventsForOutcome: { _ in [.preferenceChanged(key: key.rawValue)] }
+        ) { container in
             try StoreScopedPreferenceCommandCoordinator(
-                container: modelContext.container,
+                container: container,
                 writeAuthorization: writeAuthorization
             ).set(key: key, valueJSON: valueJSON)
-            finishStoreScopedMutation(events: [.preferenceChanged(key: key.rawValue)])
-            return true
-        } catch {
-            errorMessage = error.localizedDescription
-            return false
-        }
+        } != nil
     }
 }

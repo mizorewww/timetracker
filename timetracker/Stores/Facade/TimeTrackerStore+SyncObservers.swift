@@ -53,10 +53,7 @@ extension TimeTrackerStore {
                 validateSelectedTask()
             }
         } catch {
-            errorMessage = String(
-                format: AppStrings.localized("error.savedRefreshFailed"),
-                error.localizedDescription
-            )
+            errorMessage = savedRefreshFailedMessage(error)
         }
     }
 

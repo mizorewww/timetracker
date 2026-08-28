@@ -6,33 +6,34 @@ extension TimeTrackerStore {
     func restoreArchivedHierarchyForRecovery(
         taskID: UUID
     ) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
+        let outcome = performStoreCommand(
+            onError: { error in
+                if error is TaskLifecycleMutationError {
+                    try? self.refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
+                }
+                self.errorMessage = error.localizedDescription
+            },
+            command: { container in
+                try StoreScopedTaskLifecycleCommandCoordinator(
+                    container: container,
+                    writeAuthorization: writeAuthorization
+                ).restoreArchivedHierarchy(taskID: taskID)
+            },
+            finish: { outcome in
+                if outcome.didMutate {
+                    finishStoreScopedMutation(events: outcome.events)
+                } else {
+                    try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
+                }
+            }
+        )
+        guard outcome != nil else { return false }
+        guard isTaskDetailRouteValid(taskID) else {
+            errorMessage = AppStrings.localized(
+                "task.editor.recovery.restoreUnavailable"
+            )
             return false
         }
-        do {
-            let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
-                container: modelContext.container,
-                writeAuthorization: writeAuthorization
-            ).restoreArchivedHierarchy(taskID: taskID)
-            if outcome.didMutate {
-                finishStoreScopedMutation(events: outcome.events)
-            } else {
-                try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
-            }
-            guard isTaskDetailRouteValid(taskID) else {
-                errorMessage = AppStrings.localized(
-                    "task.editor.recovery.restoreUnavailable"
-                )
-                return false
-            }
-            return true
-        } catch {
-            if error is TaskLifecycleMutationError {
-                try? refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
-            }
-            errorMessage = error.localizedDescription
-            return false
-        }
+        return true
     }
 }

@@ -25,15 +25,15 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
         self.didReachDraftCheckpoint = didReachDraftCheckpoint
     }
 
-    func archive(taskID: UUID) throws -> TaskArchiveMutationOutcome {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
+    func mutationSession() -> StoreScopedMutationSession {
+        StoreScopedMutationSession(
+            container: container,
+            writeAuthorization: writeAuthorization
         )
+    }
 
-        return try transaction.withFreshContext(author: .localMutation) { context in
+    func archive(taskID: UUID) throws -> TaskArchiveMutationOutcome {
+        try mutationSession().withFreshMutationContext { context in
             let taskRepository = SwiftDataTaskRepository(
                 context: context,
                 deviceID: deviceID
@@ -91,14 +91,7 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
     }
 
     func unarchive(taskID: UUID) throws -> TaskUnarchiveMutationOutcome {
-        try writeAuthorization.requireUserWritesAllowed()
-        let scope = try TimerStoreScope(container: container)
-        let transaction = StoreScopedTimerMutationTransaction(
-            scope: scope,
-            container: container
-        )
-
-        return try transaction.withFreshContext(author: .localMutation) { context in
+        try mutationSession().withFreshMutationContext { context in
             let taskRepository = SwiftDataTaskRepository(
                 context: context,
                 deviceID: deviceID

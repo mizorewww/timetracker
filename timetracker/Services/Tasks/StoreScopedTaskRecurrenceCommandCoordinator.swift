@@ -74,11 +74,10 @@ nonisolated extension StoreScopedTaskRecurrenceCommandCoordinator {
             inout TaskRecurrencePersistenceState
         ) throws -> Result
     ) throws -> Result {
-        try writeAuthorization.requireUserWritesAllowed()
-        return try StoreScopedTimerMutationTransaction(
-            scope: TimerStoreScope(container: container),
-            container: container
-        ).withFreshContext(author: .localMutation) { context in
+        try StoreScopedMutationSession(
+            container: container,
+            writeAuthorization: writeAuthorization
+        ).withFreshMutationContext { context in
             var state = try TaskRecurrencePersistenceState(context: context)
             return try operation(context, &state)
         }

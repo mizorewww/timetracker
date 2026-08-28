@@ -29,62 +29,55 @@ extension TimeTrackerStore {
         longBreakSeconds: Int? = nil,
         targetRounds: Int = 1
     ) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try StoreScopedPomodoroCommandCoordinator(
-                container: modelContext.container,
-                writeAuthorization: writeAuthorization
-            ).start(
-                taskID: taskID,
-                focusSeconds: focusSeconds,
-                breakSeconds: breakSeconds,
-                longBreakSeconds: longBreakSeconds,
-                targetRounds: targetRounds
-            )
-            finishStoreScopedPomodoroMutation(
-                events: outcome.events,
-                referencedTaskIDs: outcome.referencedTaskIDs
-            )
-            return true
-        } catch {
-            errorMessage = error.localizedDescription
-            return false
-        }
+        performStoreCommand(
+            command: { container in
+                try StoreScopedPomodoroCommandCoordinator(
+                    container: container,
+                    writeAuthorization: writeAuthorization
+                ).start(
+                    taskID: taskID,
+                    focusSeconds: focusSeconds,
+                    breakSeconds: breakSeconds,
+                    longBreakSeconds: longBreakSeconds,
+                    targetRounds: targetRounds
+                )
+            },
+            finish: { outcome in
+                finishStoreScopedPomodoroMutation(
+                    events: outcome.events,
+                    referencedTaskIDs: outcome.referencedTaskIDs
+                )
+            }
+        ) != nil
     }
 
     @discardableResult
     func resumeActivePomodoroAfterBreak(
         phase: PomodoroPhaseToken
     ) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try StoreScopedPomodoroCommandCoordinator(
-                container: modelContext.container,
-                writeAuthorization: writeAuthorization
-            ).resume(
-                phase: phase
-            )
-            switch outcome {
-            case let .resumed(mutation):
-                finishStoreScopedPomodoroMutation(
-                    events: mutation.events,
-                    referencedTaskIDs: mutation.referencedTaskIDs
+        performStoreCommand(
+            command: { container in
+                try StoreScopedPomodoroCommandCoordinator(
+                    container: container,
+                    writeAuthorization: writeAuthorization
+                ).resume(
+                    phase: phase
                 )
-                return true
-            case .rejected:
-                refreshStoreScopedPomodoroAdmissionReadModels()
-                return false
+            },
+            finishResult: { outcome in
+                switch outcome {
+                case let .resumed(mutation):
+                    finishStoreScopedPomodoroMutation(
+                        events: mutation.events,
+                        referencedTaskIDs: mutation.referencedTaskIDs
+                    )
+                    return true
+                case .rejected:
+                    refreshStoreScopedPomodoroAdmissionReadModels()
+                    return false
+                }
             }
-        } catch {
-            errorMessage = error.localizedDescription
-            return false
-        }
+        ) ?? false
     }
 
     func finishStoreScopedPomodoroMutation(
@@ -101,10 +94,7 @@ extension TimeTrackerStore {
         }
         finishStoreScopedMutation(events: events)
         if let missingTaskRefreshError {
-            errorMessage = String(
-                format: AppStrings.localized("error.savedRefreshFailed"),
-                missingTaskRefreshError.localizedDescription
-            )
+            errorMessage = savedRefreshFailedMessage(missingTaskRefreshError)
         }
     }
 
@@ -116,10 +106,7 @@ extension TimeTrackerStore {
                 )
             )
         } catch {
-            errorMessage = String(
-                format: AppStrings.localized("error.savedRefreshFailed"),
-                error.localizedDescription
-            )
+            errorMessage = savedRefreshFailedMessage(error)
         }
     }
 }

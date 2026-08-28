@@ -16,30 +16,27 @@ extension TimeTrackerStore {
             fail(.taskTrackingUnavailable)
             return false
         }
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            try StoreScopedSegmentCommandCoordinator(
-                container: modelContext.container,
-                writeAuthorization: writeAuthorization
-            ).addManualTime(draft: draft, taskID: taskID)
-            finishStoreScopedMutation(events: [
-                .ledgerChanged(
-                    taskID: taskID,
-                    dateInterval: StoreInvalidationRange(
-                        start: draft.startedAt,
-                        end: draft.endedAt
+        return performStoreCommand(
+            onError: handleSegmentMutationFailure,
+            command: { container in
+                try StoreScopedSegmentCommandCoordinator(
+                    container: container,
+                    writeAuthorization: writeAuthorization
+                ).addManualTime(draft: draft, taskID: taskID)
+            },
+            finish: { _ in
+                finishStoreScopedMutation(events: [
+                    .ledgerChanged(
+                        taskID: taskID,
+                        dateInterval: StoreInvalidationRange(
+                            start: draft.startedAt,
+                            end: draft.endedAt
+                        ),
+                        isVisible: false
                     ),
-                    isVisible: false
-                ),
-            ])
-            return true
-        } catch {
-            handleSegmentMutationFailure(error)
-            return false
-        }
+                ])
+            }
+        ) != nil
     }
 
     @discardableResult
@@ -74,11 +71,8 @@ extension TimeTrackerStore {
         guard let taskID = draft.taskID else {
             throw StoreError.taskSelectionRequired
         }
-        guard let modelContext else {
-            throw StoreError.notConfigured
-        }
         let outcome = try StoreScopedSegmentCommandCoordinator(
-            container: modelContext.container,
+            container: requireStoreContainer(),
             writeAuthorization: writeAuthorization
         ).update(
             draft: draft,
@@ -94,11 +88,8 @@ extension TimeTrackerStore {
         _ segmentID: UUID,
         expectedBaseline: SegmentEditorDraftBaseline?
     ) throws {
-        guard let modelContext else {
-            throw StoreError.notConfigured
-        }
         let outcome = try StoreScopedSegmentCommandCoordinator(
-            container: modelContext.container,
+            container: requireStoreContainer(),
             writeAuthorization: writeAuthorization
         ).delete(segmentID: segmentID, expectedBaseline: expectedBaseline)
         finishStoreScopedPomodoroMutation(
@@ -131,10 +122,7 @@ extension TimeTrackerStore {
             try refreshSegmentEditorReadModels()
             errorMessage = error.localizedDescription
         } catch let refreshError {
-            errorMessage = String(
-                format: AppStrings.localized("error.savedRefreshFailed"),
-                refreshError.localizedDescription
-            )
+            errorMessage = savedRefreshFailedMessage(refreshError)
         }
     }
 }

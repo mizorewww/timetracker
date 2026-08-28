@@ -17,9 +17,8 @@ extension TimeTrackerStore {
         let changed = normalized != preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
         let taskSnapshot = llmSuggestionTaskSnapshot()
         do {
-            guard let modelContext else { throw StoreError.notConfigured }
             try StoreScopedPreferenceCommandCoordinator(
-                container: modelContext.container,
+                container: requireStoreContainer(),
                 writeAuthorization: writeAuthorization
             ).withLockedStoreAccess {
                 try llmCredentialStore.writeAPIKey(value)
@@ -33,10 +32,7 @@ extension TimeTrackerStore {
             let event = StoreDomainEvent.preferenceChanged(key: SyncedPreferenceService.legacyLLMAPIKey)
             try refresh(plan: refreshPlanner.plan(after: [event]))
         } catch {
-            errorMessage = String(
-                format: AppStrings.localized("error.savedRefreshFailed"),
-                error.localizedDescription
-            )
+            errorMessage = savedRefreshFailedMessage(error)
         }
         if changed {
             cancelLLMSuggestionTasks(matching: taskSnapshot)
@@ -153,9 +149,8 @@ extension TimeTrackerStore {
         var credentialWasWritten = false
         let didCommit: Bool
         do {
-            guard let modelContext else { throw StoreError.notConfigured }
             try StoreScopedPreferenceCommandCoordinator(
-                container: modelContext.container,
+                container: requireStoreContainer(),
                 writeAuthorization: writeAuthorization
             ).set(
                 values: [

@@ -21,23 +21,18 @@ extension TimeTrackerStore {
         taskID: UUID,
         source: TimeSessionSource = .timer
     ) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try SystemActionCommandHandler(
-                writeAuthorization: writeAuthorization
-            ).startTimerMutation(
-                taskID: taskID,
-                source: source,
-                container: modelContext.container
-            )
-            return finishStoreScopedTimerCommand(outcome)
-        } catch {
-            errorMessage = error.localizedDescription
-            return false
-        }
+        performStoreCommand(
+            command: { container in
+                try SystemActionCommandHandler(
+                    writeAuthorization: writeAuthorization
+                ).startTimerMutation(
+                    taskID: taskID,
+                    source: source,
+                    container: container
+                )
+            },
+            finishResult: finishStoreScopedTimerCommand
+        ) ?? false
     }
 
     var timerPickerMode: TimerPickerMode {
@@ -76,23 +71,18 @@ extension TimeTrackerStore {
         segmentID: UUID? = nil,
         taskID: UUID? = nil
     ) -> Bool {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return false
-        }
-        do {
-            let outcome = try SystemActionCommandHandler(
-                writeAuthorization: writeAuthorization
-            ).stopTimerMutation(
-                segmentID: segmentID,
-                taskID: taskID,
-                container: modelContext.container
-            )
-            return finishStoreScopedTimerCommand(outcome)
-        } catch {
-            errorMessage = error.localizedDescription
-            return false
-        }
+        performStoreCommand(
+            command: { container in
+                try SystemActionCommandHandler(
+                    writeAuthorization: writeAuthorization
+                ).stopTimerMutation(
+                    segmentID: segmentID,
+                    taskID: taskID,
+                    container: container
+                )
+            },
+            finishResult: finishStoreScopedTimerCommand
+        ) ?? false
     }
 
     func timerStartMutationEvents(taskID: UUID) -> Set<StoreDomainEvent> {

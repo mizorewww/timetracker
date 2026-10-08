@@ -3,17 +3,12 @@ import SwiftUI
 struct TaskDetailRecordsSection: View {
     let store: TimeTrackerStore
     let records: [TaskRecentRecordPoint]
-    let source: TaskAnalyticsSnapshot.Source
 
     var body: some View {
         Section {
             if records.isEmpty {
                 EmptyStateRow(
-                    title: AppStrings.localized(
-                        source == .appleHealth
-                            ? "task.detail.appleHealth.history.empty"
-                            : "task.records.empty"
-                    ),
+                    title: AppStrings.localized("task.records.empty"),
                     icon: "clock"
                 )
                 .accessibilityIdentifier("task.detail.history.empty")
@@ -21,28 +16,15 @@ struct TaskDetailRecordsSection: View {
                 ForEach(records) { record in
                     TaskDetailRecentRecordRow(
                         store: store,
-                        record: record,
-                        source: source
+                        record: record
                     )
                 }
             }
         } header: {
-            Text(
-                AppStrings.localized(
-                    source == .appleHealth
-                        ? "task.detail.appleHealth.history.title"
-                        : "task.detail.recentSessions"
-                )
-            )
-            .accessibilityIdentifier("task.detail.history.header")
+            Text(AppStrings.localized("task.detail.recentSessions"))
+                .accessibilityIdentifier("task.detail.history.header")
         } footer: {
-            Text(
-                .app(
-                    source == .appleHealth
-                        ? "task.detail.appleHealth.history.subtitle"
-                        : "task.detail.recentSubtitle"
-                )
-            )
+            Text(.app("task.detail.recentSubtitle"))
         }
     }
 }
@@ -50,7 +32,6 @@ struct TaskDetailRecordsSection: View {
 private struct TaskDetailRecentRecordRow: View {
     let store: TimeTrackerStore
     let record: TaskRecentRecordPoint
-    let source: TaskAnalyticsSnapshot.Source
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(AppPresentationRouter.self) private var presentationRouter
 
@@ -105,9 +86,6 @@ private struct TaskDetailRecentRecordRow: View {
     }
 
     private var isEditable: Bool {
-        guard source == .tracked else {
-            return false
-        }
         if case .trackedSegment = record.id {
             return true
         }
@@ -141,10 +119,7 @@ private struct TaskDetailRecentRecordRow: View {
         return VStack(alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing, spacing: 2) {
             Text(
                 DurationFormatter.compact(
-                    record.displayDurationSeconds(
-                        source: source,
-                        now: Date()
-                    )
+                    record.displayDurationSeconds(now: Date())
                 )
             )
             .font(primaryFont.monospacedDigit())

@@ -45,41 +45,30 @@ struct TaskDetailWorkspace: View {
 
     var body: some View {
         Group {
-            if isAppleHealthTask {
+            switch draftRecoveryLoadState {
+            case .loading:
+                TaskDetailDraftRecoveryLoadingView()
+            case .failed:
+                TaskDetailDraftRecoveryLoadFailureView(
+                    retry: retryDraftRecoveryLoad
+                )
+            case .ready where isPresentingRecovery:
+                TaskDetailRecoveryList(
+                    store: store,
+                    session: session,
+                    reason: activeDraftRecoveryReason ?? .sourceUnavailable,
+                    isAwaitingCleanup: savedRecoveryCopyTaskID != nil,
+                    isFinishingCleanup: isFinishingRecoveryCleanup,
+                    focusedTextField: $focusedTextField,
+                    focusedChecklistDraftID: $focusedChecklistDraftID,
+                    saveAsNew: savePreservedDraftAsNew,
+                    restoreOriginal: restoreArchivedSource,
+                    leaveCleanup: leaveRecoveryCleanup,
+                    discard: requestDiscard
+                )
+            case .ready:
                 if let task = store.task(for: taskID) {
                     workspace(for: task)
-                } else {
-                    ContentUnavailableView(
-                        AppStrings.localized("task.empty.selectTask"),
-                        systemImage: "heart.slash"
-                    )
-                }
-            } else {
-                switch draftRecoveryLoadState {
-                case .loading:
-                    TaskDetailDraftRecoveryLoadingView()
-                case .failed:
-                    TaskDetailDraftRecoveryLoadFailureView(
-                        retry: retryDraftRecoveryLoad
-                    )
-                case .ready where isPresentingRecovery:
-                    TaskDetailRecoveryList(
-                        store: store,
-                        session: session,
-                        reason: activeDraftRecoveryReason ?? .sourceUnavailable,
-                        isAwaitingCleanup: savedRecoveryCopyTaskID != nil,
-                        isFinishingCleanup: isFinishingRecoveryCleanup,
-                        focusedTextField: $focusedTextField,
-                        focusedChecklistDraftID: $focusedChecklistDraftID,
-                        saveAsNew: savePreservedDraftAsNew,
-                        restoreOriginal: restoreArchivedSource,
-                        leaveCleanup: leaveRecoveryCleanup,
-                        discard: requestDiscard
-                    )
-                case .ready:
-                    if let task = store.task(for: taskID) {
-                        workspace(for: task)
-                    }
                 }
             }
         }
@@ -108,8 +97,7 @@ struct TaskDetailWorkspace: View {
             controller: store.taskDraftRecoveryController,
             sourceTaskID: taskID,
             session: session,
-            isReady: draftRecoveryLoadState == .ready &&
-                isAppleHealthTask == false
+            isReady: draftRecoveryLoadState == .ready
         )
         .onChange(of: editorSourceToken) { _, sourceToken in
             guard let sourceToken else { return }
@@ -130,21 +118,12 @@ struct TaskDetailWorkspace: View {
         )
         .onChange(of: autosaveController.status, handleAutosaveStatus)
         .task(id: isSourceUnavailable) {
-            guard isAppleHealthTask == false else { return }
             prepareRecoveryIfNeeded()
         }
         .task(id: draftRecoveryLoadRequestID) {
-            guard isAppleHealthTask == false else {
-                draftRecoveryLoadState = .ready
-                return
-            }
             await loadPersistedDraftRecovery()
         }
         .onAppear(perform: registerNavigationGuard)
-    }
-
-    private var isAppleHealthTask: Bool {
-        AppleHealthTaskCatalog.taskRole(for: taskID) != nil
     }
 }
 

@@ -207,11 +207,7 @@ struct TaskHierarchyProjection: Equatable {
                 : AppStrings.localized(
                     store.isTaskRecurrenceTemplate(task)
                         ? "task.recurrence.template.trackingUnavailable"
-                        : (
-                            store.isTaskVisible(task)
-                                ? "task.healthSyncOnly.trackingUnavailable"
-                                : "task.parentUnavailable"
-                        )
+                        : "task.parentUnavailable"
                 ),
             timerCommand: store.timerPickerSelectionCommand(for: task)
         )

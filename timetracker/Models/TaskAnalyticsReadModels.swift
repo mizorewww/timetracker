@@ -127,22 +127,11 @@ struct TaskAnalyticsSnapshot {
 }
 
 extension TaskRecentRecordPoint {
-    func displayDurationSeconds(
-        source: TaskAnalyticsSnapshot.Source,
-        now: Date
-    ) -> Int {
-        switch source {
-        case .tracked:
-            TrackedTimePolicy.elapsedSeconds(
-                startedAt: startedAt,
-                endedAt: endedAt,
-                now: now
-            )
-        case .appleHealth:
-            // A sleep episode's envelope can include awake evidence that keeps
-            // adjacent stages in one record. Its measured duration deliberately
-            // excludes those awake gaps.
-            max(0, durationSeconds)
-        }
+    func displayDurationSeconds(now: Date) -> Int {
+        TrackedTimePolicy.elapsedSeconds(
+            startedAt: startedAt,
+            endedAt: endedAt,
+            now: now
+        )
     }
 }

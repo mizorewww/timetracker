@@ -18,12 +18,6 @@ struct TaskDetailTrackingAvailabilitySection: View {
                 "task.recurrence.template.trackingUnavailable",
                 systemImage: "calendar.badge.clock"
             )
-        } else if !store.isTaskAvailableForTracking(task) {
-            availabilitySection(
-                titleKey: "task.healthSyncOnly.title",
-                messageKey: "task.healthSyncOnly.trackingUnavailable",
-                systemImage: "heart.text.clipboard"
-            )
         }
     }
 

@@ -2,7 +2,6 @@ import SwiftUI
 
 struct TaskDetailOverviewSection: View {
     let snapshot: TaskAnalyticsSnapshot
-    let periodTitle: String?
 
     var body: some View {
         Section {
@@ -20,37 +19,23 @@ struct TaskDetailOverviewSection: View {
                 tint: AppColors.wallTime,
                 accessibilityIdentifier: "task.detail.summary.wall"
             )
-            if snapshot.source == .tracked {
-                TaskDetailValueRow(
-                    title: AppStrings.localized("task.detail.direct"),
-                    value: DurationFormatter.compact(snapshot.directSeconds),
-                    systemImage: "smallcircle.filled.circle",
-                    tint: .indigo,
-                    accessibilityIdentifier: "task.detail.summary.direct"
-                )
-                TaskDetailValueRow(
-                    title: AppStrings.localized("task.detail.children"),
-                    value: DurationFormatter.compact(snapshot.descendantSeconds),
-                    systemImage: "point.3.connected.trianglepath.dotted",
-                    tint: .teal,
-                    accessibilityIdentifier: "task.detail.summary.children"
-                )
-            }
+            TaskDetailValueRow(
+                title: AppStrings.localized("task.detail.direct"),
+                value: DurationFormatter.compact(snapshot.directSeconds),
+                systemImage: "smallcircle.filled.circle",
+                tint: .indigo,
+                accessibilityIdentifier: "task.detail.summary.direct"
+            )
+            TaskDetailValueRow(
+                title: AppStrings.localized("task.detail.children"),
+                value: DurationFormatter.compact(snapshot.descendantSeconds),
+                systemImage: "point.3.connected.trianglepath.dotted",
+                tint: .teal,
+                accessibilityIdentifier: "task.detail.summary.children"
+            )
         } header: {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(AppStrings.localized("analytics.summary.title"))
-                    .accessibilityIdentifier("task.detail.summary")
-                if let periodTitle {
-                    Spacer(minLength: 8)
-                    Text(periodTitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.trailing)
-                        .accessibilityIdentifier(
-                            "task.detail.summary.period"
-                        )
-                }
-            }
+            Text(AppStrings.localized("analytics.summary.title"))
+                .accessibilityIdentifier("task.detail.summary")
         }
     }
 }

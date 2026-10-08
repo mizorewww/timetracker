@@ -1,162 +1,19 @@
 import SwiftUI
 
-struct TaskDetailAppleHealthPeriodConfiguration {
-    let referenceDate: Binding<Date>
-    let liveNow: Date
-    let monthNavigationAnchor:
-        Binding<AnalyticsMonthNavigationAnchor?>
-}
-
-enum TaskDetailAppleHealthInlineStatus: Equatable {
-    case unavailable
-    case failed
-}
-
-private struct TaskDetailAppleHealthPeriodControls: View {
-    @Binding var range: AnalyticsRange
-    @Binding var referenceDate: Date
-    let liveNow: Date
-    @Binding var monthNavigationAnchor: AnalyticsMonthNavigationAnchor?
-
-    var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 16) {
-                TaskDetailAnalyticsRangePicker(range: $range)
-                    .fixedSize(horizontal: true, vertical: false)
-                AnalyticsPeriodNavigator(
-                    range: range,
-                    referenceDate: $referenceDate,
-                    liveNow: liveNow,
-                    monthNavigationAnchor: $monthNavigationAnchor
-                )
-                .fixedSize(horizontal: true, vertical: false)
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                TaskDetailAnalyticsRangePicker(range: $range)
-                HStack(spacing: 8) {
-                    AnalyticsPeriodNavigator(
-                        range: range,
-                        referenceDate: $referenceDate,
-                        liveNow: liveNow,
-                        monthNavigationAnchor: $monthNavigationAnchor
-                    )
-                }
-            }
-        }
-        .padding(.vertical, 2)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(AppStrings.localized("analytics.range"))
-        .accessibilityValue(periodTitle)
-        .accessibilityIdentifier(
-            "task.detail.appleHealth.periodFilter"
-        )
-    }
-
-    private var periodTitle: String {
-        AnalyticsPeriodText.title(
-            for: range,
-            date: referenceDate,
-            liveNow: liveNow
-        )
-    }
-}
-
 struct TaskDetailAnalysisSection: View {
     @Binding var range: AnalyticsRange
     let snapshot: TaskAnalyticsSnapshot
-    let isRefreshing: Bool
-    let retryAppleHealth: () -> Void
-    let appleHealthPeriod: TaskDetailAppleHealthPeriodConfiguration?
-    let appleHealthInlineStatus: TaskDetailAppleHealthInlineStatus?
 
     var body: some View {
         Section {
-            if let appleHealthPeriod {
-                TaskDetailAppleHealthPeriodControls(
-                    range: $range,
-                    referenceDate: appleHealthPeriod.referenceDate,
-                    liveNow: appleHealthPeriod.liveNow,
-                    monthNavigationAnchor:
-                    appleHealthPeriod.monthNavigationAnchor
-                )
-            }
+            TaskDetailAnalyticsRangePicker(range: $range)
 
-            if let appleHealthInlineStatus {
-                TaskDetailAppleHealthInlineStatusView(
-                    status: appleHealthInlineStatus,
-                    retry: retryAppleHealth
-                )
-            }
-
-            if snapshot.source == .tracked {
-                TaskDetailAnalyticsRangePicker(range: $range)
-            }
-
-            if snapshot.overview.grossSeconds == 0,
-               snapshot.source == .appleHealth
-            {
-                VStack(alignment: .leading, spacing: 4) {
-                    Label(
-                        AppStrings.localized(
-                            "task.detail.appleHealth.empty.title"
-                        ),
-                        systemImage: "heart.text.square"
-                    )
-                    .font(emptyTitleFont)
-                    .accessibilityIdentifier(
-                        "task.detail.appleHealth.empty"
-                    )
-
-                    Text(.app("task.detail.appleHealth.empty.message"))
-                        .font(emptyMessageFont)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier(
-                            "task.detail.appleHealth.empty.message"
-                        )
-                }
-                .padding(.vertical, 3)
-
-                TaskDetailAppleHealthRetryButton(
-                    action: retryAppleHealth
-                )
-            } else if snapshot.overview.grossSeconds == 0 {
+            if snapshot.overview.grossSeconds == 0 {
                 EmptyStateRow(
                     title: AppStrings.localized("task.detail.emptyRange"),
                     icon: "chart.bar"
                 )
                 .accessibilityIdentifier("task.detail.analysis.empty")
-            } else if snapshot.source == .appleHealth {
-                DailyTimeSeriesChart(
-                    points: snapshot.daily,
-                    mode: .wallBarsAndGrossLine,
-                    accessibilityTitle: AppStrings.localized(
-                        "task.detail.appleHealth.history.chart"
-                    )
-                )
-                .frame(height: 260)
-                .accessibilityIdentifier("task.detail.history.chart")
-                .accessibilityValue(snapshot.range.rawValue)
-
-                TaskDetailValueRow(
-                    title: AppStrings.localized("analytics.rhythm.averageSegment"),
-                    value: DurationFormatter.compact(
-                        snapshot.rhythm.averageSegmentSeconds
-                    ),
-                    systemImage: "timer",
-                    tint: .blue,
-                    accessibilityIdentifier: "task.detail.analysis.average"
-                )
-                TaskDetailValueRow(
-                    title: AppStrings.localized("analytics.rhythm.longest"),
-                    value: DurationFormatter.compact(
-                        snapshot.rhythm.longestContinuousSeconds
-                    ),
-                    systemImage: "arrow.left.and.right",
-                    tint: .indigo,
-                    accessibilityIdentifier: "task.detail.analysis.longest"
-                )
             } else {
                 TaskDetailContributionBar(snapshot: snapshot)
                 TaskDetailValueRow(
@@ -189,115 +46,11 @@ struct TaskDetailAnalysisSection: View {
                 }
             }
         } header: {
-            HStack(spacing: 8) {
-                Text(AppStrings.localized("task.detail.analysis"))
-                    .accessibilityIdentifier("task.detail.analysis")
-                if let appleHealthPeriodTitle {
-                    Spacer(minLength: 8)
-                    Text(appleHealthPeriodTitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.trailing)
-                        .accessibilityIdentifier(
-                            "task.detail.appleHealth.periodTitle"
-                        )
-                }
-                if isRefreshing {
-                    if appleHealthPeriodTitle == nil {
-                        Spacer()
-                    }
-                    ProgressView()
-                        .controlSize(.small)
-                        .accessibilityLabel(AppStrings.localized("analytics.loading"))
-                        .accessibilityIdentifier(
-                            snapshot.source == .appleHealth
-                                ? "task.detail.appleHealth.refreshing"
-                                : "task.detail.analyticsRefreshing"
-                        )
-                }
-            }
+            Text(AppStrings.localized("task.detail.analysis"))
+                .accessibilityIdentifier("task.detail.analysis")
         } footer: {
-            Text(
-                .app(
-                    snapshot.source == .appleHealth
-                        ? "task.detail.appleHealth.analysisSubtitle"
-                        : "task.detail.analysisSubtitle"
-                )
-            )
+            Text(.app("task.detail.analysisSubtitle"))
         }
-    }
-
-    private var appleHealthPeriodTitle: String? {
-        guard let appleHealthPeriod else { return nil }
-        return AnalyticsPeriodText.title(
-            for: range,
-            date: appleHealthPeriod.referenceDate.wrappedValue,
-            liveNow: appleHealthPeriod.liveNow
-        )
-    }
-
-    private var emptyTitleFont: Font {
-        .body.weight(.medium)
-    }
-
-    private var emptyMessageFont: Font {
-        .body
-    }
-}
-
-private struct TaskDetailAppleHealthInlineStatusView: View {
-    let status: TaskDetailAppleHealthInlineStatus
-    let retry: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Label(title, systemImage: systemImage)
-                .font(titleFont)
-                .accessibilityIdentifier(accessibilityIdentifier)
-            Text(message)
-                .font(messageFont)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.vertical, 3)
-
-        if status == .failed {
-            TaskDetailAppleHealthRetryButton(action: retry)
-        }
-    }
-
-    private var titleFont: Font {
-        .body.weight(.medium)
-    }
-
-    private var messageFont: Font {
-        .body
-    }
-
-    private var title: String {
-        AppStrings.localized(
-            status == .failed
-                ? "task.detail.appleHealth.failed.title"
-                : "task.detail.appleHealth.unavailable.title"
-        )
-    }
-
-    private var message: LocalizedStringKey {
-        .app(
-            status == .failed
-                ? "task.detail.appleHealth.failed.message"
-                : "task.detail.appleHealth.unavailable.message"
-        )
-    }
-
-    private var systemImage: String {
-        status == .failed ? "exclamationmark.triangle" : "heart.slash"
-    }
-
-    private var accessibilityIdentifier: String {
-        status == .failed
-            ? "task.detail.appleHealth.failed"
-            : "task.detail.appleHealth.unavailable"
     }
 }
 

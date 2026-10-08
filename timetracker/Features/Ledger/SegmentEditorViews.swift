@@ -129,26 +129,26 @@ struct SegmentEditorPanel: View {
             .accessibilityIdentifier("segmentEditor.view")
             .navigationTitle(AppStrings.localized("segment.edit.title"))
             #if os(iOS)
-                .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.inline)
             #endif
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button(AppStrings.cancel) {
-                            requestCancel()
-                        }
-                        .keyboardShortcut(.cancelAction)
-                        .accessibilityIdentifier("segmentEditor.cancel")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(AppStrings.cancel) {
+                        requestCancel()
                     }
-
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(AppStrings.localized("common.save")) {
-                            onSave(draft)
-                        }
-                        .keyboardShortcut(.defaultAction)
-                        .disabled(draft.taskID == nil || validation != .valid || noteError != nil)
-                        .accessibilityIdentifier("segmentEditor.save")
-                    }
+                    .keyboardShortcut(.cancelAction)
+                    .accessibilityIdentifier("segmentEditor.cancel")
                 }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(AppStrings.localized("common.save")) {
+                        onSave(draft)
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(draft.taskID == nil || validation != .valid || noteError != nil)
+                    .accessibilityIdentifier("segmentEditor.save")
+                }
+            }
         }
         .editorDiscardConfirmation(
             isPresented: $isDiscardConfirmationPresented,

@@ -178,7 +178,7 @@ struct SymbolAndColorPicker: View {
             .accessibilityIdentifier("symbol.picker.symbols")
             .layoutPriority(1)
             #if os(iOS)
-                .scrollDismissesKeyboard(.interactively)
+            .scrollDismissesKeyboard(.interactively)
             #endif
         }
         .padding()

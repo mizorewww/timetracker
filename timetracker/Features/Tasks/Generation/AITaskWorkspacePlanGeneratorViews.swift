@@ -57,61 +57,61 @@ struct AITaskPlanGeneratorSheet: View {
             }
             .navigationTitle(AppStrings.localized("aiTaskPlan.title"))
             #if os(iOS)
-                .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.inline)
             #endif
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button(AppStrings.cancel, action: requestDismiss)
-                            .disabled(isApplying)
-                            .accessibilityIdentifier("aiTaskPlan.cancel")
-                    }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(AppStrings.cancel, action: requestDismiss)
+                        .disabled(isApplying)
+                        .accessibilityIdentifier("aiTaskPlan.cancel")
+                }
 
-                    if let reviewDraft {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button {
-                                requestApply(reviewDraft)
-                            } label: {
-                                if isApplying {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                } else {
-                                    Text(.app("aiTaskPlan.apply"))
-                                }
+                if let reviewDraft {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button {
+                            requestApply(reviewDraft)
+                        } label: {
+                            if isApplying {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else {
+                                Text(.app("aiTaskPlan.apply"))
                             }
-                            .accessibilityLabel(
-                                String.localizedStringWithFormat(
-                                    AppStrings.localized(
-                                        "aiTaskPlan.applyFormat"
-                                    ),
-                                    Int64(reviewDraft.mutationCount)
+                        }
+                        .accessibilityLabel(
+                            String.localizedStringWithFormat(
+                                AppStrings.localized(
+                                    "aiTaskPlan.applyFormat"
+                                ),
+                                Int64(reviewDraft.mutationCount)
+                            )
+                        )
+                        .disabled(
+                            isApplying || reviewDraft.mutationCount == 0
+                        )
+                        #if os(macOS)
+                        .controlSize(.large)
+                        #endif
+                        .accessibilityIdentifier("aiTaskPlan.apply")
+                    }
+                } else if isConfigured {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(
+                            AppStrings.localized("aiTaskPlan.generate"),
+                            action: generate
+                        )
+                        .disabled(
+                            isGenerating ||
+                                requestText
+                                .trimmingCharacters(
+                                    in: .whitespacesAndNewlines
                                 )
-                            )
-                            .disabled(
-                                isApplying || reviewDraft.mutationCount == 0
-                            )
-                            #if os(macOS)
-                            .controlSize(.large)
-                            #endif
-                            .accessibilityIdentifier("aiTaskPlan.apply")
-                        }
-                    } else if isConfigured {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button(
-                                AppStrings.localized("aiTaskPlan.generate"),
-                                action: generate
-                            )
-                            .disabled(
-                                isGenerating ||
-                                    requestText
-                                    .trimmingCharacters(
-                                        in: .whitespacesAndNewlines
-                                    )
-                                    .isEmpty
-                            )
-                            .accessibilityIdentifier("aiTaskPlan.generate")
-                        }
+                                .isEmpty
+                        )
+                        .accessibilityIdentifier("aiTaskPlan.generate")
                     }
                 }
+            }
         }
         .platformSheetFrame(width: 720, height: 760)
         .editorDiscardConfirmation(

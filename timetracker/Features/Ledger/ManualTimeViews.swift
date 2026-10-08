@@ -96,24 +96,24 @@ struct ManualTimePanel: View {
             .formStyle(.grouped)
             .navigationTitle(AppStrings.localized("manual.title"))
             #if os(iOS)
-                .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.inline)
             #endif
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button(AppStrings.cancel) {
-                            requestCancel()
-                        }
-                        .keyboardShortcut(.cancelAction)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(AppStrings.cancel) {
+                        requestCancel()
                     }
-
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(AppStrings.localized("common.save")) {
-                            onSave(draft)
-                        }
-                        .keyboardShortcut(.defaultAction)
-                        .disabled(draft.taskID == nil || validation != .valid || noteError != nil)
-                    }
+                    .keyboardShortcut(.cancelAction)
                 }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(AppStrings.localized("common.save")) {
+                        onSave(draft)
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(draft.taskID == nil || validation != .valid || noteError != nil)
+                }
+            }
         }
         .editorDiscardConfirmation(
             isPresented: $isDiscardConfirmationPresented,

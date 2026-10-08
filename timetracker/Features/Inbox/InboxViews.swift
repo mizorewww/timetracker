@@ -27,18 +27,18 @@ struct InboxView: View {
 
     var body: some View {
         inboxList
-        #if os(iOS)
-        .listStyle(.insetGrouped)
-        .scrollDismissesKeyboard(.interactively)
-        #else
-        .listStyle(.inset)
-        #endif
-        .scrollContentBackground(.hidden)
-        .background(AppColors.background.ignoresSafeArea())
-        .navigationTitle(AppStrings.inbox)
-        #if os(iOS)
+            #if os(iOS)
+            .listStyle(.insetGrouped)
+            .scrollDismissesKeyboard(.interactively)
+            #else
+            .listStyle(.inset)
+            #endif
+            .scrollContentBackground(.hidden)
+            .background(AppColors.background.ignoresSafeArea())
+            .navigationTitle(AppStrings.inbox)
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.large)
-        #endif
+            #endif
             .accessibilityIdentifier("inbox.view")
     }
 

@@ -55,25 +55,25 @@ struct AppRootView<SyncConflictContent: View>: View {
         // asking what device they are running on.
         .environment(\.layoutShell, shell)
         #if os(macOS)
-            .focusedSceneValue(\.timeTrackerStore, store)
-            .focusedSceneValue(\.appPresentationRouter, presentationRouter)
+        .focusedSceneValue(\.timeTrackerStore, store)
+        .focusedSceneValue(\.appPresentationRouter, presentationRouter)
         #endif
-            .onGeometryChange(for: RootLayoutPolicy.WidthBand.self) { proxy in
-                RootLayoutPolicy.WidthBand(width: proxy.size.width)
-            } action: { widthBand in
-                measuredWidthBand = widthBand
-            }
-            .onAppear {
-                routeSettingsDestination(store.desktopDestination)
-            }
-            .onChange(of: store.desktopDestination) { _, destination in
-                routeSettingsDestination(destination)
-            }
-            .onChange(of: presentationRouter.sheet?.id) { _, presentationID in
-                guard presentationID == nil,
-                      store.desktopDestination == .settings else { return }
-                routeSettingsDestination(.settings)
-            }
+        .onGeometryChange(for: RootLayoutPolicy.WidthBand.self) { proxy in
+            RootLayoutPolicy.WidthBand(width: proxy.size.width)
+        } action: { widthBand in
+            measuredWidthBand = widthBand
+        }
+        .onAppear {
+            routeSettingsDestination(store.desktopDestination)
+        }
+        .onChange(of: store.desktopDestination) { _, destination in
+            routeSettingsDestination(destination)
+        }
+        .onChange(of: presentationRouter.sheet?.id) { _, presentationID in
+            guard presentationID == nil,
+                  store.desktopDestination == .settings else { return }
+            routeSettingsDestination(.settings)
+        }
     }
 
     private func routeSettingsDestination(

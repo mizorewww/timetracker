@@ -81,19 +81,19 @@ struct CompactHomeView: View {
         .background(AppColors.background)
         .navigationTitle(AppStrings.today)
         #if os(iOS)
-            .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.large)
         #endif
-            .accessibilityIdentifier("home.view")
-            .toolbar {
-                // `.primaryAction` resolves to the navigation bar's trailing slot on
-                // iOS and the window toolbar on macOS, so no branch is needed.
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: openSettings) {
-                        Label(AppStrings.settings, systemImage: "gearshape")
-                            .labelStyle(.iconOnly)
-                    }
-                    .accessibilityIdentifier("settings.open")
+        .accessibilityIdentifier("home.view")
+        .toolbar {
+            // `.primaryAction` resolves to the navigation bar's trailing slot on
+            // iOS and the window toolbar on macOS, so no branch is needed.
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: openSettings) {
+                    Label(AppStrings.settings, systemImage: "gearshape")
+                        .labelStyle(.iconOnly)
                 }
+                .accessibilityIdentifier("settings.open")
             }
+        }
     }
 }

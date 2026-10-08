@@ -55,14 +55,14 @@ struct ChecklistEditorRow: View {
         .frame(minHeight: 44)
         .contentShape(Rectangle())
         #if os(iOS)
-            .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                deleteAction(source: "swipe")
-            }
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            deleteAction(source: "swipe")
+        }
         #endif
-            .contextMenu {
-                deleteAction(source: "context")
-            }
-            .accessibilityElement(children: .contain)
+        .contextMenu {
+            deleteAction(source: "context")
+        }
+        .accessibilityElement(children: .contain)
     }
 
     private func deleteAction(source: String) -> some View {

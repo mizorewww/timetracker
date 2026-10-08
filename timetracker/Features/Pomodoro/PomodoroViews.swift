@@ -44,53 +44,53 @@ struct PomodoroView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle(AppStrings.focus)
         #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.inline)
         #endif
-            .accessibilityIdentifier("pomodoro.view")
-            .background(PomodoroBackgroundColor().ignoresSafeArea())
-            .onAppear {
-                normalizeSelectedPlan()
-                normalizeFocusTaskSelection()
-                store.reconcileActivePomodoro(now: Date())
+        .accessibilityIdentifier("pomodoro.view")
+        .background(PomodoroBackgroundColor().ignoresSafeArea())
+        .onAppear {
+            normalizeSelectedPlan()
+            normalizeFocusTaskSelection()
+            store.reconcileActivePomodoro(now: Date())
+        }
+        .onChange(of: store.preferences.pomodoroPlans) { _, _ in
+            normalizeSelectedPlan()
+        }
+        .onChange(of: availableFocusTaskIDs) { _, _ in
+            normalizeFocusTaskSelection()
+        }
+        .onChange(of: store.activePomodoroRun?.clientMutationID) { _, mutationID in
+            guard isStopConfirmationPresented,
+                  mutationID != stopConfirmationPhase?.mutationID
+            else {
+                return
             }
-            .onChange(of: store.preferences.pomodoroPlans) { _, _ in
-                normalizeSelectedPlan()
-            }
-            .onChange(of: availableFocusTaskIDs) { _, _ in
-                normalizeFocusTaskSelection()
-            }
-            .onChange(of: store.activePomodoroRun?.clientMutationID) { _, mutationID in
-                guard isStopConfirmationPresented,
-                      mutationID != stopConfirmationPhase?.mutationID
-                else {
-                    return
-                }
-                isStopConfirmationPresented = false
+            isStopConfirmationPresented = false
+            stopConfirmationPhase = nil
+        }
+        .onChange(of: isStopConfirmationPresented) { _, isPresented in
+            if isPresented == false {
                 stopConfirmationPhase = nil
             }
-            .onChange(of: isStopConfirmationPresented) { _, isPresented in
-                if isPresented == false {
-                    stopConfirmationPhase = nil
+        }
+        .confirmationDialog(
+            AppStrings.localized("pomodoro.stop.confirm.title"),
+            isPresented: $isStopConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button(AppStrings.localized("pomodoro.stop"), role: .destructive) {
+                guard let stopConfirmationPhase else {
+                    return
                 }
+                store.cancelActivePomodoro(phase: stopConfirmationPhase)
+                self.stopConfirmationPhase = nil
             }
-            .confirmationDialog(
-                AppStrings.localized("pomodoro.stop.confirm.title"),
-                isPresented: $isStopConfirmationPresented,
-                titleVisibility: .visible
-            ) {
-                Button(AppStrings.localized("pomodoro.stop"), role: .destructive) {
-                    guard let stopConfirmationPhase else {
-                        return
-                    }
-                    store.cancelActivePomodoro(phase: stopConfirmationPhase)
-                    self.stopConfirmationPhase = nil
-                }
-                Button(AppStrings.cancel, role: .cancel) {
-                    stopConfirmationPhase = nil
-                }
-            } message: {
-                Text(.app("pomodoro.stop.confirm.message"))
+            Button(AppStrings.cancel, role: .cancel) {
+                stopConfirmationPhase = nil
             }
+        } message: {
+            Text(.app("pomodoro.stop.confirm.message"))
+        }
     }
 
     private func normalizeSelectedPlan() {

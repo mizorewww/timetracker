@@ -66,7 +66,7 @@ struct CountdownTitleEditor: View {
                 )
                 .accessibilityIdentifier("settings.countdown.title.field")
                 #if os(iOS)
-                    .textInputAutocapitalization(.sentences)
+                .textInputAutocapitalization(.sentences)
                 #endif
 
                 saveButton

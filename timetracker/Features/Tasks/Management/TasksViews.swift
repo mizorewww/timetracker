@@ -86,76 +86,76 @@ struct TasksView: View {
         )
         .navigationTitle(AppStrings.tasks)
         #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.inline)
         #endif
-            .accessibilityIdentifier("tasks.view")
+        .accessibilityIdentifier("tasks.view")
         #if os(iOS)
-            .listStyle(.insetGrouped)
-            .scrollDismissesKeyboard(.interactively)
+        .listStyle(.insetGrouped)
+        .scrollDismissesKeyboard(.interactively)
         #else
-            .listStyle(.inset)
+        .listStyle(.inset)
         #endif
-            .toolbar {
-                Menu {
-                    Button {
-                        presentationRouter.presentNewTask(using: store, preservingDestination: .tasks)
-                    } label: {
-                        Label(AppStrings.localized("tasks.newRoot"), systemImage: "plus")
-                    }
-                    .accessibilityIdentifier("tasks.addRoot")
-
-                    Button {
-                        presentationRouter.presentNewTaskCategory()
-                    } label: {
-                        Label(AppStrings.localized("taskCategory.new"), systemImage: "square.grid.2x2")
-                    }
-
-                    Button {
-                        presentationRouter.presentTaskCategoryOrdering()
-                    } label: {
-                        Label(
-                            AppStrings.localized("taskCategory.sort"),
-                            systemImage: "arrow.up.arrow.down"
-                        )
-                    }
-                    .disabled(store.taskCategories.count < 2)
-                    .accessibilityIdentifier("tasks.sortCategories")
-
-                    Divider()
-
-                    Button {
-                        presentationRouter.presentAITaskPlanGenerator()
-                    } label: {
-                        Label(
-                            AppStrings.localized("aiTaskPlan.generateMenu"),
-                            systemImage: "sparkles"
-                        )
-                    }
-                    .accessibilityIdentifier("tasks.generatePlan")
+        .toolbar {
+            Menu {
+                Button {
+                    presentationRouter.presentNewTask(using: store, preservingDestination: .tasks)
                 } label: {
-                    Label(AppStrings.localized("tasks.add"), systemImage: "plus")
+                    Label(AppStrings.localized("tasks.newRoot"), systemImage: "plus")
                 }
-                .accessibilityIdentifier("tasks.add")
+                .accessibilityIdentifier("tasks.addRoot")
+
+                Button {
+                    presentationRouter.presentNewTaskCategory()
+                } label: {
+                    Label(AppStrings.localized("taskCategory.new"), systemImage: "square.grid.2x2")
+                }
+
+                Button {
+                    presentationRouter.presentTaskCategoryOrdering()
+                } label: {
+                    Label(
+                        AppStrings.localized("taskCategory.sort"),
+                        systemImage: "arrow.up.arrow.down"
+                    )
+                }
+                .disabled(store.taskCategories.count < 2)
+                .accessibilityIdentifier("tasks.sortCategories")
+
+                Divider()
+
+                Button {
+                    presentationRouter.presentAITaskPlanGenerator()
+                } label: {
+                    Label(
+                        AppStrings.localized("aiTaskPlan.generateMenu"),
+                        systemImage: "sparkles"
+                    )
+                }
+                .accessibilityIdentifier("tasks.generatePlan")
+            } label: {
+                Label(AppStrings.localized("tasks.add"), systemImage: "plus")
             }
-            .confirmationDialog(
-                AppStrings.localized("taskCategory.delete.confirm.title"),
-                isPresented: categoryDeletionBinding,
-                titleVisibility: .visible
-            ) {
-                Button(AppStrings.localized("taskCategory.delete"), role: .destructive) {
-                    if let categoryPendingDeletionID,
-                       let category = store.taskCategory(for: categoryPendingDeletionID)
-                    {
-                        store.deleteTaskCategory(category)
-                    }
-                    categoryPendingDeletionID = nil
+            .accessibilityIdentifier("tasks.add")
+        }
+        .confirmationDialog(
+            AppStrings.localized("taskCategory.delete.confirm.title"),
+            isPresented: categoryDeletionBinding,
+            titleVisibility: .visible
+        ) {
+            Button(AppStrings.localized("taskCategory.delete"), role: .destructive) {
+                if let categoryPendingDeletionID,
+                   let category = store.taskCategory(for: categoryPendingDeletionID)
+                {
+                    store.deleteTaskCategory(category)
                 }
-                Button(AppStrings.cancel, role: .cancel) {
-                    categoryPendingDeletionID = nil
-                }
-            } message: {
-                Text(.app("taskCategory.delete.confirm.message"))
+                categoryPendingDeletionID = nil
             }
+            Button(AppStrings.cancel, role: .cancel) {
+                categoryPendingDeletionID = nil
+            }
+        } message: {
+            Text(.app("taskCategory.delete.confirm.message"))
+        }
     }
 
     @ViewBuilder

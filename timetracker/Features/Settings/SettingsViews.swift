@@ -23,9 +23,9 @@ struct SettingsView: View {
     var body: some View {
         settingsNavigation
             .navigationTitle(AppStrings.settings)
-        #if os(iOS)
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
-        #endif
+            #endif
             .accessibilityIdentifier("settings.view")
             .fileExporter(
                 isPresented: $isExportPresented,

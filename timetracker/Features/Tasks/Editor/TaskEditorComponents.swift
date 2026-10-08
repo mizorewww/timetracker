@@ -42,9 +42,9 @@ struct TaskEditorForm: View {
         }
         .formStyle(.grouped)
         #if os(iOS)
-            .scrollDismissesKeyboard(.interactively)
+        .scrollDismissesKeyboard(.interactively)
         #endif
-            .accessibilityIdentifier("task.editor")
+        .accessibilityIdentifier("task.editor")
     }
 }
 

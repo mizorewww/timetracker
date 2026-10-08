@@ -66,29 +66,29 @@ struct TaskCategoryEditorSheet: View {
             .formStyle(.grouped)
             .navigationTitle(initialDraft.categoryID == nil ? AppStrings.localized("taskCategory.new") : AppStrings.localized("taskCategory.edit"))
             #if os(iOS)
-                .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.inline)
             #endif
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button(AppStrings.cancel) {
-                            requestCancel()
-                        }
-                        .keyboardShortcut(.cancelAction)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(AppStrings.cancel) {
+                        requestCancel()
                     }
-
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(AppStrings.localized("common.save")) {
-                            if store.saveTaskCategoryDraft(draft) {
-                                dismiss()
-                            }
-                        }
-                        .keyboardShortcut(.defaultAction)
-                        .disabled(
-                            draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-                                validationError != nil
-                        )
-                    }
+                    .keyboardShortcut(.cancelAction)
                 }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(AppStrings.localized("common.save")) {
+                        if store.saveTaskCategoryDraft(draft) {
+                            dismiss()
+                        }
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(
+                        draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                            validationError != nil
+                    )
+                }
+            }
         }
         .platformSheetFrame(width: 460, height: 440)
         .task {

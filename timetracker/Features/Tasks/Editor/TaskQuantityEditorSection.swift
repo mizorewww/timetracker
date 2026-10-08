@@ -70,10 +70,10 @@ struct TaskQuantityEditorSection: View {
             )
             .multilineTextAlignment(.trailing)
             #if os(iOS)
-                .keyboardType(.numberPad)
+            .keyboardType(.numberPad)
             #endif
-                .focused(focusedTextField, equals: .quantityTarget)
-                .accessibilityIdentifier("task.editor.quantity.target")
+            .focused(focusedTextField, equals: .quantityTarget)
+            .accessibilityIdentifier("task.editor.quantity.target")
         } label: {
             Text(.app("task.quantity.editor.target"))
         }

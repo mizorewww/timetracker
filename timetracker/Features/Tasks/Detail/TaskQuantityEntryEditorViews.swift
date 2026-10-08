@@ -29,12 +29,12 @@ struct TaskQuantityEntryEditorSheet: View {
                         )
                         .multilineTextAlignment(.trailing)
                         #if os(iOS)
-                            .keyboardType(.numberPad)
+                        .keyboardType(.numberPad)
                         #endif
-                            .focused($isAmountFocused)
-                            .accessibilityIdentifier(
-                                "task.detail.quantity.amount"
-                            )
+                        .focused($isAmountFocused)
+                        .accessibilityIdentifier(
+                            "task.detail.quantity.amount"
+                        )
                     } label: {
                         Text(.app("task.quantity.entry.editor.amount"))
                     }

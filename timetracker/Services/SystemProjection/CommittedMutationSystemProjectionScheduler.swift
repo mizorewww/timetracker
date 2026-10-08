@@ -62,8 +62,10 @@ nonisolated struct CommittedMutationSystemProjectionWork:
 /// Coalesces committed-mutation projection work without making a durable
 /// mutation wait for Widget, Watch, or Live Activity I/O.
 ///
-/// This core intentionally owns only in-process scheduling. Durable recovery is
-/// a separate boundary because it requires an explicit persistence contract.
+/// This core intentionally owns only in-process scheduling. Each sink keeps at
+/// most one coalesced pending generation and one serialized drain task; a
+/// failed sink keeps its work queued and retries when the next relevant
+/// mutation arrives, never blocking a sibling.
 @MainActor
 final class CommittedMutationSystemProjectionScheduler {
     typealias Worker = @MainActor (
@@ -71,19 +73,12 @@ final class CommittedMutationSystemProjectionScheduler {
         CommittedMutationSystemProjectionWork
     ) async throws -> Void
 
-    private struct SinkState {
-        var pending: CommittedMutationSystemProjectionWork?
-        var inFlight: CommittedMutationSystemProjectionWork?
-        var isPausedAfterFailure = false
-    }
-
     private let worker: Worker
     private var generation: UInt = 0
-    private var states = Dictionary(
-        uniqueKeysWithValues: CommittedMutationSystemProjectionSink.allCases.map {
-            ($0, SinkState())
-        }
-    )
+    private var pending: [
+        CommittedMutationSystemProjectionSink:
+            CommittedMutationSystemProjectionWork
+    ] = [:]
     private var drainTasks: [
         CommittedMutationSystemProjectionSink: Task<Void, Never>
     ] = [:]
@@ -102,26 +97,15 @@ final class CommittedMutationSystemProjectionScheduler {
         let targetSinks = Set(eligibleSinks)
 
         for sink in eligibleSinks {
-            let events = Self.events(
-                request.events,
-                for: sink
-            )
-            guard var state = states[sink] else { continue }
-
-            state.pending = Self.merging(
-                state.pending,
+            pending[sink] = Self.merging(
+                pending[sink],
                 with: CommittedMutationSystemProjectionWork(
                     generation: requestGeneration,
                     targetSinks: targetSinks,
-                    events: events
+                    events: Self.events(request.events, for: sink)
                 )
             )
-            // A later relevant request is a safe retry trigger. Keep the
-            // failed work in the merged batch, then let this sink catch up
-            // without repeating siblings that already succeeded.
-            state.isPausedAfterFailure = false
-            states[sink] = state
-            startDrainIfNeeded(for: sink)
+            startDrain(for: sink)
         }
     }
 
@@ -184,62 +168,30 @@ final class CommittedMutationSystemProjectionScheduler {
         )
     }
 
-    private func startDrainIfNeeded(
+    private func startDrain(
         for sink: CommittedMutationSystemProjectionSink
     ) {
-        guard drainTasks[sink] == nil,
-              let state = states[sink],
-              state.isPausedAfterFailure == false,
-              state.pending != nil
-        else {
+        guard drainTasks[sink] == nil, pending[sink] != nil else {
             return
         }
-
         drainTasks[sink] = Task { @MainActor [weak self] in
             await self?.drain(sink)
         }
     }
 
     private func drain(_ sink: CommittedMutationSystemProjectionSink) async {
-        defer {
-            drainTasks[sink] = nil
-            startDrainIfNeeded(for: sink)
-        }
-
-        while Task.isCancelled == false,
-              var state = states[sink],
-              let work = state.pending
-        {
-            state.pending = nil
-            state.inFlight = work
-            states[sink] = state
-
+        while Task.isCancelled == false, let work = pending[sink] {
+            pending[sink] = nil
             do {
                 try await worker(sink, work)
-                guard var completedState = states[sink],
-                      completedState.inFlight?.generation == work.generation
-                else {
-                    continue
-                }
-                completedState.inFlight = nil
-                completedState.isPausedAfterFailure = false
-                states[sink] = completedState
             } catch {
-                guard var failedState = states[sink],
-                      failedState.inFlight?.generation == work.generation
-                else {
-                    continue
-                }
-                failedState.inFlight = nil
-                failedState.pending = Self.merging(
-                    work,
-                    with: failedState.pending
-                )
-                failedState.isPausedAfterFailure = true
-                states[sink] = failedState
-                return
+                // Keep the failed work queued; the next relevant mutation
+                // restarts this sink without touching its siblings.
+                pending[sink] = Self.merging(work, with: pending[sink])
+                break
             }
         }
+        drainTasks[sink] = nil
     }
 
     private static func merging(

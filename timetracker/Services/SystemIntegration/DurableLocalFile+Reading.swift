@@ -35,7 +35,6 @@ nonisolated extension DurableLocalFile {
         upTo maximumByteCount: Int,
         from url: URL
     ) throws -> Data? {
-        try injectFault(.beforeManagedRead)
         let descriptor = url.path.withCString { path in
             Darwin.open(
                 path,

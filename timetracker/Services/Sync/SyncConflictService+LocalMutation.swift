@@ -214,32 +214,6 @@ nonisolated enum SyncLocalMutationRecordingError:
     case policyChanged
 }
 
-nonisolated enum PersistentHistorySyncSnapshotCheckpoint:
-    Equatable,
-    Sendable
-{
-    case beforeFreshContext
-    case beforeStateRead
-    case beforeCapture
-    case beforeFingerprint
-    case beforeStateWrite
-    case afterStateWriteBeforeReset
-}
-
-nonisolated struct PersistentHistorySyncSnapshotWorkerHooks: Sendable {
-    let reach: @Sendable (
-        PersistentHistorySyncSnapshotCheckpoint
-    ) -> Void
-
-    init(
-        reach: @escaping @Sendable (
-            PersistentHistorySyncSnapshotCheckpoint
-        ) -> Void = { _ in }
-    ) {
-        self.reach = reach
-    }
-}
-
 nonisolated struct SyncLocalMutationRecordingOutcome: Sendable {
     let result: SyncLocalMutationSnapshotResult
     let cloudReconciliationResetPolicy:
@@ -264,8 +238,7 @@ extension SyncConflictService {
                 try recordLocalMutationWithLockedState(
                     context: lockedContext,
                     events: events,
-                    policySource: policySource,
-                    hooks: .init()
+                    policySource: policySource
                 )
             }
         }
@@ -283,10 +256,8 @@ extension SyncConflictService {
     nonisolated func recordLocalMutationWithLockedState(
         context: ModelContext,
         events: Set<StoreDomainEvent>,
-        policySource: SyncLocalMutationRecordingPolicySource,
-        hooks: PersistentHistorySyncSnapshotWorkerHooks
+        policySource: SyncLocalMutationRecordingPolicySource
     ) throws -> SyncLocalMutationRecordingOutcome {
-        hooks.reach(.beforeStateRead)
         let policy = policySource.current()
         guard policy.shouldRecordSnapshot else {
             return SyncLocalMutationRecordingOutcome(
@@ -306,7 +277,6 @@ extension SyncConflictService {
         } else {
             state.localSnapshot ?? state.pendingForcedUploadSnapshot
         }
-        hooks.reach(.beforeCapture)
         let snapshot = try SyncDataSnapshot.capture(
             context: context,
             updating: baseline,
@@ -320,20 +290,14 @@ extension SyncConflictService {
             {
                 localSnapshot.applyChanges(from: workingSnapshot, to: snapshot)
                 state.localSnapshot = localSnapshot
-                state.localFingerprint = try fingerprint(
-                    localSnapshot,
-                    hooks: hooks
-                )
+                state.localFingerprint = try fingerprint(localSnapshot)
                 state.pendingConflictWorkingSnapshot = snapshot
                 if state.localFingerprint != previousLocalFingerprint {
                     state.rotatePendingConflictIdentity()
                 }
             } else {
                 state.localSnapshot = snapshot
-                state.localFingerprint = try fingerprint(
-                    snapshot,
-                    hooks: hooks
-                )
+                state.localFingerprint = try fingerprint(snapshot)
             }
             if state.pendingLocalIntent == .explicitlyReplaceCloud {
                 state.pendingForcedUploadSnapshot = snapshot
@@ -349,7 +313,6 @@ extension SyncConflictService {
                 )
             }
             state.advanceLocalGeneration()
-            hooks.reach(.beforeStateWrite)
             try requireCurrentPolicy(
                 policy,
                 from: policySource
@@ -375,10 +338,7 @@ extension SyncConflictService {
                 state.advanceSyncEpoch()
             }
             state.localSnapshot = snapshot
-            state.localFingerprint = try fingerprint(
-                snapshot,
-                hooks: hooks
-            )
+            state.localFingerprint = try fingerprint(snapshot)
             state.pendingForcedUploadSnapshot = snapshot
             if state.pendingLocalIntent != .explicitlyReplaceCloud {
                 state.pendingLocalIntent = .reconcileWithCloud
@@ -394,7 +354,6 @@ extension SyncConflictService {
                 )
             }
             state.advanceLocalGeneration()
-            hooks.reach(.beforeStateWrite)
             try requireCurrentPolicy(
                 policy,
                 from: policySource
@@ -425,11 +384,9 @@ extension SyncConflictService {
     }
 
     private nonisolated func fingerprint(
-        _ snapshot: SyncDataSnapshot,
-        hooks: PersistentHistorySyncSnapshotWorkerHooks
+        _ snapshot: SyncDataSnapshot
     ) throws -> String {
-        hooks.reach(.beforeFingerprint)
-        return try snapshot.fingerprint()
+        try snapshot.fingerprint()
     }
 
     private nonisolated func snapshotDomains(

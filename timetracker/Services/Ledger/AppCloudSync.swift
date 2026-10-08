@@ -96,22 +96,6 @@ enum AppCloudSync {
         }
     }
 
-    /// Local persistent stores can be temporary waypoints while CloudKit is
-    /// unavailable or waiting for a restart. Preserve every committed mutation
-    /// so the next CloudKit launch can compare both branches before asking the
-    /// user which one should win.
-    static var shouldStageLocalMutationsForCloudRecovery: Bool {
-        guard isEnabled else { return false }
-        switch persistenceMode {
-        case modeLocal, modeLocalFallback:
-            return true
-        case modeICloud, modeInMemoryFallback, modeUITest, modeDemoData:
-            return false
-        default:
-            return false
-        }
-    }
-
     /// A pending download is an explicit choice to replace the device branch,
     /// so it must not be converted back into a local reconciliation request.
     static var shouldRefreshLocalFallbackRecoverySnapshotBeforeReset: Bool {

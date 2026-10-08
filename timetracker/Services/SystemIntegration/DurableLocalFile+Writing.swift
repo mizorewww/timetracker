@@ -53,7 +53,6 @@ nonisolated extension DurableLocalFile {
             temporaryURL,
             excludeFromBackup: excludeFromBackup
         )
-        try injectFault(.afterAtomicWriteBeforeFileSync)
         try synchronizeDescriptor(descriptor)
         guard Darwin.close(descriptor) == 0 else {
             descriptorIsOpen = false
@@ -70,7 +69,6 @@ nonisolated extension DurableLocalFile {
             throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
         }
         published = true
-        try injectFault(.afterFileSyncBeforeDirectorySync)
         try synchronizeDirectory(directoryURL)
     }
 
@@ -85,7 +83,6 @@ nonisolated extension DurableLocalFile {
         guard unlinkResult == 0 else {
             throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
         }
-        try injectFault(.afterRemovalBeforeDirectorySync)
         try synchronizeDirectory(directoryURL)
     }
 

@@ -22,10 +22,6 @@ final class CloudRecoveryImportBuffer {
         self.recordReceipt = recordReceipt
     }
 
-    var isObserving: Bool {
-        token != nil
-    }
-
     func startIfNeeded() {
         guard token == nil else { return }
         token = center.addObserver(

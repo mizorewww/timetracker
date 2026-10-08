@@ -1,17 +1,5 @@
 import Foundation
 
-nonisolated enum DurableLocalFileFaultPoint: String, Sendable {
-    case beforeDirectoryCreation
-    case afterDirectoryCreationBeforeParentSync
-    case beforeManagedRead
-    case afterAtomicWriteBeforeFileSync
-    case afterFileSyncBeforeDirectorySync
-    case afterRemovalBeforeDirectorySync
-    case beforeQuarantinePruning
-    case afterQuarantinePruningBeforeDirectorySync
-    case afterQuarantineMoveBeforeFileSync
-}
-
 nonisolated enum DurableLocalFileError: Error, Equatable, Sendable {
     case durableRootUnavailable
     case durableRootIsNotAncestor
@@ -38,17 +26,9 @@ private final nonisolated class DurableLocalFileManagerReference:
 nonisolated struct DurableLocalFile: Sendable {
     static let lockFileName = ".TimeTrackerDurable.lock"
 
-    typealias FaultInjector =
-        @Sendable (DurableLocalFileFaultPoint) throws -> Void
-    typealias DirectorySynchronizer =
-        @Sendable (URL) throws -> Void
-
     private let fileManagerReference:
         DurableLocalFileManagerReference
     let quarantinePolicy: DurableLocalFileQuarantinePolicy
-    let dateProvider: @Sendable () -> Date
-    let directorySynchronizer: DirectorySynchronizer?
-    let injectFault: FaultInjector
 
     var fileManager: FileManager {
         fileManagerReference.value
@@ -56,17 +36,11 @@ nonisolated struct DurableLocalFile: Sendable {
 
     init(
         fileManager: FileManager = .default,
-        quarantinePolicy: DurableLocalFileQuarantinePolicy = .production,
-        dateProvider: @escaping @Sendable () -> Date = Date.init,
-        directorySynchronizer: DirectorySynchronizer? = nil,
-        injectFault: @escaping FaultInjector = { _ in }
+        quarantinePolicy: DurableLocalFileQuarantinePolicy = .production
     ) {
         fileManagerReference =
             DurableLocalFileManagerReference(fileManager)
         self.quarantinePolicy = quarantinePolicy
-        self.dateProvider = dateProvider
-        self.directorySynchronizer = directorySynchronizer
-        self.injectFault = injectFault
     }
 
     /// Compatibility path for files whose nearest existing ancestor is known

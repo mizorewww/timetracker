@@ -1,12 +1,7 @@
 import Foundation
 import SwiftData
 
-protocol WatchCommandReceiptStore: AnyObject {
-    func contains(_ commandID: UUID) -> Bool
-    func markProcessed(_ commandID: UUID)
-}
-
-final class UserDefaultsWatchCommandReceiptStore: WatchCommandReceiptStore {
+final class UserDefaultsWatchCommandReceiptStore {
     private let defaults: UserDefaults
     private let key: String
     private let maxReceipts: Int
@@ -40,18 +35,6 @@ final class UserDefaultsWatchCommandReceiptStore: WatchCommandReceiptStore {
     }
 }
 
-final class InMemoryWatchCommandReceiptStore: WatchCommandReceiptStore {
-    private var processedIDs: Set<UUID> = []
-
-    func contains(_ commandID: UUID) -> Bool {
-        processedIDs.contains(commandID)
-    }
-
-    func markProcessed(_ commandID: UUID) {
-        processedIDs.insert(commandID)
-    }
-}
-
 @MainActor
 struct WatchCommandMutationOutcome {
     let result: WatchCommandProcessingResult
@@ -60,28 +43,11 @@ struct WatchCommandMutationOutcome {
 
 @MainActor
 struct WatchCommandProcessor {
-    var receiptStore: WatchCommandReceiptStore
+    private let receiptStore = UserDefaultsWatchCommandReceiptStore()
     let writeAuthorization: StoreWriteAuthorization
 
-    init(
-        receiptStore: WatchCommandReceiptStore,
-        writeAuthorization: StoreWriteAuthorization = .applicationState
-    ) {
-        self.receiptStore = receiptStore
-        self.writeAuthorization = writeAuthorization
-    }
-
     init(writeAuthorization: StoreWriteAuthorization = .applicationState) {
-        receiptStore = UserDefaultsWatchCommandReceiptStore()
         self.writeAuthorization = writeAuthorization
-    }
-
-    func process(
-        _ command: WatchTimerCommand,
-        context: ModelContext,
-        now: Date = Date()
-    ) throws -> WatchCommandProcessingResult {
-        try processWithMutationOutcome(command, context: context, now: now).result
     }
 
     func processWithMutationOutcome(

@@ -99,27 +99,6 @@ nonisolated extension SwiftDataTaskRepository {
         try context.saveAfterMutationStep()
     }
 
-    func moveTask(taskID: UUID, newParentID: UUID?, sortOrder: Double) throws {
-        let nodes = try allNodes()
-        guard let node = nodes.first(where: { $0.id == taskID }) else { return }
-        guard canMove(nodeID: taskID, to: newParentID, nodes: nodes) else {
-            throw TaskRepositoryError.invalidMove
-        }
-
-        node.parentID = newParentID
-        node.sortOrder = sortOrder
-        let now = Date()
-        node.updatedAt = now
-        node.deviceID = deviceID
-        node.clientMutationID = UUID()
-        try applyHierarchy(to: node, parentID: newParentID)
-        updateDescendantHierarchy(of: node, nodes: nodes, now: now)
-        if newParentID != nil {
-            try setCategoryAssignment(categoryID: nil, forRootTaskID: node.id)
-        }
-        try context.saveAfterMutationStep()
-    }
-
     func archiveTask(taskID: UUID) throws {
         guard let target = try lifecycleMutationTarget(taskID: taskID) else {
             return

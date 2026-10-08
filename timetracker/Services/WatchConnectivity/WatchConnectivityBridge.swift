@@ -15,11 +15,6 @@ nonisolated enum WatchConnectivityDeliveryStatus: Equatable, Sendable {
     case failed(String)
 }
 
-nonisolated struct WatchConnectivityDiagnostic: Equatable, Sendable {
-    var operation: WatchConnectivityOperation
-    var message: String
-}
-
 #if os(iOS) && canImport(WatchConnectivity)
 import OSLog
 import WatchConnectivity
@@ -39,9 +34,6 @@ final class WatchConnectivityBridge: NSObject {
         }
     }
 
-    var diagnosticHandler: ((WatchConnectivityDiagnostic) -> Void)?
-    private(set) var lastDiagnostic: WatchConnectivityDiagnostic?
-
     private let session: WCSession?
     private let pendingCommandStore: WatchIncomingCommandStore
     private var pendingCommands: [WatchTimerCommand]
@@ -49,12 +41,10 @@ final class WatchConnectivityBridge: NSObject {
 
     init(
         session: WCSession? = WCSession.isSupported() ? .default : nil,
-        diagnosticHandler: ((WatchConnectivityDiagnostic) -> Void)? = nil,
         pendingCommandStore: WatchIncomingCommandStore? = nil
     ) {
         let pendingCommandStore = pendingCommandStore ?? WatchIncomingCommandStore()
         self.session = session
-        self.diagnosticHandler = diagnosticHandler
         self.pendingCommandStore = pendingCommandStore
         pendingCommands = pendingCommandStore.load()
         super.init()
@@ -82,8 +72,8 @@ final class WatchConnectivityBridge: NSObject {
             )
             return .submitted
         } catch {
-            let diagnostic = recordFailure(operation: .applicationContext, error: error)
-            return .failed(diagnostic.message)
+            let message = recordFailure(operation: .applicationContext, error: error)
+            return .failed(message)
         }
     }
 
@@ -194,17 +184,12 @@ final class WatchConnectivityBridge: NSObject {
     private func recordFailure(
         operation: WatchConnectivityOperation,
         error: Error
-    ) -> WatchConnectivityDiagnostic {
-        let diagnostic = WatchConnectivityDiagnostic(
-            operation: operation,
-            message: error.localizedDescription
-        )
-        lastDiagnostic = diagnostic
-        diagnosticHandler?(diagnostic)
+    ) -> String {
+        let message = error.localizedDescription
         Self.logger.error(
-            "WatchConnectivity \(operation.rawValue, privacy: .public) failed: \(diagnostic.message, privacy: .private)"
+            "WatchConnectivity \(operation.rawValue, privacy: .public) failed: \(message, privacy: .private)"
         )
-        return diagnostic
+        return message
     }
 }
 

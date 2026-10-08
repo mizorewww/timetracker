@@ -8,10 +8,6 @@ nonisolated extension SwiftDataTaskRepository {
             .sorted(by: taskHierarchyOrder)
     }
 
-    func rootNodes() throws -> [TaskNode] {
-        try children(of: nil)
-    }
-
     func children(of parentID: UUID?) throws -> [TaskNode] {
         let parent = parentID
         return try allNodes()

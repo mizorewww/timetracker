@@ -1,34 +1,6 @@
 import Foundation
 
 nonisolated extension SwiftDataTaskRepository {
-    /// Repairs a hierarchy only when the caller knows that the imported task
-    /// set is complete. Normal store refreshes must remain read-only because
-    /// CloudKit can deliver a child before its parent in a staged import.
-    @discardableResult
-    func repairInvalidHierarchy() throws -> Set<UUID> {
-        let nodes = try allNodes().deduplicatedByID()
-        let normalizedMetadata = TaskHierarchyMetadataService().normalizedMetadata(tasks: nodes)
-        let now = Date()
-        var affectedIDs = Set<UUID>()
-        for node in nodes {
-            guard let metadata = normalizedMetadata[node.id],
-                  node.parentID != metadata.parentID ||
-                  node.depth != metadata.depth ||
-                  node.path != metadata.path else { continue }
-            node.parentID = metadata.parentID
-            node.depth = metadata.depth
-            node.path = metadata.path
-            node.updatedAt = now
-            node.deviceID = deviceID
-            node.clientMutationID = UUID()
-            affectedIDs.insert(node.id)
-        }
-        if affectedIDs.isEmpty == false {
-            try context.saveAfterMutationStep()
-        }
-        return affectedIDs
-    }
-
     func canMove(nodeID: UUID, to newParentID: UUID?, nodes: [TaskNode]) -> Bool {
         guard let node = nodes.first(where: { $0.id == nodeID }) else { return false }
         let isChangingParent = node.parentID != newParentID

@@ -8,7 +8,6 @@ nonisolated extension DurableLocalFile {
         reservingFileCount: Int,
         reservingByteCount: Int64
     ) throws {
-        try injectFault(.beforeQuarantinePruning)
         let urls = try fileManager.contentsOfDirectory(
             at: directoryURL,
             includingPropertiesForKeys: [
@@ -85,7 +84,6 @@ nonisolated extension DurableLocalFile {
                 throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
             }
         }
-        try injectFault(.afterQuarantinePruningBeforeDirectorySync)
         try synchronizeDirectory(directoryURL)
     }
 

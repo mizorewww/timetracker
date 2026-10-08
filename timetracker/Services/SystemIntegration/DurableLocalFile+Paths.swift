@@ -20,12 +20,10 @@ nonisolated extension DurableLocalFile {
         }
 
         if fileManager.fileExists(atPath: directoryURL.path) == false {
-            try injectFault(.beforeDirectoryCreation)
             try fileManager.createDirectory(
                 at: directoryURL,
                 withIntermediateDirectories: true
             )
-            try injectFault(.afterDirectoryCreationBeforeParentSync)
         }
 
         // Always replay leaf-to-root. A prior process may have completed mkdir

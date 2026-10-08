@@ -77,7 +77,7 @@ nonisolated extension DurableLocalFile {
         directoryURL: URL,
         durableRootURL: URL
     ) throws -> URL? {
-        let now = dateProvider()
+        let now = Date()
         guard now.timeIntervalSinceReferenceDate.isFinite else {
             throw DurableLocalFileError.quarantineEntryMetadataUnavailable
         }
@@ -135,7 +135,6 @@ nonisolated extension DurableLocalFile {
                 quarantineURL,
                 excludeFromBackup: true
             )
-            try injectFault(.afterQuarantineMoveBeforeFileSync)
             try synchronizeFile(at: quarantineURL)
             try synchronizeDirectory(quarantineDirectory)
             try synchronizeDirectory(directoryURL)

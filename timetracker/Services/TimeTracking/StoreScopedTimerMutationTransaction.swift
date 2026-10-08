@@ -7,10 +7,6 @@ nonisolated struct TimerModelContextFactory {
         makeContext = { ModelContext(container) }
     }
 
-    init(makeContext: @escaping () throws -> ModelContext) {
-        self.makeContext = makeContext
-    }
-
     func makeFreshContext() throws -> ModelContext {
         try makeContext()
     }
@@ -32,20 +28,8 @@ nonisolated struct StoreScopedTimerMutationTransaction {
         container: ModelContainer,
         mutationLock: StoreScopedTimerMutationLock = .init()
     ) {
-        self.init(
-            scope: scope,
-            contextFactory: TimerModelContextFactory(container: container),
-            mutationLock: mutationLock
-        )
-    }
-
-    init(
-        scope: TimerStoreScope,
-        contextFactory: TimerModelContextFactory,
-        mutationLock: StoreScopedTimerMutationLock = .init()
-    ) {
         self.scope = scope
-        self.contextFactory = contextFactory
+        contextFactory = TimerModelContextFactory(container: container)
         self.mutationLock = mutationLock
     }
 

@@ -1,22 +1,6 @@
 import Foundation
 
 extension SwiftDataPomodoroRepository {
-    @discardableResult
-    func completeFocus(runID: UUID, endedAt: Date = Date()) throws -> Bool {
-        guard let run = try run(id: runID) else { return false }
-        return try completeFocus(
-            runID: runID,
-            expectedState: run.state,
-            endedAt: endedAt
-        )
-    }
-
-    @discardableResult
-    func completeBreak(runID: UUID) throws -> Bool {
-        guard let run = try run(id: runID) else { return false }
-        return try completeBreak(runID: runID, expectedState: run.state)
-    }
-
     func cancel(runID: UUID) throws {
         try cancel(runID: runID, discardRecord: false)
     }

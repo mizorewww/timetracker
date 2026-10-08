@@ -34,10 +34,6 @@ nonisolated extension DurableLocalFile {
     }
 
     func synchronizeDirectory(_ url: URL) throws {
-        if let directorySynchronizer {
-            try directorySynchronizer(url)
-            return
-        }
         let descriptor = url.path.withCString { path in
             Darwin.open(
                 path,

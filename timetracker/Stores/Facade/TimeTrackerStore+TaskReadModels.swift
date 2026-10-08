@@ -163,14 +163,6 @@ extension TimeTrackerStore {
         return taskIDs
     }
 
-    func taskTreeRows(expandedTaskIDs: Set<UUID>) -> [TaskTreeRowModel] {
-        TaskTreeFlattener.rowProjection(
-            rootTaskIDs: taskTreeReadIndex.rootTaskIDs,
-            childTaskIDsByParentID: taskTreeReadIndex.visibleChildIDsByParentID,
-            expandedTaskIDs: expandedTaskIDs
-        ).rows
-    }
-
     func taskTreeSections(expandedTaskIDs: Set<UUID>) -> [TaskTreeVisibleSectionModel] {
         let readIndex = taskTreeReadIndex
         let revision = taskTreeReadIndexRevision
@@ -214,10 +206,6 @@ extension TimeTrackerStore {
     }
 
     func path(for task: TaskNode) -> String {
-        taskPathByID[task.id] ?? task.title
-    }
-
-    func taskPath(for task: TaskNode) -> String {
         taskPathByID[task.id] ?? task.title
     }
 

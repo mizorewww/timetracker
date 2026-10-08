@@ -22,19 +22,6 @@ struct AnalyticsComparison {
     var wallDeltaSeconds: Int {
         currentWallSeconds - previousWallSeconds
     }
-
-    var grossPercentChange: Double? {
-        percentChange(current: currentGrossSeconds, previous: previousGrossSeconds)
-    }
-
-    var wallPercentChange: Double? {
-        percentChange(current: currentWallSeconds, previous: previousWallSeconds)
-    }
-
-    private func percentChange(current: Int, previous: Int) -> Double? {
-        guard previous > 0 else { return current > 0 ? 1 : nil }
-        return Double(current - previous) / Double(previous)
-    }
 }
 
 struct AnalyticsRhythm {
@@ -89,20 +76,6 @@ struct DailyAnalyticsPoint: Identifiable {
 
     var wallMinutes: Double {
         Double(wallSeconds) / 60
-    }
-}
-
-struct HourlyAnalyticsPoint: Identifiable {
-    let hour: Int
-    let grossSeconds: Int
-    let wallSeconds: Int
-
-    var id: Int {
-        hour
-    }
-
-    var label: String {
-        hour == 0 ? "00" : "\(hour)"
     }
 }
 

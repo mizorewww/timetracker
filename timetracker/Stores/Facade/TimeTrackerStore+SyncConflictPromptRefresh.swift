@@ -120,11 +120,4 @@ extension TimeTrackerStore {
         syncConflictPromptRefreshTask?.cancel()
         pendingSyncConflict = prompt
     }
-
-    func waitForSyncConflictPromptRefresh() async {
-        while let task = syncConflictPromptRefreshTask {
-            await task.value
-            await Task.yield()
-        }
-    }
 }

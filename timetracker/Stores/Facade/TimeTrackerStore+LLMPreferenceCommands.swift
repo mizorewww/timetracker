@@ -2,53 +2,6 @@ import Foundation
 import SwiftData
 
 extension TimeTrackerStore {
-    func setLLMEndpoint(_ value: String) {
-        let normalized = AppPreferenceValueSanitizer.llmEndpoint(value)
-        let changed = normalized != AppPreferenceValueSanitizer.llmEndpoint(preferences.llmEndpoint)
-        let taskSnapshot = llmSuggestionTaskSnapshot()
-        let didSet = setPreference(.llmEndpoint, valueJSON: PreferenceJSON.encode(normalized))
-        if didSet, changed {
-            cancelLLMSuggestionTasks(matching: taskSnapshot)
-        }
-    }
-
-    func setLLMAPIKey(_ value: String) {
-        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        let changed = normalized != preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        let taskSnapshot = llmSuggestionTaskSnapshot()
-        do {
-            try StoreScopedPreferenceCommandCoordinator(
-                container: requireStoreContainer(),
-                writeAuthorization: writeAuthorization
-            ).withLockedStoreAccess {
-                try llmCredentialStore.writeAPIKey(value)
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-            return
-        }
-
-        do {
-            let event = StoreDomainEvent.preferenceChanged(key: SyncedPreferenceService.legacyLLMAPIKey)
-            try refresh(plan: refreshPlanner.plan(after: [event]))
-        } catch {
-            errorMessage = savedRefreshFailedMessage(error)
-        }
-        if changed {
-            cancelLLMSuggestionTasks(matching: taskSnapshot)
-        }
-    }
-
-    func setLLMSelectedModel(_ value: String) {
-        let normalized = AppPreferenceValueSanitizer.llmModelID(value)
-        let changed = normalized != AppPreferenceValueSanitizer.llmModelID(preferences.llmSelectedModel)
-        let taskSnapshot = llmSuggestionTaskSnapshot()
-        let didSet = setPreference(.llmSelectedModel, valueJSON: PreferenceJSON.encode(normalized))
-        if didSet, changed {
-            cancelLLMSuggestionTasks(matching: taskSnapshot)
-        }
-    }
-
     func setLLMAutomaticSuggestionsEnabled(_ value: Bool) {
         AppDefaults.shared.set(value, forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
         preferences.llmAutomaticSuggestionsEnabled = value
@@ -59,11 +12,6 @@ extension TimeTrackerStore {
             cancelAutomaticInboxSuggestionRequests()
             cancelAllChecklistVisualSuggestionRequests()
         }
-    }
-
-    func setLLMAvailableModelIDs(_ values: [String]) {
-        let normalized = AppPreferenceValueSanitizer.llmModelIDs(values)
-        setPreference(.llmAvailableModelIDs, valueJSON: PreferenceJSON.encode(normalized))
     }
 
     @discardableResult
@@ -109,11 +57,6 @@ extension TimeTrackerStore {
             errorMessage = error.localizedDescription
             return false
         }
-    }
-
-    @discardableResult
-    func setLLMTaskPlanInstructions(_ value: String) -> Bool {
-        setLLMPromptInstructions(value, for: .taskPlan)
     }
 
     @discardableResult

@@ -22,8 +22,8 @@ extension TimeTrackerStore {
         let remainingTasks = availableTasks
             .filter { !priorityIDs.contains($0.id) }
             .sorted { lhs, rhs in
-                let lhsPath = taskPath(for: lhs)
-                let rhsPath = taskPath(for: rhs)
+                let lhsPath = path(for: lhs)
+                let rhsPath = path(for: rhs)
                 let lhsKey = lhsPath.lowercased()
                 let rhsKey = rhsPath.lowercased()
                 if lhsKey != rhsKey {
@@ -40,7 +40,7 @@ extension TimeTrackerStore {
                 LLMTaskCandidate(
                     id: task.id,
                     title: task.title,
-                    path: taskPath(for: task),
+                    path: path(for: task),
                     iconName: ChecklistVisualSanitizer.sanitizedIcon(
                         task.iconName
                     ),

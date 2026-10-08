@@ -94,21 +94,6 @@ extension TimeTrackerStore {
         }
     }
 
-    func pomodoroElapsedFocusSeconds(for run: PomodoroRun, now: Date = Date()) -> Int {
-        guard let sessionID = run.sessionID else { return 0 }
-        let usesRelationshipIndex = ledgerDomainStore.hasIndexedSegmentHistory
-        let candidates = usesRelationshipIndex
-            ? ledgerDomainStore.segments(forSessionID: sessionID)
-            : allSegments.visibleDeduplicatedByID()
-        let segments = candidates.filter { segment in
-            (!usesRelationshipIndex || isReadableLedgerSegment(segment)) &&
-                segment.sessionID == sessionID &&
-                segment.source == .pomodoro &&
-                segment.deletedAt == nil
-        }
-        return aggregationService.grossSeconds(segments, now: now)
-    }
-
     private func pomodoroPlannedSeconds(for run: PomodoroRun) -> Int {
         switch run.state {
         case .shortBreak:

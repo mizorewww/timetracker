@@ -3,8 +3,6 @@ import SwiftData
 
 @MainActor
 struct ChecklistCommandHandler {
-    private let orderingService = ChecklistOrderingService()
-
     @discardableResult
     func add(
         taskID: UUID,
@@ -113,20 +111,6 @@ struct ChecklistCommandHandler {
             item.clientMutationID = UUID()
         }
         try context.saveAfterMutationStep()
-    }
-
-    func reorderedIDs(
-        items: [ChecklistItem],
-        sourceOffsets: IndexSet,
-        destination: Int
-    ) -> [UUID]? {
-        orderingService.reorderedIDs(
-            elements: items.map {
-                ChecklistOrderingElement(id: $0.id, isCompleted: $0.isCompleted)
-            },
-            sourceOffsets: sourceOffsets,
-            destination: destination
-        )
     }
 
     func applyVisualSuggestion(

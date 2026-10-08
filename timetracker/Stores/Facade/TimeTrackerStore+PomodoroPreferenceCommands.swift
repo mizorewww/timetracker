@@ -31,27 +31,4 @@ extension TimeTrackerStore {
             valueJSON: PreferenceJSON.encode(AppPreferenceValueSanitizer.pomodoroPlans(plans))
         )
     }
-
-    @discardableResult
-    func addPomodoroPlan() -> Bool {
-        var plans = preferences.pomodoroPlans
-        plans.append(.newPlan)
-        return setPomodoroPlans(plans)
-    }
-
-    @discardableResult
-    func updatePomodoroPlan(_ plan: PomodoroPlan) -> Bool {
-        var plans = preferences.pomodoroPlans
-        if let index = plans.firstIndex(where: { $0.id == plan.id }) {
-            plans[index] = plan.normalized()
-        } else {
-            plans.append(plan.normalized())
-        }
-        return setPomodoroPlans(plans)
-    }
-
-    @discardableResult
-    func deletePomodoroPlan(id: UUID) -> Bool {
-        setPomodoroPlans(preferences.pomodoroPlans.filter { $0.id != id })
-    }
 }

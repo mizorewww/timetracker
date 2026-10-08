@@ -36,10 +36,6 @@ extension TimeTrackerStore {
         storeMutationObserver = SyncNotificationObserverToken(token)
     }
 
-    func removeStoreMutationObserver() {
-        storeMutationObserver = nil
-    }
-
     /// Another scene or system action has already committed. Refresh only this
     /// scene's read models: catching up must not record the mutation again or
     /// start automatic suggestion requests as a side effect.

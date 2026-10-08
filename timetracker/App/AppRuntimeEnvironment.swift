@@ -82,11 +82,4 @@ nonisolated enum AppDefaults {
         suite.removePersistentDomain(forName: testSuiteName)
         return suite
     }
-
-    /// Clears the test suite. No-op in production so a shipping build can never
-    /// wipe the user's preferences through this path.
-    static func resetForTesting() {
-        guard AppRuntimeEnvironment.isTestHost else { return }
-        shared.removePersistentDomain(forName: testSuiteName)
-    }
 }

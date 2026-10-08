@@ -252,7 +252,6 @@ final class TimeTrackerStore {
     var timeRepository: SwiftDataTimeTrackingRepository?
     var pomodoroRepository: SwiftDataPomodoroRepository?
     let aggregationService = TimeAggregationService()
-    let analyticsEngine = AnalyticsEngine()
     let taskTreeService = TaskTreeService()
     let taskTrackingAvailabilityService = TaskTrackingAvailabilityService()
     let ledgerSummaryService = LedgerSummaryService()
@@ -261,7 +260,6 @@ final class TimeTrackerStore {
     let databaseMaintenanceService = DatabaseMaintenanceService()
     let selectionCoordinator = StoreSelectionCoordinator()
     let refreshPlanner = StoreRefreshPlanner()
-    let checklistCommandHandler = ChecklistCommandHandler()
     let inboxCommandHandler = InboxCommandHandler()
     let refreshCoordinator = StoreRefreshCoordinator()
     let syncConflictService: SyncConflictService

@@ -43,30 +43,6 @@ extension TimeTrackerStore {
         return outcome
     }
 
-    /// Resolves mutation events from the committed command outcome so stale
-    /// facade caches cannot over- or under-report the domains that changed.
-    /// Returning `nil` is a canonical no-op and skips refresh, broadcast, and
-    /// post-commit projection scheduling.
-    func performMutation<Outcome>(
-        eventsForOutcome: (Outcome) -> Set<StoreDomainEvent>,
-        _ action: () throws -> Outcome?
-    ) -> Outcome? {
-        let outcome: Outcome?
-        do {
-            outcome = try executeAuthorizedMutation(action)
-        } catch {
-            errorMessage = error.localizedDescription
-            return nil
-        }
-        guard let outcome else { return nil }
-
-        let events = eventsForOutcome(outcome)
-        if events.isEmpty == false {
-            finishCommittedMutation(events: events)
-        }
-        return outcome
-    }
-
     /// The configured store container, or `StoreError.notConfigured` when the
     /// store has not been configured yet.
     func requireStoreContainer() throws -> ModelContainer {

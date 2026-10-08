@@ -168,23 +168,4 @@ extension AnalyticsStore {
             ledgerBucketCache.invalidate(intervals: invalidatedIntervals)
         }
     }
-
-    mutating func invalidateLedgerBuckets(intervals: [DateInterval]) {
-        ledgerBucketCache.invalidate(intervals: intervals)
-    }
-
-    mutating func clearLedgerBuckets() {
-        ledgerBucketCache.removeAll()
-        snapshots.removeAll(keepingCapacity: true)
-        snapshotEvaluationKeys.removeAll(keepingCapacity: true)
-        taskSnapshots.removeAll(keepingCapacity: true)
-    }
-
-    var ledgerBucketCount: Int {
-        ledgerBucketCache.bucketCount
-    }
-
-    var taskSnapshotCacheCount: Int {
-        taskSnapshots.count
-    }
 }

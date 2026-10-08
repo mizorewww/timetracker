@@ -85,22 +85,6 @@ extension AnalyticsStore {
     func dailyBreakdown(
         segments: [TimeSegment],
         range: AnalyticsRange,
-        now: Date,
-        calendar: Calendar
-    ) -> [DailyAnalyticsPoint] {
-        guard let interval = analyticsInterval(for: range, now: now, calendar: calendar) else { return [] }
-        return dailyBreakdown(
-            segments: segments,
-            range: range,
-            interval: interval,
-            evaluatedAt: now,
-            calendar: calendar
-        )
-    }
-
-    func dailyBreakdown(
-        segments: [TimeSegment],
-        range: AnalyticsRange,
         interval: DateInterval,
         evaluatedAt cutoff: Date,
         calendar: Calendar
@@ -129,22 +113,6 @@ extension AnalyticsStore {
     mutating func cachedDailyBreakdown(
         segments: [TimeSegment],
         range: AnalyticsRange,
-        now: Date,
-        calendar: Calendar
-    ) -> [DailyAnalyticsPoint] {
-        guard let interval = analyticsInterval(for: range, now: now, calendar: calendar) else { return [] }
-        return cachedDailyBreakdown(
-            segments: segments,
-            range: range,
-            interval: interval,
-            evaluatedAt: now,
-            calendar: calendar
-        )
-    }
-
-    mutating func cachedDailyBreakdown(
-        segments: [TimeSegment],
-        range: AnalyticsRange,
         interval: DateInterval,
         evaluatedAt cutoff: Date,
         calendar: Calendar
@@ -167,11 +135,6 @@ extension AnalyticsStore {
                 label: dayLabel(for: summary.date, range: range, calendar: calendar)
             )
         }
-    }
-
-    func segmentsForAnalytics(_ segments: [TimeSegment], range: AnalyticsRange, now: Date, calendar: Calendar) -> [TimeSegment] {
-        guard let interval = analyticsInterval(for: range, now: now, calendar: calendar) else { return segments }
-        return segmentsForAnalytics(segments, interval: interval, evaluatedAt: now)
     }
 
     func segmentsForAnalytics(

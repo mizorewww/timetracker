@@ -122,7 +122,7 @@ extension TimeTrackerStore {
                 normalizedTitle: policy.normalizedTitle(item.title)
             ),
             taskTitle: task.title,
-            taskPath: taskPath(for: task),
+            taskPath: path(for: task),
             instructions: preferences.llmChecklistVisualInstructions,
             configuration: preferences.llmRequestConfiguration
         )

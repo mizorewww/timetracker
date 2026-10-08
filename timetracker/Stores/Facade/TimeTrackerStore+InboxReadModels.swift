@@ -13,10 +13,6 @@ extension TimeTrackerStore {
             .sorted(by: inboxSort)
     }
 
-    var inboxItemsForDisplay: [InboxItem] {
-        openInboxItems + completedInboxItems
-    }
-
     func inboxSuggestion(for item: InboxItem) -> InboxSuggestion? {
         inboxSuggestionStateService.displaySuggestion(
             for: inboxItemReadModel(for: item),

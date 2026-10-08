@@ -2,38 +2,6 @@ import Foundation
 import SwiftData
 
 extension TimeTrackerStore {
-    @discardableResult
-    func createDailyTaskRecurrence(
-        templateTaskID: UUID,
-        startDayKey: String,
-        timeZoneIdentifier: String,
-        now: Date = Date()
-    ) -> Bool {
-        performTaskRecurrenceMutation {
-            try $0.createDailyRule(
-                templateTaskID: templateTaskID,
-                startDayKey: startDayKey,
-                timeZoneIdentifier: timeZoneIdentifier,
-                now: now
-            )
-        }
-    }
-
-    @discardableResult
-    func setTaskRecurrenceEnabled(
-        baseline: TaskRecurrenceRuleMutationBaseline,
-        isEnabled: Bool,
-        now: Date = Date()
-    ) -> Bool {
-        performTaskRecurrenceMutation {
-            try $0.setEnabled(
-                baseline: baseline,
-                isEnabled: isEnabled,
-                now: now
-            )
-        }
-    }
-
     /// Materializes only each rule's current local day. It is intentionally
     /// called from safe app-lifecycle points, never from raw CloudKit import.
     @discardableResult

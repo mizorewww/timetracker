@@ -409,7 +409,6 @@ struct PomodoroCommandHandler {
         )
         return try context.fetch(descriptor)
             .visibleDeduplicatedByID()
-            .filter { $0.sessionID == targetSessionID }
     }
 
     private func session(id: UUID, context: ModelContext) throws -> TimeSession? {

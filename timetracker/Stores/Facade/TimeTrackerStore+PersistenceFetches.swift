@@ -59,10 +59,6 @@ extension TimeTrackerStore {
             .sorted(by: checklistVisualOrder)
     }
 
-    func fetchInboxItems() throws -> [InboxItem] {
-        try fetchInboxItemReadModels().map(\.item)
-    }
-
     func fetchInboxItemReadModels() throws -> [InboxItemReadModel] {
         guard let modelContext else { return [] }
         return try InboxSuggestionIdentityService().visibleLogicalReadModels(

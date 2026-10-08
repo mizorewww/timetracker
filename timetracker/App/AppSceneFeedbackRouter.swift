@@ -34,10 +34,6 @@ final class AppSceneFeedbackRouter {
     private(set) var current: AppSceneFeedback?
     @ObservationIgnored private var pending: [AppSceneFeedback] = []
 
-    var pendingCount: Int {
-        pending.count
-    }
-
     func present(_ feedback: AppSceneFeedback) {
         guard current == nil else {
             pending.append(feedback)

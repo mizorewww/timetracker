@@ -8,13 +8,6 @@ struct InboxStore {
         itemReadModels.map(\.item)
     }
 
-    mutating func refresh(items: [InboxItem], suggestions: [InboxSuggestion]) {
-        refresh(
-            itemReadModels: InboxSuggestionIdentityService().visibleLogicalReadModels(from: items),
-            suggestions: suggestions
-        )
-    }
-
     mutating func refresh(
         itemReadModels: [InboxItemReadModel],
         suggestions: [InboxSuggestion]

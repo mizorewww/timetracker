@@ -232,20 +232,4 @@ extension InboxCommandHandler {
             return checklistItem
         }
     }
-
-    func clearSuggestions(
-        for inboxItemID: UUID,
-        context: ModelContext,
-        now: Date,
-        deviceID: String = DeviceIdentity.current
-    ) throws {
-        let preparedSuggestions = try preparedSuggestionMutations(
-            for: inboxItemID,
-            context: context
-        )
-        guard !preparedSuggestions.isEmpty else { return }
-        try context.performAtomicMutation {
-            tombstone(preparedSuggestions, now: now, deviceID: deviceID)
-        }
-    }
 }

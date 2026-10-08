@@ -40,17 +40,6 @@ extension TimeTrackerStore {
     }
 
     @discardableResult
-    func saveSegmentDraft(_ draft: SegmentEditorDraft) -> Bool {
-        do {
-            try commitSegmentDraft(draft)
-            return true
-        } catch {
-            handleSegmentMutationFailure(error)
-            return false
-        }
-    }
-
-    @discardableResult
     func deleteSegment(
         _ segmentID: UUID,
         expectedBaseline: SegmentEditorDraftBaseline? = nil

@@ -1,58 +1,6 @@
 import Foundation
 
 extension TimeTrackerStore {
-    func analyticsSnapshot(for range: AnalyticsRange, now: Date = Date()) -> AnalyticsSnapshot {
-        analyticsSnapshot(
-            for: range,
-            evaluation: range.evaluation(referenceDate: now, liveNow: now)
-        )
-    }
-
-    func analyticsSnapshot(
-        for range: AnalyticsRange,
-        evaluation: AnalyticsPeriodEvaluation,
-        calendar: Calendar = .current
-    ) -> AnalyticsSnapshot {
-        let liveRefreshBucket = analyticsLiveRefreshBucket(for: evaluation)
-        let evaluationKey = AnalyticsEvaluationCacheKey(
-            evaluation: evaluation,
-            liveRefreshBucket: liveRefreshBucket,
-            calendar: calendar
-        )
-        if let snapshot = analyticsDomainStore.cachedSnapshot(
-            for: range,
-            evaluationKey: evaluationKey
-        ) {
-            return snapshot
-        }
-
-        let segments = analyticsSegments(
-            for: range,
-            evaluation: evaluation,
-            calendar: calendar
-        )
-        let sessions = visibleSessions(for: segments)
-        var store = analyticsDomainStore
-        let snapshot = store.refreshSnapshot(
-            range: range,
-            period: evaluation.interval,
-            tasks: tasks,
-            taskCategories: taskCategories,
-            taskCategoryAssignments: taskCategoryAssignments,
-            segments: segments,
-            sessions: sessions,
-            cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs,
-            taskPathByID: taskPathByID,
-            taskParentPathByID: taskParentPathByID,
-            evaluatedAt: evaluation.cutoff,
-            liveRefreshBucket: liveRefreshBucket,
-            evaluationKey: evaluationKey,
-            calendar: calendar
-        )
-        analyticsDomainStore = store
-        return snapshot
-    }
-
     func cachedAnalyticsSnapshot(
         for range: AnalyticsRange,
         evaluation: AnalyticsPeriodEvaluation,
@@ -66,37 +14,6 @@ extension TimeTrackerStore {
                 calendar: calendar
             )
         )
-    }
-
-    func refreshAnalyticsSnapshot(for range: AnalyticsRange, now: Date = Date()) {
-        let evaluation = range.evaluation(referenceDate: now, liveNow: now)
-        let liveRefreshBucket = analyticsLiveRefreshBucket(for: evaluation)
-        let segments = analyticsSegments(
-            for: range,
-            evaluation: evaluation,
-            calendar: .current
-        )
-        let sessions = visibleSessions(for: segments)
-        var store = analyticsDomainStore
-        store.refreshSnapshot(
-            range: range,
-            period: evaluation.interval,
-            tasks: tasks,
-            taskCategories: taskCategories,
-            taskCategoryAssignments: taskCategoryAssignments,
-            segments: segments,
-            sessions: sessions,
-            cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs,
-            taskPathByID: taskPathByID,
-            taskParentPathByID: taskParentPathByID,
-            evaluatedAt: evaluation.cutoff,
-            liveRefreshBucket: liveRefreshBucket,
-            evaluationKey: AnalyticsEvaluationCacheKey(
-                evaluation: evaluation,
-                liveRefreshBucket: liveRefreshBucket
-            )
-        )
-        analyticsDomainStore = store
     }
 
     func invalidateAnalyticsSnapshots(invalidatedIntervals: [DateInterval] = []) {

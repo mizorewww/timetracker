@@ -84,28 +84,4 @@ extension TimeTrackerStore {
             finishResult: finishStoreScopedTimerCommand
         ) ?? false
     }
-
-    func timerStartMutationEvents(taskID: UUID) -> Set<StoreDomainEvent> {
-        var events: Set<StoreDomainEvent> = [
-            .ledgerChanged(taskID: taskID, dateInterval: nil, isVisible: true),
-            .pomodoroChanged(runID: nil, sessionID: nil, taskID: taskID),
-        ]
-        guard preferences.allowParallelTimers == false else { return events }
-
-        for segment in activeSegments where segment.taskID != taskID {
-            events.formUnion(timerStopMutationEvents(segment: segment))
-        }
-        return events
-    }
-
-    func timerStopMutationEvents(segment: TimeSegment) -> Set<StoreDomainEvent> {
-        timerStopMutationEvents(taskID: segment.taskID, sessionID: segment.sessionID)
-    }
-
-    func timerStopMutationEvents(taskID: UUID, sessionID: UUID) -> Set<StoreDomainEvent> {
-        [
-            .ledgerChanged(taskID: taskID, dateInterval: nil, isVisible: true),
-            .pomodoroChanged(runID: nil, sessionID: sessionID, taskID: taskID),
-        ]
-    }
 }

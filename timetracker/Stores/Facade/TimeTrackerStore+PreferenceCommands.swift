@@ -3,14 +3,6 @@ import SwiftData
 
 extension TimeTrackerStore {
     @discardableResult
-    func setPreferredColorScheme(_ value: String) -> Bool {
-        setPreference(
-            .preferredColorScheme,
-            valueJSON: PreferenceJSON.encode(AppPreferenceValueSanitizer.preferredColorScheme(value))
-        )
-    }
-
-    @discardableResult
     func setAllowParallelTimers(_ value: Bool) -> Bool {
         setPreference(.allowParallelTimers, valueJSON: PreferenceJSON.encode(value))
     }

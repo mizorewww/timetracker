@@ -70,10 +70,6 @@ nonisolated struct TaskQuantityProgressSnapshot: Equatable, Sendable {
         max(targetAmount - totalAmount, 0)
     }
 
-    var isComplete: Bool {
-        totalAmount >= targetAmount
-    }
-
     var fractionCompleted: Double {
         guard targetAmount > 0 else { return 0 }
         return min(max(Double(totalAmount) / Double(targetAmount), 0), 1)

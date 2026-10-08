@@ -1,236 +1,105 @@
 # TimeTracker 隐私与安全说明
 
 状态：工程级数据流说明，非法律隐私政策
-校对日期：2026-07-28
 
-本文说明仓库当前实现如何存储和传输数据，并列出发行前安全门禁。最终上架文案仍需根据实际发行地区、服务方和 App Store 隐私申报单独审核。
+本文说明仓库当前实现如何存储和传输数据，并列出发行前安全门禁。最终上架文案仍需按实际发行地区、服务方与 App Store 隐私申报单独审核。
 
 ## 1. 数据清单
 
 | 数据 | 本机存储 | 可能传输到 | 导出 |
 | --- | --- | --- | --- |
-| 任务、分类、收件箱、清单 | SwiftData | 用户的 CloudKit；启用建议时发送必要投影，明确生成任务计划时发送完整的当前 Category/Task/Checklist 工作区到配置的 LLM 服务 | JSON |
+| 任务、分类、收件箱、清单 | SwiftData | 用户的 CloudKit；启用建议时发送必要投影，明确生成任务计划时发送完整当前 Category/Task/Checklist 工作区到配置的 LLM 服务 | JSON |
 | 时间片、番茄记录 | SwiftData | 用户的 CloudKit；Watch/Live Activity 使用必要状态投影 | JSON |
-| 重复任务规则、每日生成回执、任务量目标与增量记录 | SwiftData | 用户的 CloudKit | JSON；旧快照缺少该表表示未知，显式空数组才表示清空 |
-| 普通设置 | SwiftData / UserDefaults | 部分偏好通过 CloudKit 同步；iCloud enablement 仅限当前设备 | JSON 中的可同步偏好，不含设备本地开关 |
-| 随机设备标识 | UserDefaults | 作为同步记录 metadata 进入 CloudKit | 可能随业务记录导出；不包含主机名或账户名 |
+| 重复规则、每日生成回执、任务量目标与增量 | SwiftData | 用户的 CloudKit | JSON；旧快照缺少该表=未知，显式空数组=清空 |
+| 普通设置 | SwiftData / UserDefaults | 部分偏好经 CloudKit 同步；iCloud enablement 仅限当前设备 | JSON 中的可同步偏好，不含设备本地开关 |
+| 随机设备标识 | UserDefaults | 作为同步记录 metadata 进入 CloudKit | 可能随业务记录导出；不含主机名或账户名 |
 | LLM API 密钥 | 本机 Keychain | 配置的 LLM endpoint 的 Authorization header | 不导出 |
-| AI 自动建议同意 | 本机 UserDefaults | 不同步；开启后才允许客户端自动向已配置 endpoint 发送必要字段 | 不导出 |
-| Widget 快照 | App Group 共享容器 | 同一设备的小组件扩展 | 不作为独立备份 |
-| Watch 快照和命令 | 主应用与 Watch 内存/队列 | 配对设备之间的 WatchConnectivity | 不作为独立备份 |
+| AI 自动建议同意 | 本机 UserDefaults | 不同步；开启后才允许客户端自动发送必要字段 | 不导出 |
+| Widget / Watch 快照与命令 | App Group / 配对设备内存与队列 | Widget 扩展 / WatchConnectivity | 不作为独立备份 |
 | 诊断与测试截图 | 开发环境文件 | 仅在维护者主动分享时 | 不属于应用 JSON |
 
-## 2. 本机存储
+## 2. 本机存储与秘密
 
-业务实体存放在 SwiftData store。启用 iCloud 后，同一业务模型可由 CloudKit 同步。应用可能在持久容器无法建立时进入诊断或临时内存模式；内存模式的数据在进程结束后消失。
+业务实体存放在 SwiftData store；启用 iCloud 后同一业务模型可由 CloudKit 同步。持久容器无法建立时应用可能进入诊断或临时内存模式——内存模式的数据在进程结束后消失。当前 schema 是 V14；V9→V14 的迁移历史与“派生缓存移除但保留用户事实、旧 schema 冻结”规则见 [Architecture](Architecture.md)。Inbox identity 是随机值或 legacy record UUID，不含标题、规范化标题或哈希；recurrence/goal 的 deterministic identity 只由 UUID、规则日键和冻结时区计算，不含用户文本。
 
-当前 schema 是 V14。V8→V9 lightweight migration 删除可重建的 `DailySummary` cache，但保留任务、时间账本、Pomodoro、checklist、Inbox、分类、倒计时和偏好等用户事实；分析摘要在内存中从 ledger 重建。V9→V10 为 Inbox AI dismissal 增加可同步的不透明 context/revision UUID，V11 加入 durable Inbox capture receipts，V12 持久化 suggestion destination kind，V13 lightweight-adds 重复规则、每日生成回执、任务量目标与增量记录，V14 为 `ChecklistItem` 增加完成分组排序字段（V13 及更早版本解析为冻结快照类型）。Inbox identity 是随机值或 legacy record UUID，不包含标题、规范化标题或标题哈希；每条记录只保存固定数量字段。V13 的 deterministic recurrence/goal identities 只由 UUID、规则日键和冻结时区等领域标识计算，不含用户文本。Legacy 类型只用于读取旧 store，不应重新进入当前导出或 CloudKit registry。
+LLM API 密钥使用 Keychain generic password：AfterFirstUnlockThisDeviceOnly、明确关闭 Keychain 同步、不跟随 iCloud、不写入 SwiftData/UserDefaults/JSON 导出或普通日志。升级时若发现旧版本遗留的明文 key，只读取一次并迁移到 Keychain，之后清空 UserDefaults 值并软删除敏感 `SyncedPreference`；Keychain 与 SwiftData 不是同一事务——安全副本写入后 redaction 在原子 mutation 中提交，保存失败时 redaction 回滚而 Keychain 副本保留以便重试。新生成的 `DeviceIdentity` 仅由平台前缀 + 随机 UUID 组成，不使用主机名、账户名、硬件标识或可读设备名；Watch 在自身 defaults 持久化独立的 `watch-UUID`，它不是认证凭据，命令去重仍用随机 command UUID。
 
-LLM API 密钥使用 Keychain generic password：
-
-- 可访问级别为 AfterFirstUnlockThisDeviceOnly。
-- 明确关闭 Keychain 同步。
-- 不跟随 iCloud 到其他设备。
-- 不写入 SwiftData、UserDefaults、JSON 导出或普通诊断日志。
-
-升级时若发现旧版本遗留的明文 API key，只允许读取一次并迁移到 Keychain，之后清空 UserDefaults 值并软删除敏感 SyncedPreference。Keychain 与 SwiftData 不是同一个事务：安全副本写入后，SwiftData redaction 在原子 mutation 中提交；若保存失败，redaction 会回滚而 Keychain 副本保留，后续启动可安全重试。迁移失败应报告错误，不应继续把明文当作正常存储。
-
-新生成的 `DeviceIdentity` 仅由平台前缀和随机 UUID 组成，不使用 Mac 主机名、账户名、硬件标识或用户可读设备名称。Apple Watch 在自身 `UserDefaults` 持久化独立的 `watch-UUID` 并随新命令发送；该值不是认证凭据，命令去重仍使用随机 command UUID。
-
-iOS 的 `SyncConflictState.json`、pending forced-upload 恢复镜像和腐损状态隔离文件可能包含任务、偏好或账本快照。写入后都使用 `FileProtectionType.completeUntilFirstUserAuthentication`：设备本次启动首次解锁前不可读，首次解锁后即使再次锁屏也可供后台 Shortcuts/CloudKit 协调使用。macOS 不使用这项 iOS Data Protection 属性；普通 file lock 本身不被当成用户快照。权威 state 读写限 128 MiB，recovery mirror 限 64 MiB；metadata 预检后仍只通过 `FileHandle` 读取 `limit + 1`，防止文件增长 TOCTOU 造成无界内存占用。写端在解析路径或触盘前先编码并验证 state 与 mirror；任一超限都保留旧的有效文件，独立 mirror rewrite 也会在最终写入边界复检。损坏或超限的权威 state 会隔离并要求显式恢复；损坏或超限的 pending mirror 会单独隔离并忽略，既不覆盖权威 state，也不阻塞仍可使用的主库。超限文件隔离不会整份载入内存。
+iOS 的同步权威状态、pending 恢复镜像和腐损隔离文件可能包含任务/偏好/账本快照，写入后使用 `FileProtectionType.completeUntilFirstUserAuthentication`（本次启动首次解锁前不可读，之后可后台使用）；macOS 不套用该属性，普通 file lock 不被当成用户快照。权威 state 限 128 MiB、recovery mirror/slot 限 64 MiB，读取先做 metadata 预检再只读 `limit+1` 防止 TOCTOU；损坏或超限的权威 state 隔离并要求显式恢复，损坏/超限的 pending mirror 单独隔离并忽略。精确规则见 [AgentDecisions](AgentDecisions.md) AD-023。
 
 ## 3. iCloud 与多设备
 
-启用 iCloud 时，任务、时间事实、番茄、收件箱、清单及非敏感偏好可能进入用户的私有 CloudKit 数据库。密钥不参与同步，因此每台设备必须单独配置。
+启用 iCloud 时，任务、时间事实、番茄、收件箱、清单及非敏感偏好可能进入用户的私有 CloudKit 数据库；密钥不参与同步，每台设备需单独配置。是否启用 iCloud 是当前设备的启动配置，只存本机 `UserDefaults`、修改后下次启动生效，不跨设备传播；历史 `TimeTrackerCloudSyncEnabled` 云端记录会在 preference 读取、冲突快照和导出/恢复边界被过滤。
 
-是否启用 iCloud 是当前设备的启动配置，只保存在本机 `UserDefaults`，修改后下次启动生效。该开关不会跨设备传播；历史 `TimeTrackerCloudSyncEnabled` 云端记录会在 preference 读取、冲突快照和导出/恢复边界被过滤。
-
-多设备风险包括：
-
-- 新旧应用版本同时写入不同 schema。
-- 离线设备稍后上传旧状态。
-- 强制上传或下载覆盖另一侧的更新。
-- 删除和维护操作在同步后传播。
-
-破坏性同步工具必须带确认、显示方向和范围，并在执行后提示等待同步或重启。应用不得把容器 fallback 误报为 CloudKit 成功。
+多设备风险包括新旧版本同时写入不同 schema、离线设备稍后上传旧状态、强制上传/下载覆盖另一侧更新、删除与维护操作同步后传播。破坏性同步工具必须带确认、显示方向与范围并在执行后提示等待同步或重启；应用不得把容器 fallback 误报为 CloudKit 成功。
 
 ## 4. AI 请求
 
-应用向用户配置的 OpenAI-compatible endpoint 发起模型列表和聊天请求。
+应用向用户配置的 OpenAI-compatible endpoint 发起模型列表与聊天请求。设置采用 Test→Save 草稿：输入 endpoint/API key 不逐字持久化，“测试连接”发送带凭证的模型列表请求但不保存，选模型并“保存”后才写入偏好和 Keychain；endpoint/模型列表/已选模型/思考强度作为一次 SwiftData 偏好提交，Keychain 是独立安全存储，偏好提交失败时尽力恢复旧密钥并单独报告补偿失败。自动建议是默认关闭的本机开关，只有另行开启后才为 Inbox/checklist 自动发送内容；手动生成任务计划仍是一次明确请求。
 
-设置采用 Test→Save 草稿：在配置 sheet 中输入 endpoint/API key 不会逐字持久化；“测试连接”会向该 endpoint 发送带凭证的模型列表请求，但不会保存；用户选择模型并点击“保存”后才写入偏好和 Keychain。endpoint、模型列表和已选模型作为一次 SwiftData 偏好提交，Keychain 则是独立安全存储；偏好提交失败时应用尽力恢复旧密钥，补偿失败会单独报告，因此这不是跨存储 ACID transaction。自动建议是默认关闭的本机开关，只有用户另行开启后才会为 Inbox/checklist 自动发送内容。手动点击建议或从任务页生成任务计划仍是一次明确请求。
+请求内容：
 
-### 收件箱任务建议
+- **Inbox 建议**：收件箱标题、候选任务 UUID、候选任务标题与层级路径、图标名与颜色十六进制值。包含全部可工作的 Task 和全部可见 Category，只做规范化/去重/确定性排序，不按人工数量、JSON 或字段预算静默丢弃。
+- **Checklist 视觉建议**：清单标题、所属任务标题与完整任务显示路径、允许的图标名与颜色列表。连续编辑采用本机 latest-input debounce 并取消已过期的 pending/in-flight 工作，只接受仍匹配最新标题、task path 与本地 revision 的响应；取消不能撤回 endpoint 已接收的数据，也不等同远端删除。用户手动选择的图标/颜色始终优先。
+- **任务计划生成**：只在用户填写需求并明确点按“生成”后发出。Request 页先显示当前 Category/Task/Checklist 数量；内容包括当次完整需求、完整的任务规划指令（可同步/导出的普通偏好，按 256 KiB 编码边界验证，不是秘密）、允许的完整规范图标名与颜色列表，以及完整的 provider-visible 当前工作区（Category、Task、Checklist 的稳定 UUID、完整标题/备注、完整父级路径、关系、预计时长、图标/颜色、排序、归档状态、任务量目标与重复设置），不按任意实体数量或路径深度静默截断；还包含同一份工作区内容的确定性 `contextFingerprint`，用于把请求与审阅绑定。
 
-请求可能包含：
+工作区 prompt 不包含 Inbox 内容、时间历史、Pomodoro 历史、Keychain 数据、设备 ID、同步 metadata 或任何 `clientMutationID`；本地 revision map 与完整 CAS baseline 只留在内存。API key 不进入 prompt 或工具结果，但按配置作为 Authorization header 发给 endpoint。编码失败不会发出 partial context；endpoint 以 HTTP 400/413/422 拒绝完整请求时以 typed error 报告三类实体 counts 与实际 encoded bytes，客户端不发送截断版也不回退旧 create-only JSON。思考强度是可同步/导出的普通偏好，只允许 DeepSeek 官方 `high`/`max`、默认 `high`；三个生产功能在 DeepSeek V4 下都发送 `thinking.type=enabled` + 当前 effort 并省略 temperature，任务规划还省略 thinking 不支持的 `tool_choice`，工具调用后的 `reasoning_content` 在同一次会话后续请求中完整回传但只用于该次临时预览，不持久化/同步/导出/记录日志；切换 effort 会取消旧请求。模型只能通过严格结构化工具读取/修改一个本机内存 overlay，不能直接访问 SwiftData；已有 Task/Checklist 按稳定 UUID 引用，Category 名称只有唯一规范化匹配时才可复用；Finalize 只产生只读 diff，破坏性影响需再次确认，Apply 在共享 store lock 下对完整 provider-visible snapshot 与本地 revision baseline 做 CAS 后原子应用，Task removal 只 Archive，任何 stale/校验/保存失败均零写入并保留预览。完整规则见 [AgentDecisions](AgentDecisions.md) AD-132。
 
-- 收件箱标题。
-- 候选任务 UUID。
-- 候选任务标题与层级路径。
-- 候选任务图标名与颜色十六进制值。
+**凭证与传输**：API key 仅放入 Authorization header；远程地址必须 HTTPS，HTTP 仅允许 localhost / `.localhost` 保留主机及经数值解析确认的 `127.0.0.0/8`/`::1`（字符串前缀不能接受 `127.evil.com`）；带 Authorization 的重定向只允许 scheme/host/有效端口完全相同。响应经禁用缓存与 cookie 的 ephemeral 会话读取，资源超时 60 秒，Content-Length 与实际正文都限制 2 MiB，非 2xx 在 headers 后立即取消。所有 AI 流程的 model ID 为 256 bytes、endpoint/API key 分别最多 4/8 KiB；模型 reason 按 512-byte 持久化字段归一化，icon 必须属于本次已公告目录，task/category UUID 必须属于实际发送候选。请求、响应与错误日志不得输出密钥，生产诊断避免记录完整用户文本。
 
-请求包含全部可工作的 Task 和全部可见 Category。候选只做规范化、去重和确定性排序，不按人工数量、JSON 或字段预算静默丢弃；完整 Unicode 标题与路径只存在于发送副本，不会因为请求构造而改写本地事实。
-
-### 清单视觉建议
-
-请求可能包含：
-
-- 清单标题。
-- 所属任务标题与任务路径。
-- 允许选择的系统图标名和颜色列表。
-
-Checklist 请求发送完整标题、所属任务标题和完整任务显示路径。Inbox、checklist 与任务计划共用本机 picker 的完整规范 SF Symbols 目录，模型返回的 icon 必须属于请求已公告的同一目录。
-
-Checklist 自动建议对连续编辑采用本机 latest-input debounce，并取消已过期的
-pending/in-flight 工作；客户端只接受仍匹配最新标题、task path 与本地 revision
-的响应。取消只能阻止本机继续处理或落库，不能撤回 endpoint 已经接收的数据，也
-不等同于远端删除。用户手动选择的图标/颜色始终优先于迟到的自动建议。
-
-### 任务计划生成
-
-请求只在用户从任务页填写需求并明确点按“生成”后发出。Request 页会先显示当前 Category、Task 和 Checklist 的准确数量。发送内容包括：
-
-- 用户当次输入的完整计划需求。
-- 完整的“任务规划指令”设置。它是可同步、可导出的普通偏好，按 JSON 编码后的 256 KiB 偏好 payload 边界验证，不是秘密；不应填写密码或 API key。
-- 允许模型使用的完整规范系统图标名和颜色列表。
-- 完整的 provider-visible 当前工作区，不按任意实体数量或 Task path 深度静默截断：
-  - Category：稳定 UUID、完整标题、图标、颜色、是否计入预测和排序。
-  - Task：稳定 UUID、完整标题与备注、完整父级路径、parent/category 关系、预计时长、截止时间、图标、颜色、排序、归档状态、任务量目标和每日重复设置。
-  - Checklist：稳定 UUID、所属 Task UUID、完整标题、完成状态、图标、颜色和排序。
-- 上述 canonical provider snapshot 的确定性 `contextFingerprint`。它只指纹化同一份会发送的工作区内容，用于把请求与审阅绑定在一起；不包含额外的本机事实或 revision baseline。
-
-工作区 prompt 不包含 Inbox 内容、时间片/时间历史、Pomodoro 历史、Keychain 数据、设备 ID、同步 metadata 或任何 `clientMutationID`。API key 不进入 prompt 或工具结果，但会按配置作为 Authorization header 发给 endpoint。Category/Task/Checklist 的本地 revision map 与完整 CAS baseline 只留在内存中，绝不编码到 provider DTO。
-
-任务计划、Inbox 和 checklist 都不使用人工 prompt/request-body 预算截断相关上下文，因为那会静默漏掉模型需要引用的实体或图标。编码失败不会发出 partial context；endpoint 以 HTTP 400/413/422 拒绝完整任务计划请求时，以 typed error 报告 Category/Task/Checklist counts 与实际 encoded request bytes。客户端不发送截断版本，也不回退到旧 create-only JSON。工具会话不按固定回合或调用次数截断；只有 `finalize_plan` 结束生成。用户取消、加固传输的 timeout/单响应 2 MiB 边界、provider context 拒绝、工具结构与字段校验继续作为显式资源和安全边界。
-
-思考强度是可同步、可导出的普通偏好，只允许 DeepSeek 官方 `high`/`max`，默认 `high`，不包含秘密。三个生产 AI 功能在 DeepSeek V4 下都会发送 `thinking.type=enabled` 和当前 `reasoning_effort`，并省略 temperature；任务计划还省略 thinking mode 不支持的 `tool_choice`。工具调用后的 `reasoning_content` 会在同一次生成会话后续请求中完整回传，但只用于该次临时预览，不持久化、不同步、导出或记录日志。切换 effort 会取消旧建议请求，旧设置的迟到结果不能保存。
-
-模型只能通过严格的结构化工具读取和修改一个本机内存 overlay；它不能直接访问 SwiftData。已有 Task/Checklist 必须按稳定 UUID 引用，Category 名称只有唯一规范化匹配时才可复用，多个同名会显式失败。新 ID 由 App 生成。Finalize 后只产生 create/update/archive/delete/reuse 的只读 diff；破坏性影响需要用户再次确认。Apply 时会在共享 store lock 下用 fresh context 对完整 provider-visible snapshot 和本地 revision baseline 做 CAS，再原子应用全部操作。Task removal 只会 Archive。任何 stale、校验或保存失败均为零写入并保留预览。
-
-所有 AI 流程的 model ID 为 256 bytes，endpoint/API key 分别最多 4/8 KiB。256-byte model ID 同时符合同步快照的 compact-field restore 上限，避免本机可写入的 AI provenance 无法恢复；opaque model ID 必须完整通过校验，不会截断成另一个 ID。模型返回的 reason 按 512-byte 持久化字段归一化，icon 必须属于本次已公告的完整目录，任务/分类 UUID 必须属于实际发送候选。provider 响应继续受 2 MiB transport 边界约束。
-
-### 凭证与传输
-
-- API key 仅放入 Authorization header。
-- 远程服务地址必须使用 HTTPS。
-- HTTP 仅允许 localhost、以 .localhost 结尾的保留主机，以及经数值解析确认的 ::1 和 127.0.0.0/8 回环地址；不能用字符串前缀接受 `127.evil.com` 等伪装主机。
-- 携带 Authorization 的重定向只允许 scheme、host 和有效端口全部相同；跨源、端口变化和 HTTPS 降级会被拒绝。
-- 响应通过禁用缓存与 cookie 的 ephemeral 会话读取；缓冲路径资源超时 60 秒，旧 create-only SSE 兼容路径使用 300 秒资源预算，Content-Length 与实际读取正文都限制为 2 MiB。非 2xx 在 headers 后立即取消，不为错误页继续读取正文；用户取消会传递给底层 network task。
-- 当前任务工作区计划使用多轮 buffered function-calling，而不是旧 create-only SSE 路径。assistant `tool_calls`、对应 `tool_call_id` 结果与 reasoning passback 只存在于本次 generation session；无效工具参数的纠正结果也只返回不含凭据的本机校验错误，不附加新的用户数据。推理内容和原始 provider 响应只作为预览的临时来源，不写入 SwiftData、不同步、不导出、不进入日志。
-- 选择第三方 endpoint 等同于授权该服务按其条款处理上述字段。
-- 请求、响应和错误日志不得输出密钥；生产诊断应避免记录完整用户文本。
-
-应用只能控制客户端发送边界，不能保证第三方服务不记录或训练。发行前必须为实际默认/推荐 endpoint 确认并披露：运营主体、处理目的、传输地区、日志/内容保留期、训练用途、用户删除渠道和服务条款版本。如果这些事实未锁定，AI 功能不得以“内容不保留”或类似措辞发布；自定义 endpoint 也必须在 UI 中提醒用户自行审查其政策。
-
-应用应在发出请求前让用户理解字段范围。数据最小化要求是只发送完成当前建议必需的内容。
+选择第三方 endpoint 即授权其按条款处理上述字段；应用只能控制客户端发送边界，不能保证第三方不记录或训练。发行前必须为实际默认/推荐 endpoint 确认并披露运营主体、处理目的、传输地区、日志/内容保留期、训练用途、用户删除渠道与服务条款版本；未锁定则不得以“内容不保留”等措辞发布，自定义 endpoint 也必须在 UI 提醒用户自行审查政策。
 
 ## 5. 系统扩展数据流
 
-sync snapshot、Widget、Watch 与 Live Activity 的提交后更新现在通过四条 persistent-history lane 异步追赶。这个调度变化只改变执行时机与本机恢复 metadata，不改变任何扩展 DTO、字段、接收方、App Group、WatchConnectivity 或 ActivityKit payload；每条 lane 只有成功后才确认自己的 cursor，失败也不会让已提交业务动作变成可重试失败。
+提交后更新由 store-scoped projection scheduler 异步追赶（见 AD-142），只改变执行时机与本机恢复 metadata，不改变任何扩展 DTO、字段、接收方、App Group、WatchConnectivity 或 ActivityKit payload；单 sink 失败不会让已提交业务动作变成可重试失败。
 
-### Live Activity
-
-Live Activity 接收当前计时的最小展示状态。它不是事实存储，系统终止活动不会删除主应用记录。锁屏和灵动岛只展示任务身份与经过时间；点按只打开主应用的“今日”，扩展没有停止按钮，也不直接执行 SwiftData、CloudKit 或其它持久 mutation。
-
-### Widget
-
-通过 `group.me.mezorewww.timetracker` App Group 共享版本化快照，主应用与 Widget 的自动签名 profile 已包含该能力。Producer 使用 Unicode-safe prefix、summary/start clamp、count cap 和 128 KiB 文本预算把投影整形到传输范围，不修改 canonical facts。快照在写入和读取都按不可信输入验证：256 KiB 编码上限、active/recent 各 64 项、有界 UTF-8 字段、有限日期/统计与唯一 ID；非法读取显示为 corrupted，不回退到 standard UserDefaults 或空数据。仍需真机验证共享读写与刷新；不得通过临时公共文件、UserDefaults suite fallback 或关闭 sandbox 来绕过。
-
-### Watch
-
-WatchConnectivity 在配对设备之间传输任务/计时快照和用户命令。命令队列持久保存在 Watch 本机，每个 command ID 是幂等键；命令和手机 terminal result 都走 durable `transferUserInfo`，可达消息只用于加速。20 秒超时后由用户重试或丢弃，重试保留原 ID 并刷新发送时间。手机在写账本前拒绝超过 30 秒的旧命令，避免长期离线消息迟到后改变当前计时；兼容快照反射也可确认旧手机已执行。DTO 应最小化，不包含 API key。
-
-Watch payload 与 UserDefaults 恢复队列是不可信边界。Producer 对 state snapshot 使用 Unicode-safe 字段上限和 128 KiB 总文本预算。Codec 再验证有限时间、UTF-8 byte 长度、唯一 ID、非负 summary 和 active timer 年龄；state snapshot 最多 64 active/256 recent，incoming/pending/failed 各有 64 项容量，持久队列编码最大 512 KiB。非法、重复或过大的恢复状态会被清除，pending overflow 进入可见 failure，不会把任意大小的数据继续留在内存或迟后执行。
-
-### App Intents
-
-App Intents 把系统提供的用户参数传入共享领域命令。Intent 结果不得回显密钥或内部诊断详情。持久 mutation 提交后只 enqueue exact events；sync snapshot、Widget、Watch 与 Live Activity 在后台从 fresh context 重放当前事实，Intent 不等待或同步生成 payload。请求来源显式区分本地提交、启动补偿和表面补投影，remote import 不得被记录成本机 mutation。投影失败不会撤销事实，也不能把已提交动作伪装为失败并诱导系统重复执行。
-
-### Deep links
-
-Widget、Live Activity 和系统使用 `timetracker` URL 打开主应用。应用只接受最长 2,048 bytes、无 credential/port/fragment 的白名单 host/path/query，并校验 UUID；无效 URL 在执行或排队前即被拒绝。数据库尚未准备好时，每个 scene 最多保留 16 个按语义去重的合法动作，scene 关闭时清空。链接不能携带 API key，也不能绕过归档、历史 tombstone 或不存在任务的可工作性检查；Checklist 完成不构成工作阻止。
+- **Live Activity** 接收当前计时的最小展示状态，不是事实存储；锁屏与灵动岛只展示任务身份与经过时间，点按只打开主应用“今日”，扩展没有停止按钮，也不直接执行 SwiftData/CloudKit 或其它持久 mutation。
+- **Widget** 通过 `group.me.mezorewww.timetracker` 共享版本化快照（自动签名 profile 已含该能力）。Producer 用 Unicode-safe prefix、summary/start clamp、count cap 与 128 KiB 文本预算把投影整形到传输范围，不修改 canonical facts；快照在写入和读取都按不可信输入验证（256 KiB 编码上限、active/recent 各 64 项、有界 UTF-8 字段、有限日期/统计、唯一 ID），非法读取显示 corrupted 而不回退到 standard UserDefaults 或空数据。仍需真机验证共享读写与刷新；不得用临时公共文件、UserDefaults suite fallback 或关闭 sandbox 绕过。
+- **Watch** 在配对设备间传输任务/计时快照与用户命令。命令队列持久保存在 Watch 本机，每个 command ID 是幂等键；命令与手机 terminal result 都走 durable `transferUserInfo`，可达消息只用于加速。20 秒超时由用户重试或丢弃，重试保留原 ID 并刷新发送时间；手机在写账本前拒绝超过 30 秒的旧命令。payload 与恢复队列是不可信边界：状态快照最多 64 active/256 recent、共用 128 KiB 文本预算，Watch 待处理/失败各 64 项、持久队列编码最大 512 KiB；非法/重复/过大的恢复状态会被清除，pending overflow 进入可见 failure。DTO 最小化，不含 API key。
+- **App Intents** 把系统参数传入共享领域命令，结果不回显密钥或内部诊断。持久 mutation 提交后只 enqueue exact events，sync snapshot 与系统表面在后台从 fresh context 重放当前事实，Intent 不等待或同步生成 payload；请求来源显式区分本地提交、启动补偿与表面补投影，remote import 不得被记录成本机 mutation。
+- **Deep links**：应用只接受 `timetracker` scheme、最长 2,048 bytes、无 credential/port/fragment 的白名单 host/path/query 并校验 UUID；数据库未就绪时每个 scene 最多保留 16 个按语义去重的合法动作，scene 关闭时清空。链接不能携带 API key，也不能绕过归档、历史 tombstone 或不存在任务的可工作性检查。
 
 ## 6. JSON 导出
 
-用户主动发起的 JSON 导出使用版本化 `timetracker.cloudSyncedData` envelope，包含过滤敏感 preference 后的可同步业务快照。App 不会自动上传该文件。
-
-当前不存在 importer、校验和、签名、加密或事务恢复，所以它：
-
-- 不是可恢复备份。
-- 可能包含任务名称和详细时间记录。
-- 应保存到用户信任的位置。
-- 不应在工单、日志或公开仓库中直接上传。
-
-未来备份格式至少需要版本、校验和、导入预检、冲突策略、staging/回滚和恢复等价性测试。
+用户主动发起的导出使用版本化 `timetracker.cloudSyncedData` envelope，包含过滤敏感 preference 后的可同步业务快照，不会自动上传。当前不存在 importer、校验和、签名、加密或事务恢复，所以它不是可恢复备份，可能包含任务名称与详细时间记录，应保存到用户信任的位置，不应在工单、日志或公开仓库中直接上传。未来备份格式至少需要版本、校验和、导入预检、冲突策略、staging/回滚和恢复等价性测试。
 
 ## 7. 归档、tombstone 与恢复边界
 
-- 普通任务只提供可逆的归档与恢复，不提供单项 Delete；归档不会擦除关联历史，也不会在仍有活动 timer/Pomodoro 时静默停止工作。
-- `TaskNode.deletedAt` 只作为旧客户端、CloudKit/import、权威重置/恢复和 LWW 去重的兼容 tombstone。它不是普通任务界面的删除动作，但必须继续随快照同步，并保留历史账本关系。
-- 普通 Local、iCloud、local-fallback 和 emergency 生产 store 永不物理 purge tombstone。CloudKit 没有每台离线设备的删除确认，过早清理可能让旧设备复活数据；生产 UI 因此不显示永久清理入口。
-- 只有隔离的 Demo/UI Test store 允许在测试中物理清理超过保留期的完整 tombstone graph。可见 orphan 可能只是分阶段 CloudKit import，不能仅因暂时缺少父记录就删除。
-- 清空、替换、重置演示数据和强制 iCloud 操作都可能造成不可逆变化。
-- 演示数据的写入（seed 与 rebuild）必须同时满足 DEBUG 构建**和**当前打开的是隔离 demo store（`AppDemoDataConfiguration.allowsDemoDataMutation`）。出厂模式为 `off` 时打开的是生产 CloudKit store，在那里 rebuild 会先给用户全部行打 tombstone 再写入演示行，并把删除和演示行一起同步到用户 iCloud。
-- 测试进程不得触碰正式 App 的状态。macOS target 未开启 sandbox，`xctest` 宿主与已安装的 `/Applications/timetracker.app` 共用 preferences domain、Application Support 目录和 App Group 容器；因此 App 与测试一律通过 `AppDefaults.shared` 访问偏好，`SyncConflictService` 状态目录与 widget 快照 suite 在测试宿主下另起命名空间。否则被中断的测试残留的恢复标志会在用户下次真实启动时触发破坏性的强制上传/下载重置，测试写出的快照也会被重放回生产 store、复活用户已删除的 Inbox 项。
-- `make build-install-all` 默认 Release：该目标直接安装到真机与 `/Applications`，Debug 二进制会定义 `DEBUG` 并解锁上述演示数据与云冒烟测试入口。
-- “清空全部数据”还会删除本机 Keychain API key 和设备本地的自动建议同意；若业务数据清理失败，应用会尽力恢复之前的外部存储值。该动作不会切换设备本地的 iCloud 启动开关。
-- 当前 JSON 无法恢复这些操作。
-
-所有永久性操作都应显示对象范围、设备/云端影响和不可恢复警告。
+- 普通任务只提供可逆的 Archive/Restore，不提供单项 Delete；归档不擦除关联历史，也不在仍有活动 timer/Pomodoro 时静默停止工作。
+- `TaskNode.deletedAt` 只作为旧客户端、CloudKit/import、权威重置/恢复与 LWW 去重的兼容 tombstone，必须继续随快照同步并保留历史账本关系。
+- 普通 Local/iCloud/local-fallback/emergency 生产 store 永不物理 purge tombstone（CloudKit 没有每台离线设备的删除确认，过早清理可能让旧设备复活数据），生产 UI 因此不显示永久清理入口；只有隔离的 Demo/UI Test store 允许在测试中清理超过保留期的完整 tombstone graph。可见 orphan 可能只是分阶段 CloudKit import，不能仅因暂时缺少父记录就删除。
+- 演示数据写入（seed/rebuild）必须同时满足 DEBUG 构建**和**当前打开的是隔离 demo store；出厂 `off` 时打开的是生产 CloudKit store，在那里 rebuild 会先给用户全部行打 tombstone 再写入演示行并同步到用户 iCloud。
+- 测试进程不得触碰正式 App 状态：macOS target 未开启 sandbox，`xctest` 宿主与已安装 app 共用 preferences domain、Application Support 与 App Group 容器，因此 App 与测试一律通过 `AppDefaults.shared`/`AppRuntimeEnvironment` 访问，`SyncConflictService` 状态目录与 widget 快照 suite 在测试宿主下另起命名空间。
+- `make build-install-all` 默认 Release；Debug 二进制定义 `DEBUG` 并解锁演示数据与冒烟入口。“清空全部数据”还会删除本机 Keychain API key 与设备本地自动建议同意，业务数据清理失败时尽力恢复；不切换设备本地 iCloud 启动开关。当前 JSON 无法恢复这些操作。
 
 ## 8. 隐私清单与平台声明
 
-主应用、Widget 和 Watch 目录当前各自包含 `PrivacyInfo.xcprivacy`，并由各 target 的 Xcode file-system-synchronized group 纳入。当前 UserDefaults Required Reason 声明为：主 App `1C8F.1` 与 `CA92.1`，Widget `1C8F.1`，Watch `CA92.1`。Live Activity extension 当前没有独立 manifest；发行审核必须确认它没有需要声明的 Required Reason API，或在需要时补自己的 manifest。主应用、Widget 与 Live Activity 的手写 `Info.plist` 都是对应 synchronized group 的显式 membership exception；Watch 使用生成的 Info.plist。最终 Archive 必须检查每个产物的 manifest/合并结果与实际 API/SDK 一致。Privacy manifest 不能替代 App Store 隐私标签、AI/CloudKit 数据流披露或法律政策。
-
-每次添加 SDK、持久标识符、分析、网络服务或新的 Required Reason API 时，重新审核所有 target 和扩展，不只审核主应用。
-
-本次后台投影重构没有新增 SDK、网络目的地、wire/schema、持久用户标识符或 Required Reason API；cursor/attempt 是本机运行恢复 metadata。因此无需新增 Privacy Manifest 声明，但仍必须在最终 Archive 中验证既有 target 的合并结果。
+主应用、Widget 和 Watch 目录各含 `PrivacyInfo.xcprivacy`，由各 target 的 file-system-synchronized group 纳入。当前 UserDefaults Required Reason 声明为主 App `1C8F.1` 与 `CA92.1`、Widget `1C8F.1`、Watch `CA92.1`；Live Activity extension 当前没有独立 manifest，发行审核必须确认它没有需要声明的 Required Reason API，或在需要时补自己的 manifest。主应用、Widget 与 Live Activity 的手写 `Info.plist` 是对应 synchronized group 的显式 membership exception；Watch 用生成的 Info.plist。最终 Archive 必须检查每个产物的 manifest/合并结果与实际 API/SDK 一致。隐私清单不能替代 App Store 隐私标签、AI/CloudKit 数据流披露或法律政策。每次新增 SDK、持久标识符、分析、网络服务或 Required Reason API 时重新审核所有 target 和扩展。
 
 ## 9. 威胁边界与工程规则
 
-当前重点威胁：
-
-- 密钥被普通偏好、同步、导出或日志泄露。
-- 用户数据被不安全 endpoint 窃听。
-- CloudKit 或 breaking migration 静默丢失数据。
-- Widget/Watch 共享格式无版本导致错误解释。
-- 测试 fixture 或截图进入版本库并携带真实数据。
-- 大量第三方依赖扩大供应链和隐私申报面。
-
-工程规则：
+重点威胁：密钥被普通偏好/同步/导出/日志泄露；用户数据被不安全 endpoint 窃听；CloudKit 或 breaking migration 静默丢失数据；Widget/Watch 共享格式无版本导致错误解释；测试 fixture/截图进入版本库并携带真实数据；大量第三方依赖扩大供应链与隐私申报面。
 
 1. 默认不记录 secret 和完整用户内容。
 2. 新 secret 默认进入 device-only Keychain。
 3. 新网络字段必须更新本文并有用户可理解的披露。
-4. 新依赖必须评估许可证、维护、安全、隐私清单和可删除性。
+4. 新依赖必须评估许可证、维护、安全、隐私清单与可删除性。
 5. destructive migration 必须有 fixture、验证和明确回滚边界。
 6. 安全失败应 fail closed；不能以便利为由退回明文或任意 HTTP。
-7. 本机 `DeviceIdentity` 只能是当前平台前缀与随机规范 UUID；不采集主机名、账户名或硬件标识，持久值异常时重新生成。
+7. 本机 `DeviceIdentity` 只能是当前平台前缀与随机规范 UUID，不采集主机名/账户名/硬件标识，持久值异常时重新生成。
 
 ## 10. 发行前检查
 
-- [ ] Keychain、遗留迁移、清空全部数据的本机秘密/同意清理与失败补偿、导出过滤测试通过。
-- [ ] 搜索日志、fixture 和示例代码，确认没有真实 secret。
-- [ ] 远程 HTTP endpoint、伪装 loopback、跨源 redirect 和 HTTPS 降级被拒绝，合法 loopback 与同源 redirect 按预期允许。
-- [ ] PrivacyInfo 文件已加入正确 target 并通过归档验证。
-- [ ] 主 App `1C8F.1`/`CA92.1`、Widget `1C8F.1`、Watch `CA92.1` 与各 target 的实际 UserDefaults/App Group 用途一致。
-- [ ] iOS 同步权威状态、恢复镜像、腐损隔离、四 lane cursor/attempt 的 protection attribute 为 `completeUntilFirstUserAuthentication`；cursor/attempt 排除备份、满足 64 KiB 上限，reset 会清理旧 frontier 并保留递增 epoch。
-- [ ] App Store 隐私标签与 AI/CloudKit 实际数据流一致。
-- [ ] AI 默认/推荐 endpoint 的运营方、用途、保留期、训练用途、跨境处理与删除渠道已确认并写入发行披露；未确认时不作“零保留”承诺。
-- [ ] AI 配置 Test→Save、自动建议默认关闭和用户显式开启行为通过测试/人工检查。
-- [ ] Inbox/checklist 请求完整序列化全部候选、完整 Unicode 字段和完整 SF Symbols 目录；非候选 UUID 拒绝、opaque model ID 与结果持久化字段边界通过回归。
-- [ ] 任务计划的显式生成与发送前 counts 披露、完整 workspace/fingerprint、counts+bytes typed failure、严格工具协议、只读 diff、破坏性确认、完整 CAS、stale 预览保留和原子混合 CRUD 回滚通过回归。
-- [ ] Widget App Group 在真机和发行 profile 上验证。
-- [ ] Watch DTO 不包含 secret；codec/queue 的字段、数量、唯一 ID、时间和 512 KiB 恢复边界通过自动测试；持久离线队列、typed terminal result、20 秒 timeout、30 秒旧命令拒绝、retry/discard 和同 ID 幂等通过配对真机验证。
-- [ ] V8→V9 `DailySummary` cache 移除与 V9→V10 Inbox suggestion identity/dismissal 迁移都在真实磁盘 fixture 上保留用户事实；旧 JSON 快照缺少新 UUID 字段时也能兼容恢复。
-- [ ] 导出文案明确“不是备份”。
+- [ ] Keychain round-trip、遗留迁移、清空全部数据的秘密/同意清理与失败补偿、导出过滤测试通过；搜索日志/fixture/示例确认无真实 secret。
+- [ ] 远程 HTTP endpoint、伪装 loopback、跨源 redirect 和 HTTPS 降级被拒绝；合法 loopback 与同源 redirect 按预期允许。
+- [ ] PrivacyInfo 已加入正确 target 并通过归档验证；`1C8F.1`/`CA92.1` 与各 target 实际 UserDefaults/App Group 用途一致；iOS 同步权威状态/恢复镜像/腐损隔离文件的 protection attribute 为 `completeUntilFirstUserAuthentication`。
+- [ ] App Store 隐私标签与 AI/CloudKit 实际数据流一致；AI 默认/推荐 endpoint 的运营方、用途、保留期、训练用途、跨境处理与删除渠道已确认并写入披露（未确认不作“零保留”承诺）；配置 Test→Save、自动建议默认关闭通过测试。
+- [ ] Inbox/checklist 完整序列化全部候选/Unicode 字段/完整 SF Symbols 目录、非候选 UUID 拒绝、opaque model ID 与结果持久化边界通过回归；任务计划的 counts 披露、完整 workspace/fingerprint、counts+bytes typed failure、严格工具协议、只读 diff、破坏性确认、完整 CAS、stale 预览保留与原子回滚通过回归。
+- [ ] Widget App Group 在真机/发行 profile 验证；Watch DTO 无 secret，codec/queue 边界通过自动测试，持久离线队列、typed terminal result、20 秒 timeout、30 秒旧命令拒绝、retry/discard 与同 ID 幂等在配对真机通过。
+- [ ] V8→V9 `DailySummary` 移除与 V9→V10 Inbox identity/dismissal 迁移在真实磁盘 fixture 保留用户事实，旧快照缺新字段时可兼容恢复；导出文案明确“不是备份”。
 
 ## 11. 用户建议
 
-- 只配置可信的 AI 服务，并阅读其隐私政策。
-- 不要把 JSON 导出发布到公共位置。
-- 每台设备单独设置 API key。
-- 执行强制同步或清理前先确认其他设备已完成同步。
-- 若应用显示临时内存模式，停止录入重要数据并先排查。
+- 只配置可信的 AI 服务并阅读其隐私政策；不要把 JSON 导出发布到公共位置；每台设备单独设置 API key。
+- 执行强制同步或清理前先确认其它设备已完成同步；若显示临时内存模式，停止录入重要数据并先排查。
 
-相关资料：[用户操作手册](UserGuide.md)、[Agent 决策](AgentDecisions.md)、[版本与迁移](Versioning.md)。
+相关资料：[用户操作手册](UserGuide.md)、[Agent 决策](AgentDecisions.md)、[架构](Architecture.md)、[Versioning](Versioning.md)。

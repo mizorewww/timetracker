@@ -81,11 +81,6 @@ struct ContentView: View {
                 presentationRouter: presentationRouter,
                 feedbackRouter: feedbackRouter
             )
-            #if DEBUG
-            if await CloudSyncSmokeTestRunner.runIfRequested(context: modelContext, store: store) {
-                return
-            }
-            #endif
         }
         .onChange(of: scenePhase) { _, phase in
             updateWatchCommandRoute(for: phase)

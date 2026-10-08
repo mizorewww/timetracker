@@ -18,30 +18,28 @@
 ## 构建要求
 
 - Xcode 需匹配声明的 SDK:iOS/iPadOS 26.2、macOS 15.7、watchOS 26.2。
-- 自动签名,team `LT98S43NKA`。**不要**用 `CODE_SIGNING_ALLOWED=NO` 或空 team 让构建"通过"。
-- 格式化工具:`brew install swiftformat`(用于 `make format`)。
-- clone 后先安装 pre-commit 钩子(校验三语种本地化 parity;版本号发布前手动 `make bump-version`,见 [Versioning](Docs/Versioning.md)):
-
-```sh
-make install-hooks
-```
+- 自动签名,team `LT98S43NKA`;**不要**用 `CODE_SIGNING_ALLOWED=NO`、空 team 或 ad-hoc 签名让构建"通过"。签名与能力验证规则见 [Testing](Docs/Testing.md)。
+- 格式化工具:`brew install swiftformat`。
+- clone 后执行一次 `make install-hooks`,安装只校验三语种 `.strings` key parity 的 pre-commit 钩子。
 
 ## 常用命令
 
-开发命令统一从 Makefile 入口进入(逻辑由 uv 管理的 Python 工具实现,详见 [DevelopmentTools](Docs/DevelopmentTools.md)):
+所有开发命令经 **Makefile** 入口;`scripts/*.sh` 只是 `uv run` 薄 wrapper,实际逻辑在 `tools/timetracker_tools/` 的纯标准库 Python 模块(无第三方运行依赖)。`uv` 会在首次运行时自动建好 `.venv`。
 
 ```sh
-make venv              # 创建/同步 .venv(可选,wrapper 会自举)
-make test              # macOS 单元测试(默认验证入口)
-make localization-check # 校验 .strings 三语种 key 一致(也是 pre-commit 闸门)
-make format            # 用 SwiftFormat 原地格式化(需 brew install swiftformat)
-make format-check      # 只读校验是否符合 SwiftFormat
-make build-ios         # iOS 设备构建
-make export-artifacts  # 导出签名产物(iOS IPA + macOS app/zip)
-make help              # 列出全部目标
+make help                # 列出全部目标
+make test                # macOS 单元测试(默认验证入口;TEST_ONLY=timetrackerTests/Suite 聚焦,CONFIGURATION=Release 收集性能证据)
+make build-macos         # macOS app 构建(generic/platform=macOS)
+make build-ios           # iOS app 构建(generic/platform=iOS,含扩展)
+make build-install-all   # 构建并安装 iOS+Watch 与 macOS(默认 Release,复制到 /Applications)
+make export-artifacts    # 归档并导出签名产物(iOS IPA + macOS app/zip,默认到 build/Archives 与 build/Exports)
+make localization-check  # 校验三语种 .strings key 一致(也是 pre-commit 闸门,无需 xcodebuild)
+make format              # SwiftFormat 原地格式化;make format-check 只读校验
+make bump-version        # 发布前手动递增版本,见 Versioning
+make clean               # 删除 build/ 下的导出、归档与安装产物
 ```
 
-各脚本行为与可配置变量见 [Scripts](Docs/Scripts.md),完整验证策略见 [Testing](Docs/Testing.md)。
+命令行变量与 shell 环境变量等价(`CONFIGURATION=Release make export-artifacts` 等于 `make CONFIGURATION=Release export-artifacts`);内联构建/测试目标用 `make DEVELOPMENT_TEAM=<team> build-ios`。`make build-info` 由 Xcode 构建阶段自动调用,不是手动门禁。
 
 ## 文档地图
 
@@ -52,15 +50,12 @@ make help              # 列出全部目标
 | 看当前实现细节与维护者笔记 | [CodeGuide](Docs/CodeGuide.md) |
 | 查必须遵守的工程决策 | [AgentDecisions](Docs/AgentDecisions.md) |
 | 写/跑测试、验证与发布门禁 | [Testing](Docs/Testing.md) |
-| 跑构建/发布/版本命令 | [DevelopmentTools](Docs/DevelopmentTools.md) |
+| 跑构建/发布/版本命令、工具链细节 | 本文件 + [Versioning](Docs/Versioning.md) |
 | 改 UI | [UI-Design](Docs/UI-Design.md) + 仓库内 `apple-hig` / `swiftui-expert-skill` |
 | 改用户可见文案 | [Localization](Docs/Localization.md) |
 | 了解用户视角的当前行为 | [UserGuide](Docs/UserGuide.md) |
 | 碰数据、AI、同步 | [PrivacyAndSecurity](Docs/PrivacyAndSecurity.md) |
 | 计划下一步功能 | [NextDevelopmentPlan](Docs/NextDevelopmentPlan.md) |
-| 重构前先查集中度与护栏 | [CodeRefactorPlan](Docs/CodeRefactorPlan.md) |
-| 版本/构建信息 | [Versioning](Docs/Versioning.md) |
-| 一次性审核证据(历史) | 见 git 历史(日期化 `Audit-*.md` 快照已于 2026-07-25 退役) |
 | 用户反馈清单(任务来源) | [userfeedback](Docs/userfeedback.md) |
 
 Agent 工作流程(文档阅读顺序、任务生命周期、验证分级、提交纪律)定义在 [AGENTS.md](AGENTS.md)。

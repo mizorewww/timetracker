@@ -73,7 +73,7 @@
 - App presentation：`AppPresentationRouter` 由每个可呈现 UI 的 scene 自己持有，`AppPresentationHost` 是该 scene 唯一的 App 级 sheet owner；feature 只请求 typed content，不在共享 facade 中保存 sheet draft 或 `isPresented`。任务选择器转入新建任务使用 matching presentation ID 的原子替换，不经过异步 dismiss/yield 空窗。
 - App feedback：每个 scene 自己持有 `AppSceneFeedbackRouter` 与唯一 `AppSceneFeedbackHost`。队列按 FIFO 呈现，dismiss 必须匹配当前 feedback UUID；不得把 macOS Settings 的用户操作错误写回共享 Store 再由主窗口弹出。
 
-分层不等于所有文件都已完成单一职责拆分。仍较集中的大型行视图已在 [CodeRefactorPlan](CodeRefactorPlan.md) 逐项列出；不要把已经完成的 Home 组合拆分重新列为“未来工作”，也不要用机械行数替代职责审核。
+分层不等于所有文件都已完成单一职责拆分。仍较集中的大型行视图已在 [ProjectMap](ProjectMap.md) 的职责集中度表逐项列出；不要把已经完成的 Home 组合拆分重新列为“未来工作”，也不要用机械行数替代职责审核。
 
 ## 3. 运行时数据流
 

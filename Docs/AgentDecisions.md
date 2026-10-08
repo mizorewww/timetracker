@@ -5,7 +5,7 @@
 
 本文记录自动化 Agent 和维护者在实现、审核、重构时必须保持的工程边界。它不是待办清单，也不替代代码审核。一次性发现与验证证据写入对应 commit/PR；未来计划写入明确标记的计划文档。
 
-收录门槛：本文件只收录跨领域架构、数据安全、兼容性或系统集成决策。单一功能内的 UI/展示细节（布局、文案、卡片结构、对齐、样式、字号）不收录为 AD——它们写入对应功能文档，或直接由代码与行为测试表达。历史上误收的此类条目已于 2026-08-27 移出本文件，原文见 git 历史。已替代的决策与历史测试说明保存在 [AgentDecisionsArchive](AgentDecisionsArchive.md)，不再充当当前指令。
+收录门槛：本文件只收录跨领域架构、数据安全、兼容性或系统集成决策。单一功能内的 UI/展示细节（布局、文案、卡片结构、对齐、样式、字号）不收录为 AD——它们写入对应功能文档，或直接由代码与行为测试表达。历史上误收的此类条目已于 2026-08-27 移出本文件，原文见 git 历史。已替代的决策与历史测试说明由 git 历史承载，不再充当当前指令。
 
 ## 1. 使用规则
 
@@ -132,7 +132,7 @@
 - README、UserGuide、CodeGuide、Architecture 和 ProjectMap 描述当前事实与所有权。
 - NextDevelopmentPlan 等明确标为 future 的文档描述未来，并写清前置条件和验收门禁。
 - 跨多会话的较大工作可使用 implementation memory 记录范围、测试契约和临时证据，保存在 `Docs/ImplementationContexts/`；一次性结果只留在对应 commit/PR，不新增长期生效的 dated Audit，也不再维护 Archive 目录（2026-08-27 起，历史记录由 git 历史承载）。
-- 已归档或被替代的计划必须在顶部标明 superseded/historical，旧命令、绝对路径、未勾选项和临时 hard rule 均不得继续充当 Agent 指令或当前 backlog。CodeRefactorPlan 等标为 current status/guardrails 的文档则按当前工作树维护，不能因为名称含 Plan 就自动视为历史。
+- 已归档或被替代的计划必须在顶部标明 superseded/historical，旧命令、绝对路径、未勾选项和临时 hard rule 均不得继续充当 Agent 指令或当前 backlog。标记为 current 的文档（ProjectMap 等）按当前工作树维护，不能因为名称含 Plan 就自动视为历史。
 
 后果：代码变更若影响用户行为、隐私、target 或迁移，必须在同一提交更新当前文档。
 
@@ -298,7 +298,7 @@
 
 决策：保持以下当前所有权：Analytics 的 landing page 与 typed category-detail destination 分文件，period/detail-list 与 store metrics/breakdown/overlap/task-snapshot 文件继续聚焦；Pomodoro setup 由 composition、empty state、focus controls、Plan/Task selection 和 timer face 文件分担；Settings 使用 display/timing、Pomodoro、countdown、sync、data、actions、bindings 和 support 文件，共享 rows 另按 foundation/value、action/destructive、input、presentation 和 sync-feedback 分文件；Task Detail 使用 canonical router 加 identity/checklist/overview/analytics/navigation/record sections；ledger infrastructure 使用 Cloud startup、persistence safety、timer DTO、aggregation、formatting、device identity 和 summary 文件，ledger domain index 又把 ordered flat-array mutation 与 day/change index 分开；rollup base 负责 state/full rebuild，Mutation extension 负责 scoped delta/replacement，pace/topology/activity 保持各自 owner；SyncConflict 使用 bootstrap/prompt、local mutation、Cloud import/export、recovery/resolution、state persistence/lock/locations、snapshot capture/分域 restore 和分域 record DTO 文件；Widget 使用 entry/provider/config、active layout、supplementary state 与 support 文件；Watch 使用 dashboard/timer/status/color UI 文件，`WatchAppStore` base 负责 observable state/restore，Commands extension 负责 queue/timeout/persistence，Connectivity extension 负责 WCSession transport/payload/freshness，SessionDelegate extension 独立承接 callbacks；facade 的 `Configuration` 负责首次配置/repository-only 系统表面装配，`Lifecycle` 负责 refresh/mutation/recovery/error。不得重新创建 `SettingsSectionsViews.swift` 或 `TimeTrackerServices.swift` 作为杂项聚合点，也不得让 closed-app post-commit 路径启动 migration、demo seed、observer 或自动 LLM 工作。
 
-后果：文件移动必须保持一个权威领域规则，不能因“拆分”复制 LWW、时间聚合、恢复或 UI action。拆分后的 sync 继续作为语义高风险域接受完整行为测试；仍较集中的 Home 和 row 文件按 [CodeRefactorPlan](CodeRefactorPlan.md) 的真实现状继续治理。
+后果：文件移动必须保持一个权威领域规则，不能因“拆分”复制 LWW、时间聚合、恢复或 UI action。拆分后的 sync 继续作为语义高风险域接受完整行为测试；仍较集中的 Home 和 row 文件按 [ProjectMap](ProjectMap.md) 的职责集中度表继续治理。
 
 验证：`CoreSourceLayoutTests` 检查关键文件存在、退役文件不存在及分组大小预算；行为测试、签名构建和最终 runtime 验证证明拆分没有改变跨平台结果。
 
@@ -1540,5 +1540,4 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 - [代码文档](CodeGuide.md)
 - [隐私与安全](PrivacyAndSecurity.md)
-- [已替代决策归档](AgentDecisionsArchive.md)
 - [版本与迁移](Versioning.md)

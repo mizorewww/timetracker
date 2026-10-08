@@ -454,6 +454,6 @@ Future work should preserve the ledger contract: every timer, pomodoro, manual e
 
 ## Version and Build Info
 
-Settings includes an About section with the app icon, `MARKETING_VERSION`, build number, Git branch, short commit hash, and build date. The app target writes `AppBuildInfo.plist` during the build via a build phase that runs `scripts/write_build_info_plist.sh` (a thin wrapper around the `timetracker_tools.write_build_info_plist` Python module; see [DevelopmentTools](DevelopmentTools.md)); do not hard-code Git metadata in Swift source.
+Settings includes an About section with the app icon, `MARKETING_VERSION`, build number, Git branch, short commit hash, and build date. The app target writes `AppBuildInfo.plist` during the build via a build phase that runs `scripts/write_build_info_plist.sh` (a thin wrapper around the `timetracker_tools.write_build_info_plist` Python module; see [Versioning](Versioning.md)); do not hard-code Git metadata in Swift source.
 
 Versions are bumped manually before a release with `make bump-version`; the pre-commit hook only enforces localization parity. See `Docs/Versioning.md` before changing release or commit automation.

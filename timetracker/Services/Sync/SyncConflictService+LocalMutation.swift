@@ -206,14 +206,6 @@ SyncLocalMutationUserDefaultsReference: @unchecked Sendable {
     }
 }
 
-nonisolated enum SyncLocalMutationRecordingError:
-    Error,
-    Equatable,
-    Sendable
-{
-    case policyChanged
-}
-
 nonisolated struct SyncLocalMutationRecordingOutcome: Sendable {
     let result: SyncLocalMutationSnapshotResult
     let cloudReconciliationResetPolicy:
@@ -253,6 +245,10 @@ extension SyncConflictService {
         return outcome.result
     }
 
+    /// Records the committed mutation under the caller's state lock. The
+    /// recording policy is captured once here; a concurrent policy transition
+    /// cannot mutate the snapshot while the lock is held, and the recorded
+    /// snapshot stays a safe recovery point regardless of a later transition.
     nonisolated func recordLocalMutationWithLockedState(
         context: ModelContext,
         events: Set<StoreDomainEvent>,
@@ -283,6 +279,13 @@ extension SyncConflictService {
             domains: snapshotDomains(for: events)
         )
 
+        func recorded() -> SyncLocalMutationRecordingOutcome {
+            SyncLocalMutationRecordingOutcome(
+                result: .recorded(prompt: prompt(from: state)),
+                cloudReconciliationResetPolicy: nil
+            )
+        }
+
         if policy.isCloudActive {
             if state.pendingConflictID != nil,
                var localSnapshot = state.localSnapshot,
@@ -290,45 +293,22 @@ extension SyncConflictService {
             {
                 localSnapshot.applyChanges(from: workingSnapshot, to: snapshot)
                 state.localSnapshot = localSnapshot
-                state.localFingerprint = try fingerprint(localSnapshot)
+                state.localFingerprint = try snapshot.fingerprint()
                 state.pendingConflictWorkingSnapshot = snapshot
                 if state.localFingerprint != previousLocalFingerprint {
                     state.rotatePendingConflictIdentity()
                 }
             } else {
                 state.localSnapshot = snapshot
-                state.localFingerprint = try fingerprint(snapshot)
+                state.localFingerprint = try snapshot.fingerprint()
             }
             if state.pendingLocalIntent == .explicitlyReplaceCloud {
                 state.pendingForcedUploadSnapshot = snapshot
             }
-            guard state != stateBeforeRecording else {
-                try requireCurrentPolicy(
-                    policy,
-                    from: policySource
-                )
-                return SyncLocalMutationRecordingOutcome(
-                    result: .recorded(prompt: prompt(from: state)),
-                    cloudReconciliationResetPolicy: nil
-                )
-            }
+            guard state != stateBeforeRecording else { return recorded() }
             state.advanceLocalGeneration()
-            try requireCurrentPolicy(
-                policy,
-                from: policySource
-            )
             try saveStateWithoutLock(state)
-            // A policy transition can race the durable write from another
-            // executor. The sidecar remains a safe recovery snapshot, but the
-            // history cursor must not acknowledge the old policy branch.
-            try requireCurrentPolicy(
-                policy,
-                from: policySource
-            )
-            return SyncLocalMutationRecordingOutcome(
-                result: .recorded(prompt: prompt(from: state)),
-                cloudReconciliationResetPolicy: nil
-            )
+            return recorded()
         }
 
         if snapshot.hasProtectableUserContent {
@@ -338,32 +318,15 @@ extension SyncConflictService {
                 state.advanceSyncEpoch()
             }
             state.localSnapshot = snapshot
-            state.localFingerprint = try fingerprint(snapshot)
+            state.localFingerprint = try snapshot.fingerprint()
             state.pendingForcedUploadSnapshot = snapshot
             if state.pendingLocalIntent != .explicitlyReplaceCloud {
                 state.pendingLocalIntent = .reconcileWithCloud
             }
-            guard state != stateBeforeRecording else {
-                try requireCurrentPolicy(
-                    policy,
-                    from: policySource
-                )
-                return SyncLocalMutationRecordingOutcome(
-                    result: .recorded(prompt: prompt(from: state)),
-                    cloudReconciliationResetPolicy: nil
-                )
-            }
+            guard state != stateBeforeRecording else { return recorded() }
             state.advanceLocalGeneration()
-            try requireCurrentPolicy(
-                policy,
-                from: policySource
-            )
             try saveStateWithoutLock(state)
         }
-        try requireCurrentPolicy(
-            policy,
-            from: policySource
-        )
         return SyncLocalMutationRecordingOutcome(
             result: .recorded(prompt: prompt(from: state)),
             cloudReconciliationResetPolicy:
@@ -372,21 +335,6 @@ extension SyncConflictService {
                 ? policy
                 : nil
         )
-    }
-
-    private nonisolated func requireCurrentPolicy(
-        _ expected: SyncLocalMutationRecordingPolicy,
-        from source: SyncLocalMutationRecordingPolicySource
-    ) throws {
-        guard source.current() == expected else {
-            throw SyncLocalMutationRecordingError.policyChanged
-        }
-    }
-
-    private nonisolated func fingerprint(
-        _ snapshot: SyncDataSnapshot
-    ) throws -> String {
-        try snapshot.fingerprint()
     }
 
     private nonisolated func snapshotDomains(

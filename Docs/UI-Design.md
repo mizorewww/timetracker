@@ -24,8 +24,6 @@ Custom drawing is allowed only when the product concept requires it, such as ana
 - Do not show a task workflow-status picker, status badge, Complete action, Reopen action, or ordinary task Delete action. Legacy planned/active/completed raw values are invisible compatibility data and behave like ordinary tasks. Archived branches remain hidden and recover through Restore; historical tombstones remain a sync compatibility boundary, not a second UI lifecycle.
 - iPhone layouts must split dense rows into two lines when icon, title, path, timer, and actions cannot fit.
 - Task Detail is the one canonical deep surface on iPhone, iPad, and macOS. Do not add a second inspector that can drift from it unless a separately reviewed product need justifies the extra selection and synchronization state. For an ordinary task, its identity icon is an icon-only navigation affordance beside an editable title, not a full navigation row: keep the 44 pt icon target and 14 pt title gap, and hide the automatic navigation-link disclosure indicator so it does not create an accessory slot between icon and title.
-- A canonical Apple Health task is the explicit read-only exception: its detail content contains only Summary, Task Analysis, and Recent Records, in that order. Day/Week/Month and historical-period controls belong at the top of Task Analysis instead of creating a fourth section. Do not show identity/editor, sync-only explanation, quantity, heatmap tracking, forecast, Add Time, More, Archive, autosave, or draft-recovery UI. Loading, empty, failure, unavailable, refresh, and retry feedback stays inside the analytics experience and must never fall back to ordinary-task content.
-- Apple Health copy must say that records are served from a read-only, device-local replica, are not editable, and do not sync through iCloud. Settings must disclose that user-initiated JSON export includes sensitive Health times and source identifiers; hiding the timeline must not imply deletion.
 - Sheets should use system `NavigationStack` + `Form` + toolbar cancel/save actions. Avoid custom modal title bars unless the content is not an editor.
 - Fixed sheet sizes are macOS-only. iPhone and iPad sheets must follow the platform presentation width so they do not overflow compact devices.
 - The analytics timeline should separate graphic bars from task text. Bars show time, color, and icon; rows below carry labels.
@@ -170,13 +168,12 @@ Bars should show only time position, duration, color, and the task symbol. Task 
 
 紧凑纵向 Timeline 的 start、interior、end 时间文字统一从图表内容 leading edge 起排；lane 数量、gap 数量和本地化 `skipped` 胶囊宽度不得改变这条基准线。动态 gutter 仍负责完整容纳胶囊并把 plot 推到右侧；与胶囊纵向冲突的 interior tick 可以省略，但剩余时间文字不能横向移动或重新居中。
 
-Today Timeline 的普通记录与 Apple Health 记录必须复用同一个响应式 record renderer：紧凑宽度都按时间、身份、来源/时长纵向重排，常规宽度都使用相同的时间列、标题列、来源 badge 和时长列。Apple Health 只在来源、已计数时长、只读动作包装上保留差异；不得按数据类型或“第一行”增加专属 padding、offset 或另一套 row。
+Today Timeline 记录复用统一的响应式 record renderer：紧凑宽度都按时间、身份、来源/时长纵向重排，常规宽度都使用相同的时间列、标题列、来源 badge 和时长列。不得按数据类型或“第一行”增加专属 padding、offset 或另一套 row。
 
 Analytics Timeline 与普通 Task Detail 的 tracked-segment 历史行都是完整可点击的原生
 button，并用尾部 pencil 说明可编辑；两处必须打开与 Today 相同的独立
 `SegmentEditorSheet`，不得复制表单、把 SwiftData 写入塞进 row，或另造局部编辑器。入口
-只接受带命名空间的 `.trackedSegment` identity；Apple Health workout/sleep 行保持静态，
-不显示 disabled edit。保存/删除后由共享 command 刷新页面，失败时保留 sheet 与草稿。
+只接受带命名空间的 `.trackedSegment` identity，不显示 disabled edit。保存/删除后由共享 command 刷新页面，失败时保留 sheet 与草稿。
 
 Adjacent tasks with no visible gap should use different lanes so their bars remain distinguishable. The layout should still minimize lane count: if task A overlaps B and B overlaps C, but A does not overlap C, A and C can reuse the same lane.
 

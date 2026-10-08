@@ -15,7 +15,7 @@
 
 实体(Entities):
 
-- **Task**(`TaskNodeAppEntity`):只列出「可直接计时」的任务。重复任务模板、归档任务、Apple Health 同步任务(运动/睡眠)不可选;重复任务选择其当日实例。支持按标题/路径搜索(`EntityStringQuery`),建议列表取前 12 个。
+- **Task**(`TaskNodeAppEntity`):只列出「可直接计时」的任务。重复任务模板、归档任务不可选;重复任务选择其当日实例。支持按标题/路径搜索(`EntityStringQuery`),建议列表取前 12 个。
 - **Running Timer**(`ActiveTimerAppEntity`):当前运行中的时间段,显示任务名与路径。
 
 ## 在快捷指令 App 中的典型用法
@@ -36,7 +36,6 @@
 
 ## 限制
 
-- Apple Health 管理的运动/睡眠任务只能由 Apple 健身/健康 App 产生,Shortcut 不能为其开始或停止计时。
 - 番茄钟(Focus)暂不提供 Shortcut(计划选择策略待设计);Inbox AI 路由在后台按既有策略异步进行,不由 Shortcut 触发。
 - 任务实体建议列表上限 12 个;更多任务请用搜索参数。
 

@@ -137,7 +137,7 @@ Async tests wait on an observable condition, confirmation, expectation or inject
 
 Network tests use injected transports and byte/status/error fixtures. Live LLM verification is a manual smoke check and must never be reported as deterministic regression evidence.
 
-CloudKit, HealthKit, Widget, Watch and Live Activity simulator results are diagnostic. Real-device entitlement, container, background-delivery and system-presentation checks remain separate release evidence.
+CloudKit, Widget, Watch and Live Activity simulator results are diagnostic. Real-device entitlement, container, background-delivery and system-presentation checks remain separate release evidence.
 
 ## UI Verification
 

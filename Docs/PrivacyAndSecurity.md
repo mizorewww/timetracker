@@ -18,8 +18,6 @@
 | AI 自动建议同意 | 本机 UserDefaults | 不同步；开启后才允许客户端自动向已配置 endpoint 发送必要字段 | 不导出 |
 | Widget 快照 | App Group 共享容器 | 同一设备的小组件扩展 | 不作为独立备份 |
 | Watch 快照和命令 | 主应用与 Watch 内存/队列 | 配对设备之间的 WatchConnectivity | 不作为独立备份 |
-| Apple 健康运动与睡眠记录 | 独立、只读、device-local SwiftData replica；排除备份 | 不由 App 传输，不进入 CloudKit/iCloud | 用户主动 JSON 导出 |
-| Apple 健康任务模板 | SwiftData；模板内容与实际健康记录无关 | 作为普通任务定义进入用户的 CloudKit | JSON |
 | 诊断与测试截图 | 开发环境文件 | 仅在维护者主动分享时 | 不属于应用 JSON |
 
 ## 2. 本机存储
@@ -101,7 +99,7 @@ pending/in-flight 工作；客户端只接受仍匹配最新标题、task path �
   - Checklist：稳定 UUID、所属 Task UUID、完整标题、完成状态、图标、颜色和排序。
 - 上述 canonical provider snapshot 的确定性 `contextFingerprint`。它只指纹化同一份会发送的工作区内容，用于把请求与审阅绑定在一起；不包含额外的本机事实或 revision baseline。
 
-工作区 prompt 不包含 Inbox 内容、时间片/时间历史、Pomodoro 历史、Health samples、Keychain 数据、设备 ID、同步 metadata 或任何 `clientMutationID`。API key 不进入 prompt 或工具结果，但会按配置作为 Authorization header 发给 endpoint。Category/Task/Checklist 的本地 revision map 与完整 CAS baseline 只留在内存中，绝不编码到 provider DTO。
+工作区 prompt 不包含 Inbox 内容、时间片/时间历史、Pomodoro 历史、Keychain 数据、设备 ID、同步 metadata 或任何 `clientMutationID`。API key 不进入 prompt 或工具结果，但会按配置作为 Authorization header 发给 endpoint。Category/Task/Checklist 的本地 revision map 与完整 CAS baseline 只留在内存中，绝不编码到 provider DTO。
 
 任务计划、Inbox 和 checklist 都不使用人工 prompt/request-body 预算截断相关上下文，因为那会静默漏掉模型需要引用的实体或图标。编码失败不会发出 partial context；endpoint 以 HTTP 400/413/422 拒绝完整任务计划请求时，以 typed error 报告 Category/Task/Checklist counts 与实际 encoded request bytes。客户端不发送截断版本，也不回退到旧 create-only JSON。工具会话不按固定回合或调用次数截断；只有 `finalize_plan` 结束生成。用户取消、加固传输的 timeout/单响应 2 MiB 边界、provider context 拒绝、工具结构与字段校验继续作为显式资源和安全边界。
 
@@ -130,18 +128,6 @@ pending/in-flight 工作；客户端只接受仍匹配最新标题、task path �
 
 sync snapshot、Widget、Watch 与 Live Activity 的提交后更新现在通过四条 persistent-history lane 异步追赶。这个调度变化只改变执行时机与本机恢复 metadata，不改变任何扩展 DTO、字段、接收方、App Group、WatchConnectivity 或 ActivityKit payload；每条 lane 只有成功后才确认自己的 cursor，失败也不会让已提交业务动作变成可重试失败。
 
-### Apple 健康
-
-Apple 健康集成只申请读取运动和睡眠分析类型，不向 HealthKit 写入数据。获得读取能力后，应用使用 HealthKit anchored query 增量读取新增、修改和删除，并把稳定样本 UUID、类型/阶段、日期与时间区间、来源 bundle 以及睡眠来源产品类型保存到独立的本机只读 SwiftData replica。iOS 的 `HKObserverQuery` 与 HealthKit background-delivery entitlement 只负责通知“相关类型有变化”；回调随后使用保存的 opaque anchor 获取具体变化，并在事务成功后才完成系统回调。事件内容和本机 replica 都不会由该机制上传到 App 服务器或 iCloud。HealthKit 合法的起止时间相等样本也按来源事实保存并推进检查点，但不会作为正时长计入时间线或分析；反向时间区间仍会使该代提交整体回滚。opaque HealthKit anchors 只作为本机增量检查点保存。界面和分析只消费不可变值快照，不提供新增、编辑、删除、补录、计时或 AI 修改入口。
-
-该 replica 使用独立的版本化 schema 和 `cloudKitDatabase: .none`，不属于主业务模型、`SyncDataSnapshot`、CloudKit conflict、restore 或 fingerprint 边界；iOS 文件使用首次解锁后数据保护并排除系统备份。它不会通过 iCloud 或 App 自身跨设备同步。“同步 Apple 健康”只表示从当前设备 HealthKit 增量刷新。关闭时间线只隐藏投影，不删除 replica；macOS 没有 HealthKit reader，也不会把其它设备的健康记录伪装成本机数据。
-
-开启功能还会创建一组固定的普通 Task/Category 导航元数据，包括所有应用支持的运动类型以及“睡觉”。目录集合在读取任何 Health 样本前即已确定，不根据用户是否真实进行过某项运动或睡眠而增减，因此目录的存在不能表达个人健康行为。它们是不可由用户编辑的 sync-only canonical 元数据，并按普通任务定义参与 CloudKit 同步；目录维护只收敛固定身份和位置，不读取或持久化 Health 样本。Archive 与 tombstone 恢复仍按目录协调器的既有收敛规则处理。
-
-“清空全部数据”会清除本机 Health replica 的记录和两个增量检查点，并像处理其他任务一样为模板写入同步 tombstone，在本机保存一次性的可恢复任务 ID 集合。用户之后重新开启 Health 时间线时，只允许重建清空前仍可见的模板；早已被用户删除的模板不会因普通刷新复活。重建会生成完整的默认分类、根任务和分类关系，不恢复清空前已被明确丢弃的自定义 payload。该一次性凭据只在本机 UserDefaults 中保存，不包含任何 Health 样本内容。
-
-这一边界用于满足 Apple 对个人健康信息不得存入 iCloud 的要求。发行前仍应复核 [App Review Guideline 5.1.3](https://developer.apple.com/app-store/review/guidelines/) 与 HealthKit entitlement、用途说明和 App Store 隐私申报。
-
 ### Live Activity
 
 Live Activity 接收当前计时的最小展示状态。它不是事实存储，系统终止活动不会删除主应用记录。锁屏和灵动岛只展示任务身份与经过时间；点按只打开主应用的“今日”，扩展没有停止按钮，也不直接执行 SwiftData、CloudKit 或其它持久 mutation。
@@ -166,12 +152,12 @@ Widget、Live Activity 和系统使用 `timetracker` URL 打开主应用。应�
 
 ## 6. JSON 导出
 
-用户主动发起的 JSON 导出使用版本化 `timetracker.userData` envelope，分别包含过滤敏感 preference 后的可同步业务快照，以及当前设备的 Apple Health replica。Health payload 包含记录 UUID、类型/阶段、时间范围和来源标识，但不包含 opaque 同步检查点。合法空 replica 会明确编码为空数组；任一数据源读取或编码失败时整体失败，不输出半份文件。App 不会自动上传该文件。
+用户主动发起的 JSON 导出使用版本化 `timetracker.cloudSyncedData` envelope，包含过滤敏感 preference 后的可同步业务快照。App 不会自动上传该文件。
 
 当前不存在 importer、校验和、签名、加密或事务恢复，所以它：
 
 - 不是可恢复备份。
-- 可能包含任务名称、详细时间记录以及敏感的运动/睡眠时间和来源标识。
+- 可能包含任务名称和详细时间记录。
 - 应保存到用户信任的位置。
 - 不应在工单、日志或公开仓库中直接上传。
 

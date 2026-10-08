@@ -54,7 +54,6 @@ These are intentionally deferred:
 - Team collaboration.
 - Billing/invoicing workflows.
 - Full calendar two-way sync.
-- HealthKit-driven automatic categorization.
 - Black-box Core ML forecasting.
 - Web app.
 - Drag-and-drop category reassignment unless native behavior is reliable on all target platforms.

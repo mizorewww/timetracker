@@ -1373,7 +1373,7 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 - 模型只能调用 strict OpenAI-compatible tools 修改纯内存 overlay：list/get；Category reuse/create/update/delete；Task create/update/archive；Checklist create/update/delete；finalize。schema 的声明属性全部 required 且禁止 additional properties。App 生成新实体 UUID 并返回 tool result，支持 read-after-write；已有 Task/Checklist 只按 UUID 引用，Category title 只有唯一规范化匹配时才复用，多个同名必须显式歧义。workspace 内文本全部是不可信 data，不得升级为 prompt 指令。Task 永远没有 hard-delete tool。
 - Finalize 只生成 baseline→overlay 的确定性、只读 diff。预览显示 create/update/archive/delete/reuse counts、所属完整路径与 before→after；用户通过 `Apply N Changes` 明确提交，删除、归档或其它破坏性影响再使用原生 destructive confirmation。模型/工具不能直接写 SwiftData，stale 或失败保留 preview。
 - Apply 在同一 store lock/fresh context 中重新捕获完整 baseline，并对 provider-visible facts 以及 Category、Task、assignment、Checklist、visual、quantity-goal、recurrence revisions 做保守 CAS。协调器必须重放 exact reviewed operations，复核跨类型/受保护身份、层级、活动 Timer/Pomodoro 与持久化字段策略，然后用一个 atomic mutation 提交。任何差异或 checkpoint/save 失败都是零写入、零事件；Checklist 精确编辑不能旋转无关 item/visual revision，Task removal 只 Archive 并保留 `deletedAt`。
-- API key 只进入 Authorization header。prompt/tool context 排除时间 ledger/history、Pomodoro history、Health samples、Inbox、Keychain、设备 ID、同步 metadata 和本地 mutation baseline。reasoning/tool round/raw provider response 只在当前生成与审阅会话中临时存在，不持久化、不同步、导出或记录日志。
+- API key 只进入 Authorization header。prompt/tool context 排除时间 ledger/history、Pomodoro history、Inbox、Keychain、设备 ID、同步 metadata 和本地 mutation baseline。reasoning/tool round/raw provider response 只在当前生成与审阅会话中临时存在，不持久化、不同步、导出或记录日志。
 
 后果：模型可以在完整现状上复用已有 `a`，并以稳定身份提出混合 CRUD，而人仍拥有可读的最终 diff 和唯一提交权。任何同时发生的本机、其它窗口或同步修改都会让旧预览安全失效，不能产生 partial write。完整上下文扩大了向自定义 endpoint 发送的用户文本范围，因此发送前 counts、字段披露、typed size failure 与第三方处理政策成为发行安全边界。
 
@@ -1490,7 +1490,7 @@ upload、download、reconciliation defaults marker 互斥；矛盾 legacy 请求
 
 - `AppRootView` 是根 shell 的唯一选择者。`RootLayoutPolicy` 以实际测得的窗口宽度和系统 compact size class 选择 compact 或 regular：低于 720 pt 或系统明确 compact 时使用单列 `TabView` shell，其余使用共享的 `NavigationSplitView` shell。
 - 业务 Store、scene presentation/feedback router 和 durable navigation identity 位于 shell 分支之上。子视图只消费根发布的 `layoutShell` 或自己的有限容器宽度；不得读取 `UIDevice.current.userInterfaceIdiom`、`UIScreen`/`NSScreen` 来决定产品布局，也不得用平台编译条件复制同一页面。
-- `#if os(...)` 只用于目标上不存在的框架/API、原生 scene/menu/window plumbing、系统 presentation/list chrome、键盘与指针/触控输入差异、HealthKit/Watch/ActivityKit 等真实 capability。平台分支不得只为同一用户信息选择不同字号、间距、卡片或内容顺序。
+- `#if os(...)` 只用于目标上不存在的框架/API、原生 scene/menu/window plumbing、系统 presentation/list chrome、键盘与指针/触控输入差异、Watch/ActivityKit 等真实 capability。平台分支不得只为同一用户信息选择不同字号、间距、卡片或内容顺序。
 - 用户身份、答案、说明、状态、警告与有文字的操作使用同一跨平台系统语义字体；path、timestamp、badge、count、chart axis/range 等 metadata 也按信息角色共享紧凑语义。需要不同密度时由 compact/regular shell、容器宽度或明确的组件 style 决定，而不是操作系统名称。
 - 新增平台 UI 分支必须在当前工程文档说明 capability 理由和验证表面；若共享 SwiftUI、宽度策略或系统容器能表达同一行为，则删除分支。
 

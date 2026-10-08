@@ -1,8 +1,15 @@
 import Foundation
 
-nonisolated struct OverlapAnalyticsParticipant: Identifiable, Equatable, Sendable {
+nonisolated struct OverlapAnalyticsParticipant: Identifiable, Equatable, Comparable, Sendable {
     let id: UUID
     let title: String
+
+    static func < (lhs: OverlapAnalyticsParticipant, rhs: OverlapAnalyticsParticipant) -> Bool {
+        if lhs.title != rhs.title {
+            return lhs.title < rhs.title
+        }
+        return lhs.id.uuidString < rhs.id.uuidString
+    }
 }
 
 nonisolated struct OverlapAnalyticsPoint: Identifiable, Equatable, Sendable {

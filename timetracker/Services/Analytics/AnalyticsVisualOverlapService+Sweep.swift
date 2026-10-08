@@ -1,4 +1,5 @@
 import Foundation
+import HeapModule
 
 nonisolated extension AnalyticsVisualOverlapService {
     func sweepOverlapWindows(
@@ -33,7 +34,7 @@ nonisolated extension AnalyticsVisualOverlapService {
 
         var activeSegmentIDs = Set<UUID>()
         var activeSegmentCountByTaskID: [UUID: Int] = [:]
-        var participantHeap = AnalyticsVisualParticipantHeap()
+        var participantHeap = Heap<OverlapAnalyticsParticipant>()
         var residentParticipantIDs = Set<UUID>()
         var rawWindows: [AnalyticsVisualRawOverlapWindow] = []
         var cursor = events.first?.date
@@ -122,7 +123,7 @@ nonisolated extension AnalyticsVisualOverlapService {
 
     func firstActiveParticipants(
         limit: Int,
-        heap: inout AnalyticsVisualParticipantHeap,
+        heap: inout Heap<OverlapAnalyticsParticipant>,
         residentParticipantIDs: inout Set<UUID>,
         activeSegmentCountByTaskID: [UUID: Int]
     ) -> [OverlapAnalyticsParticipant] {
@@ -162,78 +163,4 @@ nonisolated struct AnalyticsVisualRawOverlapWindow {
     let concurrentSegmentCount: Int
     let participantCount: Int
     let visibleParticipants: [OverlapAnalyticsParticipant]
-}
-
-nonisolated struct AnalyticsVisualParticipantHeap {
-    private var elements: [OverlapAnalyticsParticipant] = []
-
-    var min: OverlapAnalyticsParticipant? {
-        elements.first
-    }
-
-    mutating func insert(_ element: OverlapAnalyticsParticipant) {
-        elements.append(element)
-        siftUp(from: elements.count - 1)
-    }
-
-    mutating func popMin() -> OverlapAnalyticsParticipant? {
-        guard elements.isEmpty == false else { return nil }
-        if elements.count == 1 {
-            return elements.removeLast()
-        }
-        let minimum = elements[0]
-        elements[0] = elements.removeLast()
-        siftDown(from: 0)
-        return minimum
-    }
-
-    private mutating func siftUp(from index: Int) {
-        var child = index
-        var parent = parentIndex(of: child)
-        while child > 0, precedes(elements[child], elements[parent]) {
-            elements.swapAt(child, parent)
-            child = parent
-            parent = parentIndex(of: child)
-        }
-    }
-
-    private mutating func siftDown(from index: Int) {
-        var parent = index
-        while true {
-            let left = leftChildIndex(of: parent)
-            let right = rightChildIndex(of: parent)
-            var candidate = parent
-            if left < elements.count, precedes(elements[left], elements[candidate]) {
-                candidate = left
-            }
-            if right < elements.count, precedes(elements[right], elements[candidate]) {
-                candidate = right
-            }
-            guard candidate != parent else { return }
-            elements.swapAt(parent, candidate)
-            parent = candidate
-        }
-    }
-
-    private func precedes(
-        _ lhs: OverlapAnalyticsParticipant,
-        _ rhs: OverlapAnalyticsParticipant
-    ) -> Bool {
-        if lhs.title != rhs.title {
-            return lhs.title < rhs.title
-        }
-        return lhs.id.uuidString < rhs.id.uuidString
-    }
-
-    private func parentIndex(of index: Int) -> Int {
-        (index - 1) / 2
-    }
-
-    private func leftChildIndex(of index: Int) -> Int {
-        (2 * index) + 1
-    }
-
-    private func rightChildIndex(of index: Int) -> Int {
-        (2 * index) + 2
-    }
 }

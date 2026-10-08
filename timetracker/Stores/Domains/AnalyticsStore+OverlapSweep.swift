@@ -1,4 +1,5 @@
 import Foundation
+import HeapModule
 
 extension AnalyticsStore {
     func sweepOverlapWindows(
@@ -25,7 +26,7 @@ extension AnalyticsStore {
 
         var activeSegmentIDs = Set<UUID>()
         var activeSegmentCountByTaskID: [UUID: Int] = [:]
-        var participantHeap = OverlapParticipantMinHeap()
+        var participantHeap = Heap<OverlapAnalyticsParticipant>()
         var residentParticipantIDs = Set<UUID>()
         var rawWindows: [RawOverlapWindow] = []
         var cursor = events.first?.date

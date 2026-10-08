@@ -36,21 +36,10 @@ struct LLMChecklistVisualSuggestionService {
             instructions: instructions,
             configuration: configuration
         )
-        let (data, response) = try await transport(request)
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMInboxSuggestionServiceError.invalidResponse
-        }
-        guard (200 ..< 300).contains(httpResponse.statusCode) else {
-            throw LLMModelServiceError.responseStatus(httpResponse.statusCode)
-        }
-        try LLMSecureHTTPTransport.validateBufferedResponse(data)
-
-        let decoded = try JSONDecoder().decode(OpenAIChatCompletionResponse.self, from: data)
-        guard let content = decoded.choices.first?.message.content,
-              let contentData = content.data(using: .utf8)
-        else {
-            throw LLMInboxSuggestionServiceError.invalidResponse
-        }
+        let contentData = try await LLMSuggestionChatSupport.contentData(
+            for: request,
+            transport: transport
+        )
         let payload = try JSONDecoder().decode(ChecklistVisualSuggestionPayload.self, from: contentData)
         return Self.sanitize(payload: payload, modelID: input.modelID)
     }
@@ -60,50 +49,17 @@ struct LLMChecklistVisualSuggestionService {
         instructions: String,
         configuration: LLMRequestConfiguration
     ) throws -> URLRequest {
-        let credentials = try configuration.validated(
-            requestTooLarge: LLMInboxSuggestionServiceError.requestTooLarge
-        )
-        let preparedInstructions = try AppPreferenceValueSanitizer
-            .llmChecklistVisualInstructions(instructions)
-
-        var request = URLRequest(url: credentials.chatCompletionsURL)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 45
-        request.setValue("Bearer \(credentials.apiKey)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        let body = try JSONEncoder().encode(
-            OpenAIChatCompletionRequest(
-                model: input.modelID,
-                messages: [
-                    .init(
-                        role: "system",
-                        content: Self.responseContract
-                    ),
-                    .init(
-                        role: "user",
-                        content: prompt(
-                            input: input,
-                            instructions: preparedInstructions
-                        )
-                    ),
-                ],
-                temperature: LLMChatRequestPolicy.temperature(
-                    modelID: input.modelID,
-                    fallback: LLMChatRequestPolicy.suggestionTemperature
-                ),
-                responseFormat: .init(type: "json_object"),
-                thinking: LLMChatRequestPolicy.thinkingConfiguration(
-                    modelID: input.modelID
-                ),
-                reasoningEffort: LLMChatRequestPolicy.reasoningEffort(
-                    modelID: input.modelID,
-                    selected: configuration.reasoningEffort
-                )
+        try LLMSuggestionChatSupport.request(
+            modelID: input.modelID,
+            responseContract: Self.responseContract,
+            configuration: configuration
+        ) {
+            try prompt(
+                input: input,
+                instructions: AppPreferenceValueSanitizer
+                    .llmChecklistVisualInstructions(instructions)
             )
-        )
-        request.httpBody = body
-        return request
+        }
     }
 
     static func sanitize(

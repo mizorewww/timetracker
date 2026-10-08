@@ -160,13 +160,6 @@ struct CompactTimelineSection: View {
                     )
                 }
             }
-
-            // HealthKit has no macOS counterpart, so neither does this row.
-            #if os(iOS)
-            if store.shouldShowAppleHealthTimelineStatusInline {
-                AppleHealthTimelineAccessRow(store: store)
-            }
-            #endif
         } header: {
             Text(AppStrings.todayTimeline)
                 .accessibilityIdentifier("home.timeline")

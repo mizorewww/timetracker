@@ -21,8 +21,6 @@ extension TimeTrackerStore {
             events: [.fullSync],
             cause: .surfaceCatchUp
         )
-        appleHealthReplicaSyncService?.markNeedsSynchronization()
-        await refreshAppleHealthTimelineIfEnabled()
         await refreshCloudAccountStatus(
             client: cloudAccountStatusClient
         )

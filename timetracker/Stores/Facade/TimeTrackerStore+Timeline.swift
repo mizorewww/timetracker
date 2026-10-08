@@ -3,7 +3,6 @@ import Foundation
 nonisolated struct TodayTimelineSnapshotCacheKey: Equatable, Sendable {
     let analyticsRevision: UInt
     let taskReadModelRevision: UInt64
-    let appleHealthReplicaRevision: Int
     let dayStart: Date
     let nowMinuteBucket: Int
 }
@@ -41,7 +40,6 @@ extension TimeTrackerStore {
         let key = TodayTimelineSnapshotCacheKey(
             analyticsRevision: analyticsRevision,
             taskReadModelRevision: taskReadModelRevision,
-            appleHealthReplicaRevision: appleHealthReplicaRevision,
             dayStart: dayInterval.start,
             nowMinuteBucket: Self.timelineMinuteBucket(now)
         )
@@ -58,9 +56,8 @@ extension TimeTrackerStore {
             visibleInterval: dayInterval,
             now: now
         )
-        let healthSeeds = appleHealthTimelineItems.map(timelinePresentationSeed)
         let snapshot = service.snapshot(
-            seeds: trackedSeeds + healthSeeds,
+            seeds: trackedSeeds,
             visibleInterval: dayInterval
         )
         todayTimelineSnapshotCache = TodayTimelineSnapshotCache(

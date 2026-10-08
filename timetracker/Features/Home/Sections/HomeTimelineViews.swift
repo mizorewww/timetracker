@@ -98,16 +98,6 @@ struct TimelineSection: View {
                         )
                     }
                 }
-
-                #if os(iOS)
-                if store.shouldShowAppleHealthTimelineStatusInline {
-                    if timeline.entries.isEmpty == false {
-                        Divider()
-                    }
-                    AppleHealthTimelineAccessRow(store: store)
-                        .padding(14)
-                }
-                #endif
             }
             .appCard(padding: 0)
         }

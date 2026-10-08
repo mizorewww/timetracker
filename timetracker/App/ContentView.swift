@@ -81,7 +81,6 @@ struct ContentView: View {
                 presentationRouter: presentationRouter,
                 feedbackRouter: feedbackRouter
             )
-            await store.refreshAppleHealthTimelineIfEnabled()
             #if DEBUG
             if await CloudSyncSmokeTestRunner.runIfRequested(context: modelContext, store: store) {
                 return
@@ -97,12 +96,6 @@ struct ContentView: View {
                 await store.refreshForForeground()
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
-            guard hasFinishedInitialConfiguration, scenePhase == .active else { return }
-            Task { @MainActor in
-                await store.refreshAppleHealthTimelineIfEnabled()
-            }
-        }
         .onChange(of: store.persistenceWriteSafety) { _, safety in
             guard safety == .ready else {
                 hasFinishedInitialConfiguration = false
@@ -115,7 +108,6 @@ struct ContentView: View {
             registerForWatchCommandsIfNeeded()
             Task { @MainActor in
                 store.materializeCurrentDailyTaskRecurrences()
-                await store.refreshAppleHealthTimelineIfEnabled()
             }
         }
         .taskRecurrenceLifecycle(store: store, isConfigured: hasFinishedInitialConfiguration)

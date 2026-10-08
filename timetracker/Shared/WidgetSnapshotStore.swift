@@ -24,13 +24,13 @@ nonisolated struct WidgetSnapshotTimelinePolicy: Sendable {
         for result: WidgetSnapshotLoadResult,
         at now: Date
     ) -> WidgetTimelineReloadDecision {
-        guard WidgetSnapshotLimits.isFinite(now) else { return .never }
+        guard SystemSurfaceTextBounds.isFinite(now) else { return .never }
         switch result {
         case let .snapshot(snapshot, .current):
             let staleDate = snapshot.generatedAt.addingTimeInterval(WidgetSnapshot.staleAfter)
             let minimumReloadDate = now.addingTimeInterval(Self.minimumRetryDelay)
-            guard WidgetSnapshotLimits.isFinite(staleDate),
-                  WidgetSnapshotLimits.isFinite(minimumReloadDate)
+            guard SystemSurfaceTextBounds.isFinite(staleDate),
+                  SystemSurfaceTextBounds.isFinite(minimumReloadDate)
             else {
                 return .never
             }
@@ -44,8 +44,8 @@ nonisolated struct WidgetSnapshotTimelinePolicy: Sendable {
             let clockRecoveryDate = snapshot.generatedAt.addingTimeInterval(
                 -WidgetSnapshotLimits.maximumFutureClockSkew
             )
-            guard WidgetSnapshotLimits.isFinite(earliestRetry),
-                  WidgetSnapshotLimits.isFinite(clockRecoveryDate)
+            guard SystemSurfaceTextBounds.isFinite(earliestRetry),
+                  SystemSurfaceTextBounds.isFinite(clockRecoveryDate)
             else {
                 return .never
             }

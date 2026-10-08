@@ -46,7 +46,7 @@ nonisolated struct WatchStateProjectionService {
         var remainingTextBytes =
             WatchTransportLimits.maximumSnapshotTextBytes
         for timer in activeTimers {
-            remainingTextBytes -= WatchTransportLimits.textByteCount(
+            remainingTextBytes -= SystemSurfaceTextBounds.textByteCount(
                 title: timer.title,
                 path: timer.path,
                 colorHex: timer.colorHex,
@@ -59,12 +59,12 @@ nonisolated struct WatchStateProjectionService {
             task in
             let snapshot = WatchRecentTaskSnapshot(
                 taskID: task.id,
-                title: WatchTransportLimits.boundedUTF8Prefix(
+                title: SystemSurfaceTextBounds.boundedUTF8Prefix(
                     task.title,
                     maximumUTF8Bytes:
                     WatchTransportLimits.maximumProjectedTitleBytes
                 ),
-                path: WatchTransportLimits.boundedUTF8Prefix(
+                path: SystemSurfaceTextBounds.boundedUTF8Prefix(
                     taskParentPathByID[task.id] ?? "",
                     maximumUTF8Bytes:
                     WatchTransportLimits.maximumProjectedPathBytes
@@ -83,7 +83,7 @@ nonisolated struct WatchStateProjectionService {
             return WatchRankedTaskProjection(
                 rank: rank,
                 snapshot: snapshot,
-                textByteCount: WatchTransportLimits.textByteCount(
+                textByteCount: SystemSurfaceTextBounds.textByteCount(
                     title: snapshot.title,
                     path: snapshot.path,
                     colorHex: snapshot.colorHex,

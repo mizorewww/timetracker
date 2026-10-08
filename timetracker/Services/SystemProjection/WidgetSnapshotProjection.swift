@@ -27,11 +27,11 @@ nonisolated enum WidgetSnapshotProjection {
             let timer = WidgetTimerSnapshot(
                 id: segment.id,
                 taskID: segment.taskID,
-                title: WidgetSnapshotLimits.boundedUTF8Prefix(
+                title: SystemSurfaceTextBounds.boundedUTF8Prefix(
                     task?.title ?? AppStrings.localized("task.unavailable"),
                     maximumUTF8Bytes: WidgetSnapshotLimits.maximumProjectedTitleBytes
                 ),
-                path: WidgetSnapshotLimits.boundedUTF8Prefix(
+                path: SystemSurfaceTextBounds.boundedUTF8Prefix(
                     taskParentPathByID[segment.taskID] ?? "",
                     maximumUTF8Bytes: WidgetSnapshotLimits.maximumProjectedPathBytes
                 ),
@@ -42,7 +42,7 @@ nonisolated enum WidgetSnapshotProjection {
                 colorHex: WidgetSnapshotLimits.boundedProjectedStyleValue(task?.colorHex),
                 iconName: WidgetSnapshotLimits.boundedProjectedStyleValue(task?.iconName)
             )
-            let textByteCount = WidgetSnapshotLimits.textByteCount(
+            let textByteCount = SystemSurfaceTextBounds.textByteCount(
                 title: timer.title,
                 path: timer.path,
                 colorHex: timer.colorHex,
@@ -57,18 +57,18 @@ nonisolated enum WidgetSnapshotProjection {
         for task in recentTasks.prefix(min(3, WidgetSnapshotLimits.maximumRecentTasks)) {
             let recentTask = WidgetRecentTaskSnapshot(
                 taskID: task.id,
-                title: WidgetSnapshotLimits.boundedUTF8Prefix(
+                title: SystemSurfaceTextBounds.boundedUTF8Prefix(
                     task.title,
                     maximumUTF8Bytes: WidgetSnapshotLimits.maximumProjectedTitleBytes
                 ),
-                path: WidgetSnapshotLimits.boundedUTF8Prefix(
+                path: SystemSurfaceTextBounds.boundedUTF8Prefix(
                     taskParentPathByID[task.id] ?? "",
                     maximumUTF8Bytes: WidgetSnapshotLimits.maximumProjectedPathBytes
                 ),
                 colorHex: WidgetSnapshotLimits.boundedProjectedStyleValue(task.colorHex),
                 iconName: WidgetSnapshotLimits.boundedProjectedStyleValue(task.iconName)
             )
-            let textByteCount = WidgetSnapshotLimits.textByteCount(
+            let textByteCount = SystemSurfaceTextBounds.textByteCount(
                 title: recentTask.title,
                 path: recentTask.path,
                 colorHex: recentTask.colorHex,

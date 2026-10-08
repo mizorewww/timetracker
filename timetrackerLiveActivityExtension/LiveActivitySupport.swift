@@ -16,31 +16,16 @@ func abbreviatedPath(for state: TimeTrackingActivityAttributes.ContentState) -> 
 }
 
 func activityColor(_ hex: String) -> Color {
-    guard let components = activityRGB(hex) else { return .blue }
+    guard let components = HexColorParser.components(for: hex) else { return .blue }
     return Color(red: components.red, green: components.green, blue: components.blue)
 }
 
 func activityForegroundColor(_ hex: String) -> Color {
-    guard let components = activityRGB(hex) else { return .white }
+    guard let components = HexColorParser.components(for: hex) else { return .white }
     let luminance = 0.2126 * linearSRGB(components.red)
         + 0.7152 * linearSRGB(components.green)
         + 0.0722 * linearSRGB(components.blue)
     return luminance > 0.179 ? .black : .white
-}
-
-private func activityRGB(_ hex: String) -> (red: Double, green: Double, blue: Double)? {
-    var value = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-    if value.count == 3 {
-        value = value.map { "\($0)\($0)" }.joined()
-    }
-    guard value.count == 6 else { return nil }
-
-    var int: UInt64 = 0
-    guard Scanner(string: value).scanHexInt64(&int) else { return nil }
-    let red = Double((int >> 16) & 0xFF) / 255
-    let green = Double((int >> 8) & 0xFF) / 255
-    let blue = Double(int & 0xFF) / 255
-    return (red, green, blue)
 }
 
 private func linearSRGB(_ component: Double) -> Double {

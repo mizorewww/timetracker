@@ -15,56 +15,25 @@ nonisolated enum WidgetSnapshotLimits {
     static let maximumProjectedStyleValueBytes = 128
     static let maximumSnapshotTextBytes = 128 * 1024
 
-    static func isFinite(_ date: Date) -> Bool {
-        date.timeIntervalSinceReferenceDate.isFinite
-    }
-
-    static func isBounded(_ value: String, maximumUTF8Bytes: Int) -> Bool {
-        value.utf8.count <= maximumUTF8Bytes
-    }
-
-    static func isValidStyleValue(_ value: String?) -> Bool {
-        guard let value else { return true }
-        return isBounded(value, maximumUTF8Bytes: maximumStyleValueBytes)
-    }
-
-    static func boundedUTF8Prefix(_ value: String, maximumUTF8Bytes: Int) -> String {
-        guard value.utf8.count > maximumUTF8Bytes else { return value }
-        var result = ""
-        var byteCount = 0
-        for character in value {
-            let characterByteCount = String(character).utf8.count
-            guard byteCount + characterByteCount <= maximumUTF8Bytes else { break }
-            result.append(character)
-            byteCount += characterByteCount
-        }
-        return result
-    }
-
     static func boundedProjectedStyleValue(_ value: String?) -> String? {
-        value.map {
-            boundedUTF8Prefix($0, maximumUTF8Bytes: maximumProjectedStyleValueBytes)
-        }
-    }
-
-    static func textByteCount(
-        title: String,
-        path: String,
-        colorHex: String?,
-        iconName: String?
-    ) -> Int {
-        title.utf8.count + path.utf8.count +
-            (colorHex?.utf8.count ?? 0) + (iconName?.utf8.count ?? 0)
+        SystemSurfaceTextBounds.boundedProjectedStyleValue(
+            value,
+            maximumUTF8Bytes: maximumProjectedStyleValueBytes
+        )
     }
 
     static func boundedTimerStart(_ startedAt: Date, generatedAt: Date) -> Date {
-        guard isFinite(startedAt), isFinite(generatedAt) else { return generatedAt }
-        return min(
-            max(startedAt, generatedAt.addingTimeInterval(-maximumActiveTimerAge)),
-            generatedAt
+        SystemSurfaceTextBounds.boundedTimerStart(
+            startedAt,
+            generatedAt: generatedAt,
+            maximumActiveTimerAge: maximumActiveTimerAge
         )
     }
 }
+
+typealias WidgetTimerSnapshot = SystemSurfaceTimerSnapshot
+typealias WidgetRecentTaskSnapshot = SystemSurfaceRecentTaskSnapshot
+typealias WidgetTimerElapsedPresentation = SystemSurfaceTimerElapsedPresentation
 
 nonisolated struct WidgetSnapshot: Codable, Equatable, Sendable {
     nonisolated static let staleAfter: TimeInterval = 15 * 60
@@ -89,8 +58,8 @@ nonisolated struct WidgetSnapshot: Codable, Equatable, Sendable {
         at now: Date,
         staleAfter threshold: TimeInterval = WidgetSnapshot.staleAfter
     ) -> WidgetSnapshotFreshness {
-        guard WidgetSnapshotLimits.isFinite(now),
-              WidgetSnapshotLimits.isFinite(generatedAt)
+        guard SystemSurfaceTextBounds.isFinite(now),
+              SystemSurfaceTextBounds.isFinite(generatedAt)
         else {
             return .clockAdjusted
         }
@@ -102,28 +71,43 @@ nonisolated struct WidgetSnapshot: Codable, Equatable, Sendable {
 
     nonisolated var isStructurallyValid: Bool {
         let textByteCount = activeTimers.reduce(into: 0) { total, timer in
-            total += WidgetSnapshotLimits.textByteCount(
+            total += SystemSurfaceTextBounds.textByteCount(
                 title: timer.title,
                 path: timer.path,
                 colorHex: timer.colorHex,
                 iconName: timer.iconName
             )
         } + recentTasks.reduce(into: 0) { total, task in
-            total += WidgetSnapshotLimits.textByteCount(
+            total += SystemSurfaceTextBounds.textByteCount(
                 title: task.title,
                 path: task.path,
                 colorHex: task.colorHex,
                 iconName: task.iconName
             )
         }
-        guard WidgetSnapshotLimits.isFinite(generatedAt),
+        guard SystemSurfaceTextBounds.isFinite(generatedAt),
               (0 ... WidgetSnapshotLimits.maximumSummarySeconds).contains(todayGrossSeconds),
               (0 ... WidgetSnapshotLimits.maximumSummarySeconds).contains(todayWallSeconds),
               activeTimers.count <= WidgetSnapshotLimits.maximumActiveTimers,
               recentTasks.count <= WidgetSnapshotLimits.maximumRecentTasks,
               textByteCount <= WidgetSnapshotLimits.maximumSnapshotTextBytes,
-              activeTimers.allSatisfy({ $0.isStructurallyValid(relativeTo: generatedAt) }),
-              recentTasks.allSatisfy(\.isStructurallyValid),
+              activeTimers.allSatisfy({
+                  $0.isStructurallyValid(
+                      relativeTo: generatedAt,
+                      maximumTitleBytes: WidgetSnapshotLimits.maximumTitleBytes,
+                      maximumPathBytes: WidgetSnapshotLimits.maximumPathBytes,
+                      maximumStyleValueBytes: WidgetSnapshotLimits.maximumStyleValueBytes,
+                      maximumFutureClockSkew: WidgetSnapshotLimits.maximumFutureClockSkew,
+                      maximumActiveTimerAge: WidgetSnapshotLimits.maximumActiveTimerAge
+                  )
+              }),
+              recentTasks.allSatisfy({
+                  $0.isStructurallyValid(
+                      maximumTitleBytes: WidgetSnapshotLimits.maximumTitleBytes,
+                      maximumPathBytes: WidgetSnapshotLimits.maximumPathBytes,
+                      maximumStyleValueBytes: WidgetSnapshotLimits.maximumStyleValueBytes
+                  )
+              }),
               Set(activeTimers.map(\.id)).count == activeTimers.count,
               Set(recentTasks.map(\.taskID)).count == recentTasks.count
         else {
@@ -137,82 +121,4 @@ nonisolated enum WidgetSnapshotFreshness: Equatable, Sendable {
     case current
     case stale
     case clockAdjusted
-}
-
-nonisolated enum WidgetTimerElapsedPresentation: Equatable, Sendable {
-    case live(startedAt: Date)
-    case frozen(seconds: Int)
-}
-
-nonisolated struct WidgetTimerSnapshot: Codable, Equatable, Identifiable, Sendable {
-    var id: UUID
-    var taskID: UUID
-    var title: String
-    var path: String
-    var startedAt: Date
-    var colorHex: String?
-    var iconName: String?
-
-    nonisolated func elapsedPresentation(
-        for freshness: WidgetSnapshotFreshness,
-        generatedAt: Date
-    ) -> WidgetTimerElapsedPresentation {
-        guard freshness != .current else {
-            return .live(startedAt: startedAt)
-        }
-        let elapsed = generatedAt.timeIntervalSince(startedAt)
-        guard elapsed.isFinite else { return .frozen(seconds: 0) }
-        let boundedElapsed = min(
-            max(0, elapsed),
-            WidgetSnapshotLimits.maximumActiveTimerAge
-        )
-        return .frozen(seconds: Int(boundedElapsed.rounded(.down)))
-    }
-
-    nonisolated func isStructurallyValid(relativeTo generatedAt: Date) -> Bool {
-        guard WidgetSnapshotLimits.isFinite(startedAt),
-              WidgetSnapshotLimits.isFinite(generatedAt),
-              WidgetSnapshotLimits.isBounded(
-                  title,
-                  maximumUTF8Bytes: WidgetSnapshotLimits.maximumTitleBytes
-              ),
-              WidgetSnapshotLimits.isBounded(
-                  path,
-                  maximumUTF8Bytes: WidgetSnapshotLimits.maximumPathBytes
-              ),
-              WidgetSnapshotLimits.isValidStyleValue(colorHex),
-              WidgetSnapshotLimits.isValidStyleValue(iconName)
-        else {
-            return false
-        }
-        let age = generatedAt.timeIntervalSince(startedAt)
-        return age.isFinite &&
-            age >= -WidgetSnapshotLimits.maximumFutureClockSkew &&
-            age <= WidgetSnapshotLimits.maximumActiveTimerAge
-    }
-}
-
-nonisolated struct WidgetRecentTaskSnapshot: Codable, Equatable, Identifiable, Sendable {
-    var taskID: UUID
-    var title: String
-    var path: String
-    var colorHex: String?
-    var iconName: String?
-
-    var id: UUID {
-        taskID
-    }
-
-    nonisolated var isStructurallyValid: Bool {
-        WidgetSnapshotLimits.isBounded(
-            title,
-            maximumUTF8Bytes: WidgetSnapshotLimits.maximumTitleBytes
-        ) &&
-            WidgetSnapshotLimits.isBounded(
-                path,
-                maximumUTF8Bytes: WidgetSnapshotLimits.maximumPathBytes
-            ) &&
-            WidgetSnapshotLimits.isValidStyleValue(colorHex) &&
-            WidgetSnapshotLimits.isValidStyleValue(iconName)
-    }
 }

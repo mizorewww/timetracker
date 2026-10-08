@@ -10,18 +10,10 @@ nonisolated enum LiveActivityProjectionLimits {
         _ value: String,
         maximumUTF8Bytes: Int
     ) -> String {
-        guard value.utf8.count > maximumUTF8Bytes else { return value }
-
-        var result = ""
-        result.reserveCapacity(min(value.count, maximumUTF8Bytes))
-        var byteCount = 0
-        for character in value {
-            let characterByteCount = String(character).utf8.count
-            guard byteCount + characterByteCount <= maximumUTF8Bytes else { break }
-            result.append(character)
-            byteCount += characterByteCount
-        }
-        return result
+        SystemSurfaceTextBounds.boundedUTF8Prefix(
+            value,
+            maximumUTF8Bytes: maximumUTF8Bytes
+        )
     }
 }
 

@@ -125,8 +125,9 @@ struct WatchActiveTimerRow: View {
 
     private var elapsedPresentation: WatchTimerElapsedPresentation {
         timer.elapsedPresentation(
-            for: snapshotFreshness,
-            generatedAt: generatedAt
+            isCurrent: snapshotFreshness == .current,
+            generatedAt: generatedAt,
+            maximumActiveTimerAge: WatchTransportLimits.maximumActiveTimerAge
         )
     }
 

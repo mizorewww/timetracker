@@ -25,48 +25,17 @@ nonisolated enum WatchTransportLimits {
     static let maximumPersistedFailedCommands = 64
     static let maximumQueueEncodedBytes = 512 * 1024
 
-    static func isBounded(_ value: String, maximumUTF8Bytes: Int) -> Bool {
-        value.utf8.count <= maximumUTF8Bytes
-    }
-
-    static func isFinite(_ date: Date) -> Bool {
-        date.timeIntervalSinceReferenceDate.isFinite
-    }
-
-    static func isValidStyleValue(_ value: String?) -> Bool {
-        guard let value else { return true }
-        return isBounded(value, maximumUTF8Bytes: maximumStyleValueBytes)
-    }
-
-    static func boundedUTF8Prefix(_ value: String, maximumUTF8Bytes: Int) -> String {
-        guard value.utf8.count > maximumUTF8Bytes else { return value }
-        var result = ""
-        var byteCount = 0
-        for character in value {
-            let characterByteCount = String(character).utf8.count
-            guard byteCount + characterByteCount <= maximumUTF8Bytes else { break }
-            result.append(character)
-            byteCount += characterByteCount
-        }
-        return result
-    }
-
     static func boundedProjectedStyleValue(_ value: String?) -> String? {
-        value.map {
-            boundedUTF8Prefix($0, maximumUTF8Bytes: maximumProjectedStyleValueBytes)
-        }
-    }
-
-    static func textByteCount(
-        title: String,
-        path: String,
-        colorHex: String?,
-        iconName: String?
-    ) -> Int {
-        title.utf8.count + path.utf8.count +
-            (colorHex?.utf8.count ?? 0) + (iconName?.utf8.count ?? 0)
+        SystemSurfaceTextBounds.boundedProjectedStyleValue(
+            value,
+            maximumUTF8Bytes: maximumProjectedStyleValueBytes
+        )
     }
 }
+
+typealias WatchActiveTimerSnapshot = SystemSurfaceTimerSnapshot
+typealias WatchRecentTaskSnapshot = SystemSurfaceRecentTaskSnapshot
+typealias WatchTimerElapsedPresentation = SystemSurfaceTimerElapsedPresentation
 
 nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
     static let staleAfter: TimeInterval = 15 * 60
@@ -102,29 +71,13 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
     }
 
     nonisolated init(widgetSnapshot: WidgetSnapshot) {
-        generatedAt = widgetSnapshot.generatedAt
-        todayGrossSeconds = widgetSnapshot.todayGrossSeconds
-        todayWallSeconds = widgetSnapshot.todayWallSeconds
-        activeTimers = widgetSnapshot.activeTimers.map {
-            WatchActiveTimerSnapshot(
-                id: $0.id,
-                taskID: $0.taskID,
-                title: $0.title,
-                path: $0.path,
-                startedAt: $0.startedAt,
-                colorHex: $0.colorHex,
-                iconName: $0.iconName
-            )
-        }
-        recentTasks = widgetSnapshot.recentTasks.map {
-            WatchRecentTaskSnapshot(
-                taskID: $0.taskID,
-                title: $0.title,
-                path: $0.path,
-                colorHex: $0.colorHex,
-                iconName: $0.iconName
-            )
-        }
+        self.init(
+            generatedAt: widgetSnapshot.generatedAt,
+            todayGrossSeconds: widgetSnapshot.todayGrossSeconds,
+            todayWallSeconds: widgetSnapshot.todayWallSeconds,
+            activeTimers: widgetSnapshot.activeTimers,
+            recentTasks: widgetSnapshot.recentTasks
+        )
     }
 
     func freshness(
@@ -139,157 +92,63 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
     }
 
     func isValid(at now: Date) -> Bool {
-        let quickStartRanks = recentTasks.compactMap(\.quickStartRank)
-        let allTasksRanks = recentTasks.compactMap(\.allTasksRank)
-        let hasValidQuickStartRanks = quickStartRanks.isEmpty ||
-            Set(quickStartRanks) == Set(0 ..< quickStartRanks.count)
-        let hasValidAllTasksRanks = allTasksRanks.isEmpty ||
-            (
-                allTasksRanks.count == recentTasks.count &&
-                    Set(allTasksRanks) == Set(0 ..< recentTasks.count)
-            )
         let textByteCount = activeTimers.reduce(into: 0) { total, timer in
-            total += WatchTransportLimits.textByteCount(
+            total += SystemSurfaceTextBounds.textByteCount(
                 title: timer.title,
                 path: timer.path,
                 colorHex: timer.colorHex,
                 iconName: timer.iconName
             )
         } + recentTasks.reduce(into: 0) { total, task in
-            total += WatchTransportLimits.textByteCount(
+            total += SystemSurfaceTextBounds.textByteCount(
                 title: task.title,
                 path: task.path,
                 colorHex: task.colorHex,
                 iconName: task.iconName
             )
         }
-        guard WatchTransportLimits.isFinite(now),
-              WatchTransportLimits.isFinite(generatedAt),
+        guard SystemSurfaceTextBounds.isFinite(now),
+              SystemSurfaceTextBounds.isFinite(generatedAt),
               generatedAt.timeIntervalSince(now) <= WatchTransportLimits.maximumFutureClockSkew,
               (0 ... WatchTransportLimits.maximumSummarySeconds).contains(todayGrossSeconds),
               (0 ... WatchTransportLimits.maximumSummarySeconds).contains(todayWallSeconds),
               activeTimers.count <= WatchTransportLimits.maximumActiveTimers,
               recentTasks.count <= WatchTransportLimits.maximumRecentTasks,
               textByteCount <= WatchTransportLimits.maximumSnapshotTextBytes,
-              activeTimers.allSatisfy({ $0.isStructurallyValid(relativeTo: generatedAt) }),
-              recentTasks.allSatisfy(\.isStructurallyValid),
+              activeTimers.allSatisfy({
+                  $0.isStructurallyValid(
+                      relativeTo: generatedAt,
+                      maximumTitleBytes: WatchTransportLimits.maximumTitleBytes,
+                      maximumPathBytes: WatchTransportLimits.maximumPathBytes,
+                      maximumStyleValueBytes: WatchTransportLimits.maximumStyleValueBytes,
+                      maximumFutureClockSkew: WatchTransportLimits.maximumFutureClockSkew,
+                      maximumActiveTimerAge: WatchTransportLimits.maximumActiveTimerAge
+                  )
+              }),
+              recentTasks.allSatisfy({
+                  $0.isStructurallyValid(
+                      maximumTitleBytes: WatchTransportLimits.maximumTitleBytes,
+                      maximumPathBytes: WatchTransportLimits.maximumPathBytes,
+                      maximumStyleValueBytes: WatchTransportLimits.maximumStyleValueBytes
+                  ) && $0.hasValidRanks(
+                      maximumQuickStartTasks: WatchTransportLimits.maximumQuickStartTasks,
+                      maximumRecentTasks: WatchTransportLimits.maximumRecentTasks
+                  )
+              }),
               Set(activeTimers.map(\.id)).count == activeTimers.count,
-              Set(recentTasks.map(\.taskID)).count == recentTasks.count,
-              hasValidQuickStartRanks,
-              hasValidAllTasksRanks
+              Set(recentTasks.map(\.taskID)).count == recentTasks.count
         else {
             return false
         }
         return true
     }
 
-    /// New watch builds restore the usage order from optional metadata while
-    /// the wire array remains pinned-first for older watch builds.
     var allTasksByUsage: [WatchRecentTaskSnapshot] {
-        Array(recentTasks.enumerated())
-            .sorted { lhs, rhs in
-                switch (lhs.element.allTasksRank, rhs.element.allTasksRank) {
-                case let (lhsRank?, rhsRank?) where lhsRank != rhsRank:
-                    lhsRank < rhsRank
-                case (_?, nil):
-                    true
-                case (nil, _?):
-                    false
-                default:
-                    lhs.offset < rhs.offset
-                }
-            }
-            .map(\.element)
+        WatchRecentTaskSnapshot.orderedByUsage(recentTasks)
     }
 }
 
 nonisolated enum WatchSnapshotFreshness: Equatable, Sendable {
     case current
     case stale
-}
-
-nonisolated enum WatchTimerElapsedPresentation: Equatable, Sendable {
-    case live(startedAt: Date)
-    case frozen(seconds: Int)
-}
-
-nonisolated struct WatchActiveTimerSnapshot: Codable, Equatable, Identifiable, Sendable {
-    var id: UUID
-    var taskID: UUID
-    var title: String
-    var path: String
-    var startedAt: Date
-    var colorHex: String?
-    var iconName: String?
-
-    func elapsedPresentation(
-        for freshness: WatchSnapshotFreshness,
-        generatedAt: Date
-    ) -> WatchTimerElapsedPresentation {
-        guard freshness != .current else {
-            return .live(startedAt: startedAt)
-        }
-        let elapsed = generatedAt.timeIntervalSince(startedAt)
-        guard elapsed.isFinite else { return .frozen(seconds: 0) }
-        let boundedElapsed = min(
-            max(0, elapsed),
-            WatchTransportLimits.maximumActiveTimerAge
-        )
-        return .frozen(seconds: Int(boundedElapsed.rounded(.down)))
-    }
-
-    func isStructurallyValid(relativeTo generatedAt: Date) -> Bool {
-        guard WatchTransportLimits.isFinite(startedAt),
-              WatchTransportLimits.isFinite(generatedAt),
-              WatchTransportLimits.isBounded(
-                  title,
-                  maximumUTF8Bytes: WatchTransportLimits.maximumTitleBytes
-              ),
-              WatchTransportLimits.isBounded(
-                  path,
-                  maximumUTF8Bytes: WatchTransportLimits.maximumPathBytes
-              ),
-              WatchTransportLimits.isValidStyleValue(colorHex),
-              WatchTransportLimits.isValidStyleValue(iconName)
-        else {
-            return false
-        }
-        let age = generatedAt.timeIntervalSince(startedAt)
-        return age.isFinite &&
-            age >= -WatchTransportLimits.maximumFutureClockSkew &&
-            age <= WatchTransportLimits.maximumActiveTimerAge
-    }
-}
-
-nonisolated struct WatchRecentTaskSnapshot: Codable, Equatable, Identifiable, Sendable {
-    var taskID: UUID
-    var title: String
-    var path: String
-    var colorHex: String?
-    var iconName: String?
-    var quickStartRank: Int? = nil
-    var allTasksRank: Int? = nil
-
-    nonisolated var id: UUID {
-        taskID
-    }
-
-    var isStructurallyValid: Bool {
-        WatchTransportLimits.isBounded(
-            title,
-            maximumUTF8Bytes: WatchTransportLimits.maximumTitleBytes
-        ) &&
-            WatchTransportLimits.isBounded(
-                path,
-                maximumUTF8Bytes: WatchTransportLimits.maximumPathBytes
-            ) &&
-            WatchTransportLimits.isValidStyleValue(colorHex) &&
-            WatchTransportLimits.isValidStyleValue(iconName) &&
-            quickStartRank.map {
-                (0 ..< WatchTransportLimits.maximumQuickStartTasks).contains($0)
-            } != false &&
-            allTasksRank.map {
-                (0 ..< WatchTransportLimits.maximumRecentTasks).contains($0)
-            } != false
-    }
 }

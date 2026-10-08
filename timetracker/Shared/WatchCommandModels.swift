@@ -29,9 +29,9 @@ nonisolated extension WatchTimerCommand {
     }
 
     var isStructurallyValid: Bool {
-        guard WatchTransportLimits.isFinite(issuedAt),
+        guard SystemSurfaceTextBounds.isFinite(issuedAt),
               deviceID.isEmpty == false,
-              WatchTransportLimits.isBounded(
+              SystemSurfaceTextBounds.isBounded(
                   deviceID,
                   maximumUTF8Bytes: WatchTransportLimits.maximumDeviceIDBytes
               )
@@ -47,7 +47,7 @@ nonisolated extension WatchTimerCommand {
     }
 
     func isValid(at now: Date) -> Bool {
-        guard isStructurallyValid, WatchTransportLimits.isFinite(now) else { return false }
+        guard isStructurallyValid, SystemSurfaceTextBounds.isFinite(now) else { return false }
         let age = now.timeIntervalSince(issuedAt)
         return age.isFinite &&
             age >= -WatchTransportLimits.maximumFutureClockSkew &&
@@ -114,16 +114,16 @@ nonisolated struct WatchCommandResult: Codable, Equatable, Identifiable, Sendabl
 
 nonisolated extension WatchCommandResult {
     var isStructurallyValid: Bool {
-        guard WatchTransportLimits.isFinite(completedAt) else { return false }
+        guard SystemSurfaceTextBounds.isFinite(completedAt) else { return false }
         guard let failureCode else { return true }
-        return WatchTransportLimits.isBounded(
+        return SystemSurfaceTextBounds.isBounded(
             failureCode,
             maximumUTF8Bytes: WatchTransportLimits.maximumFailureCodeBytes
         )
     }
 
     func isValid(at now: Date) -> Bool {
-        guard isStructurallyValid, WatchTransportLimits.isFinite(now) else { return false }
+        guard isStructurallyValid, SystemSurfaceTextBounds.isFinite(now) else { return false }
         return completedAt.timeIntervalSince(now) <= WatchTransportLimits.maximumFutureClockSkew
     }
 }

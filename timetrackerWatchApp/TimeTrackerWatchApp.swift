@@ -6,20 +6,7 @@ struct TimeTrackerWatchApp: App {
 
     var body: some Scene {
         WindowGroup {
-            #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("--watch-ui-audit-large-text") {
-                WatchUIAuditRoot()
-                    .environment(\.dynamicTypeSize, .accessibility3)
-            } else if ProcessInfo.processInfo.arguments.contains(where: {
-                $0.hasPrefix("--watch-ui-audit")
-            }) {
-                WatchUIAuditRoot()
-            } else {
-                dashboard
-            }
-            #else
             dashboard
-            #endif
         }
     }
 

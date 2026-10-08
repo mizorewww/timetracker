@@ -106,11 +106,6 @@ nonisolated struct SharedWidgetSnapshotStore {
         defaults.set(data, forKey: Self.snapshotKey)
     }
 
-    func load(at now: Date = Date()) -> WidgetSnapshot? {
-        guard case let .snapshot(snapshot, _) = loadResult(at: now) else { return nil }
-        return snapshot
-    }
-
     func loadResult(at now: Date = Date()) -> WidgetSnapshotLoadResult {
         guard let defaults else { return .sharedContainerUnavailable }
         guard defaults.object(forKey: Self.snapshotKey) != nil else { return .missing }

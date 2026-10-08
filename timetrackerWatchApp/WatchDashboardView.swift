@@ -184,29 +184,9 @@ struct WatchDashboardView: View {
 
     private func selectInitialPageIfNeeded() {
         guard hasReceivedSnapshot, hasSelectedInitialPage == false else { return }
-        #if DEBUG
-        selectedPage = auditInitialPage ?? preferredInitialPage
-        #else
         selectedPage = preferredInitialPage
-        #endif
         hasSelectedInitialPage = true
     }
-
-    #if DEBUG
-    private var auditInitialPage: WatchDashboardPage? {
-        let arguments = ProcessInfo.processInfo.arguments
-        if arguments.contains("--watch-ui-audit-page-active") {
-            return .activeTimers
-        }
-        if arguments.contains("--watch-ui-audit-page-quick") {
-            return .quickStart
-        }
-        if arguments.contains("--watch-ui-audit-page-all") {
-            return .allTasks
-        }
-        return nil
-    }
-    #endif
 
     private var preferredInitialPage: WatchDashboardPage {
         if snapshot.activeTimers.isEmpty == false ||

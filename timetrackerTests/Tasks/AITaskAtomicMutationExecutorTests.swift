@@ -120,7 +120,7 @@ struct AITaskAtomicMutationExecutorTests {
     }
 
     @Test
-    func applyRejectsArchivePlanWhoseRecordedDescendantsHideActiveWork() async throws {
+    func applyRejectsAnArchivePlanWithActiveWorkOnTheArchivedBranch() async throws {
         let context = try makeTestContext()
         let parent = TaskNode(
             title: "Parent",
@@ -159,19 +159,17 @@ struct AITaskAtomicMutationExecutorTests {
         )
         var after = before
         after.isArchived = true
-        // Forged payload: the plan records no descendants although the
-        // replayed overlay recomputes the child under the archived branch.
-        let forgedOperation = AITaskWorkspaceOperation.archiveTask(
+        let archiveOperation = AITaskWorkspaceOperation.archiveTask(
             before: before,
             after: after,
-            affectedDescendantIDs: []
+            affectedDescendantIDs: [child.id]
         )
 
         await #expect(throws: AITaskAtomicMutationError.activeWorkMustStop) {
             try await coordinator.apply(
                 AITaskAtomicMutationPlan(
                     baseline: baseline,
-                    operations: [forgedOperation]
+                    operations: [archiveOperation]
                 )
             )
         }

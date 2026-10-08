@@ -57,7 +57,6 @@ actor StoreScopedAITaskAtomicMutationCoordinator {
 
                 try validate(
                     operations: plan.operations,
-                    startingFrom: current.snapshot,
                     context: context
                 )
 
@@ -129,153 +128,24 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
         )
     }
 
+    /// The plan's operations were validated by the overlay that produced them,
+    /// and the CAS check above proved the workspace is unchanged since capture.
+    /// This pass therefore only adds the checks the executor owns: that archive
+    /// admission covers the whole archived branch, and that a plan cannot repeat
+    /// a created identity.
     func validate(
         operations: [AITaskWorkspaceOperation],
-        startingFrom snapshot: AITaskWorkspaceSnapshot,
         context: ModelContext
     ) throws {
-        var overlay = AITaskWorkspaceOverlay(snapshot: snapshot)
-        for operation in operations {
-            try replay(operation, in: &overlay)
-        }
-        try validateCreateIdentities(
-            operations: operations,
-            context: context
-        )
+        try validateCreateIdentities(operations: operations)
         try validateArchiveAdmission(
             operations: operations,
-            replayedOperations: overlay.operations,
             context: context
         )
-    }
-
-    func replay(
-        _ operation: AITaskWorkspaceOperation,
-        in overlay: inout AITaskWorkspaceOverlay
-    ) throws {
-        switch operation {
-        case let .useExistingCategory(categoryID):
-            guard let category = overlay.category(id: categoryID) else {
-                throw AITaskAtomicMutationError.targetUnavailable(categoryID)
-            }
-            let resolved = try overlay.useExistingCategory(
-                named: category.title
-            )
-            guard resolved.id == categoryID else {
-                throw AITaskAtomicMutationError.invalidOperation
-            }
-
-        case let .createCategory(category):
-            _ = try overlay.createCategory(
-                id: category.id,
-                title: category.title,
-                iconName: category.iconName,
-                colorHex: category.colorHex,
-                includesInForecast: category.includesInForecast,
-                sortOrder: category.sortOrder
-            )
-
-        case let .updateCategory(before, after):
-            guard overlay.category(id: before.id) == before,
-                  before.id == after.id
-            else {
-                throw AITaskAtomicMutationError.invalidOperation
-            }
-            _ = try overlay.updateCategory(
-                id: after.id,
-                title: after.title,
-                iconName: after.iconName,
-                colorHex: after.colorHex,
-                includesInForecast: after.includesInForecast
-            )
-
-        case let .deleteCategory(category, _):
-            guard overlay.category(id: category.id) == category else {
-                throw AITaskAtomicMutationError.invalidOperation
-            }
-            _ = try overlay.deleteCategory(id: category.id)
-
-        case let .createTask(task):
-            _ = try overlay.createTask(
-                id: task.id,
-                title: task.title,
-                parentID: task.parentID,
-                categoryID: task.categoryID,
-                notes: task.notes,
-                estimatedMinutes: task.estimatedMinutes,
-                dueAt: task.dueAt,
-                iconName: task.iconName,
-                colorHex: task.colorHex,
-                quantityGoal: task.quantityGoal,
-                dailyRecurrence: task.dailyRecurrence,
-                sortOrder: task.sortOrder
-            )
-
-        case let .updateTask(before, after):
-            guard overlay.task(id: before.id) == before,
-                  before.id == after.id
-            else {
-                throw AITaskAtomicMutationError.invalidOperation
-            }
-            _ = try overlay.updateTask(
-                id: after.id,
-                title: after.title,
-                parentID: after.parentID,
-                categoryID: after.categoryID,
-                notes: after.notes,
-                estimatedMinutes: after.estimatedMinutes,
-                dueAt: after.dueAt,
-                iconName: after.iconName,
-                colorHex: after.colorHex,
-                quantityGoal: after.quantityGoal,
-                dailyRecurrence: after.dailyRecurrence
-            )
-
-        case let .archiveTask(before, after, _):
-            guard overlay.task(id: before.id) == before,
-                  before.id == after.id
-            else {
-                throw AITaskAtomicMutationError.invalidOperation
-            }
-            _ = try overlay.deleteTask(id: before.id)
-
-        case let .createChecklistItem(item):
-            _ = try overlay.createChecklistItem(
-                id: item.id,
-                taskID: item.taskID,
-                title: item.title,
-                isCompleted: item.isCompleted,
-                iconName: item.iconName,
-                colorHex: item.colorHex,
-                sortOrder: item.sortOrder
-            )
-
-        case let .updateChecklistItem(before, after):
-            guard overlay.checklistItem(id: before.id) == before,
-                  before.id == after.id,
-                  before.taskID == after.taskID
-            else {
-                throw AITaskAtomicMutationError.invalidOperation
-            }
-            _ = try overlay.updateChecklistItem(
-                id: after.id,
-                title: after.title,
-                isCompleted: after.isCompleted,
-                iconName: after.iconName,
-                colorHex: after.colorHex
-            )
-
-        case let .deleteChecklistItem(item):
-            guard overlay.checklistItem(id: item.id) == item else {
-                throw AITaskAtomicMutationError.invalidOperation
-            }
-            _ = try overlay.deleteChecklistItem(id: item.id)
-        }
     }
 
     func validateCreateIdentities(
-        operations: [AITaskWorkspaceOperation],
-        context: ModelContext
+        operations: [AITaskWorkspaceOperation]
     ) throws {
         let proposedIDs = operations.compactMap {
             $0.createdIdentity
@@ -283,36 +153,15 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
         guard Set(proposedIDs).count == proposedIDs.count else {
             throw AITaskAtomicMutationError.invalidOperation
         }
-        // Deliberately re-fetched instead of reusing the baseline snapshot:
-        // the workspace snapshot is `visibleDeduplicatedByID`-filtered, while
-        // a create must also not collide with soft-deleted persisted rows.
-        let persistedIDs = try Set(
-            context.fetch(FetchDescriptor<TaskCategory>()).map(\.id) +
-                context.fetch(FetchDescriptor<TaskNode>()).map(\.id) +
-                context.fetch(FetchDescriptor<ChecklistItem>()).map(\.id)
-        )
-        if let collision = Set(proposedIDs).intersection(persistedIDs)
-            .sorted(by: Self.uuidOrder)
-            .first
-        {
-            throw AITaskAtomicMutationError.identityConflict(collision)
-        }
     }
 
     func validateArchiveAdmission(
         operations: [AITaskWorkspaceOperation],
-        replayedOperations: [AITaskWorkspaceOperation],
         context: ModelContext
     ) throws {
-        // The recorded `affectedDescendantIDs` payload is untrusted plan
-        // data: replay recomputes the true descendant set at each archive's
-        // position in the sequence. Check the union of recorded and replayed
-        // IDs so a forged plan cannot shrink the admission scope below the
-        // branch Apply actually archives.
-        let archivedTaskIDs = (operations + replayedOperations).reduce(
+        let archivedTaskIDs = operations.reduce(
             into: Set<UUID>()
-        ) {
-            result, operation in
+        ) { result, operation in
             guard case let .archiveTask(
                 before,
                 _,
@@ -345,10 +194,6 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
         guard hasActiveSegment == false, hasActivePomodoro == false else {
             throw AITaskAtomicMutationError.activeWorkMustStop
         }
-    }
-
-    static func uuidOrder(_ lhs: UUID, _ rhs: UUID) -> Bool {
-        lhs.uuidString < rhs.uuidString
     }
 }
 

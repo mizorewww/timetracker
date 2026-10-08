@@ -24,23 +24,12 @@ extension TimeTrackerStore {
         let previousAutomaticSuggestions = defaults.object(
             forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
         )
-        let previousAppleHealthTimelineEnabled =
-            appleHealthTimelinePreferenceStore.isTimelineEnabled
-        let previousAppleHealthTaskCatalogClearRecoveryTaskIDs =
-            appleHealthTimelinePreferenceStore
-                .taskCatalogClearRecoveryTaskIDs
         var localSettingsWereCleared = false
         let didClear = perform {
             guard let modelContext else { throw StoreError.notConfigured }
             try llmCredentialStore.writeAPIKey("")
             defaults.removeObject(forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
-            appleHealthTimelinePreferenceStore.isTimelineEnabled = false
             localSettingsWereCleared = true
-            appleHealthTimelinePreferenceStore
-                .taskCatalogClearRecoveryTaskIDs =
-                try visibleAppleHealthTaskCatalogTaskIDsForClear()
-            try appleHealthReplicaRepository.clear()
-            appleHealthReplicaSyncService?.markNeedsSynchronization()
             try SeedData.clearAll(context: modelContext)
         }
         if !didClear, localSettingsWereCleared {
@@ -57,17 +46,11 @@ extension TimeTrackerStore {
             } else {
                 defaults.removeObject(forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
             }
-            appleHealthTimelinePreferenceStore.isTimelineEnabled =
-                previousAppleHealthTimelineEnabled
-            appleHealthTimelinePreferenceStore
-                .taskCatalogClearRecoveryTaskIDs =
-                previousAppleHealthTaskCatalogClearRecoveryTaskIDs
         }
         if didClear {
             selectedTaskID = nil
             tasksRoute = nil
             todayTaskRoute = nil
-            hideAppleHealthFromTimeline()
         }
     }
 
@@ -113,9 +96,8 @@ extension TimeTrackerStore {
 
     func jsonExport() throws -> String {
         guard let modelContext else { throw StoreError.notConfigured }
-        return try syncConflictService.exportUserData(
-            context: modelContext,
-            appleHealthReplica: appleHealthReplicaRepository
+        return try syncConflictService.exportCloudSyncedData(
+            context: modelContext
         )
     }
 }

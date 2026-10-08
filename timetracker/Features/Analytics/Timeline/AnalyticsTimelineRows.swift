@@ -29,11 +29,6 @@ extension OverlappingTimelineContent {
             .accessibilityHint(
                 AppStrings.localized("timeline.editSegment")
             )
-        case .appleHealthWorkout, .appleHealthSleep:
-            TimelineLegendRow(entry: entry)
-                .accessibilityIdentifier(
-                    "analytics.timeline.entry.\(entry.id.namespacedKey)"
-                )
         }
     }
 }

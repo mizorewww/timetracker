@@ -81,7 +81,6 @@ struct TaskRecentRecordPoint: Identifiable {
 struct TaskAnalyticsSnapshot {
     enum Source: Equatable, Sendable {
         case tracked
-        case appleHealth
     }
 
     let source: Source

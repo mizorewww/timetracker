@@ -34,15 +34,10 @@ nonisolated extension SwiftDataTaskRepository {
         var cursor: TaskNode? = task
         while let current = cursor {
             guard visitedTaskIDs.insert(current.id).inserted else { break }
-            guard current.isArchivedForLifecycle == false,
-                  AppleHealthTaskCatalog.syncOnlyTaskIDs.contains(current.id) == false
-            else {
+            guard current.isArchivedForLifecycle == false else {
                 return nil
             }
             guard let parentID = current.parentID else { break }
-            guard AppleHealthTaskCatalog.syncOnlyTaskIDs.contains(parentID) == false else {
-                return nil
-            }
             cursor = try self.task(id: parentID)
         }
 

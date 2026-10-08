@@ -31,7 +31,6 @@ nonisolated enum AITaskAtomicMutationError:
     case workspaceChanged
     case invalidOperation
     case identityConflict(UUID)
-    case protectedIdentity(UUID)
     case targetUnavailable(UUID)
     case activeWorkMustStop
 
@@ -43,8 +42,6 @@ nonisolated enum AITaskAtomicMutationError:
             AppStrings.localized("aiTaskPlan.error.invalidOperation")
         case .identityConflict:
             AppStrings.localized("aiTaskPlan.error.identityConflict")
-        case .protectedIdentity:
-            AppStrings.localized("aiTaskPlan.error.protectedIdentity")
         case .targetUnavailable:
             AppStrings.localized("aiTaskPlan.error.targetUnavailable")
         case .activeWorkMustStop:

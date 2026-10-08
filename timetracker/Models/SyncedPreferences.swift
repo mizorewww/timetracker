@@ -38,9 +38,6 @@ nonisolated enum AppPreferenceKey: String, CaseIterable {
 
 enum AppLocalPreferenceKey {
     static let llmAutomaticSuggestionsEnabled = "LLMAutomaticSuggestionsEnabled"
-    static let appleHealthTimelineEnabled = "AppleHealthTimelineEnabled"
-    static let appleHealthTaskCatalogClearRecoveryTaskIDs =
-        "AppleHealthTaskCatalogClearRecoveryIDs"
     static let macKeyboardShortcutOverrides = "MacKeyboardShortcutOverrides"
 }
 

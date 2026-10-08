@@ -13,8 +13,7 @@ nonisolated enum TaskParentChangeBlocker: Equatable {
 /// Resolves visibility and work eligibility for an entire hierarchy in linear
 /// time.
 ///
-/// Archived or deleted branches are hidden and cannot receive new work. Apple
-/// Health branches stay visible, but are sync-only. Legacy
+/// Archived or deleted branches are hidden and cannot receive new work. Legacy
 /// planned/active/completed raw values are inert compatibility bytes.
 nonisolated struct TaskTrackingAvailabilityService {
     func eligibility(tasks: [TaskNode]) -> TaskWorkEligibility {
@@ -31,16 +30,10 @@ nonisolated struct TaskTrackingAvailabilityService {
             ),
             childIDsByParentID: childIDsByParentID
         )
-        // Keep the complete fixed-ID seed set. During a partial CloudKit merge,
-        // a child can arrive before its generated Health parent.
-        let syncOnlyTaskIDs = descendantClosure(
-            startingWith: AppleHealthTaskCatalog.syncOnlyTaskIDs,
-            childIDsByParentID: childIDsByParentID
-        )
         let visibleTaskIDs = allTaskIDs.subtracting(hiddenTaskIDs)
         return TaskWorkEligibility(
             visibleTaskIDs: visibleTaskIDs,
-            trackableTaskIDs: visibleTaskIDs.subtracting(syncOnlyTaskIDs)
+            trackableTaskIDs: visibleTaskIDs
         )
     }
 

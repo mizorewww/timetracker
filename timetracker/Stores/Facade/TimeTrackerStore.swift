@@ -22,10 +22,6 @@ final class TimeTrackerStore {
     let llmCredentialStore: any LLMCredentialStoring
     let inboxSuggestionService: LLMInboxSuggestionService
     let checklistVisualSuggestionService: LLMChecklistVisualSuggestionService
-    let appleHealthDataReader: any AppleHealthDataReading
-    let appleHealthReplicaRepository: any AppleHealthReplicaRepository
-    let appleHealthReplicaSyncService: AppleHealthReplicaSyncService?
-    let appleHealthTimelinePreferenceStore: any AppleHealthTimelinePreferenceStoring
     let writeAuthorization: StoreWriteAuthorization
     let taskDraftRecoveryController: TaskDraftRecoveryController
     @ObservationIgnored
@@ -36,10 +32,6 @@ final class TimeTrackerStore {
         llmCredentialStore: (any LLMCredentialStoring)? = nil,
         inboxSuggestionService: LLMInboxSuggestionService? = nil,
         checklistVisualSuggestionService: LLMChecklistVisualSuggestionService? = nil,
-        appleHealthDataReader: (any AppleHealthDataReading)? = nil,
-        appleHealthReplicaRepository:
-        (any AppleHealthReplicaRepository)? = nil,
-        appleHealthTimelinePreferenceStore: (any AppleHealthTimelinePreferenceStoring)? = nil,
         writeAuthorization: StoreWriteAuthorization = .applicationState,
         syncConflictService: SyncConflictService? = nil,
         syncConflictPromptLoader: SyncConflictPromptLoader? = nil,
@@ -53,35 +45,6 @@ final class TimeTrackerStore {
         self.checklistVisualSuggestionService =
             checklistVisualSuggestionService ??
             LLMChecklistVisualSuggestionService()
-        let resolvedAppleHealthReader =
-            appleHealthDataReader ?? AppleHealthDataReaderFactory.platformDefault()
-        let resolvedAppleHealthPreferences =
-            appleHealthTimelinePreferenceStore
-                ?? UserDefaultsAppleHealthTimelinePreferenceStore()
-        let resolvedAppleHealthReplica =
-            appleHealthReplicaRepository
-                ?? AppleHealthReplicaModelContainerFactory
-                .platformDefaultRepository()
-        self.appleHealthDataReader = resolvedAppleHealthReader
-        self.appleHealthReplicaRepository = resolvedAppleHealthReplica
-        if let changeReader =
-            resolvedAppleHealthReader
-                as? any AppleHealthReplicaChangeReading
-        {
-            appleHealthReplicaSyncService = AppleHealthReplicaSyncService(
-                reader: changeReader,
-                repository: resolvedAppleHealthReplica
-            )
-        } else {
-            appleHealthReplicaSyncService = nil
-        }
-        self.appleHealthTimelinePreferenceStore = resolvedAppleHealthPreferences
-        isAppleHealthTimelineEnabled = resolvedAppleHealthPreferences.isTimelineEnabled
-        appleHealthTimelineState = if resolvedAppleHealthReader.isHealthDataAvailable {
-            resolvedAppleHealthPreferences.isTimelineEnabled ? .ready : .disabled
-        } else {
-            .unavailable
-        }
         self.writeAuthorization = writeAuthorization
         let resolvedSyncConflictService =
             syncConflictService ?? Self.defaultSyncConflictService()
@@ -113,15 +76,6 @@ final class TimeTrackerStore {
         pomodoroReconciliationTask?.cancel()
         scheduledSyncRefreshTask?.cancel()
         syncConflictPromptRefreshTask?.cancel()
-        appleHealthTimelineLoadTask?.cancel()
-        appleHealthReplicaObservationSetupTask?.cancel()
-        if let observer =
-            appleHealthDataReader as? any AppleHealthReplicaChangeObserving
-        {
-            Task { @MainActor in
-                observer.stopObservingReplicaChanges()
-            }
-        }
     }
 
     /// Domain-store passthroughs: the facade keeps no array copies of its own.
@@ -205,18 +159,6 @@ final class TimeTrackerStore {
         set { preferenceDomainStore.preferences = newValue }
     }
 
-    var isAppleHealthTimelineEnabled: Bool
-    var appleHealthTimelineItems: [AppleHealthTimelineItem] = []
-    var appleHealthTimelineState: AppleHealthTimelineState
-    var appleHealthReplicaRevision = 0
-    var appleHealthTaskCatalogErrorMessage: String?
-    @ObservationIgnored var isAppleHealthReplicaObservationActive = false
-    @ObservationIgnored var appleHealthReplicaObservationSetupID = UUID()
-    @ObservationIgnored var appleHealthReplicaObservationSetupTask:
-        Task<Void, Never>?
-    @ObservationIgnored var appleHealthTimelineRequestID = UUID()
-    @ObservationIgnored var appleHealthTimelineLoadTask:
-        Task<AppleHealthSampleBatch, Error>?
     var persistenceWriteSafety = AppCloudSync.persistenceWriteSafety
     var effectivePersistenceWriteSafety: PersistenceWriteSafety {
         guard writeAuthorization.usesApplicationState else { return .ready }

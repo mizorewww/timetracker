@@ -136,7 +136,6 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
     ) throws {
         var overlay = AITaskWorkspaceOverlay(snapshot: snapshot)
         for operation in operations {
-            try validateProtectedIdentities(in: operation)
             try replay(operation, in: &overlay)
         }
         try validateCreateIdentities(
@@ -274,17 +273,6 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
         }
     }
 
-    func validateProtectedIdentities(
-        in operation: AITaskWorkspaceOperation
-    ) throws {
-        guard let affectedID = operation.affectedIdentity,
-              Self.protectedAppleHealthIDs.contains(affectedID)
-        else {
-            return
-        }
-        throw AITaskAtomicMutationError.protectedIdentity(affectedID)
-    }
-
     func validateCreateIdentities(
         operations: [AITaskWorkspaceOperation],
         context: ModelContext
@@ -357,14 +345,6 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
         guard hasActiveSegment == false, hasActivePomodoro == false else {
             throw AITaskAtomicMutationError.activeWorkMustStop
         }
-    }
-
-    static var protectedAppleHealthIDs: Set<UUID> {
-        let plan = AppleHealthTaskCatalog.plan(
-            for: AppleHealthTaskCatalog.allRoles
-        )
-        return Set(plan.categories.map(\.id))
-            .union(AppleHealthTaskCatalog.syncOnlyTaskIDs)
     }
 
     static func uuidOrder(_ lhs: UUID, _ rhs: UUID) -> Bool {

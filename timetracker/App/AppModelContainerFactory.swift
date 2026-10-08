@@ -22,6 +22,7 @@ extension timetrackerApp {
         }
 
         let storeURL = AppCloudSync.persistentStoreURL
+        AppleHealthLegacyCleanup.runIfNeeded()
         let cloudConfiguration = ModelConfiguration(
             "TimeTracker",
             schema: schema,

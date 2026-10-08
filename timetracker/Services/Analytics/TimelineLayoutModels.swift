@@ -2,25 +2,14 @@ import Foundation
 
 nonisolated enum TimelineEntryID: Hashable, Sendable {
     case trackedSegment(UUID)
-    case appleHealthWorkout(UUID)
-    case appleHealthSleep(UUID)
 
     var namespace: String {
-        switch self {
-        case .trackedSegment:
-            "trackedSegment"
-        case .appleHealthWorkout:
-            "appleHealthWorkout"
-        case .appleHealthSleep:
-            "appleHealthSleep"
-        }
+        "trackedSegment"
     }
 
     var uuid: UUID {
         switch self {
-        case let .trackedSegment(id),
-             let .appleHealthWorkout(id),
-             let .appleHealthSleep(id):
+        case let .trackedSegment(id):
             id
         }
     }
@@ -33,10 +22,6 @@ nonisolated enum TimelineEntryID: Hashable, Sendable {
         switch self {
         case let .trackedSegment(id):
             "0|\(id.uuidString)"
-        case let .appleHealthWorkout(id):
-            "1|\(id.uuidString)"
-        case let .appleHealthSleep(anchorSampleID):
-            "2|\(anchorSampleID.uuidString)"
         }
     }
 }

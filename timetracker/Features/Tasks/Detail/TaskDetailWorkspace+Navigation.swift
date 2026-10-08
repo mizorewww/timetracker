@@ -102,7 +102,6 @@ extension TaskDetailWorkspace {
     }
 
     func registerNavigationGuard() {
-        let draftRecoveryController = store.taskDraftRecoveryController
         navigationGuardRegistration.attach(
             to: store.taskDetailNavigationGuard
         )
@@ -123,12 +122,10 @@ extension TaskDetailWorkspace {
             },
             discardChanges: { [weak session] in
                 guard let session else { return false }
-                do {
-                    try draftRecoveryController.remove(for: taskID)
-                } catch {
-                    session.store.errorMessage =
-                        TaskDraftRecoveryErrorPresentation
-                            .removalFailureMessage(for: error)
+                guard TaskDraftRecoveryErrorPresentation.removeDraftRecovery(
+                    for: taskID,
+                    in: session.store
+                ) else {
                     return false
                 }
                 session.discardChanges()

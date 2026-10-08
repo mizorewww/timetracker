@@ -73,14 +73,8 @@ extension TaskDetailWorkspace {
         isFinishingRecoveryCleanup = true
         Task {
             defer { isFinishingRecoveryCleanup = false }
-            do {
-                try await store.taskDraftRecoveryController
-                    .removeInBackground(for: taskID)
-            } catch {
-                store.errorMessage = TaskDraftRecoveryErrorPresentation
-                    .removalFailureMessage(for: error)
-                return
-            }
+            guard await TaskDraftRecoveryErrorPresentation.removeDraftRecoveryInBackground(for: taskID, in: store)
+            else { return }
             guard savedRecoveryCopyTaskID == savedTaskID else { return }
             isCompletingRecoveryNavigation = true
             savedRecoveryCopyTaskID = nil
@@ -107,14 +101,10 @@ extension TaskDetailWorkspace {
 
     @discardableResult
     func clearPersistedDraftRecovery() -> Bool {
-        do {
-            try store.taskDraftRecoveryController.remove(for: taskID)
-            return true
-        } catch {
-            store.errorMessage = TaskDraftRecoveryErrorPresentation
-                .removalFailureMessage(for: error)
-            return false
-        }
+        TaskDraftRecoveryErrorPresentation.removeDraftRecovery(
+            for: taskID,
+            in: store
+        )
     }
 
     private var recoveredTaskDraft: TaskEditorDraft {
@@ -146,5 +136,38 @@ enum TaskDraftRecoveryErrorPresentation {
             ),
             error.localizedDescription
         )
+    }
+
+    /// Removes a persisted recovery draft, reporting any failure on the store.
+    @MainActor
+    @discardableResult
+    static func removeDraftRecovery(
+        for taskID: UUID,
+        in store: TimeTrackerStore
+    ) -> Bool {
+        do {
+            try store.taskDraftRecoveryController.remove(for: taskID)
+            return true
+        } catch {
+            store.errorMessage = removalFailureMessage(for: error)
+            return false
+        }
+    }
+
+    /// Background variant of ``removeDraftRecovery(for:in:)``.
+    @MainActor
+    @discardableResult
+    static func removeDraftRecoveryInBackground(
+        for taskID: UUID,
+        in store: TimeTrackerStore
+    ) async -> Bool {
+        do {
+            try await store.taskDraftRecoveryController
+                .removeInBackground(for: taskID)
+            return true
+        } catch {
+            store.errorMessage = removalFailureMessage(for: error)
+            return false
+        }
     }
 }

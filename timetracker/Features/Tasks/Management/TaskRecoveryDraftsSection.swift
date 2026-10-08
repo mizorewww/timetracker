@@ -230,13 +230,8 @@ struct TaskRecoveryDraftsSection: View {
         discardingIDs.insert(sourceTaskID)
         Task {
             defer { discardingIDs.remove(sourceTaskID) }
-            do {
-                try await store.taskDraftRecoveryController
-                    .removeInBackground(for: sourceTaskID)
+            if await TaskDraftRecoveryErrorPresentation.removeDraftRecoveryInBackground(for: sourceTaskID, in: store) {
                 records.removeAll { $0.sourceTaskID == sourceTaskID }
-            } catch {
-                store.errorMessage = TaskDraftRecoveryErrorPresentation
-                    .removalFailureMessage(for: error)
             }
         }
     }

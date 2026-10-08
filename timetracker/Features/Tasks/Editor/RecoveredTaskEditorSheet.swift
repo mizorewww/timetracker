@@ -133,15 +133,11 @@ struct RecoveredTaskEditorSheet: View {
         isFinishingCleanup = true
         Task {
             defer { isFinishingCleanup = false }
-            do {
-                try await store.taskDraftRecoveryController
-                    .removeInBackground(for: presentation.sourceTaskID)
-                savedTaskID = nil
-                dismiss()
-            } catch {
-                store.errorMessage = TaskDraftRecoveryErrorPresentation
-                    .removalFailureMessage(for: error)
-            }
+            guard await TaskDraftRecoveryErrorPresentation
+                .removeDraftRecoveryInBackground(for: presentation.sourceTaskID, in: store)
+            else { return }
+            savedTaskID = nil
+            dismiss()
         }
     }
 
@@ -150,14 +146,10 @@ struct RecoveredTaskEditorSheet: View {
         isDiscarding = true
         Task {
             defer { isDiscarding = false }
-            do {
-                try await store.taskDraftRecoveryController
-                    .removeInBackground(for: presentation.sourceTaskID)
-                dismiss()
-            } catch {
-                store.errorMessage = TaskDraftRecoveryErrorPresentation
-                    .removalFailureMessage(for: error)
-            }
+            guard await TaskDraftRecoveryErrorPresentation
+                .removeDraftRecoveryInBackground(for: presentation.sourceTaskID, in: store)
+            else { return }
+            dismiss()
         }
     }
 }

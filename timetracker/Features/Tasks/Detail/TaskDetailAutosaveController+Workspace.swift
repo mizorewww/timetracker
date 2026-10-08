@@ -60,11 +60,9 @@ extension TaskDetailAutosaveController {
         store: TimeTrackerStore,
         taskID: UUID
     ) {
-        do {
-            try store.taskDraftRecoveryController.remove(for: taskID)
-        } catch {
-            store.errorMessage = TaskDraftRecoveryErrorPresentation
-                .removalFailureMessage(for: error)
-        }
+        TaskDraftRecoveryErrorPresentation.removeDraftRecovery(
+            for: taskID,
+            in: store
+        )
     }
 }

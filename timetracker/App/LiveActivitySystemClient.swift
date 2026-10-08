@@ -53,30 +53,7 @@ nonisolated struct LiveActivityRegistration: Equatable, Sendable {
 }
 
 @MainActor
-protocol LiveActivitySystemClient: AnyObject {
-    var areActivitiesEnabled: Bool { get }
-    var activities: [LiveActivityRegistration] { get }
-
-    func activityEnablementUpdates() -> AsyncStream<Bool>
-    func activityStateUpdates(
-        for activityID: String
-    ) -> AsyncStream<LiveActivityLifecycleState>
-    func request(
-        attributes: TimeTrackingActivityAttributes,
-        content: ActivityContent<TimeTrackingActivityAttributes.ContentState>
-    ) throws -> LiveActivityRegistration
-    func update(
-        activityID: String,
-        content: ActivityContent<TimeTrackingActivityAttributes.ContentState>
-    ) async -> LiveActivityRegistration?
-    func end(
-        activityID: String,
-        content: ActivityContent<TimeTrackingActivityAttributes.ContentState>
-    ) async
-}
-
-@MainActor
-final class ActivityKitLiveActivitySystemClient: LiveActivitySystemClient {
+final class ActivityKitLiveActivitySystemClient {
     private let authorizationInfo = ActivityAuthorizationInfo()
     private var knownActivities: [
         String: Activity<TimeTrackingActivityAttributes>

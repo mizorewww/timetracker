@@ -98,7 +98,7 @@ final class LiveActivityCoordinator {
     private(set) var status: LiveActivityStatus
 
     @ObservationIgnored private var lastRequest: Request?
-    @ObservationIgnored private let client: any LiveActivitySystemClient
+    @ObservationIgnored private let client: ActivityKitLiveActivitySystemClient
     @ObservationIgnored private var authorizationObservationTask: Task<Void, Never>?
     @ObservationIgnored private var activityStateObservationTask: Task<Void, Never>?
     @ObservationIgnored private var observedActivityID: String?
@@ -109,7 +109,7 @@ final class LiveActivityCoordinator {
         await reconcile(state)
     }
 
-    init(client: any LiveActivitySystemClient) {
+    init(client: ActivityKitLiveActivitySystemClient) {
         self.client = client
         status = client.areActivitiesEnabled
             ? .ready

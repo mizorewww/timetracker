@@ -196,4 +196,145 @@ extension SyncDataSnapshot {
             committedResultByCommandKey[receipt.commandKey] = result
         }
     }
+
+    /// Value-level checks for the task-progress records. Canonical identity,
+    /// day-key and cross-record re-derivation are deliberately not repeated
+    /// here: the sidecar already passed the manifest's byte-count and SHA-256
+    /// check, and restore writes each record's own identity verbatim.
+    private func validateTaskProgressSemantics() throws {
+        for record in taskRecurrenceRules ?? [] {
+            guard TaskRecurrenceCadence(rawValue: record.cadenceRaw) != nil else {
+                throw invalidTaskProgressRawValue(
+                    table: .taskRecurrenceRules,
+                    id: record.id,
+                    field: "cadenceRaw",
+                    value: record.cadenceRaw
+                )
+            }
+            try requireTimeZoneIdentifier(
+                record.timeZoneIdentifier,
+                table: .taskRecurrenceRules,
+                id: record.id
+            )
+        }
+
+        for record in taskRecurrenceOccurrences ?? [] {
+            try requireTimeZoneIdentifier(
+                record.timeZoneIdentifier,
+                table: .taskRecurrenceOccurrences,
+                id: record.id
+            )
+        }
+
+        for record in taskQuantityGoals ?? [] {
+            try requireQuantityValue(
+                record.targetAmount,
+                table: .taskQuantityGoals,
+                id: record.id,
+                field: "targetAmount"
+            )
+            guard record.unitLabel.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ).isEmpty == false,
+                record.unitLabel.unicodeScalars.contains(
+                    where: CharacterSet.controlCharacters.contains
+                ) == false
+            else {
+                throw invalidTaskProgressRawValue(
+                    table: .taskQuantityGoals,
+                    id: record.id,
+                    field: "unitLabel",
+                    value: record.unitLabel
+                )
+            }
+            try requireMaximumBytes(
+                record.unitLabel,
+                maximum: TaskQuantityPolicy.maximumUnitLabelByteCount,
+                table: .taskQuantityGoals,
+                id: record.id,
+                field: "unitLabel"
+            )
+        }
+
+        for record in taskQuantityEntries ?? [] {
+            try requireQuantityValue(
+                record.amount,
+                table: .taskQuantityEntries,
+                id: record.id,
+                field: "amount"
+            )
+        }
+    }
+
+    private func requireTimeZoneIdentifier(
+        _ value: String,
+        table: SyncSnapshotTable,
+        id: UUID
+    ) throws {
+        guard TimeZone(identifier: value) != nil else {
+            throw invalidTaskProgressRawValue(
+                table: table,
+                id: id,
+                field: "timeZoneIdentifier",
+                value: value
+            )
+        }
+        try requireMaximumBytes(
+            value,
+            maximum: TaskRecurrencePolicy.maximumTimeZoneIdentifierByteCount,
+            table: table,
+            id: id,
+            field: "timeZoneIdentifier"
+        )
+    }
+
+    private func requireQuantityValue(
+        _ value: Int,
+        table: SyncSnapshotTable,
+        id: UUID,
+        field: String
+    ) throws {
+        guard TaskQuantityPolicy.valueRange.contains(value) else {
+            throw SyncDataSnapshotPreflightError.invalidInteger(
+                table: table,
+                id: id,
+                field: field,
+                value: value,
+                allowed: "\(TaskQuantityPolicy.valueRange)"
+            )
+        }
+    }
+
+    private func requireMaximumBytes(
+        _ value: String,
+        maximum: Int,
+        table: SyncSnapshotTable,
+        id: UUID,
+        field: String
+    ) throws {
+        let actual = value.utf8.count
+        guard actual <= maximum else {
+            throw SyncDataSnapshotPreflightError.fieldByteLimitExceeded(
+                table: table,
+                id: id,
+                field: field,
+                actual: actual,
+                maximum: maximum
+            )
+        }
+    }
+
+    private func invalidTaskProgressRawValue(
+        table: SyncSnapshotTable,
+        id: UUID,
+        field: String,
+        value: String
+    ) -> SyncDataSnapshotPreflightError {
+        .invalidRawValue(
+            table: table,
+            id: id,
+            field: field,
+            value: value
+        )
+    }
 }

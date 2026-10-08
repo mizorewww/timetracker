@@ -51,59 +51,33 @@ enum SyncDataSnapshotPreflightError: LocalizedError, Equatable {
     case inconsistentInboxSuggestionIdentity(id: UUID, inboxItemID: UUID)
     case inconsistentInboxCaptureReceipt(id: UUID, inboxItemID: UUID)
     case inconsistentInboxCaptureCommandKey(commandKey: String)
-    case nonCanonicalIdentity(
-        table: SyncSnapshotTable,
-        id: UUID,
-        expectedID: UUID
-    )
-    case mismatchedReference(
-        table: SyncSnapshotTable,
-        id: UUID,
-        field: String,
-        expectedID: UUID,
-        actualID: UUID?
-    )
-    case inconsistentStringValue(
-        table: SyncSnapshotTable,
-        id: UUID,
-        field: String,
-        expected: String,
-        actual: String
-    )
 
     var errorDescription: String? {
         switch self {
         case let .tableRecordLimitExceeded(table, actual, maximum):
-            return "Sync snapshot table \(table.rawValue) has \(actual) records; maximum is \(maximum)."
+            "Sync snapshot table \(table.rawValue) has \(actual) records; maximum is \(maximum)."
         case let .totalRecordLimitExceeded(actual, maximum):
-            return "Sync snapshot has \(actual) records; maximum is \(maximum)."
+            "Sync snapshot has \(actual) records; maximum is \(maximum)."
         case let .duplicateIdentifier(table, id):
-            return "Sync snapshot table \(table.rawValue) repeats identifier \(id.uuidString)."
+            "Sync snapshot table \(table.rawValue) repeats identifier \(id.uuidString)."
         case let .fieldByteLimitExceeded(table, id, field, actual, maximum):
-            return "Sync snapshot \(table.rawValue).\(field) for \(id.uuidString) is \(actual) UTF-8 bytes; maximum is \(maximum)."
+            "Sync snapshot \(table.rawValue).\(field) for \(id.uuidString) is \(actual) UTF-8 bytes; maximum is \(maximum)."
         case let .invalidRawValue(table, id, field, value):
-            return "Sync snapshot \(table.rawValue).\(field) for \(id.uuidString) has unsupported value '\(value)'."
+            "Sync snapshot \(table.rawValue).\(field) for \(id.uuidString) has unsupported value '\(value)'."
         case let .invalidInteger(table, id, field, value, allowed):
-            return "Sync snapshot \(table.rawValue).\(field) for \(id.uuidString) is \(value); expected \(allowed)."
+            "Sync snapshot \(table.rawValue).\(field) for \(id.uuidString) is \(value); expected \(allowed)."
         case let .invalidPreferenceKey(id, key):
-            return "Sync snapshot preference key '\(key)' for \(id.uuidString) is empty or contains control characters."
+            "Sync snapshot preference key '\(key)' for \(id.uuidString) is empty or contains control characters."
         case let .invalidPreferenceValue(id, key):
-            return "Sync snapshot preference \(key) for \(id.uuidString) does not contain the expected JSON value type."
+            "Sync snapshot preference \(key) for \(id.uuidString) does not contain the expected JSON value type."
         case let .inconsistentSessionTask(table, id, sessionID, expectedTaskID, actualTaskID):
-            return "Sync snapshot \(table.rawValue) record \(id.uuidString) references session \(sessionID.uuidString) for task \(expectedTaskID.uuidString), not \(actualTaskID.uuidString)."
+            "Sync snapshot \(table.rawValue) record \(id.uuidString) references session \(sessionID.uuidString) for task \(expectedTaskID.uuidString), not \(actualTaskID.uuidString)."
         case let .inconsistentInboxSuggestionIdentity(id, inboxItemID):
-            return "Sync snapshot Inbox suggestion \(id.uuidString) disagrees with Inbox item \(inboxItemID.uuidString) about logical suggestion identity."
+            "Sync snapshot Inbox suggestion \(id.uuidString) disagrees with Inbox item \(inboxItemID.uuidString) about logical suggestion identity."
         case let .inconsistentInboxCaptureReceipt(id, inboxItemID):
-            return "Sync snapshot Inbox capture receipt \(id.uuidString) references missing Inbox item \(inboxItemID.uuidString)."
+            "Sync snapshot Inbox capture receipt \(id.uuidString) references missing Inbox item \(inboxItemID.uuidString)."
         case let .inconsistentInboxCaptureCommandKey(commandKey):
-            return "Sync snapshot Inbox capture receipts disagree about the committed result for external command key '\(commandKey)'."
-        case let .nonCanonicalIdentity(table, id, expectedID):
-            return "Sync snapshot \(table.rawValue) identifier \(id.uuidString) is not canonical; expected \(expectedID.uuidString)."
-        case let .mismatchedReference(table, id, field, expectedID, actualID):
-            let actual = actualID?.uuidString ?? "nil"
-            return "Sync snapshot \(table.rawValue).\(field) for \(id.uuidString) is \(actual); expected \(expectedID.uuidString)."
-        case let .inconsistentStringValue(table, id, field, expected, actual):
-            return "Sync snapshot \(table.rawValue).\(field) for \(id.uuidString) is '\(actual)'; expected \(expected)."
+            "Sync snapshot Inbox capture receipts disagree about the committed result for external command key '\(commandKey)'."
         }
     }
 }
@@ -117,6 +91,9 @@ nonisolated enum SyncDataSnapshotRestoreLimits {
 }
 
 extension SyncDataSnapshot {
+    /// Validates a snapshot before it is restored as local winner. The sidecar
+    /// has already passed the manifest's byte-count and SHA-256 check; this
+    /// pass rejects structurally inconsistent domain content.
     func validateForRestore() throws {
         try validateRecordCounts()
         try validateUniqueIdentifiers()

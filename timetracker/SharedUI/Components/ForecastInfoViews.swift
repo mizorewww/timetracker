@@ -63,9 +63,7 @@ struct ForecastInfoView: View {
             }
             .accessibilityIdentifier("home.info.forecast")
             .navigationTitle(AppStrings.localized("forecast.info.title"))
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
+            .appInlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(AppStrings.done) {

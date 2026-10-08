@@ -91,9 +91,7 @@ struct TaskCategoryPicker: View {
         #endif
         .navigationTitle(context.navigationTitle)
         .accessibilityIdentifier(context.accessibilityIdentifier)
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
+        .appInlineNavigationTitle()
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button(AppStrings.cancel, action: onDismiss)
@@ -143,11 +141,7 @@ struct TaskCategoryPicker: View {
                 "\(context.accessibilityIdentifier).select.\(option.id.uuidString)"
             )
         }
-        #if os(iOS)
-        .listStyle(.insetGrouped)
-        #else
-        .listStyle(.inset)
-        #endif
+        .appSheetListStyle()
         .scrollContentBackground(.hidden)
     }
 

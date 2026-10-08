@@ -134,9 +134,7 @@ struct LLMConfigurationEditor: View {
             }
             .formStyle(.grouped)
             .navigationTitle(AppStrings.localized("settings.llm.configure"))
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
+            .appInlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(AppStrings.cancel, action: requestDismiss)

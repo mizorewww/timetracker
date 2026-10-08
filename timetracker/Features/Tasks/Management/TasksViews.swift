@@ -85,9 +85,7 @@ struct TasksView: View {
             )
         )
         .navigationTitle(AppStrings.tasks)
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
+        .appInlineNavigationTitle()
         .accessibilityIdentifier("tasks.view")
         #if os(iOS)
         .listStyle(.insetGrouped)

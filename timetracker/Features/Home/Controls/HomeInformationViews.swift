@@ -190,9 +190,7 @@ private struct HomeSectionInformationView: View {
             }
             .accessibilityIdentifier(viewIdentifier)
             .navigationTitle(title)
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
+            .appInlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(AppStrings.done) {

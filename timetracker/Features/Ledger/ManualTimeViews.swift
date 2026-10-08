@@ -95,9 +95,7 @@ struct ManualTimePanel: View {
             }
             .formStyle(.grouped)
             .navigationTitle(AppStrings.localized("manual.title"))
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
+            .appInlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(AppStrings.cancel) {

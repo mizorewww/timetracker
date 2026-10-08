@@ -94,9 +94,7 @@ struct TaskEditorPanel: View {
                 ? AppStrings.localized("editor.task.newTitle")
                 : AppStrings.localized("editor.task.editTitle")
         )
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
+        .appInlineNavigationTitle()
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {

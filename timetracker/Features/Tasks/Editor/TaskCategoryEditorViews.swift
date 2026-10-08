@@ -65,9 +65,7 @@ struct TaskCategoryEditorSheet: View {
             }
             .formStyle(.grouped)
             .navigationTitle(initialDraft.categoryID == nil ? AppStrings.localized("taskCategory.new") : AppStrings.localized("taskCategory.edit"))
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
+            .appInlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(AppStrings.cancel) {

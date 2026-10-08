@@ -57,12 +57,8 @@ struct RecoveredTaskEditorSheet: View {
                 .navigationTitle(
                     AppStrings.localized("tasks.recovery.saved.title")
                 )
-                #if os(iOS)
-                .navigationBarTitleDisplayMode(.inline)
-                .listStyle(.insetGrouped)
-                #else
-                .listStyle(.inset)
-                #endif
+                .appInlineNavigationTitle()
+                .appSheetListStyle()
             }
         }
         .platformSheetFrame(width: 520, height: 620)

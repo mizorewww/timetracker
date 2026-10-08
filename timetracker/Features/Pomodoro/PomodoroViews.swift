@@ -43,9 +43,7 @@ struct PomodoroView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle(AppStrings.focus)
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
+        .appInlineNavigationTitle()
         .accessibilityIdentifier("pomodoro.view")
         .background(PomodoroBackgroundColor().ignoresSafeArea())
         .onAppear {

@@ -185,9 +185,7 @@ struct TaskQuantityEntryEditorSheet: View {
                         : "task.quantity.entry.editor.addTitle"
                 )
             )
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
+            .appInlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(AppStrings.cancel, action: requestCancel)

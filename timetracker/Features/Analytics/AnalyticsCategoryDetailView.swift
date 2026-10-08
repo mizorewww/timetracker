@@ -80,11 +80,7 @@ struct AnalyticsCategoryDetailView: View {
                 request: request
             )
         }
-        #if os(iOS)
-        .listStyle(.insetGrouped)
-        #else
-        .listStyle(.inset)
-        #endif
+        .appSheetListStyle()
         .contentMargins(
             .bottom,
             dynamicTypeSize.isAccessibilitySize ? 112 : 16,
@@ -94,9 +90,7 @@ struct AnalyticsCategoryDetailView: View {
         .background(AppColors.background)
         .navigationTitle(category.destinationTitle)
         .accessibilityIdentifier("analytics.categoryDetail.\(category.rawValue)")
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
+        .appInlineNavigationTitle()
         .transaction { transaction in
             transaction.animation = nil
         }

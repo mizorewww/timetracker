@@ -128,9 +128,7 @@ struct SegmentEditorPanel: View {
             .formStyle(.grouped)
             .accessibilityIdentifier("segmentEditor.view")
             .navigationTitle(AppStrings.localized("segment.edit.title"))
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
+            .appInlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(AppStrings.cancel) {

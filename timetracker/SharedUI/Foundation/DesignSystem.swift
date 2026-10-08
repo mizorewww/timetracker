@@ -96,6 +96,27 @@ extension View {
         self
         #endif
     }
+
+    /// Native list style for a sheet/pushed surface: inset-grouped on iOS,
+    /// plain inset elsewhere.
+    @ViewBuilder
+    func appSheetListStyle() -> some View {
+        #if os(iOS)
+        listStyle(.insetGrouped)
+        #else
+        listStyle(.inset)
+        #endif
+    }
+
+    /// Inline navigation title on platforms that support it; no-op on macOS.
+    @ViewBuilder
+    func appInlineNavigationTitle() -> some View {
+        #if os(iOS)
+        navigationBarTitleDisplayMode(.inline)
+        #else
+        self
+        #endif
+    }
 }
 
 struct AppRowIcon: View {

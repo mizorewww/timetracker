@@ -14,9 +14,7 @@ private struct TaskDetailNavigationModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .navigationTitle(store.task(for: taskID)?.title ?? AppStrings.localized("task.detail.title"))
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
+            .appInlineNavigationTitle()
             .navigationBarBackButtonHidden(
                 isSourceUnavailable &&
                     session.hasUnsavedChanges

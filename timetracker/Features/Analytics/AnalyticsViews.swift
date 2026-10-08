@@ -109,9 +109,7 @@ struct AnalyticsView: View {
             }
         }
         .navigationTitle(AppStrings.analytics)
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
+        .appInlineNavigationTitle()
         .accessibilityIdentifier("analytics.view")
         .background(AppColors.background)
         .onChange(of: range) { _, range in

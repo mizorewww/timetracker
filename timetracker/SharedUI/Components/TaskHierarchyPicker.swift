@@ -74,9 +74,7 @@ struct TaskHierarchyPicker: View {
         #endif
         .navigationTitle(navigationTitle)
         .accessibilityIdentifier(accessibilityIdentifier)
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
+        .appInlineNavigationTitle()
         .onAppear {
             revealSelectedTasks(selectedTaskIDs)
         }

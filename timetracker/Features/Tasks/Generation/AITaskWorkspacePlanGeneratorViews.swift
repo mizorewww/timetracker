@@ -56,9 +56,7 @@ struct AITaskPlanGeneratorSheet: View {
                 }
             }
             .navigationTitle(AppStrings.localized("aiTaskPlan.title"))
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
+            .appInlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(AppStrings.cancel, action: requestDismiss)

@@ -23,11 +23,7 @@ struct AnalyticsHeatmapView: View {
                         container: .listSection
                     )
                 }
-                #if os(iOS)
-                .listStyle(.insetGrouped)
-                #else
-                .listStyle(.inset)
-                #endif
+                .appSheetListStyle()
                 .contentMargins(
                     .bottom,
                     dynamicTypeSize.isAccessibilitySize ? 112 : 16,
@@ -41,8 +37,6 @@ struct AnalyticsHeatmapView: View {
         .navigationTitle(
             AnalyticsStandalonePage.heatmaps.destinationTitle
         )
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
+        .appInlineNavigationTitle()
     }
 }

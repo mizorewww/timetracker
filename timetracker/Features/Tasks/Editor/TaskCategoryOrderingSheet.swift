@@ -38,9 +38,7 @@ struct TaskCategoryOrderingSheet: View {
             .environment(\.editMode, .constant(.active))
             #endif
             .navigationTitle(AppStrings.localized("taskCategory.sort"))
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
+            .appInlineNavigationTitle()
             .accessibilityIdentifier("taskCategory.sorter")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

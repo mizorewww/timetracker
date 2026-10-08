@@ -36,11 +36,7 @@ struct AnalyticsContent: View {
                 standalonePageLinks(AnalyticsStandalonePage.homePages)
             }
         }
-        #if os(iOS)
-        .listStyle(.insetGrouped)
-        #else
-        .listStyle(.inset)
-        #endif
+        .appSheetListStyle()
         .contentMargins(
             .bottom,
             dynamicTypeSize.isAccessibilitySize ? 112 : 16,

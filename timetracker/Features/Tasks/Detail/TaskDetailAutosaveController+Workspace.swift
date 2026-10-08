@@ -5,7 +5,8 @@ extension TaskDetailAutosaveController {
         store: TimeTrackerStore,
         session: TaskEditorSession,
         taskID: UUID,
-        returnDestination: TimeTrackerStore.DesktopDestination
+        returnDestination: TimeTrackerStore.DesktopDestination,
+        recoveryController: TaskDraftRecoveryController
     ) -> TaskDetailAutosaveController {
         TaskDetailAutosaveController(
             delay: .milliseconds(450)
@@ -28,10 +29,9 @@ extension TaskDetailAutosaveController {
                 ) else {
                     return .conflicted
                 }
-                removeRecoveryAfterSave(
-                    store: store,
-                    taskID: taskID
-                )
+                Task {
+                    await recoveryController.remove(for: taskID)
+                }
                 return .saved
             case .stale:
                 return .conflicted
@@ -53,16 +53,6 @@ extension TaskDetailAutosaveController {
                 hasUnsavedChanges: session.hasUnsavedChanges,
                 isValid: session.isPersistenceValid
             )
-        )
-    }
-
-    private static func removeRecoveryAfterSave(
-        store: TimeTrackerStore,
-        taskID: UUID
-    ) {
-        TaskDraftRecoveryErrorPresentation.removeDraftRecovery(
-            for: taskID,
-            in: store
         )
     }
 }

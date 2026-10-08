@@ -638,6 +638,7 @@
 "task.editor.recovery.removeFailed" = "The draft was kept because its recovery copy could not be removed. %@";
 "task.editor.recovery.removeSuperseded" = "The draft changed while it was being discarded, so the newer version was kept.";
 "task.editor.recovery.invalidCopy" = "This recovery draft could not be prepared as a new task.";
+"task.editor.recovery.restored.message" = "Restored your unsaved changes from before the last session.";
 "tasks.recovery.title" = "Recovered Drafts";
 "tasks.recovery.footer" = "Use More to restore an archived original. If the original is gone, review the draft to save it as a new task, or discard it when no longer needed.";
 "tasks.recovery.originalArchived" = "Original task archived";

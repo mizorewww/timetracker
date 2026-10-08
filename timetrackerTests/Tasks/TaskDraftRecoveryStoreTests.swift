@@ -146,7 +146,7 @@ struct TaskDraftRecoveryStoreTests {
     }
 
     @Test
-    func recoverableRecordsSortNewestFirstAndCleanupRemovesOnlyInvalidEntries() throws {
+    func removeExpiredDropsOnlyExpiredEntries() throws {
         let directory = makeScratchDirectory()
         let firstTaskID = UUID()
         let secondTaskID = UUID()
@@ -164,23 +164,20 @@ struct TaskDraftRecoveryStoreTests {
             makeDraft(taskID: secondTaskID, title: "Newer draft"),
             for: secondTaskID
         )
-        let corruptTaskID = UUID()
-        let corruptURL = directory.appendingPathComponent(
-            store.fileName(for: corruptTaskID)
+
+        #expect(try store.removeExpired() == 0)
+        #expect(
+            try store.load(
+                for: secondTaskID,
+                currentDraft: makeDraft(taskID: secondTaskID)
+            )?.title == "Newer draft"
         )
-        try Data("{".utf8).write(to: corruptURL)
-
-        let records = try store.recoverableRecords()
-
-        #expect(records.map(\.sourceTaskID) == [secondTaskID, firstTaskID])
-        #expect(records.map(\.draft.title) == ["Newer draft", "Older draft"])
-        #expect(FileManager.default.fileExists(atPath: corruptURL.path) == false)
 
         clock.date = clock.date.addingTimeInterval(
             TaskDraftRecoveryStore.defaultRetentionInterval + 60
         )
         #expect(try store.removeExpired() == 2)
-        #expect(try store.recoverableRecords().isEmpty)
+        #expect(try store.removeExpired() == 0)
     }
 
     private func makeScratchDirectory() -> URL {

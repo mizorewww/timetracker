@@ -3,11 +3,6 @@ import SwiftUI
 private struct TaskDetailNavigationModifier: ViewModifier {
     let store: TimeTrackerStore
     let taskID: UUID
-    let session: TaskEditorSession
-    let isSourceUnavailable: Bool
-    let isAwaitingRecoveryCleanup: Bool
-    let save: () -> Void
-    let requestDiscard: () -> Void
     let preservingDestination: TimeTrackerStore.DesktopDestination
     @Environment(AppPresentationRouter.self) private var presentationRouter
 
@@ -15,30 +10,8 @@ private struct TaskDetailNavigationModifier: ViewModifier {
         content
             .navigationTitle(store.task(for: taskID)?.title ?? AppStrings.localized("task.detail.title"))
             .appInlineNavigationTitle()
-            .navigationBarBackButtonHidden(
-                isSourceUnavailable &&
-                    session.hasUnsavedChanges
-            )
             .toolbar {
-                if isSourceUnavailable, session.hasUnsavedChanges {
-                    if isAwaitingRecoveryCleanup == false {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button(AppStrings.cancel, action: requestDiscard)
-                                .keyboardShortcut(.cancelAction)
-                                .accessibilityIdentifier("task.editor.cancel")
-                        }
-                    }
-
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(saveTitle, action: save)
-                            .keyboardShortcut(.defaultAction)
-                            .disabled(
-                                isAwaitingRecoveryCleanup == false &&
-                                    session.validation.isValid == false
-                            )
-                            .accessibilityIdentifier("task.editor.save")
-                    }
-                } else if let task = store.task(for: taskID) {
+                if let task = store.task(for: taskID) {
                     ToolbarItemGroup(placement: .primaryAction) {
                         if store.isTaskAvailableForTracking(task) {
                             addTimeButton(task)
@@ -47,13 +20,6 @@ private struct TaskDetailNavigationModifier: ViewModifier {
                     }
                 }
             }
-    }
-
-    private var saveTitle: String {
-        if isAwaitingRecoveryCleanup {
-            return AppStrings.localized("tasks.recovery.finishCleanup")
-        }
-        return AppStrings.localized("task.editor.recovery.saveAsNew")
     }
 
     private func addTimeButton(_ task: TaskNode) -> some View {
@@ -84,22 +50,12 @@ extension View {
     func taskDetailNavigation(
         store: TimeTrackerStore,
         taskID: UUID,
-        session: TaskEditorSession,
-        isSourceUnavailable: Bool,
-        isAwaitingRecoveryCleanup: Bool,
-        save: @escaping () -> Void,
-        requestDiscard: @escaping () -> Void,
         preservingDestination: TimeTrackerStore.DesktopDestination
     ) -> some View {
         modifier(
             TaskDetailNavigationModifier(
                 store: store,
                 taskID: taskID,
-                session: session,
-                isSourceUnavailable: isSourceUnavailable,
-                isAwaitingRecoveryCleanup: isAwaitingRecoveryCleanup,
-                save: save,
-                requestDiscard: requestDiscard,
                 preservingDestination: preservingDestination
             )
         )

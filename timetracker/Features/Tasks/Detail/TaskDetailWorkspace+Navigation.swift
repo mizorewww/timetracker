@@ -2,37 +2,11 @@ import Foundation
 
 extension TaskDetailWorkspace {
     var editorSourceToken: TaskEditorSourceToken? {
-        guard isPresentingRecovery == false,
-              let task = store.task(for: taskID) else { return nil }
+        guard let task = store.task(for: taskID) else { return nil }
         return TaskEditorSourceToken(
             baseline: store.editorDraft(for: task).baseline,
             parentCandidateIDs: store.validParentTasks(for: taskID).map(\.id)
         )
-    }
-
-    var isSourceUnavailable: Bool {
-        store.isTaskDetailRouteValid(taskID) == false
-    }
-
-    var activeDraftRecoveryReason: TaskDraftRecoveryReason? {
-        if isSourceUnavailable {
-            return unavailableDraftRecoveryReason
-        }
-        return draftRecoveryReason
-    }
-
-    var unavailableDraftRecoveryReason: TaskDraftRecoveryReason {
-        store.task(for: taskID) == nil
-            ? .sourceUnavailable
-            : .sourceArchived
-    }
-
-    var isPresentingRecovery: Bool {
-        activeDraftRecoveryReason != nil || savedRecoveryCopyTaskID != nil
-    }
-
-    func save() {
-        savePreservedDraftAsNew()
     }
 
     func cancelPendingNavigationIfNeeded(isDiscardConfirmationPresented: Bool) {
@@ -76,11 +50,8 @@ extension TaskDetailWorkspace {
             return
         }
 
-        guard clearPersistedDraftRecovery() else { return }
+        clearPersistedDraftRecovery()
         session.discardChanges()
-        if sourceIsUnavailable == false {
-            draftRecoveryReason = nil
-        }
         clearInputFocus()
         if sourceIsUnavailable {
             dismissDetail()
@@ -88,11 +59,8 @@ extension TaskDetailWorkspace {
     }
 
     func reloadLatestDraft() {
-        guard clearPersistedDraftRecovery() else { return }
+        clearPersistedDraftRecovery()
         session.reloadLatestDraft()
-        if store.isTaskDetailRouteValid(taskID) {
-            draftRecoveryReason = nil
-        }
         clearInputFocus()
     }
 
@@ -122,12 +90,6 @@ extension TaskDetailWorkspace {
             },
             discardChanges: { [weak session] in
                 guard let session else { return false }
-                guard TaskDraftRecoveryErrorPresentation.removeDraftRecovery(
-                    for: taskID,
-                    in: session.store
-                ) else {
-                    return false
-                }
                 session.discardChanges()
                 return true
             },
@@ -145,12 +107,9 @@ extension TaskDetailWorkspace {
         _ oldValue: Bool,
         _ hasUnsavedChanges: Bool
     ) {
-        guard isCompletingRecoveryNavigation == false,
-              oldValue != hasUnsavedChanges,
+        guard oldValue != hasUnsavedChanges,
               hasUnsavedChanges == false else { return }
-        if store.isTaskDetailRouteValid(taskID) {
-            draftRecoveryReason = nil
-        } else {
+        if store.isTaskDetailRouteValid(taskID) == false {
             dismissDetail()
         }
     }

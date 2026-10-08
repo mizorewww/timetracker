@@ -16,6 +16,14 @@ struct TaskDetailList: View {
         @Bindable var session = session
 
         List {
+            if session.showsRecoveredDraftNotice {
+                Section {
+                    TaskDetailRecoveredDraftNotice(
+                        dismiss: session.dismissRecoveredDraftNotice
+                    )
+                }
+            }
+
             Section {
                 TaskDetailIdentityRow(
                     store: store,
@@ -162,6 +170,31 @@ struct TaskDetailList: View {
         } else {
             TaskDetailAnalyticsLoadingSection()
         }
+    }
+}
+
+private struct TaskDetailRecoveredDraftNotice: View {
+    let dismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(
+                AppStrings.localized("task.editor.recovery.title"),
+                systemImage: "doc.badge.clock"
+            )
+            .font(.headline)
+            .foregroundStyle(.orange)
+
+            Text(.app("task.editor.recovery.restored.message"))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button(AppStrings.localized("common.dismiss"), action: dismiss)
+                .accessibilityIdentifier("task.detail.recovery.dismiss")
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("task.detail.recovery.notice")
     }
 }
 

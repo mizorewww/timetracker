@@ -53,25 +53,6 @@ extension TimeTrackerStore {
         )
     }
 
-    func saveRecoveredTaskDraftResult(
-        _ draft: TaskEditorDraft,
-        proposedTaskID: UUID,
-        returnDestination: DesktopDestination? = nil
-    ) -> TaskDraftSaveResult {
-        guard draft.taskID == nil, draft.baseline == nil else {
-            return .failed(
-                message: AppStrings.localized(
-                    "task.editor.recovery.invalidCopy"
-                )
-            )
-        }
-        return saveTaskDraftResult(
-            draft,
-            proposedTaskID: proposedTaskID,
-            returnDestination: returnDestination
-        )
-    }
-
     private func saveTaskDraftResult(
         _ draft: TaskEditorDraft,
         proposedTaskID: UUID?,

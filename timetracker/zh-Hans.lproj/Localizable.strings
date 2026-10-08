@@ -638,6 +638,7 @@
 "task.editor.recovery.removeFailed" = "恢复副本无法删除，因此草稿已保留。%@";
 "task.editor.recovery.removeSuperseded" = "丢弃过程中草稿发生了变化，因此已保留更新版本。";
 "task.editor.recovery.invalidCopy" = "无法将这份恢复草稿准备为新任务。";
+"task.editor.recovery.restored.message" = "已恢复上次会话中未保存的更改。";
 "tasks.recovery.title" = "可恢复的草稿";
 "tasks.recovery.footer" = "归档的原任务可从“更多”中恢复；原任务已不存在时，可以检查草稿并另存为新任务，不再需要时也可以放弃。";
 "tasks.recovery.originalArchived" = "原任务已归档";

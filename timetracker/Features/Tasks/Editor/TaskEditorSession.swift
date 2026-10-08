@@ -11,6 +11,8 @@ final class TaskEditorSession {
     private(set) var parentCandidates: [TaskNode]
     var pendingReloadDraft: TaskEditorDraft?
     var isDiscardConfirmationPresented = false
+    /// Set while a persisted crash-recovery draft is showing its inline notice.
+    var showsRecoveredDraftNotice = false
     private(set) var navigationConfirmationRequestID: UUID?
 
     init(store: TimeTrackerStore, initialDraft: TaskEditorDraft) {
@@ -263,6 +265,17 @@ final class TaskEditorSession {
         draft = recoveredDraft
         parentCandidates = Self.parentCandidates(for: recoveredDraft, store: store)
         pendingReloadDraft = nil
+        showsRecoveredDraftNotice = true
+    }
+
+    func dismissRecoveredDraftNotice() {
+        showsRecoveredDraftNotice = false
+    }
+
+    /// Surfaces the Keep/Reload alert for a draft that autosave could not commit
+    /// because the persisted task moved on.
+    func presentStaleDraftReload() {
+        prepareLatestDraft()
     }
 
     func discardChanges() {

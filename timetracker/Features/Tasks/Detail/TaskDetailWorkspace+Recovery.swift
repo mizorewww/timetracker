@@ -1,173 +1,26 @@
 import Foundation
 
 extension TaskDetailWorkspace {
-    func prepareRecoveryIfNeeded() {
-        guard store.isTaskDetailRouteValid(taskID) == false,
-              session.hasUnsavedChanges,
-              draftRecoveryReason == nil else { return }
-        draftRecoveryReason = unavailableDraftRecoveryReason
-    }
-
+    /// Restores the newest crash/termination recovery draft for this task into
+    /// the editor session and surfaces a single inline notice.
     func loadPersistedDraftRecovery() async {
-        do {
-            let recoveredDraft = try await store.taskDraftRecoveryController.load(
-                for: taskID,
-                currentDraft: session.sessionBaseline
-            )
-            guard Task.isCancelled == false else { return }
-            if let recoveredDraft {
-                let sourceChanged =
-                    recoveredDraft.baseline != session.sessionBaseline.baseline
-                session.restoreRecoveredDraft(recoveredDraft)
-                if store.task(for: recoveredDraft.id) != nil {
-                    savedRecoveryCopyTaskID = recoveredDraft.id
-                }
-                if store.isTaskDetailRouteValid(taskID) == false {
-                    draftRecoveryReason = unavailableDraftRecoveryReason
-                } else if sourceChanged {
-                    draftRecoveryReason = .sourceChanged
-                }
-            }
-            draftRecoveryLoadState = .ready
-        } catch is CancellationError {
-            return
-        } catch {
-            draftRecoveryLoadState = .failed
-        }
-    }
-
-    func retryDraftRecoveryLoad() {
-        draftRecoveryLoadState = .loading
-        draftRecoveryLoadRequestID = UUID()
-    }
-
-    func savePreservedDraftAsNew() {
-        if savedRecoveryCopyTaskID != nil {
-            finishSavedRecoveryCopy()
-            return
-        }
-        let draft = session.draft.taskID == nil
-            ? session.draft
-            : recoveredTaskDraft
-        let result = store.saveRecoveredTaskDraftResult(
-            draft,
-            proposedTaskID: session.draft.id,
-            returnDestination: returnDestination
-        )
-        switch result {
-        case let .saved(savedTaskID):
-            savedRecoveryCopyTaskID = savedTaskID
-            finishSavedRecoveryCopy()
-        case .stale:
-            store.errorMessage = TaskLifecycleMutationError
-                .staleDraft
-                .localizedDescription
-        case let .failed(message):
-            store.errorMessage = message
-        }
-    }
-
-    func finishSavedRecoveryCopy() {
-        guard let savedTaskID = savedRecoveryCopyTaskID,
-              isFinishingRecoveryCleanup == false else { return }
-        isFinishingRecoveryCleanup = true
-        Task {
-            defer { isFinishingRecoveryCleanup = false }
-            guard await TaskDraftRecoveryErrorPresentation.removeDraftRecoveryInBackground(for: taskID, in: store)
-            else { return }
-            guard savedRecoveryCopyTaskID == savedTaskID else { return }
-            isCompletingRecoveryNavigation = true
-            savedRecoveryCopyTaskID = nil
-            clearInputFocus()
-            navigationGuardRegistration.unregister()
-            session.discardChanges()
-            dismissDetail()
-            replaceDetail(savedTaskID)
-        }
-    }
-
-    func leaveRecoveryCleanup() {
-        clearInputFocus()
-        navigationGuardRegistration.unregister()
-        dismissDetail()
-    }
-
-    func restoreArchivedSource() {
-        guard store.restoreArchivedHierarchyForRecovery(taskID: taskID) else {
-            return
-        }
-        draftRecoveryReason = .sourceChanged
-    }
-
-    @discardableResult
-    func clearPersistedDraftRecovery() -> Bool {
-        TaskDraftRecoveryErrorPresentation.removeDraftRecovery(
+        let recoveredDraft = try? await store.taskDraftRecoveryController.load(
             for: taskID,
-            in: store
+            currentDraft: session.sessionBaseline
         )
-    }
-
-    private var recoveredTaskDraft: TaskEditorDraft {
-        let parentID = session.draft.parentID.flatMap {
-            store.isTaskDetailRouteValid($0) ? $0 : nil
+        await store.taskDraftRecoveryController.removeExpired()
+        guard Task.isCancelled == false else { return }
+        if let recoveredDraft {
+            session.restoreRecoveredDraft(recoveredDraft)
         }
-        let categoryID = parentID == nil && session.draft.parentID == nil
-            ? session.draft.categoryID.flatMap {
-                store.taskCategory(for: $0) == nil ? nil : $0
-            }
-            : nil
-        return session.draft.copyAsNew(
-            parentID: parentID,
-            categoryID: categoryID
-        )
-    }
-}
-
-enum TaskDraftRecoveryErrorPresentation {
-    static func removalFailureMessage(for error: Error) -> String {
-        if error as? TaskDraftRecoveryControllerError == .removalSuperseded {
-            return AppStrings.localized(
-                "task.editor.recovery.removeSuperseded"
-            )
-        }
-        return String(
-            format: AppStrings.localized(
-                "task.editor.recovery.removeFailed"
-            ),
-            error.localizedDescription
-        )
+        isRecoveryLoaded = true
     }
 
-    /// Removes a persisted recovery draft, reporting any failure on the store.
-    @MainActor
-    @discardableResult
-    static func removeDraftRecovery(
-        for taskID: UUID,
-        in store: TimeTrackerStore
-    ) -> Bool {
-        do {
-            try store.taskDraftRecoveryController.remove(for: taskID)
-            return true
-        } catch {
-            store.errorMessage = removalFailureMessage(for: error)
-            return false
-        }
-    }
-
-    /// Background variant of ``removeDraftRecovery(for:in:)``.
-    @MainActor
-    @discardableResult
-    static func removeDraftRecoveryInBackground(
-        for taskID: UUID,
-        in store: TimeTrackerStore
-    ) async -> Bool {
-        do {
-            try await store.taskDraftRecoveryController
-                .removeInBackground(for: taskID)
-            return true
-        } catch {
-            store.errorMessage = removalFailureMessage(for: error)
-            return false
+    /// Removes the persisted recovery draft for this task so a discarded or
+    /// reloaded draft is not offered again on reopen.
+    func clearPersistedDraftRecovery() {
+        Task { [store, taskID] in
+            await store.taskDraftRecoveryController.remove(for: taskID)
         }
     }
 }

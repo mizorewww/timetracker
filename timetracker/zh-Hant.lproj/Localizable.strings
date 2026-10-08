@@ -638,6 +638,7 @@
 "task.editor.recovery.removeFailed" = "無法刪除復原副本，因此草稿已保留。%@";
 "task.editor.recovery.removeSuperseded" = "捨棄期間草稿發生了變更，因此已保留較新的版本。";
 "task.editor.recovery.invalidCopy" = "無法將這份復原草稿準備為新任務。";
+"task.editor.recovery.restored.message" = "已還原上次工作階段中未儲存的變更。";
 "tasks.recovery.title" = "可復原的草稿";
 "tasks.recovery.footer" = "已封存的原任務可從「更多」中復原；原任務已不存在時，可以檢查草稿並另存為新任務，不再需要時也可以捨棄。";
 "tasks.recovery.originalArchived" = "原任務已封存";

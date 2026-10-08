@@ -7,7 +7,6 @@ struct AppPresentation: Identifiable {
             draft: TaskEditorDraft,
             returnDestination: TimeTrackerStore.DesktopDestination
         )
-        case recoveredTaskEditor(RecoveredTaskDraftPresentation)
         case taskCategoryEditor(TaskCategoryEditorDraft)
         case taskCategoryOrdering
         case manualTime(ManualTimeDraft)
@@ -45,14 +44,6 @@ struct SingleTaskCategoryPickerPresentation {
     let selectedCategoryID: UUID?
     let context: TaskCategoryPickerSelectionContext
     let selectCategory: (UUID) -> Bool
-}
-
-struct RecoveredTaskDraftPresentation {
-    let sourceTaskID: UUID
-    let proposedTaskID: UUID
-    let savedTaskID: UUID?
-    let draft: TaskEditorDraft
-    let returnDestination: TimeTrackerStore.DesktopDestination
 }
 
 @MainActor

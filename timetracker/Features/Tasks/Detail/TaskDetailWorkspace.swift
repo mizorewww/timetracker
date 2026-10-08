@@ -10,12 +10,7 @@ struct TaskDetailWorkspace: View {
     @State var session: TaskEditorSession
     @State var autosaveController: TaskDetailAutosaveController
     @State var navigationGuardRegistration = TaskDetailNavigationRegistrationToken()
-    @State var draftRecoveryReason: TaskDraftRecoveryReason?
-    @State var savedRecoveryCopyTaskID: UUID?
-    @State var isFinishingRecoveryCleanup = false
-    @State var isCompletingRecoveryNavigation = false
-    @State var draftRecoveryLoadState: TaskDraftRecoveryLoadState = .loading
-    @State var draftRecoveryLoadRequestID = UUID()
+    @State var isRecoveryLoaded = false
     @FocusState var focusedTextField: TaskEditorTextField?
     @FocusState var focusedChecklistDraftID: UUID?
     init(
@@ -38,48 +33,26 @@ struct TaskDetailWorkspace: View {
                 store: store,
                 session: session,
                 taskID: taskID,
-                returnDestination: returnDestination
+                returnDestination: returnDestination,
+                recoveryController: store.taskDraftRecoveryController
             )
         )
     }
 
     var body: some View {
         Group {
-            switch draftRecoveryLoadState {
-            case .loading:
-                TaskDetailDraftRecoveryLoadingView()
-            case .failed:
-                TaskDetailDraftRecoveryLoadFailureView(
-                    retry: retryDraftRecoveryLoad
+            if isRecoveryLoaded, let task = store.task(for: taskID) {
+                workspace(for: task)
+            } else if isRecoveryLoaded {
+                ContentUnavailableView(
+                    AppStrings.localized("task.empty.selectTask"),
+                    systemImage: "checklist"
                 )
-            case .ready where isPresentingRecovery:
-                TaskDetailRecoveryList(
-                    store: store,
-                    session: session,
-                    reason: activeDraftRecoveryReason ?? .sourceUnavailable,
-                    isAwaitingCleanup: savedRecoveryCopyTaskID != nil,
-                    isFinishingCleanup: isFinishingRecoveryCleanup,
-                    focusedTextField: $focusedTextField,
-                    focusedChecklistDraftID: $focusedChecklistDraftID,
-                    saveAsNew: savePreservedDraftAsNew,
-                    restoreOriginal: restoreArchivedSource,
-                    leaveCleanup: leaveRecoveryCleanup,
-                    discard: requestDiscard
-                )
-            case .ready:
-                if let task = store.task(for: taskID) {
-                    workspace(for: task)
-                }
             }
         }
         .taskDetailNavigation(
             store: store,
             taskID: taskID,
-            session: session,
-            isSourceUnavailable: isPresentingRecovery,
-            isAwaitingRecoveryCleanup: savedRecoveryCopyTaskID != nil,
-            save: save,
-            requestDiscard: requestDiscard,
             preservingDestination: returnDestination
         )
         .taskEditorSessionSafety(
@@ -89,15 +62,11 @@ struct TaskDetailWorkspace: View {
         )
         .taskDetailAutosave(
             controller: autosaveController,
+            recoveryController: store.taskDraftRecoveryController,
+            sourceTaskID: taskID,
             request: autosaveRequest,
             focusedTextField: focusedTextField,
             focusedChecklistDraftID: focusedChecklistDraftID
-        )
-        .taskDetailDraftRecovery(
-            controller: store.taskDraftRecoveryController,
-            sourceTaskID: taskID,
-            session: session,
-            isReady: draftRecoveryLoadState == .ready
         )
         .onChange(of: editorSourceToken) { _, sourceToken in
             guard let sourceToken else { return }
@@ -117,18 +86,13 @@ struct TaskDetailWorkspace: View {
             updateNavigationGuardForDraftChanges
         )
         .onChange(of: autosaveController.status, handleAutosaveStatus)
-        .task(id: isSourceUnavailable) {
-            prepareRecoveryIfNeeded()
+        .onChange(of: store.isTaskDetailRouteValid(taskID)) { _, isRouteValid in
+            guard isRouteValid == false else { return }
+            dismissDetail()
         }
-        .task(id: draftRecoveryLoadRequestID) {
+        .task {
             await loadPersistedDraftRecovery()
         }
         .onAppear(perform: registerNavigationGuard)
     }
-}
-
-enum TaskDraftRecoveryLoadState: Equatable {
-    case loading
-    case ready
-    case failed
 }

@@ -3,8 +3,8 @@ import Foundation
 extension TaskDetailWorkspace {
     var autosaveRequest: TaskDetailAutosaveRequest {
         TaskDetailAutosaveRequest(
-            isEnabled: draftRecoveryLoadState == .ready &&
-                isPresentingRecovery == false,
+            isEnabled: isRecoveryLoaded &&
+                store.isTaskDetailRouteValid(taskID),
             draft: session.draft,
             hasUnsavedChanges: session.hasUnsavedChanges,
             isValid: session.isPersistenceValid
@@ -16,9 +16,7 @@ extension TaskDetailWorkspace {
         _ status: TaskDetailAutosaveController.Status
     ) {
         guard oldStatus != status, status == .conflicted else { return }
-        draftRecoveryReason = isSourceUnavailable
-            ? unavailableDraftRecoveryReason
-            : .sourceChanged
         clearInputFocus()
+        session.presentStaleDraftReload()
     }
 }

@@ -17,8 +17,6 @@ struct TasksView: View {
         let rowSupplements = store.taskManagementRowSupplementProjection()
 
         List {
-            TaskRecoveryDraftsSection(store: store)
-
             #if os(iOS)
             if usesInlineSearchField {
                 Section {

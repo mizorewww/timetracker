@@ -29,9 +29,6 @@ struct CoreCloudRecoveryGateTests {
 
             let context = try makeTestContext()
             let store = TimeTrackerStore(
-                appleHealthDataReader: UnavailableAppleHealthDataReader(),
-                appleHealthTimelinePreferenceStore:
-                TestAppleHealthTimelinePreferenceStore(),
                 writeAuthorization: .isolatedTestHarness,
                 syncConflictService: SyncConflictService(stateURL: stateURL)
             )

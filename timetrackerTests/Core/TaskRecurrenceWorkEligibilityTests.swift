@@ -185,7 +185,7 @@ struct TaskRecurrenceWorkEligibilityTests {
     }
 
     @Test
-    func scopedAdmissionPreservesAncestorHealthAndStagedOccurrenceRules() throws {
+    func scopedAdmissionPreservesArchivedAncestorAndStagedOccurrenceRules() throws {
         let context = try makeTestContext()
         let archivedParent = TaskNode(
             title: "Archived parent",
@@ -196,11 +196,6 @@ struct TaskRecurrenceWorkEligibilityTests {
         let archivedChild = TaskNode(
             title: "Archived descendant",
             parentID: archivedParent.id,
-            deviceID: "eligibility"
-        )
-        let healthChild = TaskNode(
-            title: "Staged Health descendant",
-            parentID: AppleHealthTaskCatalog.taskDefinition(for: .sleep).id,
             deviceID: "eligibility"
         )
         let stagedTemplate = TaskNode(
@@ -215,7 +210,6 @@ struct TaskRecurrenceWorkEligibilityTests {
         )
         context.insert(archivedParent)
         context.insert(archivedChild)
-        context.insert(healthChild)
         context.insert(stagedTemplate)
         context.insert(ordinaryTask)
         context.insert(TaskRecurrenceOccurrence(
@@ -232,7 +226,6 @@ struct TaskRecurrenceWorkEligibilityTests {
             deviceID: "eligibility"
         )
         #expect(try repository.directWorkTask(id: archivedChild.id) == nil)
-        #expect(try repository.directWorkTask(id: healthChild.id) == nil)
         #expect(try repository.directWorkTask(id: stagedTemplate.id) == nil)
         #expect(try repository.directWorkTask(id: ordinaryTask.id)?.id == ordinaryTask.id)
     }

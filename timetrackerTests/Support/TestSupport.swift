@@ -23,9 +23,6 @@ func makeTestContext() throws -> ModelContext {
 @MainActor
 func makeTestStore() -> TimeTrackerStore {
     TimeTrackerStore(
-        appleHealthDataReader: UnavailableAppleHealthDataReader(),
-        appleHealthTimelinePreferenceStore:
-        TestAppleHealthTimelinePreferenceStore(),
         writeAuthorization: .isolatedTestHarness
     )
 }
@@ -34,24 +31,8 @@ func makeTestStore() -> TimeTrackerStore {
 func makeTestStore(
     llmCredentialStore: any LLMCredentialStoring
 ) -> TimeTrackerStore {
-    makeTestStore(
-        llmCredentialStore: llmCredentialStore,
-        appleHealthTimelinePreferenceStore:
-        TestAppleHealthTimelinePreferenceStore()
-    )
-}
-
-@MainActor
-func makeTestStore(
-    llmCredentialStore: any LLMCredentialStoring,
-    appleHealthTimelinePreferenceStore:
-    any AppleHealthTimelinePreferenceStoring
-) -> TimeTrackerStore {
     TimeTrackerStore(
         llmCredentialStore: llmCredentialStore,
-        appleHealthDataReader: UnavailableAppleHealthDataReader(),
-        appleHealthTimelinePreferenceStore:
-        appleHealthTimelinePreferenceStore,
         writeAuthorization: .isolatedTestHarness
     )
 }
@@ -91,9 +72,6 @@ func makeTestStore(
     TimeTrackerStore(
         llmCredentialStore: llmCredentialStore,
         inboxSuggestionService: inboxSuggestionService,
-        appleHealthDataReader: UnavailableAppleHealthDataReader(),
-        appleHealthTimelinePreferenceStore:
-        TestAppleHealthTimelinePreferenceStore(),
         writeAuthorization: .isolatedTestHarness
     )
 }
@@ -108,23 +86,8 @@ func makeTestStore(
         llmCredentialStore: llmCredentialStore,
         inboxSuggestionService: inboxSuggestionService,
         checklistVisualSuggestionService: checklistVisualSuggestionService,
-        appleHealthDataReader: UnavailableAppleHealthDataReader(),
-        appleHealthTimelinePreferenceStore:
-        TestAppleHealthTimelinePreferenceStore(),
         writeAuthorization: .isolatedTestHarness
     )
-}
-
-@MainActor
-final class TestAppleHealthTimelinePreferenceStore:
-    AppleHealthTimelinePreferenceStoring
-{
-    var isTimelineEnabled: Bool
-    var taskCatalogClearRecoveryTaskIDs: Set<UUID> = []
-
-    init(isTimelineEnabled: Bool = false) {
-        self.isTimelineEnabled = isTimelineEnabled
-    }
 }
 
 func projectRootURL() throws -> URL {

@@ -104,6 +104,13 @@ extension TimeTrackerStore {
         } catch {
             startupErrors.append(error)
         }
+        do {
+            try context.withHistoryAuthor(.bootstrapMaintenance) {
+                try AppleHealthCatalogCleanup.removeLegacyCatalogRowsIfNeeded(context: context)
+            }
+        } catch {
+            startupErrors.append(error)
+        }
         if configuresSyncConflictState {
             bootstrapSyncConflictStateIfNeeded(
                 context: context,

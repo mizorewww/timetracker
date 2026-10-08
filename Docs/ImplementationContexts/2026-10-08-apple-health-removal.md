@@ -41,10 +41,12 @@ integration (feature moves to a standalone export app).
 
 ## Residual risks
 
-- D1 leaves ~13 synced "ghost" catalog tasks/categories visible on every
-  device; retiring them later needs an explicit product decision.
-- A still-running older health-capable build could recreate catalog rows against
-  the new build; D1 intentionally does not fight this.
+- ~~D1 leaves ~13 synced "ghost" catalog tasks/categories visible on every
+  device~~ Resolved in a follow-up: `AppleHealthCatalogCleanup` now retires the
+  deterministic `A1*` rows at every startup through the repository boundary
+  (archive tasks, tombstone categories/assignments; LWW-correct, idempotent,
+  skips tasks with live segments). Until every device runs a health-free build,
+  an older build can still recreate a row; the next launch retires it again.
 - Orphan cleanup deletes `AppleHealthReplica.store*` at first launch of the new
   build only; if a launch never happens the file stays orphaned (harmless,
   backup-excluded). No health JSON payload can be exported any more.

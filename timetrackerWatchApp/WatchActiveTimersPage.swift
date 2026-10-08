@@ -36,10 +36,11 @@ struct WatchActiveTimersPage: View {
             let preview = Array(failures.prefix(Self.failurePreviewLimit))
             Section {
                 ForEach(preview) { failure in
-                    WatchCommandFailureActionRow(
-                        failure: failure,
-                        onRetryCommand: onRetryCommand,
-                        onDiscardCommand: onDiscardCommand
+                    WatchCommandFailureRow(
+                        title: failure.title,
+                        result: failure.failure.result,
+                        onRetry: { onRetryCommand(failure.id) },
+                        onDiscard: { onDiscardCommand(failure.id) }
                     )
                 }
 

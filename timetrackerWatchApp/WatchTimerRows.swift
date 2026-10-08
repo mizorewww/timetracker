@@ -64,7 +64,7 @@ struct WatchActiveTimerRow: View {
         .disabled(commandState == .pending)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityValue(elapsedAccessibilityValue)
+        .accessibilityValue(elapsedText)
         .accessibilityHint(Text(commandState.timerHintKey))
     }
 
@@ -104,17 +104,7 @@ struct WatchActiveTimerRow: View {
             .accessibilityHidden(true)
     }
 
-    @ViewBuilder
-    private var elapsedText: some View {
-        switch elapsedPresentation {
-        case let .live(startedAt):
-            Text(startedAt, style: .timer)
-        case let .frozen(seconds):
-            Text(ElapsedClockFormatter.full(seconds))
-        }
-    }
-
-    private var elapsedAccessibilityValue: Text {
+    private var elapsedText: Text {
         switch elapsedPresentation {
         case let .live(startedAt):
             Text(startedAt, style: .timer)

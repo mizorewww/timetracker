@@ -16,38 +16,11 @@ struct LockScreenTimerView: View {
     }
 }
 
-enum LiveActivityTimerRowStyle {
-    case lockScreen
-    case dynamicIsland
-
-    var iconSize: CGFloat {
-        switch self {
-        case .lockScreen:
-            34
-        case .dynamicIsland:
-            30
-        }
-    }
-
-    var showsPath: Bool {
-        self == .lockScreen
-    }
-
-    var timerStyle: TimerText.Style {
-        switch self {
-        case .lockScreen:
-            .lockScreen
-        case .dynamicIsland:
-            .expanded
-        }
-    }
-}
-
 struct LiveActivityTimerRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let state: TimeTrackingActivityAttributes.ContentState
     let isStale: Bool
-    let style: LiveActivityTimerRowStyle
+    let style: TimerText.Style
 
     var body: some View {
         if dynamicTypeSize.isAccessibilitySize {
@@ -99,7 +72,7 @@ struct LiveActivityTimerRow: View {
         TimerText(
             startedAt: state.startedAt,
             isStale: isStale,
-            style: style.timerStyle
+            style: style
         )
     }
 }

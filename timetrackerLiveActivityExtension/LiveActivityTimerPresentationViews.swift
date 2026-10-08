@@ -1,10 +1,32 @@
 import Foundation
 import SwiftUI
 
+/// Shared stopwatch `Text` used by the lock-screen row, the Dynamic Island row
+/// and both compact regions so they can never disagree about the elapsed value.
+func liveActivityStopwatchText(startedAt: Date) -> Text {
+    Text(
+        .currentDate,
+        format: .stopwatch(
+            startingAt: startedAt,
+            showsHours: true,
+            maxFieldCount: 3,
+            maxPrecision: .seconds(1)
+        )
+    )
+}
+
 struct TimerText: View {
     enum Style {
         case lockScreen
         case expanded
+
+        var iconSize: CGFloat {
+            self == .lockScreen ? 34 : 30
+        }
+
+        var showsPath: Bool {
+            self == .lockScreen
+        }
     }
 
     let startedAt: Date
@@ -51,34 +73,6 @@ struct TimerText: View {
     }
 
     private var stopwatchText: Text {
-        Text(
-            .currentDate,
-            format: .stopwatch(
-                startingAt: startedAt,
-                showsHours: true,
-                maxFieldCount: 3,
-                maxPrecision: .seconds(1)
-            )
-        )
-    }
-}
-
-struct CompactTimerText: View {
-    let startedAt: Date
-
-    var body: some View {
-        fullStopwatchText
-    }
-
-    var fullStopwatchText: Text {
-        Text(
-            .currentDate,
-            format: .stopwatch(
-                startingAt: startedAt,
-                showsHours: true,
-                maxFieldCount: 3,
-                maxPrecision: .seconds(1)
-            )
-        )
+        liveActivityStopwatchText(startedAt: startedAt)
     }
 }

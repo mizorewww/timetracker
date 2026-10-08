@@ -37,52 +37,53 @@ struct TimeTrackerLiveActivityWidget: Widget {
                 .accessibilityLabel(context.state.taskTitle)
                 .accessibilityIdentifier("liveActivity.compact.leading")
             } compactTrailing: {
-                let timer = CompactTimerText(
-                    startedAt: context.state.startedAt
+                CompactTimerSurface(
+                    context: context,
+                    maxWidth: 50,
+                    minimumScaleFactor: 0.7,
+                    accessibilityIdentifier: "liveActivity.compact.timer"
                 )
-                Link(destination: LiveActivityDeepLinks.today) {
-                    timer
-                        .font(.caption2.monospacedDigit().weight(.semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .frame(maxWidth: 50)
-                        .accessibilityHidden(true)
-                }
-                .accessibilityLabel(
-                    String(localized: context.isStale ? "live.timer.stale" : "live.timer.elapsed")
-                )
-                .accessibilityValue(timer.fullStopwatchText)
-                .accessibilityHint(
-                    context.isStale ? String(localized: "live.timer.staleHint") : ""
-                )
-                .accessibilityAddTraits(.updatesFrequently)
-                .accessibilityIdentifier("liveActivity.compact.timer")
             } minimal: {
-                let timer = CompactTimerText(
-                    startedAt: context.state.startedAt
+                CompactTimerSurface(
+                    context: context,
+                    maxWidth: 45,
+                    minimumScaleFactor: 0.55,
+                    accessibilityIdentifier: "liveActivity.minimal.timer"
                 )
-                Link(destination: LiveActivityDeepLinks.today) {
-                    timer
-                        .font(.caption2.monospacedDigit().weight(.semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.55)
-                        .frame(maxWidth: 45)
-                        .accessibilityHidden(true)
-                }
-                .accessibilityLabel(
-                    String(localized: context.isStale ? "live.timer.stale" : "live.timer.elapsed")
-                )
-                .accessibilityValue(timer.fullStopwatchText)
-                .accessibilityHint(
-                    context.isStale ? String(localized: "live.timer.staleHint") : ""
-                )
-                .accessibilityAddTraits(.updatesFrequently)
-                .accessibilityIdentifier("liveActivity.minimal.timer")
             }
             .keylineTint(activityColor(context.state.colorHex))
             .widgetURL(LiveActivityDeepLinks.today)
         }
+    }
+}
+
+/// Compact/minimal Dynamic Island timer region: one stopwatch surface shared by
+/// the trailing and minimal slots, differing only in width, scale and a11y id.
+struct CompactTimerSurface: View {
+    let context: ActivityViewContext<TimeTrackingActivityAttributes>
+    let maxWidth: CGFloat
+    let minimumScaleFactor: CGFloat
+    let accessibilityIdentifier: String
+
+    var body: some View {
+        let timer = liveActivityStopwatchText(startedAt: context.state.startedAt)
+        Link(destination: LiveActivityDeepLinks.today) {
+            timer
+                .font(.caption2.monospacedDigit().weight(.semibold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(minimumScaleFactor)
+                .frame(maxWidth: maxWidth)
+                .accessibilityHidden(true)
+        }
+        .accessibilityLabel(
+            String(localized: context.isStale ? "live.timer.stale" : "live.timer.elapsed")
+        )
+        .accessibilityValue(timer)
+        .accessibilityHint(
+            context.isStale ? String(localized: "live.timer.staleHint") : ""
+        )
+        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 }

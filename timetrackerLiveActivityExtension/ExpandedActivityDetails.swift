@@ -9,7 +9,7 @@ struct ExpandedActivityDetails: View {
         LiveActivityTimerRow(
             state: context.state,
             isStale: context.isStale,
-            style: .dynamicIsland
+            style: .expanded
         )
         .frame(maxWidth: .infinity, alignment: .leading)
     }

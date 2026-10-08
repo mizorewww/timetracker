@@ -130,7 +130,7 @@ struct ActiveTimerContent: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
                 .accessibilityLabel(Text(localized("widget.elapsed.label")))
-                .accessibilityValue(elapsedAccessibilityValue)
+                .accessibilityValue(elapsedText)
 
             if !dynamicTypeSize.isAccessibilitySize, !timer.path.isEmpty {
                 Text(timer.path)
@@ -151,17 +151,7 @@ struct ActiveTimerContent: View {
         }
     }
 
-    @ViewBuilder
-    private var elapsedText: some View {
-        switch elapsedPresentation {
-        case let .live(startedAt):
-            Text(startedAt, style: .timer)
-        case let .frozen(seconds):
-            Text(ElapsedClockFormatter.compact(seconds))
-        }
-    }
-
-    private var elapsedAccessibilityValue: Text {
+    private var elapsedText: Text {
         switch elapsedPresentation {
         case let .live(startedAt):
             Text(startedAt, style: .timer)

@@ -53,13 +53,20 @@ struct WatchTaskListView: View {
             } else {
                 ForEach(tasks) { task in
                     let command = commandIndex.startTask(task.taskID)
-                    WatchTaskActionRow(
+                    let isRunning = activeTaskIDs.contains(task.taskID)
+                    WatchTaskShortcutRow(
                         task: task,
-                        command: command,
-                        isRunning: activeTaskIDs.contains(task.taskID),
-                        onStartTask: onStartTask,
-                        onRetryCommand: onRetryCommand,
-                        onShowActiveTimers: onShowActiveTimers
+                        commandState: command.state,
+                        isRunning: isRunning,
+                        action: {
+                            if let retryCommandID = command.retryCommandID {
+                                onRetryCommand(retryCommandID)
+                            } else if isRunning {
+                                onShowActiveTimers()
+                            } else {
+                                onStartTask(task.taskID)
+                            }
+                        }
                     )
                 }
             }
@@ -80,31 +87,5 @@ struct WatchTaskListView: View {
 
     private var emptySystemImage: String {
         hasReceivedSnapshot ? kind.emptySystemImage : "iphone.and.arrow.forward"
-    }
-}
-
-struct WatchTaskActionRow: View {
-    let task: WatchRecentTaskSnapshot
-    let command: WatchRowCommandPresentation
-    let isRunning: Bool
-    let onStartTask: (UUID) -> Void
-    let onRetryCommand: (UUID) -> Void
-    let onShowActiveTimers: () -> Void
-
-    var body: some View {
-        WatchTaskShortcutRow(
-            task: task,
-            commandState: command.state,
-            isRunning: isRunning,
-            action: {
-                if let retryCommandID = command.retryCommandID {
-                    onRetryCommand(retryCommandID)
-                } else if isRunning {
-                    onShowActiveTimers()
-                } else {
-                    onStartTask(task.taskID)
-                }
-            }
-        )
     }
 }

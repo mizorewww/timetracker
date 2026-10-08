@@ -18,10 +18,11 @@ struct WatchCommandFailuresView: View {
         List {
             Section {
                 ForEach(failures) { failure in
-                    WatchCommandFailureActionRow(
-                        failure: failure,
-                        onRetryCommand: onRetryCommand,
-                        onDiscardCommand: onDiscardCommand
+                    WatchCommandFailureRow(
+                        title: failure.title,
+                        result: failure.failure.result,
+                        onRetry: { onRetryCommand(failure.id) },
+                        onDiscard: { onDiscardCommand(failure.id) }
                     )
                 }
             } footer: {
@@ -30,20 +31,5 @@ struct WatchCommandFailuresView: View {
         }
         .navigationTitle("watch.commandFailures.listTitle")
         .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-struct WatchCommandFailureActionRow: View {
-    let failure: WatchCommandFailurePresentation
-    let onRetryCommand: (UUID) -> Void
-    let onDiscardCommand: (UUID) -> Void
-
-    var body: some View {
-        WatchCommandFailureRow(
-            title: failure.title,
-            result: failure.failure.result,
-            onRetry: { onRetryCommand(failure.id) },
-            onDiscard: { onDiscardCommand(failure.id) }
-        )
     }
 }

@@ -1,12 +1,5 @@
 import Foundation
 
-nonisolated enum WatchConnectivityOperation: String, Equatable, Sendable {
-    case activation
-    case applicationContext
-    case reachableMessage
-    case commandResultDelivery
-}
-
 nonisolated enum WatchConnectivityDeliveryStatus: Equatable, Sendable {
     case unavailable
     case notActivated
@@ -19,6 +12,12 @@ nonisolated enum WatchConnectivityDeliveryStatus: Equatable, Sendable {
 import OSLog
 import WatchConnectivity
 
+/// Process-wide WatchConnectivity session owner.
+///
+/// Commands carry an idempotent ID and are processed by the currently attached
+/// scene; if no scene is attached the legacy receipt acknowledges delivery and
+/// the watch build retries. Terminal results travel through one durable
+/// `transferUserInfo` payload plus the synchronous reply handler when present.
 @MainActor
 final class WatchConnectivityBridge: NSObject {
     static let shared = WatchConnectivityBridge()
@@ -28,30 +27,13 @@ final class WatchConnectivityBridge: NSObject {
         category: "WatchConnectivity"
     )
 
-    var commandHandler: ((WatchTimerCommand) -> WatchCommandResult)? {
-        didSet {
-            drainPendingCommandsIfPossible()
-        }
-    }
+    var commandHandler: ((WatchTimerCommand) -> WatchCommandResult)?
 
     private let session: WCSession?
-    private let pendingCommandStore: WatchIncomingCommandStore
-    private var pendingCommands: [WatchTimerCommand]
-    private let pendingCommandLimit = 64
 
-    init(
-        session: WCSession? = WCSession.isSupported() ? .default : nil,
-        pendingCommandStore: WatchIncomingCommandStore? = nil
-    ) {
-        let pendingCommandStore = pendingCommandStore ?? WatchIncomingCommandStore()
+    init(session: WCSession? = WCSession.isSupported() ? .default : nil) {
         self.session = session
-        self.pendingCommandStore = pendingCommandStore
-        pendingCommands = pendingCommandStore.load()
         super.init()
-    }
-
-    var isSupported: Bool {
-        session != nil
     }
 
     func activateIfSupported() {
@@ -72,7 +54,10 @@ final class WatchConnectivityBridge: NSObject {
             )
             return .submitted
         } catch {
-            let message = recordFailure(operation: .applicationContext, error: error)
+            let message = recordFailure(
+                operation: "applicationContext",
+                error: error
+            )
             return .failed(message)
         }
     }
@@ -88,7 +73,10 @@ final class WatchConnectivityBridge: NSObject {
             replyHandler: nil,
             errorHandler: { [weak self] error in
                 Task { @MainActor in
-                    self?.recordFailure(operation: .reachableMessage, error: error)
+                    self?.recordFailure(
+                        operation: "reachableMessage",
+                        error: error
+                    )
                 }
             }
         )
@@ -103,91 +91,34 @@ final class WatchConnectivityBridge: NSObject {
             replyHandler?(["received": false])
             return
         }
-        let overflowedCommands = enqueuePendingCommand(command)
-        for overflowedCommand in overflowedCommands {
-            deliverDurableCommandResult(
-                .failed(
-                    commandID: overflowedCommand.id,
-                    failureCode: "queueOverflow"
-                ),
-                sendReachableMessage: true
-            )
-        }
         guard let commandHandler else {
             // Older watch builds understand this receipt. Current builds keep the
-            // action pending until the queued command later receives a typed result.
+            // command pending until it is retried or times out.
             replyHandler?(["received": true])
             return
         }
-        processPending(command, using: commandHandler, replyHandler: replyHandler)
-    }
-
-    private func drainPendingCommandsIfPossible() {
-        guard let commandHandler, pendingCommands.isEmpty == false else { return }
-        let commands = pendingCommands
-        for command in commands where pendingCommands.contains(where: { $0.id == command.id }) {
-            processPending(command, using: commandHandler, replyHandler: nil)
-        }
-    }
-
-    private func processPending(
-        _ command: WatchTimerCommand,
-        using commandHandler: (WatchTimerCommand) -> WatchCommandResult,
-        replyHandler: (([String: Any]) -> Void)?
-    ) {
         let result = commandHandler(command)
         replyHandler?(WatchConnectivityPayloadCodec.encode(result: result))
-        deliverDurableCommandResult(result, sendReachableMessage: replyHandler == nil)
-        removePendingCommand(id: command.id)
-    }
-
-    @discardableResult
-    private func enqueuePendingCommand(_ command: WatchTimerCommand) -> [WatchTimerCommand] {
-        pendingCommands.removeAll { $0.id == command.id }
-        pendingCommands.append(command)
-        let overflowCount = max(0, pendingCommands.count - pendingCommandLimit)
-        let overflowedCommands = Array(pendingCommands.prefix(overflowCount))
-        if overflowCount > 0 {
-            pendingCommands.removeFirst(overflowCount)
-        }
-        pendingCommandStore.save(pendingCommands)
-        return overflowedCommands
-    }
-
-    private func removePendingCommand(id: UUID) {
-        pendingCommands.removeAll { $0.id == id }
-        pendingCommandStore.save(pendingCommands)
+        deliverDurableCommandResult(result)
     }
 
     /// `transferUserInfo` provides a durable terminal result even if the direct
     /// reply is lost while either device changes reachability.
-    private func deliverDurableCommandResult(
-        _ result: WatchCommandResult,
-        sendReachableMessage: Bool
-    ) {
+    private func deliverDurableCommandResult(_ result: WatchCommandResult) {
         guard let session, session.isPaired, session.isWatchAppInstalled else { return }
-        let payload = WatchConnectivityPayloadCodec.encode(result: result)
-        session.transferUserInfo(payload)
-        guard sendReachableMessage, session.isReachable else { return }
-        session.sendMessage(
-            payload,
-            replyHandler: nil,
-            errorHandler: { [weak self] error in
-                Task { @MainActor in
-                    self?.recordFailure(operation: .commandResultDelivery, error: error)
-                }
-            }
+        session.transferUserInfo(
+            WatchConnectivityPayloadCodec.encode(result: result)
         )
     }
 
     @discardableResult
     private func recordFailure(
-        operation: WatchConnectivityOperation,
+        operation: String,
         error: Error
     ) -> String {
         let message = error.localizedDescription
         Self.logger.error(
-            "WatchConnectivity \(operation.rawValue, privacy: .public) failed: \(message, privacy: .private)"
+            "WatchConnectivity \(operation, privacy: .public) failed: \(message, privacy: .private)"
         )
         return message
     }
@@ -201,7 +132,7 @@ extension WatchConnectivityBridge: WCSessionDelegate {
     ) {
         guard let error else { return }
         Task { @MainActor [weak self] in
-            self?.recordFailure(operation: .activation, error: error)
+            self?.recordFailure(operation: "activation", error: error)
         }
     }
 

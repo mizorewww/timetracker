@@ -94,10 +94,10 @@ extension TimeTrackerStore {
                     if let event = notification.userInfo?[
                         NSPersistentCloudKitContainer.eventNotificationUserInfoKey
                     ] as? NSPersistentCloudKitContainer.Event,
-                        event.endDate != nil
+                        let receipt = CloudRecoveryContainerEventReceipt(event: event)
                     {
                         do {
-                            try store.syncConflictService.recordCloudRecoveryContainerEvent(event)
+                            try store.syncConflictService.recordCloudRecoveryContainerEvent(receipt)
                         } catch {
                             store.recordCloudExportStateFailure(error)
                             return
@@ -146,7 +146,9 @@ extension TimeTrackerStore {
         }
         do {
             if AppCloudSync.isCloudImportRecoveryActive,
-               try syncConflictService.hasCompletedCloudRecoveryImportReceipt()
+               try syncConflictService.cloudRecoveryImportIsReady(
+                   in: syncConflictService.loadState()
+               )
             {
                 scheduleQuietRefresh(
                     reason: .cloudImportFinished(

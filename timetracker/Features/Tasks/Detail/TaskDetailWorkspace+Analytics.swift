@@ -64,13 +64,7 @@ private struct TaskDetailAnalyticsWorkspace: View {
             guard phase == .active else { return }
             liveNow = Date()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
-            liveNow = Date()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .NSSystemClockDidChange)) { _ in
-            liveNow = Date()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
+        .onSystemClockChange {
             liveNow = Date()
         }
     }

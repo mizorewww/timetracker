@@ -117,6 +117,19 @@ extension View {
         self
         #endif
     }
+
+    /// Runs `action` on every system clock, calendar-day and time-zone change.
+    func onSystemClockChange(_ action: @escaping () -> Void) -> some View {
+        onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+            action()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSSystemClockDidChange)) { _ in
+            action()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
+            action()
+        }
+    }
 }
 
 struct AppRowIcon: View {

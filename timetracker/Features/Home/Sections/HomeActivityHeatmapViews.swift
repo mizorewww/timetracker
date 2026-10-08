@@ -92,25 +92,7 @@ struct HomeActivityHeatmapSection: View {
             guard phase == .active else { return }
             refreshClock()
         }
-        .onReceive(
-            NotificationCenter.default.publisher(
-                for: .NSSystemClockDidChange
-            )
-        ) { _ in
-            refreshClock()
-        }
-        .onReceive(
-            NotificationCenter.default.publisher(
-                for: .NSSystemTimeZoneDidChange
-            )
-        ) { _ in
-            refreshClock()
-        }
-        .onReceive(
-            NotificationCenter.default.publisher(
-                for: .NSCalendarDayChanged
-            )
-        ) { _ in
+        .onSystemClockChange {
             refreshClock()
         }
     }

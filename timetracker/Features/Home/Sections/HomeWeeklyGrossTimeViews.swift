@@ -44,25 +44,7 @@ struct HomeWeeklyGrossTimeSection: View {
             guard phase == .active else { return }
             clockRevision &+= 1
         }
-        .onReceive(
-            NotificationCenter.default.publisher(
-                for: .NSSystemClockDidChange
-            )
-        ) { _ in
-            clockRevision &+= 1
-        }
-        .onReceive(
-            NotificationCenter.default.publisher(
-                for: .NSSystemTimeZoneDidChange
-            )
-        ) { _ in
-            clockRevision &+= 1
-        }
-        .onReceive(
-            NotificationCenter.default.publisher(
-                for: .NSCalendarDayChanged
-            )
-        ) { _ in
+        .onSystemClockChange {
             clockRevision &+= 1
         }
     }

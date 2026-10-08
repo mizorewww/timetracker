@@ -12,6 +12,7 @@ struct LLMPromptInstructionsEditor: View {
     @State private var draft: String
     @State private var mode = LLMPromptInstructionsEditorMode.edit
     @State private var validationError: LLMPromptInstructionsValidationError?
+    @State private var normalizedDraft: String?
     @State private var isDiscardConfirmationPresented = false
     @State private var isSaving = false
 
@@ -38,8 +39,9 @@ struct LLMPromptInstructionsEditor: View {
         self.onDismiss = onDismiss
         self.onSave = onSave
         _draft = State(initialValue: initialInstructions)
+        _normalizedDraft = State(initialValue: initialInstructions)
         _validationError = State(
-            initialValue: Self.validationError(for: initialInstructions, kind: kind)
+            initialValue: Self.evaluate(initialInstructions, kind: kind).error
         )
     }
 
@@ -57,13 +59,6 @@ struct LLMPromptInstructionsEditor: View {
             return actual
         }
         return draft.utf8.count
-    }
-
-    private var normalizedDraft: String? {
-        try? AppPreferenceValueSanitizer.llmPromptInstructions(
-            draft,
-            for: kind
-        )
     }
 
     private var accessibilityID: String {
@@ -84,7 +79,9 @@ struct LLMPromptInstructionsEditor: View {
         .frame(minWidth: 560, minHeight: 520)
         #endif
         .onChange(of: draft) { _, newValue in
-            validationError = Self.validationError(for: newValue, kind: kind)
+            let evaluated = Self.evaluate(newValue, kind: kind)
+            normalizedDraft = evaluated.normalized
+            validationError = evaluated.error
         }
         .editorDiscardConfirmation(
             isPresented: $isDiscardConfirmationPresented,
@@ -292,10 +289,9 @@ struct LLMPromptInstructionsEditor: View {
     }
 
     private func save() {
-        guard let normalized = try? AppPreferenceValueSanitizer
-            .llmPromptInstructions(draft, for: kind)
-        else {
-            validationError = Self.validationError(for: draft, kind: kind)
+        let evaluated = Self.evaluate(draft, kind: kind)
+        guard let normalized = evaluated.normalized else {
+            validationError = evaluated.error
             return
         }
         isSaving = true
@@ -323,21 +319,21 @@ struct LLMPromptInstructionsEditor: View {
         draft = kind.defaultInstructions
     }
 
-    private static func validationError(
-        for value: String,
+    private static func evaluate(
+        _ value: String,
         kind: LLMPromptKind
-    ) -> LLMPromptInstructionsValidationError? {
+    ) -> (normalized: String?, error: LLMPromptInstructionsValidationError?) {
         do {
-            _ = try AppPreferenceValueSanitizer.llmPromptInstructions(
+            let normalized = try AppPreferenceValueSanitizer.llmPromptInstructions(
                 value,
                 for: kind
             )
-            return nil
+            return (normalized, nil)
         } catch let error as LLMPromptInstructionsValidationError {
-            return error
+            return (nil, error)
         } catch {
             assertionFailure("Unexpected prompt instructions validation error: \(error)")
-            return nil
+            return (nil, nil)
         }
     }
 }

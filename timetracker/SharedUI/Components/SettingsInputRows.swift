@@ -50,38 +50,3 @@ struct SettingsTextFieldRow: View {
         .multilineTextAlignment(textAlignment)
     }
 }
-
-struct SettingsNumberFieldRow: View {
-    let title: String
-    let value: Binding<Int>
-    let formatter: NumberFormatter
-    let systemImage: String
-    var tint: Color = .accentColor
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-    var body: some View {
-        Group {
-            if dynamicTypeSize.isAccessibilitySize {
-                VStack(alignment: .leading, spacing: 8) {
-                    SettingsRowLabel(title: title, systemImage: systemImage, tint: tint)
-                    numberField
-                        .textFieldStyle(.roundedBorder)
-                }
-            } else {
-                LabeledContent {
-                    numberField
-                } label: {
-                    SettingsRowLabel(title: title, systemImage: systemImage, tint: tint)
-                }
-            }
-        }
-        .settingsRowSeparatorAligned()
-    }
-
-    private var numberField: some View {
-        TextField(title, value: value, formatter: formatter)
-            .labelsHidden()
-            .accessibilityLabel(title)
-            .multilineTextAlignment(dynamicTypeSize.isAccessibilitySize ? .leading : .trailing)
-    }
-}

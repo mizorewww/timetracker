@@ -1,43 +1,5 @@
 import SwiftUI
 
-struct ForecastExplanationCallout: View {
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "chart.line.uptrend.xyaxis")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.blue)
-                .frame(width: 22, height: 22)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(.app("forecast.explainer.title"))
-                    .font(titleFont)
-                Text(.app("forecast.explainer.body"))
-                    .font(bodyFont)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(10)
-        .background(Color.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.blue.opacity(0.12), lineWidth: 1)
-        )
-        .accessibilityElement(children: .combine)
-    }
-
-    private var titleFont: Font {
-        .body.weight(.semibold)
-    }
-
-    private var bodyFont: Font {
-        .body
-    }
-}
-
 struct ForecastInfoButton: View {
     var body: some View {
         InformationPresentationButton(

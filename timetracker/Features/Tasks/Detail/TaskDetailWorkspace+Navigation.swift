@@ -28,10 +28,7 @@ extension TaskDetailWorkspace {
     }
 
     var isPresentingRecovery: Bool {
-        TaskDraftRecoveryPresentation.isRequired(
-            reason: activeDraftRecoveryReason,
-            savedCopyTaskID: savedRecoveryCopyTaskID
-        )
+        activeDraftRecoveryReason != nil || savedRecoveryCopyTaskID != nil
     }
 
     func save() {

@@ -27,12 +27,3 @@ enum TaskDraftRecoveryReason: Equatable {
         }
     }
 }
-
-enum TaskDraftRecoveryPresentation {
-    static func isRequired(
-        reason: TaskDraftRecoveryReason?,
-        savedCopyTaskID: UUID?
-    ) -> Bool {
-        reason != nil || savedCopyTaskID != nil
-    }
-}

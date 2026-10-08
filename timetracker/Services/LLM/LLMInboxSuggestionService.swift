@@ -110,32 +110,6 @@ struct LLMInboxSuggestionService {
     }
 
     func suggestionRequest(
-        inboxTitle: String,
-        taskCandidates: [LLMTaskCandidate],
-        categoryCandidates: [LLMCategoryCandidate],
-        instructions: String = LLMPromptKind.inboxRouting.defaultInstructions,
-        configuration: LLMRequestConfiguration
-    ) throws -> URLRequest {
-        let input = LLMSuggestionInputPolicy.prepare(
-            inboxTitle: inboxTitle,
-            taskCandidates: taskCandidates,
-            categoryCandidates: categoryCandidates,
-            modelID: configuration.modelID
-        )
-        guard !input.modelID.isEmpty else {
-            throw LLMInboxSuggestionServiceError.missingModel
-        }
-        guard !input.taskCandidates.isEmpty || !input.categoryCandidates.isEmpty else {
-            throw LLMInboxSuggestionServiceError.noTaskCandidates
-        }
-        return try suggestionRequest(
-            input: input,
-            instructions: instructions,
-            configuration: configuration
-        )
-    }
-
-    private func suggestionRequest(
         input: LLMInboxSuggestionPreparedInput,
         instructions: String,
         configuration: LLMRequestConfiguration

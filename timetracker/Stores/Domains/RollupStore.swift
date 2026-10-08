@@ -36,43 +36,6 @@ struct RollupStore {
         }
     }
 
-    /// Compatibility overload for service-level callers. The application uses
-    /// the scoped overload below so this method never sits on a mutation hot path.
-    mutating func refreshAffected(
-        taskIDs: Set<UUID>,
-        tasks: [TaskNode],
-        segments: [TimeSegment],
-        checklistItems: [ChecklistItem],
-        forecastEligibleTaskIDs: Set<UUID>? = nil,
-        now: Date = Date(),
-        calendar: Calendar = .current
-    ) {
-        guard incrementalIndex.isInitialized else {
-            refresh(
-                tasks: tasks,
-                segments: segments,
-                checklistItems: checklistItems,
-                forecastEligibleTaskIDs: forecastEligibleTaskIDs,
-                now: now,
-                calendar: calendar
-            )
-            return
-        }
-        let scopedChecklistItems = Dictionary(
-            grouping: checklistItems.filter { taskIDs.contains($0.taskID) },
-            by: \.taskID
-        )
-        refreshAffected(
-            directTaskIDs: taskIDs,
-            explicitAncestorTaskIDs: [],
-            segmentChanges: incrementalIndex.replacementChanges(taskIDs: taskIDs, segments: segments),
-            checklistItemsByTaskID: scopedChecklistItems,
-            forecastEligibleTaskIDs: forecastEligibleTaskIDs,
-            now: now,
-            calendar: calendar
-        )
-    }
-
     mutating func refreshAffected(
         directTaskIDs: Set<UUID>,
         explicitAncestorTaskIDs: Set<UUID>,

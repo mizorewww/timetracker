@@ -88,17 +88,6 @@ nonisolated enum LLMSecureHTTPTransport {
         }
     }
 
-    static func validateResponseHeaders(
-        _ response: URLResponse,
-        maximumResponseByteCount: Int
-    ) throws {
-        try validateResponseStatus(response, data: Data())
-        try validateResponseMetadata(
-            response,
-            maximumResponseByteCount: maximumResponseByteCount
-        )
-    }
-
     private static func validateResponseMetadata(
         _ response: URLResponse,
         maximumResponseByteCount: Int

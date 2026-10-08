@@ -19,14 +19,15 @@ struct TaskRollupServiceTests {
             endedAt: now
         )
 
-        let rollups = TaskRollupService().rollups(
+        var store = RollupStore()
+        store.refresh(
             tasks: [parent, child],
             segments: [segment],
             checklistItems: [],
             now: now
         )
-        let childRollup = try #require(rollups[child.id])
-        let parentRollup = try #require(rollups[parent.id])
+        let childRollup = try #require(store.rollup(for: child.id))
+        let parentRollup = try #require(store.rollup(for: parent.id))
 
         #expect(childRollup.workedSeconds == 20)
         #expect(childRollup.remainingSeconds == 100)
@@ -45,12 +46,14 @@ struct TaskRollupServiceTests {
             ChecklistItem(taskID: task.id, title: "Two", isCompleted: true, deviceID: "test"),
         ]
 
-        let rollup = try #require(TaskRollupService().rollups(
+        var store = RollupStore()
+        store.refresh(
             tasks: [task],
             segments: [],
             checklistItems: items,
             now: now
-        )[task.id])
+        )
+        let rollup = try #require(store.rollup(for: task.id))
 
         #expect(rollup.checklistProgress == ChecklistProgress(taskID: task.id, totalCount: 2, completedCount: 2))
         #expect(rollup.remainingSeconds == 0)
@@ -64,13 +67,15 @@ struct TaskRollupServiceTests {
         let task = TaskNode(title: "Excluded", parentID: nil, deviceID: "test")
         task.estimatedSeconds = 600
 
-        let rollup = try #require(TaskRollupService().rollups(
+        var store = RollupStore()
+        store.refresh(
             tasks: [task],
             segments: [],
             checklistItems: [],
             forecastEligibleTaskIDs: [],
             now: now
-        )[task.id])
+        )
+        let rollup = try #require(store.rollup(for: task.id))
 
         #expect(rollup.forecastState == .disabled)
         #expect(rollup.estimatedTotalSeconds == nil)
@@ -85,23 +90,25 @@ struct TaskRollupServiceTests {
         let unrelated = TaskNode(title: "Unrelated", parentID: nil, deviceID: "test")
         child.estimatedSeconds = 100
         unrelated.estimatedSeconds = 300
-        let service = TaskRollupService()
-        let initial = service.rollups(
+
+        var store = RollupStore()
+        store.refresh(
             tasks: [parent, child, unrelated],
             segments: [],
             checklistItems: [],
             now: now
         )
+        let initial = store.taskRollups
 
         child.estimatedSeconds = 200
-        let updated = service.rollups(
-            updating: [child.id],
-            existingRollups: initial,
-            tasks: [parent, child, unrelated],
-            segments: [],
-            checklistItems: [],
+        store.refreshAffected(
+            directTaskIDs: [child.id],
+            explicitAncestorTaskIDs: [],
+            segmentChanges: [],
+            checklistItemsByTaskID: [:],
             now: now
         )
+        let updated = store.taskRollups
 
         #expect(updated[child.id]?.remainingSeconds == 200)
         #expect(updated[parent.id]?.remainingSeconds == 200)

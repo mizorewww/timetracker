@@ -4,8 +4,6 @@ struct LedgerBucketCache {
     private struct CacheKey: Hashable {
         let intervalStart: Date
         let intervalEnd: Date
-        let taskID: UUID?
-        let version: Int
     }
 
     private struct CacheEntry {
@@ -30,16 +28,13 @@ struct LedgerBucketCache {
     mutating func summaries(
         segments: [TimeSegment],
         interval: DateInterval,
-        taskID: UUID? = nil,
         now: Date = Date(),
-        calendar: Calendar = .current,
-        version: Int = 1
+        calendar: Calendar = .current
     ) -> [DailySummarySnapshot] {
         let days = dayIntervals(in: interval, calendar: calendar)
         let groupedSegments = segmentsByDay(
             segments,
             interval: interval,
-            taskID: taskID,
             now: now,
             calendar: calendar
         )
@@ -49,10 +44,8 @@ struct LedgerBucketCache {
             return summary(
                 daySegments: groupedSegments[dayStart] ?? [],
                 day: day,
-                taskID: taskID,
                 now: now,
-                calendar: calendar,
-                version: version
+                calendar: calendar
             )
         }
     }
@@ -75,16 +68,12 @@ struct LedgerBucketCache {
     private mutating func summary(
         daySegments: [TimeSegment],
         day: DateInterval,
-        taskID: UUID?,
         now: Date,
-        calendar: Calendar,
-        version: Int
+        calendar: Calendar
     ) -> DailySummarySnapshot? {
         let key = CacheKey(
             intervalStart: day.start,
-            intervalEnd: day.end,
-            taskID: taskID,
-            version: version
+            intervalEnd: day.end
         )
         let signature = signature(for: daySegments, now: now)
 
@@ -97,10 +86,8 @@ struct LedgerBucketCache {
         let snapshot = summaryService.summaries(
             segments: daySegments,
             interval: day,
-            taskID: taskID,
             now: now,
-            calendar: calendar,
-            version: version
+            calendar: calendar
         ).first
 
         if let snapshot {
@@ -130,13 +117,12 @@ struct LedgerBucketCache {
     private func segmentsByDay(
         _ segments: [TimeSegment],
         interval: DateInterval,
-        taskID: UUID?,
         now: Date,
         calendar: Calendar
     ) -> [Date: [TimeSegment]] {
         var result: [Date: [TimeSegment]] = [:]
 
-        for segment in segments where overlaps(segment, interval: interval, taskID: taskID, now: now) {
+        for segment in segments where overlaps(segment, interval: interval, now: now) {
             guard let bounded = TrackedTimePolicy.interval(
                 startedAt: segment.startedAt,
                 endedAt: segment.endedAt,
@@ -150,7 +136,7 @@ struct LedgerBucketCache {
             while cursor < bounded.end {
                 let next = calendar.date(byAdding: .day, value: 1, to: cursor) ?? bounded.end
                 let day = DateInterval(start: max(cursor, interval.start), end: min(next, interval.end))
-                if day.end > day.start, overlaps(segment, interval: day, taskID: taskID, now: now) {
+                if day.end > day.start, overlaps(segment, interval: day, now: now) {
                     result[calendar.startOfDay(for: day.start), default: []].append(segment)
                 }
                 cursor = next
@@ -178,11 +164,8 @@ struct LedgerBucketCache {
         return hasher.finalize()
     }
 
-    private func overlaps(_ segment: TimeSegment, interval: DateInterval, taskID: UUID?, now: Date) -> Bool {
+    private func overlaps(_ segment: TimeSegment, interval: DateInterval, now: Date) -> Bool {
         guard segment.deletedAt == nil else { return false }
-        if let taskID, segment.taskID != taskID {
-            return false
-        }
         return TrackedTimePolicy.overlaps(
             startedAt: segment.startedAt,
             endedAt: segment.endedAt,

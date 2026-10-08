@@ -1,5 +1,10 @@
 import Foundation
 
+struct TaskRollupHistoricalPace: Equatable {
+    let averageSeconds: Int
+    let activeDayCount: Int
+}
+
 struct TaskRollupCalculationContext {
     private let service: TaskRollupService
     private let taskByID: [UUID: TaskNode]
@@ -11,34 +16,6 @@ struct TaskRollupCalculationContext {
     private let historicalPaceByTaskID: [UUID: TaskRollupHistoricalPace]
     private let initialCache: [UUID: TaskRollup]
     private var updates: [UUID: TaskRollup] = [:]
-
-    init(
-        service: TaskRollupService,
-        tasks: [TaskNode],
-        segments: [TimeSegment],
-        checklistItems: [ChecklistItem],
-        forecastEligibleTaskIDs: Set<UUID>?,
-        now: Date,
-        initialCache: [UUID: TaskRollup]
-    ) {
-        let inputs = TaskRollupInputAggregation().inputs(
-            tasks: tasks,
-            segments: segments,
-            checklistItems: checklistItems,
-            now: now
-        )
-        self.init(
-            service: service,
-            taskByID: inputs.taskByID,
-            childrenByParent: inputs.childrenByParent,
-            ownWorkedSecondsByTaskID: inputs.ownWorkedSecondsByTaskID,
-            checklistProgressByTaskID: inputs.checklistProgressByTaskID,
-            historicalPaceByTaskID: inputs.historicalPaceByTaskID,
-            forecastEligibleTaskIDs: forecastEligibleTaskIDs,
-            postorderTaskIDs: inputs.postorderTaskIDs,
-            initialCache: initialCache
-        )
-    }
 
     /// Pre-indexed initializer used by `RollupStore` after the initial load.
     /// Keeping raw persistence models out of this path prevents a single

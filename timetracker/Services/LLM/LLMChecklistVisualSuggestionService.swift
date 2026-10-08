@@ -55,29 +55,6 @@ struct LLMChecklistVisualSuggestionService {
         return Self.sanitize(payload: payload, modelID: input.modelID)
     }
 
-    func suggestionRequest(
-        checklistTitle: String,
-        taskTitle: String,
-        taskPath: String,
-        instructions: String = LLMPromptKind.checklistVisual.defaultInstructions,
-        configuration: LLMRequestConfiguration
-    ) throws -> URLRequest {
-        let input = LLMSuggestionInputPolicy.prepareChecklistVisual(
-            checklistTitle: checklistTitle,
-            taskTitle: taskTitle,
-            taskPath: taskPath,
-            modelID: configuration.modelID
-        )
-        guard !input.modelID.isEmpty else {
-            throw LLMInboxSuggestionServiceError.missingModel
-        }
-        return try suggestionRequest(
-            input: input,
-            instructions: instructions,
-            configuration: configuration
-        )
-    }
-
     private func suggestionRequest(
         input: LLMChecklistVisualSuggestionPreparedInput,
         instructions: String,

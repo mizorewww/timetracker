@@ -5,35 +5,6 @@ struct TodayActivityHeatmapSnapshotService {
 
     func taskSnapshots(
         selectedTaskIDs: [UUID],
-        tasks: [TaskNode],
-        additionalContributingTaskIDsBySelectedTaskID: [UUID: Set<UUID>] = [:],
-        segments: [TimeSegment],
-        checklistItems: [ChecklistItem],
-        quantityGoals: [TaskQuantityGoal],
-        quantityEntries: [TaskQuantityEntry],
-        period: ActivityHeatmapPeriod,
-        now: Date,
-        calendar: Calendar = .current
-    ) async -> [TaskActivityHeatmapSnapshot] {
-        let indexes = TaskTreeService().indexes(tasks: tasks)
-        return await taskSnapshots(
-            selectedTaskIDs: selectedTaskIDs,
-            taskByID: indexes.taskByID,
-            childrenByParentID: indexes.childrenByParentID,
-            additionalContributingTaskIDsBySelectedTaskID:
-            additionalContributingTaskIDsBySelectedTaskID,
-            segments: segments,
-            checklistItems: checklistItems,
-            quantityGoals: quantityGoals,
-            quantityEntries: quantityEntries,
-            period: period,
-            now: now,
-            calendar: calendar
-        )
-    }
-
-    func taskSnapshots(
-        selectedTaskIDs: [UUID],
         taskByID: [UUID: TaskNode],
         childrenByParentID: [UUID?: [TaskNode]],
         additionalContributingTaskIDsBySelectedTaskID: [UUID: Set<UUID>] = [:],
@@ -117,18 +88,6 @@ struct TodayActivityHeatmapSnapshotService {
             )
         }
         return snapshots
-    }
-
-    func contributingTaskIDs(
-        selectedTaskIDs: [UUID],
-        tasks: [TaskNode]
-    ) -> Set<UUID> {
-        let indexes = TaskTreeService().indexes(tasks: tasks)
-        return contributingTaskIDs(
-            selectedTaskIDs: selectedTaskIDs,
-            taskByID: indexes.taskByID,
-            childrenByParentID: indexes.childrenByParentID
-        )
     }
 
     func contributingTaskIDs(

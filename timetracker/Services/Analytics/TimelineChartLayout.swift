@@ -94,27 +94,6 @@ nonisolated enum TimelineChartLayout {
     static let verticalGapLabelMinimumSpacing: CGFloat = 4
     static let verticalGapLabelBoundaryInset: CGFloat = 18
 
-    static func horizontalLanes(
-        height: CGFloat,
-        laneCount: Int,
-        gapLabelRowCount: Int,
-        gapLabelHeight: CGFloat = horizontalGapLabelHeight
-    ) -> TimelineChartLaneLayout {
-        centeredLanes(
-            plotOrigin: 0,
-            plotExtent: max(
-                1,
-                height - horizontalAnnotationHeight(
-                    gapLabelRowCount: gapLabelRowCount,
-                    gapLabelHeight: gapLabelHeight
-                )
-            ),
-            laneCount: laneCount,
-            preferredLaneExtent: horizontalPreferredLaneExtent,
-            preferredSpacing: horizontalPreferredLaneSpacing
-        )
-    }
-
     static func horizontalPlotLanes(
         height: CGFloat,
         laneCount: Int
@@ -207,6 +186,17 @@ nonisolated enum TimelineChartLayout {
             horizontalAxisLabelHeight
     }
 
+    static func horizontalPlotHeight(laneCount: Int) -> CGFloat {
+        let count = max(1, laneCount)
+        let groupExtent =
+            CGFloat(count) * horizontalPreferredLaneExtent +
+            CGFloat(max(0, count - 1)) * horizontalPreferredLaneSpacing
+        return max(
+            120 - horizontalAxisLabelHeight,
+            groupExtent + 20
+        )
+    }
+
     static func horizontalPlotHeight(
         height: CGFloat,
         gapLabelRowCount: Int,
@@ -219,40 +209,6 @@ nonisolated enum TimelineChartLayout {
                 gapLabelHeight: gapLabelHeight
             )
         )
-    }
-
-    static func horizontalPlotHeight(laneCount: Int) -> CGFloat {
-        let count = max(1, laneCount)
-        let groupExtent =
-            CGFloat(count) * horizontalPreferredLaneExtent +
-            CGFloat(max(0, count - 1)) * horizontalPreferredLaneSpacing
-        return max(
-            120 - horizontalAxisLabelHeight,
-            groupExtent + 20
-        )
-    }
-
-    static func horizontalAxisLabelOrigin(
-        plotHeight: CGFloat,
-        gapLabelRowCount: Int,
-        gapLabelHeight: CGFloat = horizontalGapLabelHeight
-    ) -> CGFloat {
-        finiteNonnegative(plotHeight) + horizontalGapAnnotationHeight(
-            rowCount: gapLabelRowCount,
-            labelHeight: gapLabelHeight
-        )
-    }
-
-    static func horizontalTimelineHeight(
-        laneCount: Int,
-        gapLabelRowCount: Int,
-        gapLabelHeight: CGFloat = horizontalGapLabelHeight
-    ) -> CGFloat {
-        horizontalPlotHeight(laneCount: laneCount) +
-            horizontalAnnotationHeight(
-                gapLabelRowCount: gapLabelRowCount,
-                gapLabelHeight: gapLabelHeight
-            )
     }
 
     static func verticalTimelineHeight(
@@ -382,26 +338,6 @@ nonisolated enum TimelineChartLayout {
         )
     }
 
-    static func horizontalGapLabelFrame(
-        placement: TimelineChartHorizontalGapLabelPlacement,
-        plotHeight: CGFloat,
-        labelHeight: CGFloat = horizontalGapLabelHeight,
-        rowSpacing: CGFloat = horizontalGapLabelRowSpacing
-    ) -> CGRect {
-        let row = max(0, placement.row)
-        let height = finiteNonnegative(labelHeight)
-        let spacing = finiteNonnegative(rowSpacing)
-
-        return CGRect(
-            x: finiteNonnegative(placement.axisOrigin),
-            y: finiteNonnegative(plotHeight) +
-                horizontalAnnotationSpacing +
-                CGFloat(row) * (height + spacing),
-            width: finiteNonnegative(placement.axisExtent),
-            height: height
-        )
-    }
-
     static func verticalGapLabels(
         gaps: [TimelineOmittedGap],
         compression: TimelineAxisCompression,
@@ -507,31 +443,6 @@ nonisolated enum TimelineChartLayout {
             y: finiteNonnegative(placement.axisOrigin),
             width: max(0, gutterWidth - 2 * inset),
             height: finiteNonnegative(placement.axisExtent)
-        )
-    }
-
-    static func verticalGapLabelFrame(
-        position: CGFloat,
-        axisLength: CGFloat,
-        axisLabelWidth: CGFloat = verticalAxisLabelWidth,
-        labelHeight: CGFloat = verticalGapLabelHeight,
-        horizontalInset: CGFloat = verticalGapLabelHorizontalInset
-    ) -> CGRect {
-        let length = finiteNonnegative(axisLength)
-        let gutterWidth = finiteNonnegative(axisLabelWidth)
-        let inset = min(finiteNonnegative(horizontalInset), gutterWidth / 2)
-        let height = min(finiteNonnegative(labelHeight), length)
-        let coordinate = position.isFinite ? position : 0
-        let originY = min(
-            max(0, coordinate - height / 2),
-            max(0, length - height)
-        )
-
-        return CGRect(
-            x: inset,
-            y: originY,
-            width: max(0, gutterWidth - 2 * inset),
-            height: height
         )
     }
 

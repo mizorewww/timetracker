@@ -5,8 +5,6 @@ nonisolated struct OpenAIChatCompletionRequest: Encodable {
     let messages: [OpenAIChatMessage]
     let temperature: Double?
     let responseFormat: OpenAIChatResponseFormat?
-    var stream: Bool?
-    var streamOptions: OpenAIChatStreamOptions?
     var tools: [OpenAIChatToolDefinition]?
     var toolChoice: String?
     var thinking: OpenAIChatThinkingConfiguration?
@@ -17,8 +15,6 @@ nonisolated struct OpenAIChatCompletionRequest: Encodable {
         messages: [OpenAIChatMessage],
         temperature: Double?,
         responseFormat: OpenAIChatResponseFormat? = nil,
-        stream: Bool? = nil,
-        streamOptions: OpenAIChatStreamOptions? = nil,
         tools: [OpenAIChatToolDefinition]? = nil,
         toolChoice: String? = nil,
         thinking: OpenAIChatThinkingConfiguration? = nil,
@@ -28,8 +24,6 @@ nonisolated struct OpenAIChatCompletionRequest: Encodable {
         self.messages = messages
         self.temperature = temperature
         self.responseFormat = responseFormat
-        self.stream = stream
-        self.streamOptions = streamOptions
         self.tools = tools
         self.toolChoice = toolChoice
         self.thinking = thinking
@@ -41,8 +35,6 @@ nonisolated struct OpenAIChatCompletionRequest: Encodable {
         case messages
         case temperature
         case responseFormat = "response_format"
-        case stream
-        case streamOptions = "stream_options"
         case tools
         case toolChoice = "tool_choice"
         case thinking
@@ -88,12 +80,10 @@ nonisolated struct OpenAIChatResponseFormat: Encodable {
     let type: String
 }
 
-nonisolated struct OpenAIChatStreamOptions: Encodable {
-    let includeUsage: Bool
-
-    enum CodingKeys: String, CodingKey {
-        case includeUsage = "include_usage"
-    }
+nonisolated struct OpenAIChatUsage: Decodable, Sendable, Equatable {
+    let prompt_tokens: Int?
+    let completion_tokens: Int?
+    let total_tokens: Int?
 }
 
 nonisolated struct OpenAIChatCompletionResponse: Decodable, Sendable {
@@ -113,5 +103,5 @@ nonisolated struct OpenAIChatCompletionResponse: Decodable, Sendable {
     }
 
     let choices: [Choice]
-    let usage: OpenAIChatCompletionStreamChunk.Usage?
+    let usage: OpenAIChatUsage?
 }

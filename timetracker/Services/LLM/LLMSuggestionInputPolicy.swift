@@ -125,10 +125,6 @@ nonisolated enum LLMSuggestionInputPolicy {
         return UUID(uuidString: trimmed)
     }
 
-    static func sanitizedTaskID(_ taskID: String) -> UUID? {
-        sanitizedDestinationID(taskID)
-    }
-
     static func boundedTrimmedUTF8(_ value: String, maximumByteCount: Int) -> String {
         guard maximumByteCount > 0 else { return "" }
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)

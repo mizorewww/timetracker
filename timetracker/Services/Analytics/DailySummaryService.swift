@@ -2,16 +2,12 @@ import Foundation
 
 struct DailySummarySnapshot: Equatable, Identifiable {
     var id: String {
-        "\(Int(date.timeIntervalSince1970))-\(taskID?.uuidString ?? "all")"
+        "\(Int(date.timeIntervalSince1970))"
     }
 
     let date: Date
-    let taskID: UUID?
     let grossSeconds: Int
     let wallClockSeconds: Int
-    let pomodoroCount: Int
-    let interruptionCount: Int
-    let version: Int
 }
 
 struct DailySummaryService {
@@ -32,18 +28,14 @@ struct DailySummaryService {
     func summaries(
         segments: [TimeSegment],
         interval: DateInterval,
-        taskID: UUID? = nil,
         now: Date = Date(),
-        calendar: Calendar = .current,
-        version: Int = 1
+        calendar: Calendar = .current
     ) -> [DailySummarySnapshot] {
         dayIntervals(in: interval, calendar: calendar).map { day in
             summary(
                 segments: segments,
                 day: day,
-                taskID: taskID,
-                now: now,
-                version: version
+                now: now
             )
         }
     }
@@ -51,44 +43,29 @@ struct DailySummaryService {
     private func summary(
         segments: [TimeSegment],
         day: DateInterval,
-        taskID: UUID?,
-        now: Date,
-        version: Int
+        now: Date
     ) -> DailySummarySnapshot {
-        let clipped = segments.compactMap { clippedInterval(for: $0, in: day, taskID: taskID, now: now).map { (segment: $0.segment, interval: $0.interval) } }
+        let clipped = segments.compactMap { clippedInterval(for: $0, in: day, now: now).map { (segment: $0.segment, interval: $0.interval) } }
         let gross = clipped.reduce(0) { result, item in
             result + Int(item.interval.end.timeIntervalSince(item.interval.start))
         }
         let wall = aggregationService.mergeOverlappingIntervals(clipped.map(\.interval)).reduce(0) { result, interval in
             result + Int(interval.end.timeIntervalSince(interval.start))
         }
-        let pomodoroCount = clipped.filter { item in
-            item.segment.source == .pomodoro &&
-                item.segment.endedAt != nil &&
-                item.segment.endedAt.map { $0 <= now && day.contains($0) } == true
-        }.count
 
         return DailySummarySnapshot(
             date: day.start,
-            taskID: taskID,
             grossSeconds: gross,
-            wallClockSeconds: wall,
-            pomodoroCount: pomodoroCount,
-            interruptionCount: 0,
-            version: version
+            wallClockSeconds: wall
         )
     }
 
     private func clippedInterval(
         for segment: TimeSegment,
         in interval: DateInterval,
-        taskID: UUID?,
         now: Date
     ) -> (segment: TimeSegment, interval: DateInterval)? {
         guard segment.deletedAt == nil else { return nil }
-        if let taskID, segment.taskID != taskID {
-            return nil
-        }
 
         guard let clipped = TrackedTimePolicy.interval(
             startedAt: segment.startedAt,

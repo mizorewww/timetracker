@@ -96,12 +96,6 @@ nonisolated struct InboxSuggestionIdentityService {
         visibleLogicalResolutions(from: items).map(\.readModel)
     }
 
-    func logicalWinners<S: Sequence>(from items: S) -> [InboxItem]
-        where S.Element == InboxItem
-    {
-        logicalResolutions(from: items).map(\.winner)
-    }
-
     func visibleLogicalResolutions<S: Sequence>(from items: S) -> [InboxItemMergeResolution]
         where S.Element == InboxItem
     {

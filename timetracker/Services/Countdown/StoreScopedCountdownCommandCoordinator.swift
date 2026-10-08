@@ -96,7 +96,7 @@ struct StoreScopedCountdownCommandCoordinator {
             )
             guard let event = try context.fetch(descriptor)
                 .deduplicatedByID()
-                .first(where: { $0.id == eventID }),
+                .first,
                 event.deletedAt == nil
             else {
                 throw StoreScopedCountdownMutationError.eventUnavailable

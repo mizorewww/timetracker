@@ -19,20 +19,8 @@ struct TaskTreeProjectionCache {
     private var hierarchyEntries: [HierarchyEntry] = []
     private var searchEntries: [SearchEntry] = []
 
-    private(set) var hierarchyBuildCount = 0
-    private(set) var searchBuildCount = 0
-    private(set) var invalidationCount = 0
-
     init(capacity: Int = 4) {
         self.capacity = Swift.max(1, capacity)
-    }
-
-    var hierarchyEntryCount: Int {
-        hierarchyEntries.count
-    }
-
-    var searchEntryCount: Int {
-        searchEntries.count
     }
 
     mutating func projection(
@@ -48,7 +36,6 @@ struct TaskTreeProjectionCache {
         }
 
         let projection = readIndex.projection(expandedTaskIDs: expandedTaskIDs)
-        hierarchyBuildCount += 1
         hierarchyEntries.append(
             HierarchyEntry(expandedTaskIDs: expandedTaskIDs, projection: projection)
         )
@@ -71,7 +58,6 @@ struct TaskTreeProjectionCache {
         }
 
         let projection = readIndex.searchProjection(matching: query)
-        searchBuildCount += 1
         searchEntries.append(SearchEntry(query: query, projection: projection))
         if searchEntries.count > capacity {
             searchEntries.removeFirst(searchEntries.count - capacity)
@@ -81,9 +67,6 @@ struct TaskTreeProjectionCache {
 
     private mutating func prepare(for requestedRevision: UInt64) {
         guard revision != requestedRevision else { return }
-        if revision != nil {
-            invalidationCount += 1
-        }
         revision = requestedRevision
         hierarchyEntries.removeAll(keepingCapacity: true)
         searchEntries.removeAll(keepingCapacity: true)

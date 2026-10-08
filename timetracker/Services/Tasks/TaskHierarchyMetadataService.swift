@@ -46,20 +46,6 @@ nonisolated struct TaskHierarchyMetadataService {
             }
         }
 
-        // Defensive fallback for malformed imported graphs. The repair plan should
-        // make every component reachable, but never leave metadata unbounded if a
-        // future schema introduces another invalid shape.
-        let sortedTasks = tasks
-            .map { (id: $0.id, task: $0) }
-            .sorted { $0.id.uuidString < $1.id.uuidString }
-            .map { $0.task }
-        for task in sortedTasks where result[task.id] == nil {
-            result[task.id] = TaskHierarchyMetadata(
-                parentID: nil,
-                depth: 0,
-                path: TaskHierarchyMetadata.canonicalPath(for: task.id)
-            )
-        }
         return result
     }
 }

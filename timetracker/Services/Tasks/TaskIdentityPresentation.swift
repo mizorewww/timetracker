@@ -6,9 +6,6 @@ nonisolated struct TaskIdentityText: Equatable, Sendable {
 }
 
 nonisolated struct TaskVisualPresentation: Equatable, Sendable {
-    static let defaultSymbolName = ChecklistVisualSanitizer.defaultIcon
-    static let defaultColorHex = ChecklistVisualSanitizer.defaultColor
-
     let symbolName: String
     let colorHex: String
 

@@ -219,7 +219,7 @@ private struct QuickStartEditorTaskRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            TaskIdentityRow(presentation: presentation)
+            TaskSummaryRow(presentation: presentation)
                 .layoutPriority(1)
             if let order {
                 Text("#\(order)")

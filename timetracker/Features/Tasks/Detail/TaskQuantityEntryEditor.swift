@@ -1,4 +1,98 @@
+import Foundation
 import SwiftUI
+
+nonisolated struct TaskQuantityEntryEditorDraft: Equatable, Sendable {
+    var amount: Int
+    var recordedAt: Date
+
+    var isValid: Bool {
+        TaskQuantityPolicy.valueRange.contains(amount) &&
+            PersistentDatePolicy.contains(recordedAt)
+    }
+
+    var validationMessage: String {
+        if TaskQuantityPolicy.valueRange.contains(amount) == false {
+            return TaskQuantityEntryMutationError.invalidAmount
+                .localizedDescription
+        }
+        return TaskQuantityEntryMutationError.invalidRecordedAt
+            .localizedDescription
+    }
+}
+
+nonisolated struct TaskQuantityEntryEditorRoute:
+    Identifiable,
+    Equatable,
+    Sendable
+{
+    nonisolated enum Mode: Equatable, Sendable {
+        case add(entryID: UUID)
+        case edit(
+            entryBaseline: TaskQuantityEntryMutationBaseline,
+            updateOperationID: UUID,
+            deleteOperationID: UUID
+        )
+    }
+
+    let id: UUID
+    let taskID: UUID
+    let goalBaseline: TaskQuantityGoalMutationBaseline
+    let unitLabel: String
+    let initialDraft: TaskQuantityEntryEditorDraft
+    let mode: Mode
+
+    static func add(
+        detail: TaskQuantityDetailSnapshot,
+        now: Date = Date(),
+        routeID: UUID = UUID(),
+        entryID: UUID = UUID()
+    ) -> TaskQuantityEntryEditorRoute {
+        let remaining = detail.progress.remainingAmount
+        let amount = remaining > 0 ? Int(remaining) : 1
+        return TaskQuantityEntryEditorRoute(
+            id: routeID,
+            taskID: detail.progress.taskID,
+            goalBaseline: detail.progress.goalBaseline,
+            unitLabel: detail.progress.unitLabel,
+            initialDraft: TaskQuantityEntryEditorDraft(
+                amount: amount,
+                recordedAt: now
+            ),
+            mode: .add(entryID: entryID)
+        )
+    }
+
+    static func edit(
+        detail: TaskQuantityDetailSnapshot,
+        entry: TaskQuantityEntrySnapshot,
+        routeID: UUID = UUID(),
+        updateOperationID: UUID = UUID(),
+        deleteOperationID: UUID = UUID()
+    ) -> TaskQuantityEntryEditorRoute {
+        TaskQuantityEntryEditorRoute(
+            id: routeID,
+            taskID: detail.progress.taskID,
+            goalBaseline: detail.progress.goalBaseline,
+            unitLabel: detail.progress.unitLabel,
+            initialDraft: TaskQuantityEntryEditorDraft(
+                amount: entry.amount,
+                recordedAt: entry.recordedAt
+            ),
+            mode: .edit(
+                entryBaseline: entry.baseline,
+                updateOperationID: updateOperationID,
+                deleteOperationID: deleteOperationID
+            )
+        )
+    }
+
+    var isEditing: Bool {
+        if case .edit = mode {
+            return true
+        }
+        return false
+    }
+}
 
 struct TaskQuantityEntryEditorSheet: View {
     let store: TimeTrackerStore
@@ -49,15 +143,14 @@ struct TaskQuantityEntryEditorSheet: View {
                             "task.quantity.entry.editor.date"
                         ),
                         selection: $draft.recordedAt,
-                        in: TaskQuantityEntryEditorActions.allowedDateRange,
+                        in: Self.allowedDateRange,
                         displayedComponents: [.date, .hourAndMinute]
                     )
                     .accessibilityIdentifier("task.detail.quantity.date")
 
                     if draft.isValid == false {
                         TaskEditorInlineErrorMessage(
-                            message: TaskQuantityEntryEditorActions
-                                .validationMessage(for: draft),
+                            message: draft.validationMessage,
                             accessibilityIdentifier:
                             "task.detail.quantity.validation"
                         )
@@ -148,6 +241,11 @@ struct TaskQuantityEntryEditorSheet: View {
         }
     }
 
+    private static var allowedDateRange: ClosedRange<Date> {
+        let maximumDate = PersistentDatePolicy.maximumDateExclusive.addingTimeInterval(-1)
+        return PersistentDatePolicy.minimumDate ... maximumDate
+    }
+
     private func requestCancel() {
         isAmountFocused = false
         if draft == route.initialDraft {
@@ -159,19 +257,37 @@ struct TaskQuantityEntryEditorSheet: View {
 
     private func save() {
         isAmountFocused = false
-        if TaskQuantityEntryEditorActions.save(
-            store: store,
-            route: route,
-            draft: draft
-        ) {
+        let didCommit: Bool = switch route.mode {
+        case let .add(entryID):
+            store.recordTaskQuantity(
+                taskID: route.taskID,
+                goalBaseline: route.goalBaseline,
+                amount: draft.amount,
+                entryID: entryID,
+                recordedAt: draft.recordedAt
+            )
+        case let .edit(entryBaseline, operationID, _):
+            store.updateTaskQuantityEntry(
+                baseline: entryBaseline,
+                goalBaseline: route.goalBaseline,
+                amount: draft.amount,
+                recordedAt: draft.recordedAt,
+                operationID: operationID
+            )
+        }
+        if didCommit {
             dismiss()
         }
     }
 
     private func delete() {
-        if TaskQuantityEntryEditorActions.delete(
-            store: store,
-            route: route
+        guard case let .edit(entryBaseline, _, operationID) = route.mode
+        else {
+            return
+        }
+        if store.deleteTaskQuantityEntry(
+            baseline: entryBaseline,
+            operationID: operationID
         ) {
             dismiss()
         }

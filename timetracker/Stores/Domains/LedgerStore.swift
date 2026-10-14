@@ -77,7 +77,7 @@ struct LedgerStore {
         now: Date = Date(),
         calendar: Calendar = .current
     ) throws {
-        let fetchedSegments = try repository.allSegments().deduplicatedByID()
+        let fetchedSegments = try repository.allSegments()
         rebuildSegmentIndexes(segments: fetchedSegments, now: now, calendar: calendar)
         try sessionIndex.rebuild(repository.sessions())
         hasLoadedHistory = true

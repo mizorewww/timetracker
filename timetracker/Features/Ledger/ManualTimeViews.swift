@@ -180,6 +180,6 @@ struct ManualTimePanel: View {
     }
 
     private var availableTasks: [TaskNode] {
-        store.tasks.filter(store.isTaskAvailableForTracking)
+        store.trackableTasks
     }
 }

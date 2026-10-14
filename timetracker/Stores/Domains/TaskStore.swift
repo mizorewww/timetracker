@@ -13,7 +13,7 @@ struct TaskStore {
     private(set) var incompleteQuantityProgressTaskIDs = Set<UUID>()
 
     mutating func refresh(repository: SwiftDataTaskRepository) throws {
-        tasks = try repository.allNodes().deduplicatedByID()
+        tasks = try repository.allNodes()
         categories = try repository.categories().deduplicatedByID()
         categoryAssignments = try repository.categoryAssignments().deduplicatedByID()
         try refreshAllTaskProgress(repository: repository)

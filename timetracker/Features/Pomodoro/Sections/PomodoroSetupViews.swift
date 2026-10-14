@@ -19,7 +19,7 @@ struct PomodoroSetupCard: View {
     }
 
     private var availableTasks: [TaskNode] {
-        store.tasks.filter(store.isTaskAvailableForTracking)
+        store.trackableTasks
     }
 
     var body: some View {

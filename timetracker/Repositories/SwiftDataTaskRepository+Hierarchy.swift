@@ -32,16 +32,19 @@ nonisolated extension SwiftDataTaskRepository {
         return result
     }
 
+    /// `nodes` is the caller's visible task snapshot, reused so one write does
+    /// not fetch the whole tree again.
     func applyHierarchy(
         to node: TaskNode,
-        parentID: UUID?
+        parentID: UUID?,
+        nodes: [TaskNode]
     ) throws {
         if let parentID {
-            guard let parent = try task(id: parentID) else {
+            guard let parent = nodes.first(where: { $0.id == parentID }) else {
                 throw TaskRepositoryError.invalidMove
             }
-            guard try TaskTrackingAvailabilityService()
-                .trackableTaskIDs(tasks: allNodes())
+            guard TaskTrackingAvailabilityService()
+                .trackableTaskIDs(tasks: nodes)
                 .contains(parentID)
             else {
                 throw TaskRepositoryError.invalidMove

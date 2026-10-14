@@ -18,9 +18,7 @@ struct QuickStartEditorSheet: View {
 
     private var availableTasks: [TaskNode] {
         let selectedIDSet = Set(selectedIDs)
-        return store.tasks.filter {
-            store.isTaskAvailableForTracking($0) && !selectedIDSet.contains($0.id)
-        }
+        return store.trackableTasks.filter { !selectedIDSet.contains($0.id) }
     }
 
     private var pinnedTasks: [TaskNode] {

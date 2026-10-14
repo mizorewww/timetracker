@@ -94,9 +94,9 @@ struct SegmentEditorSheet: View {
     private func reloadLatestDraft() {
         do {
             try store.refreshSegmentEditorReadModels()
-            guard let segment = store.allSegments.first(where: {
-                $0.id == currentDraft.segmentID && $0.deletedAt == nil
-            }), let latestDraft = store.segmentEditorDraft(for: segment) else {
+            guard let latestDraft = store.segmentEditorDraft(
+                for: .trackedSegment(currentDraft.segmentID)
+            ) else {
                 feedbackRouter.present(
                     title: AppStrings.localized("segment.editor.deleted.title"),
                     message: AppStrings.localized("segment.editor.deleted.message")

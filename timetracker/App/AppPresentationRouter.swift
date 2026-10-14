@@ -131,7 +131,7 @@ extension AppPresentationRouter {
 
     @discardableResult
     func presentManualTime(taskID: UUID? = nil, using store: TimeTrackerStore) -> Bool {
-        let availableTasks = store.tasks.filter(store.isTaskAvailableForTracking)
+        let availableTasks = store.trackableTasks
         let requestedTask = taskID.flatMap { store.taskByID[$0] }
         let selectedTask = store.selectedTaskID.flatMap { store.taskByID[$0] }
         let target = requestedTask.flatMap { store.isTaskAvailableForTracking($0) ? $0.id : nil } ??

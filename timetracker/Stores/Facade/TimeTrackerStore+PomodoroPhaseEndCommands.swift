@@ -47,7 +47,7 @@ extension TimeTrackerStore {
     /// refresh pipeline still runs for actual mutations.
     func convergeLiveTimerReadModels() throws {
         guard let timeRepository, let pomodoroRepository else { return }
-        pomodoroRuns = try pomodoroRepository.runs().deduplicatedByID()
+        pomodoroRuns = try pomodoroRepository.runs()
         try ledgerDomainStore.refreshVisible(repository: timeRepository)
         try refreshLedgerRelationshipVisibility()
         schedulePomodoroReconciliation(now: Date())

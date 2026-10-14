@@ -39,11 +39,11 @@ Delete this file at closeout.
 - [x] Container factory fallback chain de-duplicated (done in G5).
 
 ### G4 — Performance on every-write paths
-- [ ] Ledger relationship visibility maintained incrementally (no full task fetch + full segment filter per refresh).
-- [ ] Domain store internals that drive no view are `@ObservationIgnored`; revision counters drive invalidation.
-- [ ] Repository `children(of:)` uses a predicate; hierarchy writes reuse caller nodes; no redundant dedupe/sort.
-- [ ] Cached trackable-task read model replaces repeated `tasks.filter` in views.
-- [ ] Redundant first `refreshInboxDomain` pass removed; editor lookups use `segmentByID`.
+- [x] Ledger relationship visibility maintained incrementally (no full task fetch + full segment filter per refresh).
+- [-] Domain store observation granularity — not changed: ignored indexes already use the revision-dependency pattern; making ledger/rollup stores ignored would require every body caller to add a revision read, and a missed one silently stales the UI.
+- [x] Repository `children(of:)` uses a predicate; hierarchy writes reuse caller nodes; no redundant dedupe/sort.
+- [x] Cached trackable-task read model replaces repeated `tasks.filter` in views.
+- [x] Redundant first `refreshInboxDomain` pass removed; editor lookups use `segmentByID`.
 - [x] Sync conflict `prompt()` read path — removed with the sync layer.
 
 ### G5 — Structural simplification

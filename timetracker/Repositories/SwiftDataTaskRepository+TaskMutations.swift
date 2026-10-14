@@ -17,18 +17,19 @@ nonisolated extension SwiftDataTaskRepository {
             iconName: iconName,
             notes: nil
         )
-        let siblings = try children(of: parentID)
+        let nodes = try allNodes()
+        let siblings = nodes.filter { $0.parentID == parentID }
         let node = TaskNode(
             title: values.title,
             parentID: parentID,
             deviceID: deviceID,
             colorHex: values.colorHex,
             iconName: values.iconName,
-            sortOrder: SortOrderPolicy.after(siblings.last?.sortOrder)
+            sortOrder: SortOrderPolicy.after(siblings.map(\.sortOrder).max())
         )
         node.id = proposedID
 
-        try applyHierarchy(to: node, parentID: parentID)
+        try applyHierarchy(to: node, parentID: parentID, nodes: nodes)
         context.insert(node)
         try setCategoryAssignment(categoryID: parentID == nil ? categoryID : nil, forRootTaskID: node.id)
         try context.saveAfterMutationStep()
@@ -69,7 +70,7 @@ nonisolated extension SwiftDataTaskRepository {
         node.dueAt = dueAt
         node.markMutated(at: now, deviceID: deviceID)
         if isChangingParent {
-            try applyHierarchy(to: node, parentID: parentID)
+            try applyHierarchy(to: node, parentID: parentID, nodes: nodes)
         }
         updateDescendantHierarchy(of: node, nodes: nodes, now: now)
         try setCategoryAssignment(categoryID: parentID == nil ? categoryID : nil, forRootTaskID: node.id)

@@ -8,11 +8,21 @@ nonisolated extension SwiftDataTaskRepository {
             .sorted(by: taskHierarchyOrder)
     }
 
+    /// The predicate only nominates candidates: every copy of each candidate
+    /// is re-fetched so LWW picks the winner even if only a stale copy matched.
     func children(of parentID: UUID?) throws -> [TaskNode] {
         let parent = parentID
-        return try allNodes()
-            .filter { $0.parentID == parent }
-            .sorted(by: taskSiblingOrder)
+        let candidates = try context.fetch(
+            FetchDescriptor<TaskNode>(predicate: #Predicate { $0.parentID == parent })
+        )
+        let candidateIDs = Array(Set(candidates.map(\.id)))
+        guard candidateIDs.isEmpty == false else { return [] }
+        return try context.fetch(
+            FetchDescriptor<TaskNode>(predicate: #Predicate { candidateIDs.contains($0.id) })
+        )
+        .visibleDeduplicatedByID()
+        .filter { $0.parentID == parent }
+        .sorted(by: taskSiblingOrder)
     }
 
     func task(id: UUID) throws -> TaskNode? {

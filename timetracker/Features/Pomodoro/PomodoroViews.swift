@@ -18,9 +18,7 @@ struct PomodoroView: View {
     }
 
     private var availableFocusTaskIDs: [UUID] {
-        store.tasks
-            .filter(store.isTaskAvailableForTracking)
-            .map(\.id)
+        store.trackableTasks.map(\.id)
     }
 
     var body: some View {

@@ -12,6 +12,7 @@ extension TimeTrackerStore {
         // passthroughs, so only the derived facade indexes need rebuilding.
         rebuildTaskIndexes()
         rebuildTaskCategoryIndexes()
+        try refreshExistingTaskIDs()
         try refreshLedgerRelationshipVisibility()
         cancelInvalidChecklistVisualSuggestionRequests()
     }
@@ -34,7 +35,7 @@ extension TimeTrackerStore {
     }
 
     func refreshPomodoroDomain(schedulesReconciliation: Bool = true) throws {
-        pomodoroRuns = try pomodoroRepository?.runs().deduplicatedByID() ?? []
+        pomodoroRuns = try pomodoroRepository?.runs() ?? []
         if schedulesReconciliation {
             schedulePomodoroReconciliation()
         }
@@ -127,13 +128,13 @@ extension TimeTrackerStore {
 
     func refreshInboxDomain(plan: StoreRefreshPlan) throws {
         let itemReadModels = try fetchInboxItemReadModels()
-        inboxDomainStore.refresh(itemReadModels: itemReadModels, suggestions: inboxSuggestions)
         if plan.affectedInboxItemIDs.isEmpty || inboxSuggestions.isEmpty {
             try inboxDomainStore.refresh(
                 itemReadModels: itemReadModels,
                 suggestions: fetchInboxSuggestions()
             )
         } else {
+            inboxDomainStore.refresh(itemReadModels: itemReadModels, suggestions: inboxSuggestions)
             try inboxDomainStore.refreshSuggestionScoped(
                 inboxItemIDs: plan.affectedInboxItemIDs,
                 suggestions: fetchInboxSuggestions(inboxItemIDs: plan.affectedInboxItemIDs)

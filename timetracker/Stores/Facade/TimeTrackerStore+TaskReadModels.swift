@@ -1,9 +1,19 @@
 import Foundation
 
 extension TimeTrackerStore {
+    /// Tasks that can be timed, in tree order; recomputed once per task
+    /// read-model revision.
+    var trackableTasks: [TaskNode] {
+        if let cached = trackableTasksCache, cached.revision == taskReadModelRevision {
+            return cached.tasks
+        }
+        let trackable = tasks.filter(isTaskAvailableForTracking)
+        trackableTasksCache = (taskReadModelRevision, trackable)
+        return trackable
+    }
+
     var recentTasks: [TaskNode] {
-        tasks
-            .filter(isTaskAvailableForTracking)
+        trackableTasks
             .sorted { lhs, rhs in
                 if lhs.updatedAt != rhs.updatedAt {
                     return lhs.updatedAt > rhs.updatedAt
@@ -15,7 +25,7 @@ extension TimeTrackerStore {
     }
 
     func frequentRecentTasks(excluding excludedIDs: Set<UUID> = [], limit: Int = 3) -> [TaskNode] {
-        let availableTasks = tasks.filter(isTaskAvailableForTracking)
+        let availableTasks = trackableTasks
         let activityByTaskID = taskUsageActivityByTaskID(
             for: availableTasks
         )

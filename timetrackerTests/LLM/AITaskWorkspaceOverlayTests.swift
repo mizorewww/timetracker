@@ -30,26 +30,4 @@ struct AITaskWorkspaceOverlayTests {
             try overlay.deleteChecklistItem(id: checklistItemID)
         }
     }
-
-    @Test
-    func snapshotFingerprintRoundTripsAndRejectsTampering() throws {
-        let snapshot = AITaskWorkspaceSnapshot(
-            categories: [],
-            tasks: [],
-            checklistItems: []
-        )
-        let encoder = JSONEncoder()
-        let encoded = try encoder.encode(snapshot)
-
-        #expect(try JSONDecoder().decode(AITaskWorkspaceSnapshot.self, from: encoded) == snapshot)
-
-        var json = try #require(
-            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
-        )
-        json["contextFingerprint"] = "tampered"
-        let tampered = try JSONSerialization.data(withJSONObject: json)
-        #expect(throws: DecodingError.self) {
-            try JSONDecoder().decode(AITaskWorkspaceSnapshot.self, from: tampered)
-        }
-    }
 }

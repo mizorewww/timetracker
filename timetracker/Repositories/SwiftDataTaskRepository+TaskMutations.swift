@@ -4,28 +4,7 @@ import SwiftData
 nonisolated extension SwiftDataTaskRepository {
     @discardableResult
     func createTask(
-        title: String,
-        parentID: UUID?,
-        categoryID: UUID? = nil,
-        colorHex: String? = nil,
-        iconName: String? = nil
-    ) throws -> TaskNode {
-        try createTask(
-            proposedID: UUID(),
-            title: title,
-            parentID: parentID,
-            categoryID: categoryID,
-            colorHex: colorHex,
-            iconName: iconName
-        )
-    }
-
-    /// Creates a task with an identity chosen by an enclosing idempotent
-    /// command. This remains a concrete-repository API so ordinary callers
-    /// continue to receive repository-owned UUIDs.
-    @discardableResult
-    func createTask(
-        proposedID: UUID,
+        proposedID: UUID = UUID(),
         title: String,
         parentID: UUID?,
         categoryID: UUID? = nil,

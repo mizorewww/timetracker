@@ -55,7 +55,7 @@ nonisolated struct AITaskWorkspaceChecklistItem:
 /// The complete, provider-facing task workspace. Arrays are canonically sorted
 /// and task paths are always rebuilt from every available ancestor. No item
 /// count or path-depth window is applied here.
-nonisolated struct AITaskWorkspaceSnapshot: Codable, Equatable, Sendable {
+nonisolated struct AITaskWorkspaceSnapshot: Encodable, Equatable, Sendable {
     static let currentSchemaVersion = 1
 
     let schemaVersion: Int
@@ -94,38 +94,6 @@ nonisolated struct AITaskWorkspaceSnapshot: Codable, Equatable, Sendable {
         case tasks
         case checklistItems
         case contextFingerprint
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let transmittedFingerprint = try container.decode(
-            String.self,
-            forKey: .contextFingerprint
-        )
-        try self.init(
-            schemaVersion: container.decode(Int.self, forKey: .schemaVersion),
-            categories: container.decode(
-                [AITaskWorkspaceCategory].self,
-                forKey: .categories
-            ),
-            tasks: container.decode(
-                [AITaskWorkspaceTask].self,
-                forKey: .tasks
-            ),
-            checklistItems: container.decode(
-                [AITaskWorkspaceChecklistItem].self,
-                forKey: .checklistItems
-            )
-        )
-        let expectedFingerprint = try contextFingerprint
-        guard transmittedFingerprint == expectedFingerprint else {
-            throw DecodingError.dataCorruptedError(
-                forKey: .contextFingerprint,
-                in: container,
-                debugDescription:
-                "The task workspace context fingerprint does not match its facts."
-            )
-        }
     }
 
     func encode(to encoder: Encoder) throws {

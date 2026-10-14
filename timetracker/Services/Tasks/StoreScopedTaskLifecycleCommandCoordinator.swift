@@ -78,10 +78,7 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
                 throw TaskLifecycleMutationError.activeWorkMustStop
             }
 
-            try TaskDraftCommandHandler().archive(
-                taskID: taskID,
-                repository: taskRepository
-            )
+            try taskRepository.archiveTask(taskID: taskID)
             return TaskArchiveMutationOutcome(
                 taskID: taskID,
                 didMutate: true,
@@ -118,10 +115,7 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
                 throw TaskLifecycleMutationError.archivedAncestorMustRestoreFirst
             }
 
-            try TaskDraftCommandHandler().unarchive(
-                taskID: taskID,
-                repository: taskRepository
-            )
+            try taskRepository.unarchiveTask(taskID: taskID)
             return TaskUnarchiveMutationOutcome(
                 taskID: taskID,
                 didMutate: true,
@@ -227,22 +221,13 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
                         deviceID: resolvedDeviceID
                     )
                 }
-            let savedTaskID: UUID = if let proposedTaskID {
-                try TaskDraftCommandHandler().saveNew(
-                    draft: draft,
-                    proposedTaskID: proposedTaskID,
-                    sanitizedTitle: sanitizedTitle,
-                    taskRepository: taskRepository,
-                    saveChecklistDrafts: saveChecklistDrafts
-                )
-            } else {
-                try TaskDraftCommandHandler().save(
-                    draft: draft,
-                    sanitizedTitle: sanitizedTitle,
-                    taskRepository: taskRepository,
-                    saveChecklistDrafts: saveChecklistDrafts
-                )
-            }
+            let savedTaskID = try TaskDraftCommandHandler().save(
+                draft: draft,
+                newTaskID: proposedTaskID ?? UUID(),
+                sanitizedTitle: sanitizedTitle,
+                taskRepository: taskRepository,
+                saveChecklistDrafts: saveChecklistDrafts
+            )
             try didReachDraftCheckpoint(
                 .taskAndChecklistSaved(savedTaskID)
             )

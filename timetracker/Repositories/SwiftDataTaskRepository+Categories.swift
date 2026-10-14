@@ -79,26 +79,7 @@ nonisolated extension SwiftDataTaskRepository {
 
     @discardableResult
     func createCategory(
-        title: String,
-        colorHex: String? = nil,
-        iconName: String? = nil,
-        includesInForecast: Bool = true
-    ) throws -> TaskCategory {
-        try createCategory(
-            proposedID: UUID(),
-            title: title,
-            colorHex: colorHex,
-            iconName: iconName,
-            includesInForecast: includesInForecast
-        )
-    }
-
-    /// Creates a category with an identity chosen by an enclosing idempotent
-    /// command. The protocol entry point intentionally keeps its existing
-    /// repository-owned identity behavior.
-    @discardableResult
-    func createCategory(
-        proposedID: UUID,
+        proposedID: UUID = UUID(),
         title: String,
         colorHex: String? = nil,
         iconName: String? = nil,

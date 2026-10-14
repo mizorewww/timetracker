@@ -61,13 +61,6 @@ struct AppleHealthCatalogCleanupTests {
         #expect(try repository.task(id: legacyTaskID)?.clientMutationID == markerBefore)
     }
 
-    @Test("cleanup tolerates stores that never contained the catalog")
-    func cleanupToleratesAbsentRows() throws {
-        let context = try makeTestContext()
-        try AppleHealthCatalogCleanup.removeLegacyCatalogRowsIfNeeded(context: context)
-        #expect(try context.fetch(FetchDescriptor<TaskNode>()).isEmpty)
-    }
-
     @Test("cleanup skips a legacy task with a live segment for a later launch")
     func cleanupSkipsActiveWork() throws {
         let context = try makeTestContext()

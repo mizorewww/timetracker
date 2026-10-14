@@ -165,23 +165,6 @@ struct CoreLLMResponseTransportTests {
         }
     }
 
-    @Test
-    func responseLimitErrorsHaveLocalizedDescriptions() throws {
-        let responseTooLarge = try #require(LLMModelServiceError.responseTooLarge.errorDescription)
-        let timeout = try #require(LLMModelServiceError.timeout.errorDescription)
-
-        #expect([
-            "The server response was too large.",
-            "服务器返回的内容过大。",
-            "伺服器返回的內容過大。",
-        ].contains(responseTooLarge))
-        #expect([
-            "The server took too long to respond.",
-            "服务器响应超时。",
-            "伺服器回應逾時。",
-        ].contains(timeout))
-    }
-
     private static let oversizedInjectedTransport: LLMModelService.Transport = { request in
         let response = try #require(
             HTTPURLResponse(

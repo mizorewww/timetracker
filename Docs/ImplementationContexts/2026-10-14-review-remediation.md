@@ -52,8 +52,8 @@ Delete this file at closeout.
 - [x] LiveActivityCoordinator: single dismissed checkpoint. No protocol seam/tests: iOS-only code, macOS test gate, single implementation.
 
 ### G6 — Tests
-- [ ] Oracle tests for ledger math: gross/wall/overlap, cross-midnight, DST, soft-deleted segments, rapid restart.
-- [ ] Remove redundant/duplicated tests and tests for deleted code; shared UI-test launch helper.
+- [x] Oracle tests for ledger math: gross/wall/overlap, cross-midnight, DST, soft-deleted segments, rapid restart.
+- [x] Remove redundant/duplicated tests and tests for deleted code; shared UI-test launch helper.
 
 ### G7 — Documentation
 - [ ] Delete stale identifiers, deleted-name lists, hard-coded counts; ADs state invariants, numbers live in code.

@@ -6,36 +6,21 @@ import Testing
 @Suite(.serialized)
 struct TestHostIsolationTests {
     @Test
-    func unitTestHostDetectionRecognizesXCTestEnvironment() {
-        #expect(AppRuntimeEnvironment.isUnitTestHost(environment: [
-            "XCTestConfigurationFilePath": "/tmp/timetracker.xctestconfiguration",
-        ]))
-        #expect(AppRuntimeEnvironment.isUnitTestHost(environment: [
-            "XCTestBundlePath": "/tmp/timetrackerTests.xctest",
-        ]))
-        #expect(AppRuntimeEnvironment.isUnitTestHost(environment: [:]) == false)
-    }
-
-    @Test
     func hostDetectionCoversUnitAndUITestProcesses() {
+        // Every isolation expectation below depends on this being true.
+        #expect(AppRuntimeEnvironment.isTestHost)
         #expect(AppRuntimeEnvironment.isTestHost(
-            environment: ["XCTestBundlePath": "/tmp/timetrackerTests.xctest"],
+            environment: ["XCTestConfigurationFilePath": "/tmp/timetracker.xctestconfiguration"],
             arguments: ["timetracker"]
         ))
         #expect(AppRuntimeEnvironment.isTestHost(
             environment: [:],
-            arguments: ["timetracker", "--uitesting"]
+            arguments: ["timetracker", AppRuntimeEnvironment.uiTestingArgument]
         ))
         #expect(AppRuntimeEnvironment.isTestHost(
             environment: [:],
             arguments: ["timetracker"]
         ) == false)
-    }
-
-    @Test
-    func thisProcessIsRecognizedAsATestHost() {
-        // Every isolation expectation below depends on this being true.
-        #expect(AppRuntimeEnvironment.isTestHost)
     }
 
     @Test

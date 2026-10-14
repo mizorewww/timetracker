@@ -6,23 +6,7 @@ struct WatchConnectivityPayloadCodecTests {
     private let now = Date()
 
     @Test
-    func startCommandRoundTrips() {
-        let command = WatchTimerCommand(
-            id: UUID(),
-            type: .startTask,
-            taskID: UUID(),
-            segmentID: nil,
-            issuedAt: now,
-            deviceID: "watch-a"
-        )
-
-        #expect(WatchConnectivityPayloadCodec.decodeCommand(
-            from: WatchConnectivityPayloadCodec.encode(command: command)
-        ) == command)
-    }
-
-    @Test
-    func stopCommandRoundTrips() {
+    func commandAndResultRoundTrip() {
         let command = WatchTimerCommand(
             id: UUID(),
             type: .stopSegment,
@@ -31,14 +15,6 @@ struct WatchConnectivityPayloadCodecTests {
             issuedAt: now,
             deviceID: "watch-b"
         )
-
-        #expect(WatchConnectivityPayloadCodec.decodeCommand(
-            from: WatchConnectivityPayloadCodec.encode(command: command)
-        ) == command)
-    }
-
-    @Test
-    func terminalResultRoundTrips() {
         let result = WatchCommandResult(
             commandID: UUID(),
             status: .missingTask,
@@ -47,6 +23,9 @@ struct WatchConnectivityPayloadCodecTests {
             failureCode: "missing"
         )
 
+        #expect(WatchConnectivityPayloadCodec.decodeCommand(
+            from: WatchConnectivityPayloadCodec.encode(command: command)
+        ) == command)
         #expect(WatchConnectivityPayloadCodec.decodeCommandResult(
             from: WatchConnectivityPayloadCodec.encode(result: result)
         ) == result)

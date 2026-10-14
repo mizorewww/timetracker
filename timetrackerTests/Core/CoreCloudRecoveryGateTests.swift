@@ -109,7 +109,7 @@ struct CoreCloudRecoveryGateTests {
 
             let competingWriterEntered = DispatchSemaphore(value: 0)
             let competingWriterFinished = DispatchSemaphore(value: 0)
-            let scope = TimerStoreScope(persistentStoreURL: storeURL)
+            let scope = StoreScope(persistentStoreURL: storeURL)
             let gate = try timetrackerApp.performPendingCloudRecoveryResetAfterProtectingLocalFallback(
                 schema: schema,
                 localConfiguration: configuration,
@@ -118,7 +118,7 @@ struct CoreCloudRecoveryGateTests {
                 preparePendingRecovery: { true },
                 beforeDestructiveReset: {
                     DispatchQueue.global().async {
-                        _ = try? StoreScopedTimerMutationLock().withExclusiveAccess(for: scope) {
+                        _ = try? StoreMutationLock().withExclusiveAccess(for: scope) {
                             competingWriterEntered.signal()
                         }
                         competingWriterFinished.signal()
@@ -562,8 +562,8 @@ struct CoreCloudRecoveryGateTests {
             defer { removeTemporaryStoreDirectory(for: storeURL) }
             let defaults = AppDefaults.shared
             defaults.set(true, forKey: AppCloudSync.pendingCloudDownloadResetKey)
-            let scope = TimerStoreScope(persistentStoreURL: storeURL)
-            let lock = StoreScopedTimerMutationLock()
+            let scope = StoreScope(persistentStoreURL: storeURL)
+            let lock = StoreMutationLock()
             let competitorEntered = DispatchSemaphore(value: 0)
             let competitorFinished = DispatchSemaphore(value: 0)
             var competitorWasBlockedDuringStoreRemoval = false
@@ -617,7 +617,7 @@ struct CoreCloudRecoveryGateTests {
                     )
                 )
             }
-            let lockURL = TimerStoreScope(
+            let lockURL = StoreScope(
                 persistentStoreURL: storeURL
             ).mutationLockURL
             #expect(

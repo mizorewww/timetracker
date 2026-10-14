@@ -1,14 +1,14 @@
 import Foundation
 import SwiftData
 
-nonisolated enum TimerStoreScopeResolutionError: Error, Equatable {
+nonisolated enum StoreScopeResolutionError: Error, Equatable {
     case missingConfiguration
     case ambiguousConfigurations(Int)
 }
 
 @MainActor
-private final class InMemoryTimerStoreScopeRegistry {
-    static let shared = InMemoryTimerStoreScopeRegistry()
+private final class InMemoryStoreScopeRegistry {
+    static let shared = InMemoryStoreScopeRegistry()
 
     private final class Entry {
         weak var container: ModelContainer?
@@ -42,7 +42,7 @@ private final class InMemoryTimerStoreScopeRegistry {
 ///
 /// Persistent stores converge on a canonical file URL. In-memory containers
 /// must retain and reuse one explicit identity for their complete lifetime.
-nonisolated struct TimerStoreScope: Hashable, Sendable {
+nonisolated struct StoreScope: Hashable, Sendable {
     private enum Storage: Hashable, Sendable {
         case persistent(URL)
         case inMemory(UUID)
@@ -57,17 +57,17 @@ nonisolated struct TimerStoreScope: Hashable, Sendable {
     init(container: ModelContainer) throws {
         let configurations = container.configurations
         guard let configuration = configurations.first else {
-            throw TimerStoreScopeResolutionError.missingConfiguration
+            throw StoreScopeResolutionError.missingConfiguration
         }
         guard configurations.count == 1 else {
-            throw TimerStoreScopeResolutionError.ambiguousConfigurations(
+            throw StoreScopeResolutionError.ambiguousConfigurations(
                 configurations.count
             )
         }
 
         if configuration.isStoredInMemoryOnly {
             self.init(
-                inMemoryIdentity: InMemoryTimerStoreScopeRegistry.shared.identity(
+                inMemoryIdentity: InMemoryStoreScopeRegistry.shared.identity(
                     for: container
                 )
             )
@@ -104,12 +104,12 @@ nonisolated struct TimerStoreScope: Hashable, Sendable {
         switch storage {
         case let .persistent(storeURL):
             storeURL.deletingLastPathComponent().appendingPathComponent(
-                storeURL.lastPathComponent + StoreScopedTimerMutationLock.fileSuffix
+                storeURL.lastPathComponent + StoreMutationLock.fileSuffix
             )
         case let .inMemory(identity):
             FileManager.default.temporaryDirectory.appendingPathComponent(
                 "timetracker-\(identity.uuidString.lowercased())"
-                    + StoreScopedTimerMutationLock.fileSuffix
+                    + StoreMutationLock.fileSuffix
             )
         }
     }

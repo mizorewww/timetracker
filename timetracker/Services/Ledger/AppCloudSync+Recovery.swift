@@ -51,13 +51,13 @@ extension AppCloudSync {
                 try removePersistentStoreFiles(at: url)
             }
         }
-        let scope = TimerStoreScope(persistentStoreURL: resolvedStoreURL)
+        let scope = StoreScope(persistentStoreURL: resolvedStoreURL)
         do {
             try FileManager.default.createDirectory(
                 at: resolvedStoreURL.deletingLastPathComponent(),
                 withIntermediateDirectories: true
             )
-            return try StoreScopedTimerMutationLock().withExclusiveAccess(
+            return try StoreMutationLock().withExclusiveAccess(
                 for: scope
             ) {
                 performPendingCloudRecoveryResetWithLockedStore(
@@ -209,7 +209,7 @@ extension AppCloudSync {
                 $0.lastPathComponent.hasPrefix(storePrefix) &&
                     $0.lastPathComponent
                     != storePrefix
-                    + StoreScopedTimerMutationLock.fileSuffix
+                    + StoreMutationLock.fileSuffix
             }
 
             for file in storeFiles {

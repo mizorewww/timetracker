@@ -16,8 +16,8 @@ struct StoreScopedMutationSession {
         _ operation: (ModelContext) throws -> Result
     ) throws -> Result {
         try writeAuthorization.requireUserWritesAllowed()
-        return try StoreScopedTimerMutationTransaction(
-            scope: TimerStoreScope(container: container),
+        return try StoreMutationTransaction(
+            scope: StoreScope(container: container),
             container: container
         ).withFreshContext(author: author, operation)
     }
@@ -28,9 +28,22 @@ struct StoreScopedMutationSession {
         _ operation: (ModelContext) throws -> Result
     ) throws -> Result {
         try writeAuthorization.requireUserWritesAllowed()
-        return try StoreScopedTimerMutationTransaction(
-            scope: TimerStoreScope(container: container),
+        return try StoreMutationTransaction(
+            scope: StoreScope(container: container),
             container: container
         ).withFreshReadContext(operation)
+    }
+}
+
+/// A store-scoped writer: every coordinator authorizes and locks through the
+/// same session built from its container.
+protocol StoreScopedCommandCoordinator {
+    var container: ModelContainer { get }
+    var writeAuthorization: StoreWriteAuthorization { get }
+}
+
+extension StoreScopedCommandCoordinator {
+    var mutationSession: StoreScopedMutationSession {
+        StoreScopedMutationSession(container: container, writeAuthorization: writeAuthorization)
     }
 }

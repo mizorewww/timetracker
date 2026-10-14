@@ -5,7 +5,7 @@ import SwiftData
 /// because timer admission and other commands read those rows under the shared
 /// store lock.
 @MainActor
-struct StoreScopedPreferenceCommandCoordinator {
+struct StoreScopedPreferenceCommandCoordinator: StoreScopedCommandCoordinator {
     let container: ModelContainer
     let writeAuthorization: StoreWriteAuthorization
 
@@ -43,10 +43,7 @@ struct StoreScopedPreferenceCommandCoordinator {
     /// the device-only LLM credential, with a concurrent full configuration
     /// save. It deliberately creates a fresh read context without saving it.
     func withLockedStoreAccess(_ operation: () throws -> Void) throws {
-        try StoreScopedMutationSession(
-            container: container,
-            writeAuthorization: writeAuthorization
-        ).withFreshReadContext { _ in
+        try mutationSession.withFreshReadContext { _ in
             try operation()
         }
     }
@@ -54,9 +51,6 @@ struct StoreScopedPreferenceCommandCoordinator {
     private func withFreshMutationContext(
         _ operation: (ModelContext) throws -> Void
     ) throws {
-        try StoreScopedMutationSession(
-            container: container,
-            writeAuthorization: writeAuthorization
-        ).withFreshMutationContext(operation)
+        try mutationSession.withFreshMutationContext(operation)
     }
 }

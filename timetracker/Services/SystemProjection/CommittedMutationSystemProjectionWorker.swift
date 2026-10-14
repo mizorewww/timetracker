@@ -403,7 +403,7 @@ final class CommittedMutationSystemProjectionSchedulerRegistry {
         }
     }
 
-    private var entriesByScope: [TimerStoreScope: Entry] = [:]
+    private var entriesByScope: [StoreScope: Entry] = [:]
 
     func scheduler(
         for container: ModelContainer
@@ -412,7 +412,7 @@ final class CommittedMutationSystemProjectionSchedulerRegistry {
             $0.value.hasLiveContainer
         }
 
-        let scope = try TimerStoreScope(container: container)
+        let scope = try StoreScope(container: container)
         if let entry = entriesByScope[scope] {
             entry.updateContainer(container)
             return entry.scheduler

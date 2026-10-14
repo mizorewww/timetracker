@@ -6,15 +6,15 @@ import SwiftData
 ///
 /// Ordinary timer commands, task lifecycle writes, Pomodoro phase commands,
 /// ledger record editing/deletion, and sync snapshot work use this lock domain.
-nonisolated struct StoreScopedTimerMutationTransaction {
-    let scope: TimerStoreScope
+nonisolated struct StoreMutationTransaction {
+    let scope: StoreScope
     let container: ModelContainer
-    let mutationLock: StoreScopedTimerMutationLock
+    let mutationLock: StoreMutationLock
 
     init(
-        scope: TimerStoreScope,
+        scope: StoreScope,
         container: ModelContainer,
-        mutationLock: StoreScopedTimerMutationLock = .init()
+        mutationLock: StoreMutationLock = .init()
     ) {
         self.scope = scope
         self.container = container

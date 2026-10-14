@@ -13,8 +13,8 @@ extension SyncConflictService {
         _ operation: (ModelContext) throws -> Result
     ) throws -> Result {
         let container = context.container
-        let scope = try TimerStoreScope(container: container)
-        return try StoreScopedTimerMutationTransaction(
+        let scope = try StoreScope(container: container)
+        return try StoreMutationTransaction(
             scope: scope,
             container: container
         ).withFreshReadContext(operation)

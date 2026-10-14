@@ -126,7 +126,7 @@
 - 边界：public start 命令不接收调用方传入的 `allowParallelTimers`；`StoreScopedTimerCommandCoordinator` 在 store lock 内用 `TimerAdmissionPreferenceResolver` 从 canonical `SyncedPreference` 解析。纯 policy 不解决跨 context/进程竞态，生产 writer 仍必须走锁 + fresh context。
 
 **AD-069：所有生产 writer 在 store-specific 锁 + fresh context 内提交。**
-- 规则：`TimerStoreScope` 为每个 store 提供稳定 identity，`StoreScopedTimerMutationLock` 从 scope 派生同目录 `.timer-mutations.lock`（复用 `PathFileLockRegistry`/`PathProcessFileLock`），`StoreScopedTimerMutationTransaction` 的固定顺序是“取得 store lock → 创建 fresh `ModelContext` → 关闭 autosave → 一次 `performAtomicMutation`”，离开作用域释放锁。
+- 规则：`StoreScope` 为每个 store 提供稳定 identity，`StoreMutationLock` 从 scope 派生同目录 `.store-mutations.lock`（复用 `PathFileLockRegistry`/`PathProcessFileLock`），`StoreMutationTransaction` 的固定顺序是“取得 store lock → 创建 fresh `ModelContext` → 关闭 autosave → 一次 `performAtomicMutation`”，离开作用域释放锁。
 - 边界：锁内只做授权、fresh fetch、plan、model mutation 和 commit，网络/UI 等待/post-commit refresh 留在锁外。timer、Pomodoro、手工时间、segment 编辑、task lifecycle/draft、category、checklist、recurrence、countdown、同步偏好、Inbox primary/suggestion、AI workspace apply 与设备本地 LLM Keychain 更新已共用此域（合并原 AD-082、AD-084、AD-098、AD-099、AD-108、AD-114、AD-115）；新增写入口不得退回 scene-owned `ModelContext`。
 
 **AD-023：同步状态使用跨进程锁、有界 slot manifest 与 fail-closed 读（合并原 AD-073、AD-074、AD-104、AD-110、AD-111）。**

@@ -10,7 +10,7 @@ private enum StoreScopedPomodoroCommandInvariantError: Error {
 /// Serializes Pomodoro admission and phase changes with ordinary timer commands
 /// and task lifecycle writes for one concrete SwiftData store.
 @MainActor
-struct StoreScopedPomodoroCommandCoordinator {
+struct StoreScopedPomodoroCommandCoordinator: StoreScopedCommandCoordinator {
     let container: ModelContainer
     let writeAuthorization: StoreWriteAuthorization
     let deviceID: String?
@@ -28,13 +28,6 @@ struct StoreScopedPomodoroCommandCoordinator {
         self.nowProvider = nowProvider
     }
 
-    func mutationSession() -> StoreScopedMutationSession {
-        StoreScopedMutationSession(
-            container: container,
-            writeAuthorization: writeAuthorization
-        )
-    }
-
     func start(
         taskID: UUID,
         focusSeconds: Int,
@@ -42,7 +35,7 @@ struct StoreScopedPomodoroCommandCoordinator {
         longBreakSeconds: Int?,
         targetRounds: Int
     ) throws -> StoreScopedPomodoroStartOutcome {
-        try mutationSession().withFreshMutationContext { context in
+        try mutationSession.withFreshMutationContext { context in
             let now = nowProvider()
             let resolvedDeviceID = deviceID ?? DeviceIdentity.current
             let taskRepository = SwiftDataTaskRepository(
@@ -119,7 +112,7 @@ struct StoreScopedPomodoroCommandCoordinator {
     func resume(
         phase: PomodoroPhaseToken
     ) throws -> StoreScopedPomodoroResumeOutcome {
-        try mutationSession().withFreshMutationContext { context in
+        try mutationSession.withFreshMutationContext { context in
             let now = nowProvider()
             let resolvedDeviceID = deviceID ?? DeviceIdentity.current
             let timeRepository = SwiftDataTimeTrackingRepository(

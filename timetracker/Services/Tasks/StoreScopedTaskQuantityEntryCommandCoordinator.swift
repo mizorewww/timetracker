@@ -6,7 +6,7 @@ import SwiftData
 /// value-semantic baselines; scene-owned SwiftData models never cross the
 /// store lock.
 @MainActor
-struct StoreScopedTaskQuantityEntryCommandCoordinator {
+struct StoreScopedTaskQuantityEntryCommandCoordinator: StoreScopedCommandCoordinator {
     let container: ModelContainer
     let writeAuthorization: StoreWriteAuthorization
     let deviceID: String
@@ -59,10 +59,7 @@ struct StoreScopedTaskQuantityEntryCommandCoordinator {
             TaskQuantityEntryPersistenceState
         ) throws -> Result
     ) throws -> Result {
-        try StoreScopedMutationSession(
-            container: container,
-            writeAuthorization: writeAuthorization
-        ).withFreshMutationContext { context in
+        try mutationSession.withFreshMutationContext { context in
             try operation(
                 context,
                 TaskQuantityEntryPersistenceState(context: context)

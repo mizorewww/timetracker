@@ -5,10 +5,10 @@ import SwiftData
 /// and the sync-state lock is acquired only after both.
 actor PersistentHistorySyncSnapshotWorker {
     private let container: ModelContainer
-    private let scope: TimerStoreScope
+    private let scope: StoreScope
     private let syncConflictService: SyncConflictService
     private let policySource: SyncLocalMutationRecordingPolicySource
-    private let mutationLock = StoreScopedTimerMutationLock()
+    private let mutationLock = StoreMutationLock()
 
     @MainActor
     init(
@@ -16,7 +16,7 @@ actor PersistentHistorySyncSnapshotWorker {
         syncConflictService: SyncConflictService = SyncConflictService()
     ) throws {
         self.container = container
-        scope = try TimerStoreScope(container: container)
+        scope = try StoreScope(container: container)
         self.syncConflictService = syncConflictService
         policySource = .appDefaults()
     }

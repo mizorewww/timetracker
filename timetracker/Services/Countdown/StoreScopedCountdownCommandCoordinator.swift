@@ -30,7 +30,7 @@ enum StoreScopedCountdownMutationError: LocalizedError, Equatable {
 /// write through an older SwiftData object after another scene has updated or
 /// tombstoned the same logical event.
 @MainActor
-struct StoreScopedCountdownCommandCoordinator {
+struct StoreScopedCountdownCommandCoordinator: StoreScopedCommandCoordinator {
     let container: ModelContainer
     let writeAuthorization: StoreWriteAuthorization
     let deviceID: String
@@ -49,7 +49,7 @@ struct StoreScopedCountdownCommandCoordinator {
     }
 
     func add() throws {
-        try mutationSession().withFreshMutationContext { context in
+        try mutationSession.withFreshMutationContext { context in
             _ = try CountdownCommandHandler().add(
                 context: context,
                 deviceID: deviceID
@@ -89,7 +89,7 @@ struct StoreScopedCountdownCommandCoordinator {
         baseline: CountdownMutationBaseline,
         operation: (CountdownEvent, ModelContext) throws -> Void
     ) throws {
-        try mutationSession().withFreshMutationContext { context in
+        try mutationSession.withFreshMutationContext { context in
             let eventID = baseline.eventID
             let descriptor = FetchDescriptor<CountdownEvent>(
                 predicate: #Predicate { $0.id == eventID }
@@ -106,12 +106,5 @@ struct StoreScopedCountdownCommandCoordinator {
             }
             try operation(event, context)
         }
-    }
-
-    private func mutationSession() -> StoreScopedMutationSession {
-        StoreScopedMutationSession(
-            container: container,
-            writeAuthorization: writeAuthorization
-        )
     }
 }

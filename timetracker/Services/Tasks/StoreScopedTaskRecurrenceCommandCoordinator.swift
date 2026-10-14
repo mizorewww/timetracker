@@ -4,7 +4,7 @@ import SwiftData
 /// Serializes recurrence rule changes and current-day materialization with the
 /// same store lock used by task and timer commands. Scene-owned SwiftData
 /// models never cross this boundary.
-nonisolated struct StoreScopedTaskRecurrenceCommandCoordinator {
+nonisolated struct StoreScopedTaskRecurrenceCommandCoordinator: StoreScopedCommandCoordinator {
     let container: ModelContainer
     let writeAuthorization: StoreWriteAuthorization
     let deviceID: String
@@ -74,10 +74,7 @@ nonisolated extension StoreScopedTaskRecurrenceCommandCoordinator {
             inout TaskRecurrencePersistenceState
         ) throws -> Result
     ) throws -> Result {
-        try StoreScopedMutationSession(
-            container: container,
-            writeAuthorization: writeAuthorization
-        ).withFreshMutationContext { context in
+        try mutationSession.withFreshMutationContext { context in
             var state = try TaskRecurrencePersistenceState(context: context)
             return try operation(context, &state)
         }

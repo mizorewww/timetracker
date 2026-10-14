@@ -17,8 +17,8 @@ extension timetrackerApp {
             at: storeURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        let scope = TimerStoreScope(persistentStoreURL: storeURL)
-        return try StoreScopedTimerMutationLock().withExclusiveAccess(for: scope) {
+        let scope = StoreScope(persistentStoreURL: storeURL)
+        return try StoreMutationLock().withExclusiveAccess(for: scope) {
             try refreshLocalFallbackRecoverySnapshotBeforeCloudReset(
                 schema: schema,
                 localConfiguration: localConfiguration,

@@ -6,7 +6,7 @@ import SwiftData
 /// this type directly.
 actor StoreScopedAITaskAtomicMutationCoordinator {
     let container: ModelContainer
-    let scope: TimerStoreScope
+    let scope: StoreScope
     let writeAuthorization: StoreWriteAuthorization
     let deviceID: String
     let nowProvider: @Sendable () -> Date
@@ -23,7 +23,7 @@ actor StoreScopedAITaskAtomicMutationCoordinator {
         @Sendable (AITaskAtomicMutationCheckpoint) throws -> Void = { _ in }
     ) throws {
         self.container = container
-        scope = try TimerStoreScope(container: container)
+        scope = try StoreScope(container: container)
         self.writeAuthorization = writeAuthorization
         self.deviceID = deviceID
         self.nowProvider = nowProvider
@@ -32,7 +32,7 @@ actor StoreScopedAITaskAtomicMutationCoordinator {
 
     func captureBaseline() throws -> AITaskAtomicMutationBaseline {
         try PerformanceSignpost.interval("AI workspace baseline capture") {
-            try StoreScopedTimerMutationTransaction(
+            try StoreMutationTransaction(
                 scope: scope,
                 container: container
             ).withFreshReadContext { context in
@@ -46,7 +46,7 @@ actor StoreScopedAITaskAtomicMutationCoordinator {
     ) async throws -> AITaskAtomicMutationOutcome {
         try await writeAuthorization.requireUserWritesAllowed()
         return try PerformanceSignpost.interval("AI workspace atomic apply") {
-            try StoreScopedTimerMutationTransaction(
+            try StoreMutationTransaction(
                 scope: scope,
                 container: container
             ).withFreshContext(author: .localMutation) { context in

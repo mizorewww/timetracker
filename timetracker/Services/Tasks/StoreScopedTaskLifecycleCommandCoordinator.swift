@@ -5,7 +5,7 @@ import SwiftData
 /// the same SwiftData store. The canonical subtree and active work set are
 /// fetched only after the shared timer lock is held.
 @MainActor
-struct StoreScopedTaskLifecycleCommandCoordinator {
+struct StoreScopedTaskLifecycleCommandCoordinator: StoreScopedCommandCoordinator {
     let container: ModelContainer
     let writeAuthorization: StoreWriteAuthorization
     let deviceID: String?
@@ -25,15 +25,8 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
         self.didReachDraftCheckpoint = didReachDraftCheckpoint
     }
 
-    func mutationSession() -> StoreScopedMutationSession {
-        StoreScopedMutationSession(
-            container: container,
-            writeAuthorization: writeAuthorization
-        )
-    }
-
     func archive(taskID: UUID) throws -> TaskArchiveMutationOutcome {
-        try mutationSession().withFreshMutationContext { context in
+        try mutationSession.withFreshMutationContext { context in
             let taskRepository = SwiftDataTaskRepository(
                 context: context,
                 deviceID: deviceID
@@ -88,7 +81,7 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
     }
 
     func unarchive(taskID: UUID) throws -> TaskUnarchiveMutationOutcome {
-        try mutationSession().withFreshMutationContext { context in
+        try mutationSession.withFreshMutationContext { context in
             let taskRepository = SwiftDataTaskRepository(
                 context: context,
                 deviceID: deviceID
@@ -162,7 +155,7 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
                 confirmsQuantityProgressReset:
                 draft.confirmsQuantityProgressReset
             )
-        return try mutationSession().withFreshMutationContext { context in
+        return try mutationSession.withFreshMutationContext { context in
             let resolvedDeviceID = deviceID ?? DeviceIdentity.current
             let taskRepository = SwiftDataTaskRepository(
                 context: context,

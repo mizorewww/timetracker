@@ -72,7 +72,7 @@ struct InboxItemMutationBaseline: Equatable, Sendable {
 /// canonical item set and every item revision are revalidated only after the
 /// lock is held in a fresh context.
 @MainActor
-struct StoreScopedInboxCommandCoordinator {
+struct StoreScopedInboxCommandCoordinator: StoreScopedCommandCoordinator {
     let container: ModelContainer
     let writeAuthorization: StoreWriteAuthorization
     let deviceID: String
@@ -178,10 +178,7 @@ struct StoreScopedInboxCommandCoordinator {
     func withFreshLockedContext<Outcome>(
         _ operation: (ModelContext) throws -> Outcome
     ) throws -> Outcome {
-        try StoreScopedMutationSession(
-            container: container,
-            writeAuthorization: writeAuthorization
-        ).withFreshMutationContext(operation)
+        try mutationSession.withFreshMutationContext(operation)
     }
 
     private func mutateItem(

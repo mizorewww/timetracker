@@ -7,43 +7,41 @@ struct TaskDetailWorkspace: View {
     let returnDestination: TimeTrackerStore.DesktopDestination
     let dismissDetail: () -> Void
     let replaceDetail: (UUID) -> Void
-    @State var session: TaskEditorSession
-    @State var autosaveController: TaskDetailAutosaveController
+    let session: TaskEditorSession
+    let autosaveController: TaskDetailAutosaveController
     @State var navigationGuardRegistration = TaskDetailNavigationRegistrationToken()
-    @State var isRecoveryLoaded = false
     @FocusState var focusedTextField: TaskEditorTextField?
     @FocusState var focusedChecklistDraftID: UUID?
+
+    /// Session and autosave controller created once by the loader, after any
+    /// persisted recovery draft has been restored.
+    struct Prepared {
+        let session: TaskEditorSession
+        let autosaveController: TaskDetailAutosaveController
+    }
+
     init(
         store: TimeTrackerStore,
         taskID: UUID,
-        initialDraft: TaskEditorDraft,
+        prepared: Prepared,
         returnDestination: TimeTrackerStore.DesktopDestination,
         dismissDetail: @escaping () -> Void,
         replaceDetail: @escaping (UUID) -> Void
     ) {
         self.store = store
         self.taskID = taskID
+        session = prepared.session
+        autosaveController = prepared.autosaveController
         self.returnDestination = returnDestination
         self.dismissDetail = dismissDetail
         self.replaceDetail = replaceDetail
-        let session = TaskEditorSession(store: store, initialDraft: initialDraft)
-        _session = State(initialValue: session)
-        _autosaveController = State(
-            initialValue: .workspaceController(
-                store: store,
-                session: session,
-                taskID: taskID,
-                returnDestination: returnDestination,
-                recoveryController: store.taskDraftRecoveryController
-            )
-        )
     }
 
     var body: some View {
         Group {
-            if isRecoveryLoaded, let task = store.task(for: taskID) {
+            if let task = store.task(for: taskID) {
                 workspace(for: task)
-            } else if isRecoveryLoaded {
+            } else {
                 ContentUnavailableView(
                     AppStrings.localized("task.empty.selectTask"),
                     systemImage: "checklist"
@@ -89,9 +87,6 @@ struct TaskDetailWorkspace: View {
         .onChange(of: store.isTaskDetailRouteValid(taskID)) { _, isRouteValid in
             guard isRouteValid == false else { return }
             dismissDetail()
-        }
-        .task {
-            await loadPersistedDraftRecovery()
         }
         .onAppear(perform: registerNavigationGuard)
     }

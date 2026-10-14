@@ -26,22 +26,21 @@ private struct TaskDetailAnalyticsWorkspace: View {
 
     @State private var range: AnalyticsRange = .week
     @State private var liveNow = Date()
+    @State private var loaded: (request: TaskAnalyticsSnapshotRequest, snapshot: TaskAnalyticsSnapshot?)?
 
     var body: some View {
-        let evaluationDate = liveNow
         let request = store.taskAnalyticsSnapshotRequest(
             for: task,
             range: range,
-            referenceDate: evaluationDate,
-            liveNow: evaluationDate
+            referenceDate: liveNow,
+            liveNow: liveNow
         )
-        let snapshot = store.taskAnalyticsSnapshot(
-            for: request,
-            now: evaluationDate
-        )
+        // Keep the previous result on screen for the one frame a cache miss
+        // takes to resolve, like the Analytics page does.
+        let snapshot = store.cachedTaskAnalyticsSnapshot(for: request) ?? loaded?.snapshot
         let refreshPlan = scenePhase == .active
             ? AnalyticsRefreshPlan.next(
-                liveNow: evaluationDate,
+                liveNow: liveNow,
                 followsCurrentPeriod: true,
                 liveRefreshBucket: request.liveRefreshBucket
             )
@@ -57,27 +56,11 @@ private struct TaskDetailAnalyticsWorkspace: View {
             snapshot: snapshot,
             range: $range
         )
-        .task(id: refreshPlan) {
-            await waitForRefresh(refreshPlan)
+        .task(id: request) {
+            let snapshot = store.taskAnalyticsSnapshot(for: request, now: liveNow)
+            guard Task.isCancelled == false else { return }
+            loaded = (request, snapshot)
         }
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active else { return }
-            liveNow = Date()
-        }
-        .onSystemClockChange {
-            liveNow = Date()
-        }
-    }
-
-    @MainActor
-    private func waitForRefresh(_ plan: AnalyticsRefreshPlan?) async {
-        guard let plan else { return }
-        let delay = max(0, plan.deadline.timeIntervalSinceNow)
-        do {
-            try await Task.sleep(for: .seconds(delay))
-        } catch {
-            return
-        }
-        liveNow = Date()
+        .liveAnalyticsClock($liveNow, plan: refreshPlan, scenePhase: scenePhase)
     }
 }

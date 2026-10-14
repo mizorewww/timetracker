@@ -5,7 +5,6 @@ struct InboxView: View {
     @State private var draft = InboxCaptureDraft()
     @State private var addFocusToken = 0
     @State private var showsCompleted = false
-    @State private var completionPresentationRevision = 0
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutShell) private var layoutShell
@@ -65,6 +64,7 @@ struct InboxView: View {
                                 toggleCompletion(item.id)
                             }
                         )
+                        .id(InboxRowIdentity(itemID: item.id, isCompleted: false))
                     }
                     .onMove(perform: moveInboxItems)
                 }
@@ -89,7 +89,6 @@ struct InboxView: View {
                 )
             }
         }
-        .id(completionPresentationRevision)
     }
 
     @ViewBuilder
@@ -131,7 +130,6 @@ struct InboxView: View {
             showsCompleted = true
         }
         store.toggleInboxItem(currentItem)
-        completionPresentationRevision += 1
     }
 
     @discardableResult
@@ -155,4 +153,12 @@ struct InboxCaptureDraft: Equatable {
         title = ""
         return true
     }
+}
+
+/// Qualifies a row's identity by its section. A `List` cell that moves between
+/// the open and completed sections keeps stale grouping and interaction state,
+/// so crossing sections is presented as a removal plus an insertion.
+struct InboxRowIdentity: Hashable {
+    let itemID: UUID
+    let isCompleted: Bool
 }

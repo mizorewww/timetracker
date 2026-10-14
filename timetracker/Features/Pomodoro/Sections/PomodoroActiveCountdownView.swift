@@ -9,7 +9,6 @@ struct PomodoroActiveCountdownView: View {
     let taskColor: Color
     let canResumeFocus: Bool
     @Environment(\.pageLiveClocksActive) private var liveClocksActive
-    @State private var lastLiveDate = Date()
 
     private var isBreak: Bool {
         run.state == .shortBreak || run.state == .longBreak
@@ -21,9 +20,8 @@ struct PomodoroActiveCountdownView: View {
                 liveCountdown
             } else {
                 // Fully stop the schedule while this page is not the selected
-                // tab: the frozen value is re-rendered on reselection, and the
-                // first live tick refreshes it within a second.
-                countdown(at: lastLiveDate)
+                // tab; reselection re-renders with the live schedule.
+                countdown(at: Date())
             }
         }
         .accessibilityIdentifier("pomodoro.countdown")
@@ -31,10 +29,7 @@ struct PomodoroActiveCountdownView: View {
 
     private var liveCountdown: some View {
         TimelineView(PomodoroCountdownSchedule(deadline: run.phaseDeadline)) { context in
-            if context.date != lastLiveDate {
-                lastLiveDate = context.date
-            }
-            return countdown(at: context.date)
+            countdown(at: context.date)
         }
     }
 

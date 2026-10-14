@@ -3,8 +3,7 @@ import Foundation
 extension TaskDetailWorkspace {
     var autosaveRequest: TaskDetailAutosaveRequest {
         TaskDetailAutosaveRequest(
-            isEnabled: isRecoveryLoaded &&
-                store.isTaskDetailRouteValid(taskID),
+            isEnabled: store.isTaskDetailRouteValid(taskID),
             draft: session.draft,
             hasUnsavedChanges: session.hasUnsavedChanges,
             isValid: session.isPersistenceValid

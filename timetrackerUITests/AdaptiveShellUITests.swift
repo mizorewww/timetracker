@@ -19,38 +19,7 @@ final class AdaptiveShellUITests: XCTestCase {
     }
 
     private func launchApp(windowWidth: CGFloat? = nil) -> XCUIApplication {
-        let app = XCUIApplication()
-        app.launchArguments = [
-            "--uitesting",
-            "-ApplePersistenceIgnoreState", "YES",
-            "-AppleLanguages", "(en)",
-            "-AppleLocale", "en_US",
-            "-TimeTrackerAutomaticDemoDataModeOverride", "replaceOnLaunch",
-            "-TimeTrackerAutomaticDemoSeedingDisabled", "NO",
-        ]
-        app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
-        #if os(macOS)
-        if let windowWidth {
-            app.launchEnvironment["TIMETRACKER_UI_TEST_WINDOW_WIDTH"] = "\(windowWidth)"
-            app.launchEnvironment["TIMETRACKER_UI_TEST_WINDOW_HEIGHT"] = "820"
-        }
-        #endif
-        app.launch()
-        addTeardownBlock {
-            if app.state != .notRunning {
-                app.terminate()
-            }
-        }
-        #if os(macOS)
-        let readyElement = app.descendants(matching: .any)["home.view"]
-        #else
-        let readyElement = app.otherElements["app.initialConfiguration.ready"]
-        #endif
-        XCTAssertTrue(
-            readyElement.waitForExistence(timeout: 90),
-            "The app never finished initial configuration."
-        )
-        return app
+        launchDemoApp(windowSize: windowWidth.map { CGSize(width: $0, height: 820) })
     }
 
     private func activate(
@@ -73,13 +42,6 @@ final class AdaptiveShellUITests: XCTestCase {
     /// says nothing about which shell was chosen.
     private func compactSettingsButton(in app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any)["settings.open"]
-    }
-
-    private func attachScreenshot(_ app: XCUIApplication, named name: String) {
-        let attachment = XCTAttachment(screenshot: app.screenshot())
-        attachment.name = name
-        attachment.lifetime = .keepAlways
-        add(attachment)
     }
 
     /// The presented shell must be the one this window's width calls for.

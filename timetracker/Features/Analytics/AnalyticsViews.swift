@@ -89,9 +89,7 @@ struct AnalyticsView: View {
                 request: request
             )
         }
-        .task(id: refreshPlan) {
-            await waitForRefresh(refreshPlan)
-        }
+        .liveAnalyticsClock($liveNow, plan: refreshPlan, scenePhase: scenePhase)
         .navigationDestination(for: AnalyticsCategory.self) { category in
             AnalyticsCategoryDetailView(
                 store: store,
@@ -119,24 +117,6 @@ struct AnalyticsView: View {
             liveNow = actionNow
             followsCurrentPeriod = range.isCurrentPeriod(referenceDate, liveNow: actionNow)
         }
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active else { return }
-            liveNow = Date()
-        }
-        .onSystemClockChange {
-            liveNow = Date()
-        }
-    }
-
-    private func waitForRefresh(_ plan: AnalyticsRefreshPlan?) async {
-        guard let plan else { return }
-        let delay = max(0, plan.deadline.timeIntervalSinceNow)
-        do {
-            try await Task.sleep(for: .seconds(delay))
-        } catch {
-            return
-        }
-        liveNow = Date()
     }
 }
 

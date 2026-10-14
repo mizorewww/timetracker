@@ -71,7 +71,6 @@ struct TasksNavigationView: View {
             },
             replaceDetail: store.openTaskDetail
         )
-        .id(route.taskID)
     }
 
     private func synchronizePath(with route: TasksRoute?) {

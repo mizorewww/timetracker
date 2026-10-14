@@ -22,17 +22,23 @@ extension TimeTrackerStore {
         analyticsDomainStore = store
     }
 
+    func cachedTaskAnalyticsSnapshot(
+        for request: TaskAnalyticsSnapshotRequest
+    ) -> TaskAnalyticsSnapshot? {
+        analyticsDomainStore.cachedTaskSnapshot(
+            taskID: request.taskID,
+            range: request.range,
+            evaluationKey: request.evaluationKey
+        )
+    }
+
     func taskAnalyticsSnapshot(
         for request: TaskAnalyticsSnapshotRequest,
         now: Date = Date(),
         calendar: Calendar = .current
     ) -> TaskAnalyticsSnapshot? {
         guard let task = task(for: request.taskID) else { return nil }
-        if let snapshot = analyticsDomainStore.cachedTaskSnapshot(
-            taskID: request.taskID,
-            range: request.range,
-            evaluationKey: request.evaluationKey
-        ) {
+        if let snapshot = cachedTaskAnalyticsSnapshot(for: request) {
             return snapshot
         }
 

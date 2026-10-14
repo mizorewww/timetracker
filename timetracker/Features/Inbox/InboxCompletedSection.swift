@@ -21,6 +21,7 @@ struct InboxCompletedSection: View {
                         }
                     )
                     .moveDisabled(true)
+                    .id(InboxRowIdentity(itemID: item.id, isCompleted: true))
                 }
             }
         } header: {

@@ -167,7 +167,10 @@ final class TimeTrackerStore {
     }
 
     var rollupDomainStore = RollupStore()
-    var analyticsDomainStore = AnalyticsStore()
+    /// Pure memo of analytics snapshots and day buckets. Readers key on
+    /// `analyticsRevision`, which every invalidation bumps, so filling the
+    /// memo from a view's `body` must not itself publish a change.
+    @ObservationIgnored var analyticsDomainStore = AnalyticsStore()
     var analyticsRevision: UInt = 0
     /// Today timeline snapshot cache (see TimeTrackerStore+Timeline.swift).
     /// Keyed by data revisions + day + minute bucket so repeated body

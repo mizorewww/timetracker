@@ -5,13 +5,68 @@ import SwiftUI
 /// Exact record values and actions stay in the adjacent feature-owned rows.
 /// This component owns only the shared axis, overlap lanes, bars, and omitted
 /// idle-gap presentation.
-nonisolated struct TimelineChartVerticalBarLayoutKey: Equatable, Sendable {
-    /// Full entry array (COW copy; equality is O(n) over ~600 entries, far
-    /// cheaper than the projection) plus the compression and axis length, so
-    /// any data or size change invalidates the memo.
-    let entries: [AnalyticsTimelineEntry]
-    let compression: TimelineAxisCompression
-    let axisLength: CGFloat
+/// Per-chart memo of bar projections. The Layout passes, the plot, and the
+/// axis labels all need the projection for the same axis length; tab-switch
+/// animations repeat those passes and projecting 600+ entries each time stalls
+/// the switch. A reference memo shares one result without publishing state.
+final class TimelineChartBarLayoutMemo {
+    private enum Axis: Hashable {
+        case horizontal
+        case vertical
+    }
+
+    private struct Key: Hashable {
+        let axis: Axis
+        let length: CGFloat
+    }
+
+    private static let maximumRetainedLengths = 8
+
+    private var entries: [AnalyticsTimelineEntry] = []
+    private var compression: TimelineAxisCompression?
+    private var layouts: [Key: TimelineChartBarLayout] = [:]
+
+    func horizontal(
+        entries: [AnalyticsTimelineEntry],
+        compression: TimelineAxisCompression,
+        width: CGFloat
+    ) -> TimelineChartBarLayout {
+        layout(Key(axis: .horizontal, length: width), entries: entries, compression: compression) {
+            TimelineChartLayout.horizontalBars(entries: entries, compression: compression, width: width)
+        }
+    }
+
+    func vertical(
+        entries: [AnalyticsTimelineEntry],
+        compression: TimelineAxisCompression,
+        height: CGFloat
+    ) -> TimelineChartBarLayout {
+        layout(Key(axis: .vertical, length: height), entries: entries, compression: compression) {
+            TimelineChartLayout.verticalBars(entries: entries, compression: compression, height: height)
+        }
+    }
+
+    private func layout(
+        _ key: Key,
+        entries: [AnalyticsTimelineEntry],
+        compression: TimelineAxisCompression,
+        project: () -> TimelineChartBarLayout
+    ) -> TimelineChartBarLayout {
+        if compression != self.compression || entries != self.entries {
+            self.entries = entries
+            self.compression = compression
+            layouts.removeAll(keepingCapacity: true)
+        }
+        if let cached = layouts[key] {
+            return cached
+        }
+        if layouts.count >= Self.maximumRetainedLengths {
+            layouts.removeAll(keepingCapacity: true)
+        }
+        let projected = project()
+        layouts[key] = projected
+        return projected
+    }
 }
 
 struct TimelineChart: View {
@@ -19,11 +74,7 @@ struct TimelineChart: View {
     var compactHeight: CGFloat = 360
     var exposesUITestingMarks = false
     @Environment(\.layoutShell) private var layoutShell
-    /// Vertical bar layout memo: tab-switch animations re-layout the chart at
-    /// the same size several times; projecting 600+ entries per pass stalls
-    /// the switch. Keyed by entry/gap identity and the axis length.
-    @State private var verticalBarLayoutCache:
-        (key: TimelineChartVerticalBarLayoutKey, layout: TimelineChartBarLayout)?
+    @State private var barLayoutMemo = TimelineChartBarLayoutMemo()
 
     var body: some View {
         Group {
@@ -78,7 +129,8 @@ extension TimelineChart {
         TimelineChartHorizontalViewportLayout(
             entries: laneEntries,
             gaps: axisCompression.omittedGaps,
-            compression: axisCompression
+            compression: axisCompression,
+            barLayoutMemo: barLayoutMemo
         ) {
             GeometryReader { viewport in
                 ScrollView(.horizontal) {
@@ -100,7 +152,8 @@ extension TimelineChart {
         TimelineChartHorizontalLayout(
             entries: laneEntries,
             gaps: axisCompression.omittedGaps,
-            compression: axisCompression
+            compression: axisCompression,
+            barLayoutMemo: barLayoutMemo
         ) {
             horizontalPlot
                 .timelineChartLayoutRole(.plot)
@@ -118,7 +171,7 @@ extension TimelineChart {
 
     private var horizontalPlot: some View {
         GeometryReader { proxy in
-            let barLayout = TimelineChartLayout.horizontalBars(
+            let barLayout = barLayoutMemo.horizontal(
                 entries: laneEntries,
                 compression: axisCompression,
                 width: proxy.size.width
@@ -158,7 +211,7 @@ extension TimelineChart {
 
     private var horizontalAxisLabels: some View {
         GeometryReader { proxy in
-            let barLayout = TimelineChartLayout.horizontalBars(
+            let barLayout = barLayoutMemo.horizontal(
                 entries: laneEntries,
                 compression: axisCompression,
                 width: proxy.size.width
@@ -167,34 +220,12 @@ extension TimelineChart {
         }
     }
 
-    private func verticalBarLayout(
-        entries: [AnalyticsTimelineEntry],
-        compression: TimelineAxisCompression,
-        height: CGFloat
-    ) -> TimelineChartBarLayout {
-        let key = TimelineChartVerticalBarLayoutKey(
-            entries: entries,
-            compression: compression,
-            axisLength: height
-        )
-        if let cached = verticalBarLayoutCache, cached.key == key {
-            return cached.layout
-        }
-        let layout = TimelineChartLayout.verticalBars(
-            entries: entries,
-            compression: compression,
-            height: height
-        )
-        verticalBarLayoutCache = (key: key, layout: layout)
-        return layout
-    }
-
     var verticalTimeline: some View {
         let height = TimelineChartLayout.verticalTimelineHeight(
             minimumHeight: compactHeight,
             gapLabelCount: axisCompression.omittedGaps.count
         )
-        let barLayout = verticalBarLayout(
+        let barLayout = barLayoutMemo.vertical(
             entries: laneEntries,
             compression: axisCompression,
             height: height
@@ -211,7 +242,8 @@ extension TimelineChart {
         return TimelineChartVerticalLayout(
             entries: laneEntries,
             gaps: axisCompression.omittedGaps,
-            compression: axisCompression
+            compression: axisCompression,
+            barLayoutMemo: barLayoutMemo
         ) {
             verticalPlot
                 .timelineChartLayoutRole(.plot)
@@ -237,7 +269,7 @@ extension TimelineChart {
 
     private var verticalPlot: some View {
         GeometryReader { proxy in
-            let barLayout = TimelineChartLayout.verticalBars(
+            let barLayout = barLayoutMemo.vertical(
                 entries: laneEntries,
                 compression: axisCompression,
                 height: proxy.size.height
@@ -278,7 +310,7 @@ extension TimelineChart {
 
     private var verticalAxisLabels: some View {
         GeometryReader { proxy in
-            let barLayout = TimelineChartLayout.verticalBars(
+            let barLayout = barLayoutMemo.vertical(
                 entries: laneEntries,
                 compression: axisCompression,
                 height: proxy.size.height
@@ -355,6 +387,7 @@ private struct TimelineChartHorizontalViewportLayout: Layout {
     let entries: [AnalyticsTimelineEntry]
     let gaps: [TimelineOmittedGap]
     let compression: TimelineAxisCompression
+    let barLayoutMemo: TimelineChartBarLayoutMemo
 
     func sizeThatFits(
         proposal: ProposedViewSize,
@@ -367,6 +400,7 @@ private struct TimelineChartHorizontalViewportLayout: Layout {
             entries: entries,
             gaps: gaps,
             compression: compression,
+            barLayoutMemo: barLayoutMemo,
             availableWidth: availableWidth,
             labelSizes: measuredGapLabelSizes(in: subviews)
         )
@@ -399,6 +433,7 @@ private struct TimelineChartHorizontalLayout: Layout {
     let entries: [AnalyticsTimelineEntry]
     let gaps: [TimelineOmittedGap]
     let compression: TimelineAxisCompression
+    let barLayoutMemo: TimelineChartBarLayoutMemo
 
     func sizeThatFits(
         proposal: ProposedViewSize,
@@ -481,6 +516,7 @@ private struct TimelineChartHorizontalLayout: Layout {
             entries: entries,
             gaps: gaps,
             compression: compression,
+            barLayoutMemo: barLayoutMemo,
             availableWidth: width,
             labelSizes: measuredGapLabelSizes(in: subviews)
         )
@@ -491,6 +527,7 @@ private struct TimelineChartVerticalLayout: Layout {
     let entries: [AnalyticsTimelineEntry]
     let gaps: [TimelineOmittedGap]
     let compression: TimelineAxisCompression
+    let barLayoutMemo: TimelineChartBarLayoutMemo
 
     func sizeThatFits(
         proposal: ProposedViewSize,
@@ -596,7 +633,7 @@ private struct TimelineChartVerticalLayout: Layout {
         subviews: Subviews
     ) -> VerticalMetrics {
         let safeHeight = max(0, height.isFinite ? height : 0)
-        let bars = TimelineChartLayout.verticalBars(
+        let bars = barLayoutMemo.vertical(
             entries: entries,
             compression: compression,
             height: safeHeight
@@ -655,6 +692,7 @@ private func timelineChartHorizontalMetrics(
     entries: [AnalyticsTimelineEntry],
     gaps: [TimelineOmittedGap],
     compression: TimelineAxisCompression,
+    barLayoutMemo: TimelineChartBarLayoutMemo,
     availableWidth: CGFloat,
     labelSizes: [String: CGSize]
 ) -> TimelineChartHorizontalMetrics {
@@ -662,7 +700,7 @@ private func timelineChartHorizontalMetrics(
         availableWidth: availableWidth,
         gapLabelWidths: labelSizes.values.map(\.width)
     )
-    let bars = TimelineChartLayout.horizontalBars(
+    let bars = barLayoutMemo.horizontal(
         entries: entries,
         compression: compression,
         width: width

@@ -150,35 +150,34 @@ enum AnalyticsPeriodText {
             {
                 return AppStrings.localized("analytics.period.yesterday")
             }
-            return formattedDate(date, dateStyle: .medium, calendar: calendar)
+            return date.formatted(dateStyle(calendar: calendar))
         case .week:
             let start = range.interval(containing: date, calendar: calendar)?.start ?? date
-            let label = formattedDate(start, dateStyle: .medium, calendar: calendar)
+            let label = start.formatted(dateStyle(calendar: calendar))
             return String(format: AppStrings.localized("analytics.period.weekOfFormat"), label)
         case .month:
-            let formatter = formatter(calendar: calendar)
-            formatter.setLocalizedDateFormatFromTemplate("MMMM y")
-            return formatter.string(from: date)
+            return date.formatted(
+                Date.FormatStyle(
+                    locale: calendar.locale ?? .current,
+                    calendar: calendar,
+                    timeZone: calendar.timeZone
+                )
+                .month(.wide)
+                .year()
+            )
         }
     }
 
-    private static func formattedDate(
-        _ date: Date,
-        dateStyle: DateFormatter.Style,
-        calendar: Calendar
-    ) -> String {
-        let formatter = formatter(calendar: calendar)
-        formatter.dateStyle = dateStyle
-        formatter.timeStyle = .none
-        return formatter.string(from: date)
-    }
-
-    private static func formatter(calendar: Calendar) -> DateFormatter {
-        let formatter = DateFormatter()
-        formatter.locale = calendar.locale ?? .current
-        formatter.calendar = calendar
-        formatter.timeZone = calendar.timeZone
-        return formatter
+    /// `Date.FormatStyle` caches its formatter, unlike a fresh `DateFormatter`
+    /// per title evaluation.
+    private static func dateStyle(calendar: Calendar) -> Date.FormatStyle {
+        Date.FormatStyle(
+            date: .abbreviated,
+            time: .omitted,
+            locale: calendar.locale ?? .current,
+            calendar: calendar,
+            timeZone: calendar.timeZone
+        )
     }
 }
 

@@ -23,7 +23,6 @@ private struct TodayTaskNavigationDestinationModifier: ViewModifier {
                         self.route = store.prepareTaskDetailRoute(taskID)
                     }
                 )
-                .id(route.taskID)
             }
             .onAppear(perform: clearInvalidRoute)
             .onChange(of: routedTaskShouldRemainPresented) { _, _ in

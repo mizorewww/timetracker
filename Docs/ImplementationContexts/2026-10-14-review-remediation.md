@@ -18,12 +18,12 @@ Delete this file at closeout.
 - [x] Inbox coordinator user-facing errors are localized.
 
 ### G2 — SwiftUI state written during `body`
-- [ ] Task-detail analytics snapshot no longer mutates observed store state from `body`.
-- [ ] `TimelineChart` computes bar layout once per input (Layout cache / parent), no `@State` write in `body`.
-- [ ] Pomodoro countdown stops writing `@State` inside `TimelineView`.
-- [ ] Analytics period titles stop allocating `DateFormatter` per evaluation.
-- [ ] TaskDetail: one `.id(taskID)` owner; session/controller created once; recovery load in loader.
-- [ ] Inbox list stops being rebuilt with `.id(completionPresentationRevision)`.
+- [x] Task-detail analytics snapshot no longer mutates observed store state from `body`.
+- [x] `TimelineChart` computes bar layout once per input (Layout cache / parent), no `@State` write in `body`.
+- [x] Pomodoro countdown stops writing `@State` inside `TimelineView`.
+- [x] Analytics period titles stop allocating `DateFormatter` per evaluation.
+- [x] TaskDetail: one `.id(taskID)` owner; session/controller created once; recovery load in loader.
+- [x] Inbox list stops being rebuilt with `.id(completionPresentationRevision)`.
 
 ### G3 — Abstraction cleanup
 - [ ] `ModelContext?` command parameters become non-optional; dead else-branches removed.
@@ -33,7 +33,7 @@ Delete this file at closeout.
 - [ ] Remove `TimerModelContextFactory`, pass-through command handlers, unused `AITaskWorkspaceSnapshot` decoding.
 - [ ] Coordinators share one mutation environment instead of repeating init/session boilerplate.
 - [ ] Named constants for sort-order step, Pomodoro discard ratio, maximum task depth.
-- [ ] Live-clock refresh modifier shared by Analytics and Task detail.
+- [x] Live-clock refresh modifier shared by Analytics and Task detail.
 - [ ] AI plan generator state collapsed into one phase enum.
 - [ ] Startup configuration is an explicit state enum; test-launch arguments centralized.
 - [ ] Container factory fallback chain de-duplicated.

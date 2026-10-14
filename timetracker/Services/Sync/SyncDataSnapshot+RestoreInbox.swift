@@ -42,9 +42,7 @@ extension SyncDataSnapshot {
         let supersededAt = now.addingTimeInterval(-1)
         for item in existing.values where !snapshotIDs.contains(item.id) {
             item.deletedAt = supersededAt
-            item.updatedAt = supersededAt
-            item.deviceID = deviceID
-            item.clientMutationID = UUID()
+            item.markMutated(at: supersededAt, deviceID: deviceID)
         }
         for record in inboxItems {
             let contextID = record.suggestionContextID ?? record.id
@@ -132,9 +130,7 @@ extension SyncDataSnapshot {
                 observed: suggestion.updatedAt
             )
             suggestion.deletedAt = deletedAt
-            suggestion.updatedAt = deletedAt
-            suggestion.deviceID = deviceID
-            suggestion.clientMutationID = UUID()
+            suggestion.markMutated(at: deletedAt, deviceID: deviceID)
         }
         for record in inboxSuggestions {
             let itemIdentity = itemIdentityByID[record.inboxItemID]

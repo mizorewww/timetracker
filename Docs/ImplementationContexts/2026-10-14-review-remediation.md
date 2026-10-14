@@ -28,8 +28,8 @@ Delete this file at closeout.
 ### G3 — Abstraction cleanup
 - [x] `ModelContext?` command parameters become non-optional; dead else-branches removed.
 - [x] One Pomodoro settle/discard implementation (repository-owned); private `segments(in:)` copies use canonical re-fetch.
-- [ ] One `markMutated` on synced models; one LWW comparator.
-- [ ] Remove dead snapshot-level lane allocation (`lane`, `labelIndex`, `laneCount`).
+- [x] One `markMutated` on synced models; one LWW comparator.
+- [x] Remove dead snapshot-level lane allocation (`lane`, `labelIndex`, `laneCount`).
 - [ ] Remove `TimerModelContextFactory` (done), pass-through command handlers (Pomodoro reconcile/cancel done), unused `AITaskWorkspaceSnapshot` decoding.
 - [ ] Coordinators share one mutation environment instead of repeating init/session boilerplate.
 - [x] Named constants for sort-order step, Pomodoro discard ratio, maximum task depth.

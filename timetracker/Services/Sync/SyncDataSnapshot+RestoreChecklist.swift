@@ -13,9 +13,7 @@ extension SyncDataSnapshot {
                 observed: item.updatedAt
             )
             item.deletedAt = deletedAt
-            item.updatedAt = deletedAt
-            item.deviceID = deviceID
-            item.clientMutationID = UUID()
+            item.markMutated(at: deletedAt, deviceID: deviceID)
         }
         for record in checklistItems {
             let model = existing[record.id] ?? ChecklistItem(
@@ -58,9 +56,7 @@ extension SyncDataSnapshot {
         let supersededAt = now.addingTimeInterval(-1)
         for visual in existing.values where !snapshotIDs.contains(visual.id) {
             visual.deletedAt = supersededAt
-            visual.updatedAt = supersededAt
-            visual.deviceID = deviceID
-            visual.clientMutationID = UUID()
+            visual.markMutated(at: supersededAt, deviceID: deviceID)
         }
         for record in checklistItemVisuals {
             let model = existing[record.id] ?? ChecklistItemVisual(

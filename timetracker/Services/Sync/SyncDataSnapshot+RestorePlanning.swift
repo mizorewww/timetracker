@@ -13,9 +13,7 @@ extension SyncDataSnapshot {
                 observed: run.updatedAt
             )
             run.deletedAt = deletedAt
-            run.updatedAt = deletedAt
-            run.deviceID = deviceID
-            run.clientMutationID = UUID()
+            run.markMutated(at: deletedAt, deviceID: deviceID)
         }
         for record in pomodoroRuns {
             let focusSeconds = max(1, record.focusSecondsPlanned)
@@ -69,9 +67,7 @@ extension SyncDataSnapshot {
                 observed: event.updatedAt
             )
             event.deletedAt = deletedAt
-            event.updatedAt = deletedAt
-            event.deviceID = deviceID
-            event.clientMutationID = UUID()
+            event.markMutated(at: deletedAt, deviceID: deviceID)
         }
         for record in countdownEvents {
             let model = existing[record.id] ?? CountdownEvent(
@@ -111,9 +107,7 @@ extension SyncDataSnapshot {
         let supersededAt = now.addingTimeInterval(-1)
         for preference in existing.values where !snapshotIDs.contains(preference.id) {
             preference.deletedAt = supersededAt
-            preference.updatedAt = supersededAt
-            preference.deviceID = deviceID
-            preference.clientMutationID = UUID()
+            preference.markMutated(at: supersededAt, deviceID: deviceID)
         }
         for record in safeRecords {
             let model = existing[record.id] ?? SyncedPreference(

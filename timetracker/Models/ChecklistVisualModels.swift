@@ -42,29 +42,6 @@ final class ChecklistItemVisual {
     }
 }
 
-extension ChecklistItemVisual {
-    /// Defines a deterministic LWW order for the logical "item has visual"
-    /// key. CloudKit can materialize multiple physical UUIDs for one item.
-    func isPreferredLogicalWinner(over other: ChecklistItemVisual) -> Bool {
-        if updatedAt != other.updatedAt {
-            return updatedAt > other.updatedAt
-        }
-        if (deletedAt == nil) != (other.deletedAt == nil) {
-            return deletedAt != nil
-        }
-        if createdAt != other.createdAt {
-            return createdAt > other.createdAt
-        }
-        if deviceID != other.deviceID {
-            return deviceID > other.deviceID
-        }
-        if clientMutationID != other.clientMutationID {
-            return clientMutationID.uuidString > other.clientMutationID.uuidString
-        }
-        return id.uuidString > other.id.uuidString
-    }
-}
-
 nonisolated extension Sequence<ChecklistItemVisual> {
     func logicalWinnersByChecklistItemID() -> [UUID: ChecklistItemVisual] {
         reduce(into: [:]) { winners, visual in

@@ -1,24 +1,20 @@
 import Foundation
 
+/// Clips items to the day and orders them; visual lanes are assigned in pixel
+/// space by `TimelineChartLayout`, not here.
 nonisolated enum TimelineLayoutEngine {
     static func layout(
         items: [TimelineLayoutItem],
-        dayInterval: DateInterval,
-        minimumLaneGap: TimeInterval = 60
+        dayInterval: DateInterval
     ) -> TimelineLayoutResult {
         PerformanceSignpost.interval("Timeline layout") {
-            layoutWithoutInstrumentation(
-                items: items,
-                dayInterval: dayInterval,
-                minimumLaneGap: minimumLaneGap
-            )
+            layoutWithoutInstrumentation(items: items, dayInterval: dayInterval)
         }
     }
 
     private static func layoutWithoutInstrumentation(
         items: [TimelineLayoutItem],
-        dayInterval: DateInterval,
-        minimumLaneGap: TimeInterval
+        dayInterval: DateInterval
     ) -> TimelineLayoutResult {
         let visibleItems = items
             .compactMap { clippedItem($0, to: dayInterval) }
@@ -33,25 +29,7 @@ nonisolated enum TimelineLayoutEngine {
             }
 
         let displayInterval = makeDisplayInterval(for: visibleItems, dayInterval: dayInterval)
-        let itemByID = Dictionary(
-            uniqueKeysWithValues: visibleItems.map { ($0.id, $0) }
-        )
-        let entries = TimelineLaneAllocator.assignments(
-            for: visibleItems.map { item in
-                TimelineLaneInterval(
-                    id: item.id,
-                    start: item.startedAt.timeIntervalSinceReferenceDate,
-                    end: item.endedAt.timeIntervalSinceReferenceDate
-                )
-            },
-            minimumGap: minimumLaneGap
-        )
-        .compactMap { assignment -> TimelineLayoutEntry? in
-            guard let item = itemByID[assignment.id] else { return nil }
-            return TimelineLayoutEntry(item: item, lane: assignment.lane)
-        }
-
-        return TimelineLayoutResult(displayInterval: displayInterval, entries: entries)
+        return TimelineLayoutResult(displayInterval: displayInterval, items: visibleItems)
     }
 
     static func makeDisplayInterval(

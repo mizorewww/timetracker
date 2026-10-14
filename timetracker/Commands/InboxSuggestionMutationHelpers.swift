@@ -17,9 +17,7 @@ extension InboxCommandHandler {
         suggestion.taskID = destination.persistenceTargetID
         suggestion.destinationKindRaw = destination.suggestionDestinationKind.rawValue
         suggestion.generatedAt = now
-        suggestion.updatedAt = now
-        suggestion.deviceID = deviceID
-        suggestion.clientMutationID = UUID()
+        suggestion.markMutated(at: now, deviceID: deviceID)
     }
 
     func preparedSuggestionMutations(
@@ -92,8 +90,6 @@ extension InboxCommandHandler {
 
     func softDelete(_ suggestion: InboxSuggestion, now: Date, deviceID: String) {
         suggestion.deletedAt = now
-        suggestion.updatedAt = now
-        suggestion.deviceID = deviceID
-        suggestion.clientMutationID = UUID()
+        suggestion.markMutated(at: now, deviceID: deviceID)
     }
 }

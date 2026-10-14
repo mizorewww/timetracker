@@ -25,9 +25,7 @@ extension InboxCommandHandler {
             winner.suggestedTaskID = nil
             winner.suggestionGeneratedAt = now
             winner.dismissedSuggestionRevisionID = winner.effectiveSuggestionRevisionID
-            winner.updatedAt = now
-            winner.deviceID = deviceID
-            winner.clientMutationID = UUID()
+            winner.markMutated(at: now, deviceID: deviceID)
             tombstone(preparedSuggestions, now: now, deviceID: deviceID)
             tombstoneSuperseded(
                 logicalMutation.activeSiblings,
@@ -113,9 +111,7 @@ extension InboxCommandHandler {
             winner.suggestedTaskID = result.destination.legacySuggestedTaskID
             winner.suggestionGeneratedAt = now
             winner.dismissedSuggestionRevisionID = nil
-            winner.updatedAt = now
-            winner.deviceID = deviceID
-            winner.clientMutationID = UUID()
+            winner.markMutated(at: now, deviceID: deviceID)
             tombstoneSuperseded(
                 logicalMutation.activeSiblings,
                 winnerUpdatedAt: now,
@@ -223,9 +219,7 @@ extension InboxCommandHandler {
             )
 
             winner.deletedAt = now
-            winner.updatedAt = now
-            winner.deviceID = deviceID
-            winner.clientMutationID = UUID()
+            winner.markMutated(at: now, deviceID: deviceID)
             softDelete(canonicalSuggestion, now: now, deviceID: deviceID)
             tombstone(otherSuggestionMutations, now: now, deviceID: deviceID)
             tombstone(logicalMutation.activeSiblings, now: now, deviceID: deviceID)

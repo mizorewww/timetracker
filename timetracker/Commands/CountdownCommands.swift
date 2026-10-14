@@ -69,9 +69,7 @@ struct CountdownCommandHandler {
         if let date {
             event.date = date
         }
-        event.updatedAt = now
-        event.deviceID = deviceID
-        event.clientMutationID = UUID()
+        event.markMutated(at: now, deviceID: deviceID)
         try context.saveAfterMutationStep()
     }
 
@@ -82,9 +80,7 @@ struct CountdownCommandHandler {
         deviceID: String = DeviceIdentity.current
     ) throws {
         event.deletedAt = now
-        event.updatedAt = now
-        event.deviceID = deviceID
-        event.clientMutationID = UUID()
+        event.markMutated(at: now, deviceID: deviceID)
         try context.saveAfterMutationStep()
     }
 }

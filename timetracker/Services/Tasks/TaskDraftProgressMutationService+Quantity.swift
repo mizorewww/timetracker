@@ -109,9 +109,7 @@ nonisolated extension TaskDraftProgressMutationService {
         goal.targetAmount = draft.targetAmount
         goal.unitLabel = draft.unitLabel
         goal.deletedAt = nil
-        goal.updatedAt = date
-        goal.deviceID = deviceID
-        goal.clientMutationID = UUID()
+        goal.markMutated(at: date, deviceID: deviceID)
         try didReachCheckpoint(.quantityGoalChanged(goal.id))
     }
 
@@ -163,8 +161,6 @@ nonisolated extension TaskDraftProgressMutationService {
         ClientMutationTrackedModel
     {
         model.deletedAt = date
-        model.updatedAt = date
-        model.deviceID = deviceID
-        model.clientMutationID = UUID()
+        model.markMutated(at: date, deviceID: deviceID)
     }
 }

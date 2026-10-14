@@ -51,7 +51,7 @@ struct AnalyticsLayoutTests {
     }
 
     @Test
-    func layoutClipsToTheDayAndAllocatesOverlaps() throws {
+    func layoutClipsToTheDay() throws {
         let day = DateInterval(start: base, duration: 3600)
         let firstID = UUID(uuidString: "00000000-0000-0000-0000-000000000021")!
         let secondID = UUID(uuidString: "00000000-0000-0000-0000-000000000022")!
@@ -63,16 +63,14 @@ struct AnalyticsLayoutTests {
                 TimelineLayoutItem(id: secondID, startedAt: base.addingTimeInterval(300), endedAt: base.addingTimeInterval(900)),
                 TimelineLayoutItem(id: outsideID, startedAt: base.addingTimeInterval(4000), endedAt: base.addingTimeInterval(4200)),
             ],
-            dayInterval: day,
-            minimumLaneGap: 0
+            dayInterval: day
         )
 
         #expect(result.displayInterval == DateInterval(start: base, end: base.addingTimeInterval(900)))
-        #expect(result.entries.map(\.id) == [.trackedSegment(firstID), .trackedSegment(secondID)])
-        #expect(result.laneCount == 2)
-        let first = try #require(result.entries.first)
-        #expect(first.item.startedAt == day.start)
-        #expect(first.item.endedAt == base.addingTimeInterval(600))
+        #expect(result.items.map(\.id) == [.trackedSegment(firstID), .trackedSegment(secondID)])
+        let first = try #require(result.items.first)
+        #expect(first.startedAt == day.start)
+        #expect(first.endedAt == base.addingTimeInterval(600))
     }
 
     @Test

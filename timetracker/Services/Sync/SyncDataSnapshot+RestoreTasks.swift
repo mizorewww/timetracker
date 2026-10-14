@@ -13,9 +13,7 @@ extension SyncDataSnapshot {
                 observed: task.updatedAt
             )
             task.deletedAt = deletedAt
-            task.updatedAt = deletedAt
-            task.deviceID = deviceID
-            task.clientMutationID = UUID()
+            task.markMutated(at: deletedAt, deviceID: deviceID)
         }
         for record in tasks {
             let model = existing[record.id] ?? TaskNode(
@@ -71,9 +69,7 @@ extension SyncDataSnapshot {
                 observed: category.updatedAt
             )
             category.deletedAt = deletedAt
-            category.updatedAt = deletedAt
-            category.deviceID = deviceID
-            category.clientMutationID = UUID()
+            category.markMutated(at: deletedAt, deviceID: deviceID)
         }
         for record in taskCategories {
             let model = existing[record.id] ?? TaskCategory(
@@ -113,9 +109,7 @@ extension SyncDataSnapshot {
         let supersededAt = now.addingTimeInterval(-1)
         for assignment in existing.values where !snapshotIDs.contains(assignment.id) {
             assignment.deletedAt = supersededAt
-            assignment.updatedAt = supersededAt
-            assignment.deviceID = deviceID
-            assignment.clientMutationID = UUID()
+            assignment.markMutated(at: supersededAt, deviceID: deviceID)
         }
         for record in taskCategoryAssignments {
             let model = existing[record.id] ?? TaskCategoryAssignment(

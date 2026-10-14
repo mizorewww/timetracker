@@ -143,9 +143,7 @@ nonisolated extension SwiftDataTaskRepository {
         category.colorHex = values.colorHex
         category.iconName = values.iconName
         category.includesInForecast = includesInForecast
-        category.updatedAt = Date()
-        category.deviceID = deviceID
-        category.clientMutationID = UUID()
+        category.markMutated(at: Date(), deviceID: deviceID)
         try context.saveAfterMutationStep()
     }
 
@@ -155,15 +153,11 @@ nonisolated extension SwiftDataTaskRepository {
         }
         let now = Date()
         category.deletedAt = now
-        category.updatedAt = now
-        category.deviceID = deviceID
-        category.clientMutationID = UUID()
+        category.markMutated(at: now, deviceID: deviceID)
 
         for assignment in try categoryAssignments() where assignment.categoryID == categoryID {
             assignment.deletedAt = now
-            assignment.updatedAt = now
-            assignment.deviceID = deviceID
-            assignment.clientMutationID = UUID()
+            assignment.markMutated(at: now, deviceID: deviceID)
         }
         try context.saveAfterMutationStep()
     }
@@ -181,9 +175,7 @@ nonisolated extension SwiftDataTaskRepository {
 
         if let winner = existing.first {
             winner.categoryID = categoryID
-            winner.updatedAt = now
-            winner.deviceID = deviceID
-            winner.clientMutationID = UUID()
+            winner.markMutated(at: now, deviceID: deviceID)
             for duplicate in existing.dropFirst() {
                 markCategoryAssignmentDeleted(duplicate, now: now)
             }
@@ -204,8 +196,6 @@ nonisolated extension SwiftDataTaskRepository {
 
     private func markCategoryAssignmentDeleted(_ assignment: TaskCategoryAssignment, now: Date) {
         assignment.deletedAt = now
-        assignment.updatedAt = now
-        assignment.deviceID = deviceID
-        assignment.clientMutationID = UUID()
+        assignment.markMutated(at: now, deviceID: deviceID)
     }
 }

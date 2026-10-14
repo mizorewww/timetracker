@@ -13,9 +13,7 @@ extension SyncDataSnapshot {
                 observed: session.updatedAt
             )
             session.deletedAt = mutationDate
-            session.updatedAt = mutationDate
-            session.deviceID = deviceID
-            session.clientMutationID = UUID()
+            session.markMutated(at: mutationDate, deviceID: deviceID)
         }
         for record in sessions {
             let source = TimeSessionSource(rawValue: record.sourceRaw) ?? .timer

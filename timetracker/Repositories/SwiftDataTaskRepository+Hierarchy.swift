@@ -67,9 +67,7 @@ nonisolated extension SwiftDataTaskRepository {
             if next.node.depth != next.depth || next.node.path != expectedPath {
                 next.node.depth = next.depth
                 next.node.path = expectedPath
-                next.node.updatedAt = now
-                next.node.deviceID = deviceID
-                next.node.clientMutationID = UUID()
+                next.node.markMutated(at: now, deviceID: deviceID)
             }
 
             pending.append(contentsOf: (childrenByParentID[next.node.id] ?? []).map { child in

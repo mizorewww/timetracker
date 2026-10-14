@@ -108,8 +108,8 @@ nonisolated struct AnalyticsVisualSnapshotService {
         let segmentByID = Dictionary(
             uniqueKeysWithValues: segments.map { (TimelineEntryID.trackedSegment($0.id), $0) }
         )
-        let entries = layout.entries.enumerated().compactMap { index, layoutEntry -> AnalyticsTimelineEntry? in
-            guard let segment = segmentByID[layoutEntry.id] else { return nil }
+        let entries = layout.items.compactMap { item -> AnalyticsTimelineEntry? in
+            guard let segment = segmentByID[item.id] else { return nil }
             let task = input.taskByID[segment.taskID]
             return AnalyticsTimelineEntry(
                 id: .trackedSegment(segment.id),
@@ -120,14 +120,12 @@ nonisolated struct AnalyticsVisualSnapshotService {
                 path: task?.path ?? input.unavailableTaskPath,
                 iconName: task?.iconName ?? "checkmark.circle",
                 colorHex: task?.colorHex ?? "0A84FF",
-                startedAt: layoutEntry.item.startedAt,
-                endedAt: layoutEntry.item.endedAt,
-                lane: layoutEntry.lane,
-                labelIndex: index,
-                interval: layoutEntry.item.interval,
+                startedAt: item.startedAt,
+                endedAt: item.endedAt,
+                interval: item.interval,
                 durationSeconds: max(
                     0,
-                    Int(layoutEntry.item.interval.duration)
+                    Int(item.interval.duration)
                 )
             )
         }
@@ -136,7 +134,7 @@ nonisolated struct AnalyticsVisualSnapshotService {
             displayInterval: layout.displayInterval,
             axisCompression: TimelineAxisCompression(
                 displayInterval: layout.displayInterval,
-                busyIntervals: layout.entries.map(\.item.interval)
+                busyIntervals: layout.items.map(\.interval)
             )
         )
     }

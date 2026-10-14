@@ -383,9 +383,7 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
             item.title = proposed.title
             item.isCompleted = proposed.isCompleted
             item.sortOrder = proposed.sortOrder
-            item.updatedAt = now
-            item.deviceID = deviceID
-            item.clientMutationID = UUID()
+            item.markMutated(at: now, deviceID: deviceID)
         }
 
         let visual = try visibleChecklistVisual(
@@ -407,9 +405,7 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
             visual.suggestionModelID = "manual"
             visual.suggestionGeneratedAt = nil
             visual.userEditedAt = now
-            visual.updatedAt = now
-            visual.deviceID = deviceID
-            visual.clientMutationID = UUID()
+            visual.markMutated(at: now, deviceID: deviceID)
         } else {
             let created = ChecklistItemVisual(
                 checklistItemID: proposed.id,
@@ -438,18 +434,14 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
             throw AITaskAtomicMutationError.targetUnavailable(proposed.id)
         }
         item.deletedAt = now
-        item.updatedAt = now
-        item.deviceID = deviceID
-        item.clientMutationID = UUID()
+        item.markMutated(at: now, deviceID: deviceID)
 
         if let visual = try visibleChecklistVisual(
             itemID: proposed.id,
             context: context
         ) {
             visual.deletedAt = now
-            visual.updatedAt = now
-            visual.deviceID = deviceID
-            visual.clientMutationID = UUID()
+            visual.markMutated(at: now, deviceID: deviceID)
         }
     }
 

@@ -49,9 +49,7 @@ struct InboxCommandHandler {
             logicalMutation.winner.text.apply(to: winner)
             winner.isCompleted.toggle()
             winner.completedAt = winner.isCompleted ? now : nil
-            winner.updatedAt = now
-            winner.deviceID = deviceID
-            winner.clientMutationID = UUID()
+            winner.markMutated(at: now, deviceID: deviceID)
             tombstoneSuperseded(
                 logicalMutation.activeSiblings,
                 winnerUpdatedAt: now,
@@ -90,9 +88,7 @@ struct InboxCommandHandler {
             winner.suggestionGeneratedAt = nil
             winner.suggestionRevisionID = UUID()
             winner.dismissedSuggestionRevisionID = nil
-            winner.updatedAt = now
-            winner.deviceID = deviceID
-            winner.clientMutationID = UUID()
+            winner.markMutated(at: now, deviceID: deviceID)
             tombstone(preparedSuggestions, now: now, deviceID: deviceID)
             tombstoneSuperseded(
                 logicalMutation.activeSiblings,
@@ -118,9 +114,7 @@ struct InboxCommandHandler {
             logicalMutation.materializeDismissal()
             logicalMutation.winner.text.apply(to: winner)
             winner.deletedAt = now
-            winner.updatedAt = now
-            winner.deviceID = deviceID
-            winner.clientMutationID = UUID()
+            winner.markMutated(at: now, deviceID: deviceID)
             tombstone(preparedSuggestions, now: now, deviceID: deviceID)
             tombstone(logicalMutation.activeSiblings, now: now, deviceID: deviceID)
         }
@@ -176,9 +170,7 @@ struct InboxCommandHandler {
                 logicalMutation.materializeDismissal()
                 logicalMutation.winner.text.apply(to: item)
                 item.sortOrder = SortOrderPolicy.position(index)
-                item.updatedAt = now
-                item.deviceID = deviceID
-                item.clientMutationID = UUID()
+                item.markMutated(at: now, deviceID: deviceID)
                 tombstoneSuperseded(
                     logicalMutation.activeSiblings,
                     winnerUpdatedAt: now,

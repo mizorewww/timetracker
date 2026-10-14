@@ -56,10 +56,6 @@ nonisolated struct AnalyticsTimelineSnapshot: Equatable, Sendable {
         displayInterval: nil,
         axisCompression: nil
     )
-
-    var laneCount: Int {
-        (entries.map(\.lane).max() ?? -1) + 1
-    }
 }
 
 nonisolated struct AnalyticsTimelineEntry: Identifiable, Equatable, Sendable {
@@ -72,8 +68,6 @@ nonisolated struct AnalyticsTimelineEntry: Identifiable, Equatable, Sendable {
     let usesCurrentEndLabel: Bool
     let startedAt: Date
     let endedAt: Date
-    let lane: Int
-    let labelIndex: Int
     let interval: DateInterval
     /// Counted duration after visible-range clipping, not necessarily envelope time.
     let durationSeconds: Int
@@ -92,8 +86,6 @@ nonisolated struct AnalyticsTimelineEntry: Identifiable, Equatable, Sendable {
         usesCurrentEndLabel: Bool = false,
         startedAt: Date,
         endedAt: Date,
-        lane: Int,
-        labelIndex: Int,
         interval: DateInterval,
         durationSeconds: Int
     ) {
@@ -106,8 +98,6 @@ nonisolated struct AnalyticsTimelineEntry: Identifiable, Equatable, Sendable {
         self.usesCurrentEndLabel = usesCurrentEndLabel
         self.startedAt = startedAt
         self.endedAt = endedAt
-        self.lane = lane
-        self.labelIndex = labelIndex
         self.interval = interval
         self.durationSeconds = durationSeconds
     }

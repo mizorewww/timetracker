@@ -115,7 +115,9 @@ nonisolated extension Sequence
     }
 }
 
-private nonisolated extension PersistentUUIDModel {
+nonisolated extension PersistentUUIDModel {
+    /// Deterministic LWW order (AD-014): newer `updatedAt`, tombstone on a
+    /// tie, newer `createdAt`, then device and mutation identity.
     func isPreferred(over other: Self) -> Bool {
         if updatedAt != other.updatedAt {
             return updatedAt > other.updatedAt
@@ -142,6 +144,29 @@ private nonisolated extension PersistentUUIDModel {
             return segment.deterministicConflictKey > otherSegment.deterministicConflictKey
         }
         return false
+    }
+}
+
+nonisolated extension PersistentUUIDModel {
+    /// LWW order for rows that share a logical key but not a UUID; the row ID
+    /// breaks the final tie so exactly one winner exists.
+    func isPreferredLogicalWinner(over other: Self) -> Bool {
+        if isPreferred(over: other) {
+            return true
+        }
+        if other.isPreferred(over: self) {
+            return false
+        }
+        return id.uuidString > other.id.uuidString
+    }
+}
+
+nonisolated extension SoftDeletablePersistentUUIDModel {
+    /// Stamps a local write so it wins LWW against the previous value.
+    func markMutated(at mutationDate: Date, deviceID: String) {
+        updatedAt = mutationDate
+        self.deviceID = deviceID
+        (self as? ClientMutationTrackedModel)?.clientMutationID = UUID()
     }
 }
 

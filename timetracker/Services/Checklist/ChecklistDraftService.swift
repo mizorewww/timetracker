@@ -181,9 +181,7 @@ struct ChecklistDraftService {
                             item.sortOrderBeforeCompletion = nil
                         }
                         item.deletedAt = nil
-                        item.updatedAt = now
-                        item.deviceID = deviceID
-                        item.clientMutationID = UUID()
+                        item.markMutated(at: now, deviceID: deviceID)
                     }
                     upsertVisual(
                         for: item.id,
@@ -221,14 +219,10 @@ struct ChecklistDraftService {
 
             for item in existing where item.deletedAt == nil && !keptIDs.contains(item.id) {
                 item.deletedAt = now
-                item.updatedAt = now
-                item.deviceID = deviceID
-                item.clientMutationID = UUID()
+                item.markMutated(at: now, deviceID: deviceID)
                 if let visual = visualByItemID[item.id] {
                     visual.deletedAt = now
-                    visual.updatedAt = now
-                    visual.deviceID = deviceID
-                    visual.clientMutationID = UUID()
+                    visual.markMutated(at: now, deviceID: deviceID)
                 }
             }
         }
@@ -255,9 +249,7 @@ struct ChecklistDraftService {
                 existing.suggestionGeneratedAt = nil
             }
             existing.deletedAt = nil
-            existing.updatedAt = now
-            existing.deviceID = deviceID
-            existing.clientMutationID = UUID()
+            existing.markMutated(at: now, deviceID: deviceID)
         } else {
             context.insert(
                 ChecklistItemVisual(

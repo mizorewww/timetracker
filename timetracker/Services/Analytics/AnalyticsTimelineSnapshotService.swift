@@ -8,8 +8,7 @@ struct AnalyticsTimelineSnapshotService {
         taskParentPathByID: [UUID: String],
         date: Date = Date(),
         now: Date = Date(),
-        calendar: Calendar = .current,
-        minimumLaneGap: TimeInterval = 60
+        calendar: Calendar = .current
     ) -> AnalyticsTimelineSnapshot {
         let dayInterval = calendar.dateInterval(of: .day, for: date)
             ?? DateInterval(start: calendar.startOfDay(for: date), duration: 86400)
@@ -23,8 +22,7 @@ struct AnalyticsTimelineSnapshotService {
         )
         return snapshot(
             seeds: seeds,
-            visibleInterval: dayInterval,
-            minimumLaneGap: minimumLaneGap
+            visibleInterval: dayInterval
         )
     }
 
@@ -70,8 +68,7 @@ struct AnalyticsTimelineSnapshotService {
 
     func snapshot(
         seeds: [TimelinePresentationSeed],
-        visibleInterval: DateInterval,
-        minimumLaneGap: TimeInterval = 60
+        visibleInterval: DateInterval
     ) -> AnalyticsTimelineSnapshot {
         let visibleSeeds = seeds.compactMap { seed -> TimelinePresentationSeed? in
             guard let interval = seed.interval.intersection(with: visibleInterval),
@@ -109,12 +106,11 @@ struct AnalyticsTimelineSnapshotService {
         }
         let layout = TimelineLayoutEngine.layout(
             items: layoutItems,
-            dayInterval: visibleInterval,
-            minimumLaneGap: minimumLaneGap
+            dayInterval: visibleInterval
         )
         let seedByID = Dictionary(uniqueKeysWithValues: visibleSeeds.map { ($0.id, $0) })
-        let entries = layout.entries.enumerated().compactMap { index, layoutEntry -> AnalyticsTimelineEntry? in
-            guard let seed = seedByID[layoutEntry.id] else { return nil }
+        let entries = layout.items.compactMap { item -> AnalyticsTimelineEntry? in
+            guard let seed = seedByID[item.id] else { return nil }
             return AnalyticsTimelineEntry(
                 id: seed.id,
                 subject: seed.subject,
@@ -123,11 +119,9 @@ struct AnalyticsTimelineSnapshotService {
                 iconName: seed.iconName,
                 colorHex: seed.colorHex,
                 usesCurrentEndLabel: seed.usesCurrentEndLabel,
-                startedAt: layoutEntry.item.startedAt,
-                endedAt: layoutEntry.item.endedAt,
-                lane: layoutEntry.lane,
-                labelIndex: index,
-                interval: layoutEntry.item.interval,
+                startedAt: item.startedAt,
+                endedAt: item.endedAt,
+                interval: item.interval,
                 durationSeconds: max(
                     0,
                     Int(seed.durationIntervals.reduce(0.0) {
@@ -138,7 +132,7 @@ struct AnalyticsTimelineSnapshotService {
         }
         let compression = TimelineAxisCompression(
             displayInterval: layout.displayInterval,
-            busyIntervals: layout.entries.map(\.item.interval)
+            busyIntervals: layout.items.map(\.interval)
         )
 
         return AnalyticsTimelineSnapshot(

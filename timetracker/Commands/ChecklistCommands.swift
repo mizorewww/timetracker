@@ -78,9 +78,7 @@ struct ChecklistCommandHandler {
         }
         item.isCompleted = isCompleted
         item.completedAt = isCompleted ? now : nil
-        item.updatedAt = now
-        item.deviceID = deviceID
-        item.clientMutationID = UUID()
+        item.markMutated(at: now, deviceID: deviceID)
         try context.saveAfterMutationStep()
     }
 
@@ -106,9 +104,7 @@ struct ChecklistCommandHandler {
 
         for (index, item) in orderedItems.enumerated() {
             item.sortOrder = SortOrderPolicy.position(index)
-            item.updatedAt = now
-            item.deviceID = deviceID
-            item.clientMutationID = UUID()
+            item.markMutated(at: now, deviceID: deviceID)
         }
         try context.saveAfterMutationStep()
     }
@@ -132,9 +128,7 @@ struct ChecklistCommandHandler {
             existingVisual.suggestionGeneratedAt = now
             existingVisual.userEditedAt = nil
             existingVisual.deletedAt = nil
-            existingVisual.updatedAt = now
-            existingVisual.deviceID = deviceID
-            existingVisual.clientMutationID = UUID()
+            existingVisual.markMutated(at: now, deviceID: deviceID)
         } else {
             context.insert(
                 ChecklistItemVisual(

@@ -91,9 +91,7 @@ extension InboxCommandHandler {
         for preparedItem in preparedItems {
             preparedItem.text.apply(to: preparedItem.item)
             preparedItem.item.deletedAt = now
-            preparedItem.item.updatedAt = now
-            preparedItem.item.deviceID = deviceID
-            preparedItem.item.clientMutationID = UUID()
+            preparedItem.item.markMutated(at: now, deviceID: deviceID)
         }
     }
 

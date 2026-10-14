@@ -88,9 +88,7 @@ nonisolated extension SwiftDataTaskRepository {
         node.notes = values.notes
         node.estimatedSeconds = TaskEstimatePolicy.normalized(seconds: estimatedSeconds)
         node.dueAt = dueAt
-        node.updatedAt = now
-        node.deviceID = deviceID
-        node.clientMutationID = UUID()
+        node.markMutated(at: now, deviceID: deviceID)
         if isChangingParent {
             try applyHierarchy(to: node, parentID: parentID)
         }
@@ -111,9 +109,7 @@ nonisolated extension SwiftDataTaskRepository {
         let node = target.node
         node.statusRaw = LegacyTaskStatusRaw.archived
         node.archivedAt = node.archivedAt ?? mutationDate
-        node.updatedAt = mutationDate
-        node.deviceID = deviceID
-        node.clientMutationID = UUID()
+        node.markMutated(at: mutationDate, deviceID: deviceID)
         try context.saveAfterMutationStep()
     }
 
@@ -133,9 +129,7 @@ nonisolated extension SwiftDataTaskRepository {
         if node.statusRaw == LegacyTaskStatusRaw.archived {
             node.statusRaw = LegacyTaskStatusRaw.active
         }
-        node.updatedAt = mutationDate
-        node.deviceID = deviceID
-        node.clientMutationID = UUID()
+        node.markMutated(at: mutationDate, deviceID: deviceID)
         try context.saveAfterMutationStep()
     }
 

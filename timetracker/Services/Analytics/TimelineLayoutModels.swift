@@ -50,22 +50,10 @@ nonisolated struct TimelineLayoutItem: Identifiable, Equatable, Sendable {
     }
 }
 
-nonisolated struct TimelineLayoutEntry: Identifiable, Equatable, Sendable {
-    let item: TimelineLayoutItem
-    let lane: Int
-
-    var id: TimelineEntryID {
-        item.id
-    }
-}
-
 nonisolated struct TimelineLayoutResult: Equatable, Sendable {
     let displayInterval: DateInterval
-    let entries: [TimelineLayoutEntry]
-
-    var laneCount: Int {
-        (entries.map(\.lane).max() ?? -1) + 1
-    }
+    /// Clipped to the day, ordered by start, end, then stable ID.
+    let items: [TimelineLayoutItem]
 }
 
 nonisolated struct TimelineOmittedGap: Identifiable, Equatable, Sendable {

@@ -83,9 +83,7 @@ extension SyncedPreferenceService {
                 }
                 preference.valueJSON = redactedValue
                 preference.deletedAt = preference.deletedAt ?? now
-                preference.updatedAt = now
-                preference.deviceID = deviceID
-                preference.clientMutationID = UUID()
+                preference.markMutated(at: now, deviceID: deviceID)
             }
         }
     }

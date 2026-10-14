@@ -21,9 +21,7 @@ extension SyncDataSnapshot {
                 observed: model.updatedAt
             )
             model.deletedAt = mutationDate
-            model.updatedAt = mutationDate
-            model.deviceID = deviceID
-            model.clientMutationID = UUID()
+            model.markMutated(at: mutationDate, deviceID: deviceID)
         }
 
         for record in records {
@@ -76,9 +74,7 @@ extension SyncDataSnapshot {
                 observed: model.updatedAt
             )
             model.deletedAt = mutationDate
-            model.updatedAt = mutationDate
-            model.deviceID = deviceID
-            model.clientMutationID = UUID()
+            model.markMutated(at: mutationDate, deviceID: deviceID)
         }
 
         for record in records {
@@ -131,9 +127,7 @@ extension SyncDataSnapshot {
                 observed: model.updatedAt
             )
             model.deletedAt = mutationDate
-            model.updatedAt = mutationDate
-            model.deviceID = deviceID
-            model.clientMutationID = UUID()
+            model.markMutated(at: mutationDate, deviceID: deviceID)
         }
 
         for record in records {
@@ -183,9 +177,7 @@ extension SyncDataSnapshot {
                 observed: model.updatedAt
             )
             model.deletedAt = mutationDate
-            model.updatedAt = mutationDate
-            model.deviceID = deviceID
-            model.clientMutationID = UUID()
+            model.markMutated(at: mutationDate, deviceID: deviceID)
         }
 
         for record in records {

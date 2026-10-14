@@ -18,9 +18,7 @@ extension SyncDataSnapshot {
 
         for receipt in existing.values where !snapshotIDs.contains(receipt.id) {
             receipt.deletedAt = supersededAt
-            receipt.updatedAt = supersededAt
-            receipt.deviceID = deviceID
-            receipt.clientMutationID = UUID()
+            receipt.markMutated(at: supersededAt, deviceID: deviceID)
         }
 
         for record in records {

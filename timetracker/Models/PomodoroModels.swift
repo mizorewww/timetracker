@@ -236,12 +236,4 @@ extension PomodoroRun {
         self.endedAt = didComplete ? endedAt : nil
         markMutated(at: mutationDate, deviceID: deviceID)
     }
-
-    /// Keeps the sync conflict tuple aligned with the writer that performed a
-    /// local state transition. Call this after changing any persisted run field.
-    func markMutated(at mutationDate: Date, deviceID: String) {
-        updatedAt = mutationDate
-        self.deviceID = deviceID
-        clientMutationID = UUID()
-    }
 }

@@ -57,28 +57,6 @@ struct TestHostIsolationTests {
     }
 
     @Test
-    func armingCloudRecoveryFlagsNeverReachesTheInstalledAppDomain() {
-        let keys = [
-            AppCloudSync.pendingCloudUploadResetKey,
-            AppCloudSync.pendingCloudDownloadResetKey,
-            AppCloudSync.queuedCloudReconciliationKey,
-            AppCloudSync.activeCloudReconciliationKey,
-            AppCloudSync.cloudRecoveryStoreResetKey,
-            AppCloudSync.activeCloudDownloadRecoveryKey,
-        ]
-        let standard = UserDefaults.standard
-        let before = standard.dictionaryWithValues(forKeys: keys) as NSDictionary
-        defer { keys.forEach { AppDefaults.shared.removeObject(forKey: $0) } }
-
-        // The exact shape of write that used to leak out of an interrupted test
-        // run and arm a destructive reset on the next real launch.
-        keys.forEach { AppDefaults.shared.set(true, forKey: $0) }
-
-        #expect(keys.allSatisfy { AppDefaults.shared.bool(forKey: $0) })
-        #expect(before == standard.dictionaryWithValues(forKeys: keys) as NSDictionary)
-    }
-
-    @Test
     func demoDataOverrideWritesStayOutOfTheInstalledAppDomain() {
         let overrideKey = AppDemoDataConfiguration.overrideKey
         let seedingKey = SeedData.automaticDemoSeedingDisabledKey
@@ -101,20 +79,6 @@ struct TestHostIsolationTests {
     }
 
     @Test
-    func syncConflictStateDirectoryIsNamespacedAwayFromTheInstalledApp() throws {
-        let directory = try SyncConflictService.defaultStateDirectoryURL()
-        let productionName = SyncConflictService.stateDirectoryName
-
-        // A snapshot written here must never be replayed into the real store,
-        // which is what resurrected deleted Inbox items.
-        #expect(directory.lastPathComponent != productionName)
-        #expect(directory.lastPathComponent.hasPrefix(productionName))
-        #expect(directory.lastPathComponent.hasSuffix(
-            AppRuntimeEnvironment.testNamespaceSuffix
-        ))
-    }
-
-    @Test
     func widgetSnapshotSuiteIsNamespacedAwayFromTheSharedAppGroup() {
         #expect(
             SharedWidgetSnapshotStore.effectiveSuiteName
@@ -127,18 +91,12 @@ struct TestHostIsolationTests {
     }
 
     @Test @MainActor
-    func unitTestHostContainerLeavesApplicationRecoveryStateUntouched() throws {
+    func unitTestHostContainerLeavesApplicationPersistenceStateUntouched() throws {
         let keys = [
             AppCloudSync.enabledKey,
             AppCloudSync.modeKey,
             AppCloudSync.errorKey,
             AppCloudSync.accountStatusKey,
-            AppCloudSync.pendingCloudUploadResetKey,
-            AppCloudSync.pendingCloudDownloadResetKey,
-            AppCloudSync.queuedCloudReconciliationKey,
-            AppCloudSync.activeCloudReconciliationKey,
-            AppCloudSync.cloudRecoveryStoreResetKey,
-            AppCloudSync.activeCloudDownloadRecoveryKey,
         ]
         let defaults = UserDefaults.standard
         let before = defaults.dictionaryWithValues(forKeys: keys) as NSDictionary

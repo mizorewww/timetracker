@@ -1,44 +1,24 @@
 import Foundation
 
 extension TimeTrackerStore {
+    /// One finished CloudKit event or remote-store change, reported to the
+    /// user as the latest Cloud activity.
     enum SyncRefreshReason: Sendable {
         case remoteStoreChanged
-        case cloudImportFinished(
-            succeeded: Bool,
-            reportsConflict: Bool,
-            failureMessage: String?
-        )
-        case cloudExportFinished(
-            eventID: UUID,
-            succeeded: Bool,
-            reportsConflict: Bool,
-            failureMessage: String?
-        )
+        case cloudImportFinished(succeeded: Bool, failureMessage: String?)
+        case cloudExportFinished(succeeded: Bool, failureMessage: String?)
         case cloudSetupFinished(succeeded: Bool, failureMessage: String?)
 
+        /// Failures outrank successes, and an import outranks an export or
+        /// setup, when several events land in one coalescing window.
         var priority: Int {
             switch self {
             case .remoteStoreChanged:
                 0
-            case let .cloudExportFinished(_, succeeded, reportsConflict, _):
-                reportsConflict ? 4 : (succeeded ? 1 : 3)
-            case let .cloudImportFinished(succeeded, reportsConflict, _):
-                reportsConflict ? 4 : (succeeded ? 2 : 3)
-            case let .cloudSetupFinished(succeeded, _):
+            case let .cloudExportFinished(succeeded, _), let .cloudSetupFinished(succeeded, _):
                 succeeded ? 1 : 3
-            }
-        }
-
-        var activityKind: SyncActivityKind {
-            switch self {
-            case .remoteStoreChanged:
-                .remoteRefresh
-            case .cloudImportFinished:
-                .importData
-            case .cloudExportFinished:
-                .exportData
-            case .cloudSetupFinished:
-                .setup
+            case let .cloudImportFinished(succeeded, _):
+                succeeded ? 2 : 3
             }
         }
 
@@ -46,78 +26,32 @@ extension TimeTrackerStore {
             completedAt: Date,
             processingFailureMessage: String? = nil
         ) -> SyncActivityOutcome? {
-            if let processingFailureMessage {
+            let kind: SyncActivityKind
+            let succeeded: Bool
+            let failureMessage: String?
+            switch self {
+            case .remoteStoreChanged:
+                guard let processingFailureMessage else { return nil }
                 return SyncActivityOutcome(
-                    kind: activityKind,
+                    kind: .remoteRefresh,
                     completedAt: completedAt,
                     result: .failed(message: processingFailureMessage)
                 )
+            case let .cloudImportFinished(eventSucceeded, message):
+                (kind, succeeded, failureMessage) = (.importData, eventSucceeded, message)
+            case let .cloudExportFinished(eventSucceeded, message):
+                (kind, succeeded, failureMessage) = (.exportData, eventSucceeded, message)
+            case let .cloudSetupFinished(eventSucceeded, message):
+                (kind, succeeded, failureMessage) = (.setup, eventSucceeded, message)
             }
-            switch self {
-            case .remoteStoreChanged:
-                return nil
-            case let .cloudImportFinished(succeeded, _, failureMessage),
-                 let .cloudSetupFinished(succeeded, failureMessage):
-                return eventOutcome(
-                    succeeded: succeeded,
-                    failureMessage: failureMessage,
-                    completedAt: completedAt
-                )
-            case let .cloudExportFinished(_, succeeded, _, failureMessage):
-                return eventOutcome(
-                    succeeded: succeeded,
-                    failureMessage: failureMessage,
-                    completedAt: completedAt
-                )
+            let result: SyncActivityResult = if let processingFailureMessage {
+                .failed(message: processingFailureMessage)
+            } else if succeeded {
+                .succeeded
+            } else {
+                .failed(message: failureMessage ?? AppStrings.localized("sync.activity.unknownFailure"))
             }
-        }
-
-        private func eventOutcome(
-            succeeded: Bool,
-            failureMessage: String?,
-            completedAt: Date
-        ) -> SyncActivityOutcome {
-            let result: SyncActivityResult = succeeded
-                ? .succeeded
-                : .failed(
-                    message: failureMessage
-                        ?? AppStrings.localized("sync.activity.unknownFailure")
-                )
-            return SyncActivityOutcome(
-                kind: activityKind,
-                completedAt: completedAt,
-                result: result
-            )
-        }
-    }
-
-    struct SyncRefreshBatch: Sendable {
-        private(set) var activityReason: SyncRefreshReason?
-        private(set) var requiresCloudImportHandling = false
-        private(set) var requiresReadModelCatchUp = false
-        private var latestCloudImportSucceeded: Bool?
-
-        mutating func insert(_ reason: SyncRefreshReason) {
-            if activityReason.map({ reason.priority >= $0.priority }) ?? true {
-                activityReason = reason
-            }
-            switch reason {
-            case let .cloudImportFinished(succeeded, reportsConflict, _):
-                latestCloudImportSucceeded = succeeded
-                requiresCloudImportHandling = requiresCloudImportHandling
-                    || succeeded
-                    || reportsConflict
-                requiresReadModelCatchUp = true
-            case let .cloudExportFinished(_, _, reportsConflict, _):
-                requiresCloudImportHandling = requiresCloudImportHandling || reportsConflict
-                requiresReadModelCatchUp = requiresReadModelCatchUp || reportsConflict
-            case .remoteStoreChanged, .cloudSetupFinished:
-                requiresReadModelCatchUp = true
-            }
-        }
-
-        var hasSuccessfulCloudImport: Bool {
-            latestCloudImportSucceeded == true
+            return SyncActivityOutcome(kind: kind, completedAt: completedAt, result: result)
         }
     }
 }

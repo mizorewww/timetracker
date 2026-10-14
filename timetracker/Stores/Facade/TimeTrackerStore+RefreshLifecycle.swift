@@ -14,12 +14,10 @@ extension TimeTrackerStore {
         cloudAccountStatusClient: CloudAccountStatusClient? = nil
     ) async {
         refreshQuietly()
-        scheduleSyncConflictPromptRefresh()
         materializeCurrentDailyTaskRecurrences()
         reconcileActivePomodoro(now: Date())
         enqueueCommittedMutationSystemProjections(
-            events: [.fullSync],
-            cause: .surfaceCatchUp
+            events: [.fullSync]
         )
         await refreshCloudAccountStatus(
             client: cloudAccountStatusClient
@@ -46,37 +44,6 @@ extension TimeTrackerStore {
             cloudAccountCheck = outcome
         }
         return outcome
-    }
-
-    @discardableResult
-    func resolveSyncConflict(
-        expectedConflictID: UUID?,
-        resolution: SyncConflictResolution
-    ) throws -> SyncConflictResolutionResult {
-        guard let modelContext else { throw StoreError.notConfigured }
-        let result = try syncConflictService.resolveSyncConflict(
-            expectedConflictID: expectedConflictID,
-            resolution: resolution,
-            context: modelContext
-        )
-        guard result != .conflictChanged else {
-            try replacePendingSyncConflict(
-                syncConflictService.prompt()
-            )
-            return result
-        }
-        replacePendingSyncConflict(nil)
-        StoreMutationBroadcaster.publishSyncConflictPromptChange()
-        if hasCompletedStartupConfiguration {
-            try refresh()
-            enqueueCommittedMutationSystemProjections(
-                events: [.fullSync],
-                cause: .surfaceCatchUp
-            )
-        } else {
-            configureIfNeeded(context: modelContext)
-        }
-        return result
     }
 
     func refresh() throws {

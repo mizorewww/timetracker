@@ -4,52 +4,37 @@ import Testing
 struct SystemProjectionSchedulerTests {
     @Test
     @MainActor
-    func requestCauseSeparatesLocalSnapshotRecordingFromSurfaceCatchUp() {
+    func eventsTargetOnlyTheSurfacesThatShowThem() {
         let allSinks = Set(CommittedMutationSystemProjectionSink.allCases)
-        let systemSurfaces = Set(
-            CommittedMutationSystemProjectionSink.systemSurfaceCases
-        )
 
         #expect(CommittedMutationSystemProjectionScheduler.targetedSinks(
             for: .init(
-                events: [.taskChanged(taskID: nil, affectedAncestorIDs: [])],
-                cause: .localCommit
+                events: [.taskChanged(taskID: nil, affectedAncestorIDs: [])]
             )
         ) == allSinks)
         #expect(CommittedMutationSystemProjectionScheduler.targetedSinks(
             for: .init(
-                events: [.remoteImportCompleted],
-                cause: .surfaceCatchUp
-            )
-        ) == systemSurfaces)
-        #expect(CommittedMutationSystemProjectionScheduler.targetedSinks(
-            for: .init(
-                events: [.fullSync],
-                cause: .startupCatchUp
+                events: [.remoteImportCompleted]
             )
         ) == allSinks)
         #expect(CommittedMutationSystemProjectionScheduler.targetedSinks(
             for: .init(
-                events: [.preferenceChanged(key: nil)],
-                cause: .surfaceCatchUp
+                events: [.fullSync]
+            )
+        ) == allSinks)
+        #expect(CommittedMutationSystemProjectionScheduler.targetedSinks(
+            for: .init(
+                events: [.preferenceChanged(key: nil)]
             )
         ) == [.watch])
         #expect(CommittedMutationSystemProjectionScheduler.targetedSinks(
             for: .init(
-                events: [.preferenceChanged(key: nil)],
-                cause: .localCommit
-            )
-        ) == [.syncSnapshot, .watch])
-        #expect(CommittedMutationSystemProjectionScheduler.targetedSinks(
-            for: .init(
-                events: [.checklistChanged(taskID: nil, affectedAncestorIDs: [])],
-                cause: .surfaceCatchUp
+                events: [.checklistChanged(taskID: nil, affectedAncestorIDs: [])]
             )
         ).isEmpty)
         #expect(CommittedMutationSystemProjectionScheduler.targetedSinks(
             for: .init(
                 events: [],
-                cause: .surfaceCatchUp,
                 forcedSystemSinks: [.watch]
             )
         ) == [.watch])
@@ -86,34 +71,6 @@ struct SystemProjectionSchedulerTests {
 
     @Test
     @MainActor
-    func syncSnapshotUsesExactEventsWithoutMaterializingSurfaces() async throws {
-        let events: Set<StoreDomainEvent> = [
-            .checklistChanged(taskID: nil, affectedAncestorIDs: []),
-        ]
-        var recordedEvents: Set<StoreDomainEvent> = []
-        var materializationCount = 0
-        let worker = CommittedMutationSystemProjectionWorker(
-            syncRecorder: { recordedEvents = $0 },
-            materializer: { _ in
-                materializationCount += 1
-                return nil
-            },
-            publisher: { _, _ in }
-        )
-        let work = CommittedMutationSystemProjectionWork(
-            generation: 1,
-            targetSinks: [.syncSnapshot],
-            events: events
-        )
-
-        try await worker.perform(sink: .syncSnapshot, work: work)
-
-        #expect(recordedEvents == events)
-        #expect(materializationCount == 0)
-    }
-
-    @Test
-    @MainActor
     func failedSinkRetriesOnTheNextRelevantGeneration() async {
         var attempts: [CommittedMutationSystemProjectionSink: Int] = [:]
         let scheduler = CommittedMutationSystemProjectionScheduler { sink, _ in
@@ -123,14 +80,12 @@ struct SystemProjectionSchedulerTests {
             }
         }
         let request = CommittedMutationSystemProjectionRequest(
-            events: [.taskChanged(taskID: nil, affectedAncestorIDs: [])],
-            cause: .localCommit
+            events: [.taskChanged(taskID: nil, affectedAncestorIDs: [])]
         )
 
         scheduler.enqueue(request)
         #expect(await eventually {
-            attempts[.syncSnapshot] == 1 &&
-                attempts[.widget] == 1 &&
+            attempts[.widget] == 1 &&
                 attempts[.watch] == 1 &&
                 attempts[.liveActivity] == 1
         })

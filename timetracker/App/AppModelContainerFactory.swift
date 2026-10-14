@@ -2,8 +2,10 @@ import Foundation
 import SwiftData
 
 extension timetrackerApp {
+    /// Opens the first store that works: demo, then CloudKit (when enabled),
+    /// then the same file without CloudKit, then an in-memory emergency store
+    /// that blocks writes. A failure never deletes the on-disk store.
     static func makeModelContainer() -> ModelContainer {
-        let schema = Self.schema
         #if DEBUG
         if AppRuntimeEnvironment.isUITesting {
             do {
@@ -21,141 +23,63 @@ extension timetrackerApp {
             }
         }
 
-        let storeURL = AppCloudSync.persistentStoreURL
         AppleHealthLegacyCleanup.runIfNeeded()
-        let cloudConfiguration = ModelConfiguration(
-            "TimeTracker",
-            schema: schema,
-            url: storeURL,
-            cloudKitDatabase: .private(AppCloudSync.containerIdentifier)
-        )
-        let localConfiguration = ModelConfiguration(
-            "TimeTracker",
-            schema: schema,
-            url: storeURL,
-            cloudKitDatabase: .none
-        )
-        let demoConfiguration = ModelConfiguration(
-            "TimeTrackerDemo",
-            schema: schema,
-            url: AppDemoDataConfiguration.persistentStoreURL,
-            cloudKitDatabase: .none
-        )
-        let emergencyConfiguration = ModelConfiguration(
-            "TimeTrackerEmergency",
-            schema: schema,
-            isStoredInMemoryOnly: true,
-            cloudKitDatabase: .none
-        )
+        let storeURL = AppCloudSync.persistentStoreURL
 
         if AppDemoDataConfiguration.usesLocalDemoStore {
-            AppCloudSync.recordDemoDataMode()
-            do {
-                return try ModelContainer(
-                    for: schema,
-                    migrationPlan: TimeTrackerMigrationPlan.self,
-                    configurations: [demoConfiguration]
-                )
-            } catch {
-                return makeEmergencyModelContainer(
-                    schema: schema,
-                    configuration: emergencyConfiguration,
-                    error: error
-                )
-            }
+            AppCloudSync.recordMode(AppCloudSync.modeDemoData)
+            return openOrEmergency(
+                ModelConfiguration("TimeTrackerDemo", schema: schema, url: AppDemoDataConfiguration.persistentStoreURL, cloudKitDatabase: .none)
+            )
         }
 
+        let localConfiguration = ModelConfiguration("TimeTracker", schema: schema, url: storeURL, cloudKitDatabase: .none)
         guard AppCloudSync.isEnabled else {
-            AppCloudSync.recordCloudKitDisabledByUser()
-            do {
-                return try ModelContainer(
-                    for: schema,
-                    migrationPlan: TimeTrackerMigrationPlan.self,
-                    configurations: [localConfiguration]
-                )
-            } catch {
-                return makeEmergencyModelContainer(
+            AppCloudSync.recordMode(AppCloudSync.modeLocal)
+            return openOrEmergency(localConfiguration)
+        }
+
+        do {
+            let container = try open(
+                ModelConfiguration(
+                    "TimeTracker",
                     schema: schema,
-                    configuration: emergencyConfiguration,
-                    error: error
+                    url: storeURL,
+                    cloudKitDatabase: .private(AppCloudSync.containerIdentifier)
                 )
-            }
-        }
-
-        AppCloudSync.prepareInterruptedCloudDownloadRecovery()
-        let recoveryGate: AppCloudSync.CloudRecoveryGate
-        do {
-            recoveryGate = try performPendingCloudRecoveryResetAfterProtectingLocalFallback(
-                schema: schema,
-                localConfiguration: localConfiguration,
-                storeURL: storeURL
             )
-        } catch {
-            // The existing local store is still the only fully current copy.
-            // Never delete it when its protected recovery branch could not be
-            // brought up to date first.
-            return makeLocalFallbackModelContainer(
-                schema: schema,
-                localConfiguration: localConfiguration,
-                emergencyConfiguration: emergencyConfiguration,
-                error: error
-            )
-        }
-
-        let completedRecovery: AppCloudSync.CompletedCloudRecovery
-        switch recoveryGate {
-        case let .completed(recovery):
-            completedRecovery = recovery
-        case let .deferred(reason):
-            return makeLocalFallbackModelContainer(
-                schema: schema,
-                localConfiguration: localConfiguration,
-                emergencyConfiguration: emergencyConfiguration,
-                error: reason
-            )
-        case let .failed(failure):
-            return makeLocalFallbackModelContainer(
-                schema: schema,
-                localConfiguration: localConfiguration,
-                emergencyConfiguration: emergencyConfiguration,
-                error: failure
-            )
-        }
-
-        if AppDefaults.shared.bool(forKey: AppCloudSync.queuedCloudReconciliationKey) ||
-            AppCloudSync.isCloudImportRecoveryActive ||
-            completedRecovery.reset == .download
-        {
-            CloudRecoveryImportBuffer.shared.startIfNeeded()
-        }
-        do {
-            let container = try ModelContainer(
-                for: schema,
-                migrationPlan: TimeTrackerMigrationPlan.self,
-                configurations: [cloudConfiguration]
-            )
-            AppCloudSync.recordCloudKitEnabled(after: completedRecovery)
+            AppCloudSync.recordMode(AppCloudSync.modeICloud)
             return container
         } catch {
-            CloudRecoveryImportBuffer.shared.stopAndDiscard()
             AppCloudSync.recordLocalFallback(error: error)
-            do {
-                return try ModelContainer(
-                    for: schema,
-                    migrationPlan: TimeTrackerMigrationPlan.self,
-                    configurations: [localConfiguration]
-                )
-            } catch {
-                return makeEmergencyModelContainer(
-                    schema: schema,
-                    configuration: emergencyConfiguration,
-                    error: error
-                )
-            }
+            return openOrEmergency(localConfiguration)
         }
     }
 
     static var schema: Schema {
         TimeTrackerModelRegistry.currentSchema
+    }
+
+    private static func open(_ configuration: ModelConfiguration) throws -> ModelContainer {
+        try ModelContainer(
+            for: schema,
+            migrationPlan: TimeTrackerMigrationPlan.self,
+            configurations: [configuration]
+        )
+    }
+
+    private static func openOrEmergency(_ configuration: ModelConfiguration) -> ModelContainer {
+        do {
+            return try open(configuration)
+        } catch {
+            AppCloudSync.recordEmergencyInMemoryFallback(error: error)
+            do {
+                return try open(
+                    ModelConfiguration("TimeTrackerEmergency", schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
+                )
+            } catch {
+                preconditionFailure("Could not create emergency in-memory ModelContainer: \(error)")
+            }
+        }
     }
 }

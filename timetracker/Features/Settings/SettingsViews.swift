@@ -13,7 +13,6 @@ struct SettingsView: View {
     @State var isExportPresented = false
     @State private var exportDocument = JSONExportDocument(text: "")
     @State var isCheckingSync = false
-    @State var syncOperationMessage: String?
     @State var dataOperationMessage: String?
     @State private var selectedCategory: SettingsCategory? = .general
     #if os(iOS)

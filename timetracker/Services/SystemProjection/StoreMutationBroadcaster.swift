@@ -12,9 +12,6 @@ enum StoreMutationBroadcaster {
     private static let notificationName = Notification.Name(
         "\(AppIdentity.bundleIdentifier).storeMutationCommitted"
     )
-    private static let syncConflictPromptNotificationName = Notification.Name(
-        "TimeTrackerSyncConflictPromptChanged"
-    )
     private static let eventsUserInfoKey = "events"
     private static let pendingBroadcastRetentionLimit = 64
     private static var pendingBroadcasts: [PendingBroadcast] = []
@@ -75,16 +72,5 @@ enum StoreMutationBroadcaster {
 
     static var notification: Notification.Name {
         notificationName
-    }
-
-    static func publishSyncConflictPromptChange() {
-        NotificationCenter.default.post(
-            name: syncConflictPromptNotificationName,
-            object: nil
-        )
-    }
-
-    static var syncConflictPromptNotification: Notification.Name {
-        syncConflictPromptNotificationName
     }
 }

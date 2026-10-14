@@ -3,7 +3,7 @@ import Foundation
 nonisolated struct InboxItemRecord:
     Codable,
     Equatable,
-    SyncSnapshotRecord
+    UserDataRecord
 {
     let id: UUID
     let suggestionContextID: UUID?
@@ -78,7 +78,7 @@ extension InboxItemRecord {
 nonisolated struct InboxCaptureReceiptRecord:
     Codable,
     Equatable,
-    SyncSnapshotRecord
+    UserDataRecord
 {
     let id: UUID
     let commandKey: String
@@ -102,7 +102,7 @@ nonisolated struct InboxCaptureReceiptRecord:
 nonisolated struct InboxSuggestionRecord:
     Codable,
     Equatable,
-    SyncSnapshotRecord
+    UserDataRecord
 {
     let id: UUID
     let inboxItemID: UUID

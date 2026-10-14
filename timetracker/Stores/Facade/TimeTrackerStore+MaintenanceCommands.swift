@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 
 extension TimeTrackerStore {
     func replaceWithDemoData() {
@@ -96,8 +97,6 @@ extension TimeTrackerStore {
 
     func jsonExport() throws -> String {
         guard let modelContext else { throw StoreError.notConfigured }
-        return try syncConflictService.exportCloudSyncedData(
-            context: modelContext
-        )
+        return try UserDataExport.encodedJSON(container: modelContext.container)
     }
 }

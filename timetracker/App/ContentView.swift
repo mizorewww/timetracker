@@ -8,11 +8,9 @@ struct ContentView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var store: TimeTrackerStore
     @State private var presentationRouter = AppPresentationRouter()
     @State private var feedbackRouter = AppSceneFeedbackRouter()
-    @State private var dismissedSyncConflictID: UUID?
     @State private var pendingDeepLinks = PendingDeepLinkQueue()
     @State private var hasFinishedInitialConfiguration = false
     #if os(iOS) && canImport(WatchConnectivity)
@@ -30,9 +28,7 @@ struct ContentView: View {
     var body: some View {
         Group {
             if store.effectivePersistenceWriteSafety == .ready {
-                AppRootView(store: store) {
-                    syncConflictNotice
-                }
+                AppRootView(store: store)
             } else {
                 PersistenceRecoveryView(safety: store.effectivePersistenceWriteSafety)
             }
@@ -46,8 +42,6 @@ struct ContentView: View {
             feedbackRouter: feedbackRouter
         )
         .appSceneFeedbackHost(router: feedbackRouter)
-        // The sync-conflict banner is installed by whichever shell `AppRootView`
-        // picks, so it no longer needs a second macOS-only insertion here.
         .task {
             store.configureIfNeeded(context: modelContext)
             guard store.persistenceWriteSafety == .ready else { return }
@@ -121,9 +115,6 @@ struct ContentView: View {
         }
         .onChange(of: store.errorMessage) { _, message in
             relayStoreError(message)
-        }
-        .onChange(of: store.pendingSyncConflict?.id) { _, _ in
-            dismissedSyncConflictID = nil
         }
         .onChange(of: presentationRouter.sheet?.id) { _, presentationID in
             guard presentationID == nil else { return }
@@ -210,45 +201,5 @@ struct ContentView: View {
         if store.errorMessage == message {
             store.errorMessage = nil
         }
-    }
-
-    private var syncConflictNotice: some View {
-        Group {
-            if let conflict = visibleSyncConflict {
-                SyncConflictNotice(
-                    onReview: {
-                        store.taskDetailNavigationGuard.requestNavigation(
-                            dismissingActiveDetail: true
-                        ) {
-                            dismissedSyncConflictID = conflict.id
-                            store.closeTaskDetailNavigation()
-                            store.desktopDestination = .settings
-                        }
-                    },
-                    onDismiss: {
-                        dismissedSyncConflictID = conflict.id
-                    }
-                )
-                .transition(
-                    reduceMotion
-                        ? .opacity
-                        : .opacity.combined(with: .move(edge: .top))
-                )
-            }
-        }
-        .animation(
-            reduceMotion ? AppMotion.opacity : AppMotion.stateChange,
-            value: visibleSyncConflict?.id
-        )
-    }
-
-    private var visibleSyncConflict: SyncConflictPrompt? {
-        guard store.effectivePersistenceWriteSafety == .ready,
-              let conflict = store.pendingSyncConflict,
-              dismissedSyncConflictID != conflict.id
-        else {
-            return nil
-        }
-        return conflict
     }
 }

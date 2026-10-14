@@ -1,43 +1,16 @@
 import Foundation
 
-nonisolated protocol SyncSnapshotRecord: Sendable {
+nonisolated protocol UserDataRecord: Sendable {
     var id: UUID { get }
 }
 
-nonisolated extension Array where Element: SyncSnapshotRecord {
+nonisolated extension Array where Element: UserDataRecord {
     func sortedByID() -> [Element] {
         sorted { $0.id.uuidString < $1.id.uuidString }
     }
 }
 
-nonisolated extension Array where Element: SyncSnapshotRecord & Equatable {
-    mutating func applyChanges(from baseline: [Element], to updated: [Element]) {
-        var resultByID = recordsByID()
-        let baselineByID = baseline.recordsByID()
-        let updatedByID = updated.recordsByID()
-        let comparedIDs = Set(baselineByID.keys).union(updatedByID.keys)
-
-        for id in comparedIDs where baselineByID[id] != updatedByID[id] {
-            if let record = updatedByID[id] {
-                resultByID[id] = record
-            } else {
-                resultByID.removeValue(forKey: id)
-            }
-        }
-        self = Array(resultByID.values).sortedByID()
-    }
-
-    /// Historical state files may predate model-level deduplication. Taking the
-    /// last encoded record keeps migration deterministic instead of trapping on
-    /// `Dictionary(uniqueKeysWithValues:)` when an identifier is repeated.
-    private func recordsByID() -> [UUID: Element] {
-        reduce(into: [:]) { records, record in
-            records[record.id] = record
-        }
-    }
-}
-
-nonisolated struct TaskRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct TaskRecord: Codable, Equatable, UserDataRecord {
     let id: UUID
     let title: String
     let kindRaw: String
@@ -77,7 +50,7 @@ nonisolated struct TaskRecord: Codable, Equatable, SyncSnapshotRecord {
     }
 }
 
-nonisolated struct TaskCategoryRecord: Codable, Equatable, SyncSnapshotRecord {
+nonisolated struct TaskCategoryRecord: Codable, Equatable, UserDataRecord {
     let id: UUID
     let title: String
     let colorHex: String?
@@ -104,7 +77,7 @@ nonisolated struct TaskCategoryRecord: Codable, Equatable, SyncSnapshotRecord {
 nonisolated struct TaskCategoryAssignmentRecord:
     Codable,
     Equatable,
-    SyncSnapshotRecord
+    UserDataRecord
 {
     let id: UUID
     let taskID: UUID

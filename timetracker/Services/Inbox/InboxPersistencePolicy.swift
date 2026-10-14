@@ -101,7 +101,7 @@ enum InboxPersistencePolicy {
             title: requiredSingleLine(
                 title,
                 field: .itemTitle,
-                maximum: SyncDataSnapshotRestoreLimits.maximumTitleByteCount
+                maximum: PersistedFieldLimits.maximumTitleByteCount
             ),
             notes: optionalMultiline(
                 notes,
@@ -137,7 +137,7 @@ enum InboxPersistencePolicy {
             titleSnapshot: requiredSingleLine(
                 titleSnapshot,
                 field: .titleSnapshot,
-                maximum: SyncDataSnapshotRestoreLimits.maximumTitleByteCount
+                maximum: PersistedFieldLimits.maximumTitleByteCount
             )
         )
     }
@@ -174,7 +174,7 @@ enum InboxPersistencePolicy {
         )
         try enforceByteLimit(
             trimmed,
-            maximum: SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount,
+            maximum: PersistedFieldLimits.maximumCompactFieldByteCount,
             field: field
         )
         return trimmed
@@ -197,7 +197,7 @@ enum InboxPersistencePolicy {
         )
         try enforceByteLimit(
             prepared,
-            maximum: SyncDataSnapshotRestoreLimits.maximumNoteByteCount,
+            maximum: PersistedFieldLimits.maximumNoteByteCount,
             field: field
         )
         return prepared

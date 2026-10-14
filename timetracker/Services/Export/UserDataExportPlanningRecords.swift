@@ -3,7 +3,7 @@ import Foundation
 nonisolated struct CountdownEventRecord:
     Codable,
     Equatable,
-    SyncSnapshotRecord
+    UserDataRecord
 {
     let id: UUID
     let title: String
@@ -25,7 +25,7 @@ nonisolated struct CountdownEventRecord:
 nonisolated struct SyncedPreferenceRecord:
     Codable,
     Equatable,
-    SyncSnapshotRecord
+    UserDataRecord
 {
     let id: UUID
     let key: String

@@ -5,8 +5,6 @@ enum SettingsDestructiveConfirmation: Hashable {
     case clearDemo
     case resetAllData
     case optimizeDatabase
-    case replaceCloud(expectedConflictID: UUID?)
-    case replaceDevice(expectedConflictID: UUID?)
 
     var titleKey: String {
         switch self {
@@ -14,8 +12,6 @@ enum SettingsDestructiveConfirmation: Hashable {
         case .clearDemo: "dialog.clearDemo.title"
         case .resetAllData: "dialog.resetData.title"
         case .optimizeDatabase: "dialog.optimize.title"
-        case .replaceCloud: "dialog.forceUpload.title"
-        case .replaceDevice: "dialog.forceDownload.title"
         }
     }
 
@@ -25,8 +21,6 @@ enum SettingsDestructiveConfirmation: Hashable {
         case .clearDemo: "dialog.clearDemo.confirm"
         case .resetAllData: "dialog.resetData.confirm"
         case .optimizeDatabase: "dialog.optimize.confirm"
-        case .replaceCloud: "dialog.forceUpload.confirm"
-        case .replaceDevice: "dialog.forceDownload.confirm"
         }
     }
 
@@ -36,8 +30,6 @@ enum SettingsDestructiveConfirmation: Hashable {
         case .clearDemo: "dialog.clearDemo.message"
         case .resetAllData: "dialog.resetData.message"
         case .optimizeDatabase: "dialog.optimize.message"
-        case .replaceCloud: "dialog.forceUpload.message"
-        case .replaceDevice: "dialog.forceDownload.message"
         }
     }
 }
@@ -79,10 +71,6 @@ extension SettingsView {
                     )
                 )
             }
-        case let .replaceCloud(expectedConflictID):
-            forceUploadLocalData(expectedConflictID: expectedConflictID)
-        case let .replaceDevice(expectedConflictID):
-            forceDownloadCloudData(expectedConflictID: expectedConflictID)
         }
     }
 }

@@ -3,7 +3,7 @@ import Foundation
 nonisolated struct TaskRecurrenceRuleRecord:
     Codable,
     Equatable,
-    SyncSnapshotRecord
+    UserDataRecord
 {
     let id: UUID
     let templateTaskID: UUID
@@ -31,7 +31,7 @@ nonisolated struct TaskRecurrenceRuleRecord:
 nonisolated struct TaskRecurrenceOccurrenceRecord:
     Codable,
     Equatable,
-    SyncSnapshotRecord
+    UserDataRecord
 {
     let id: UUID
     let ruleID: UUID
@@ -59,7 +59,7 @@ nonisolated struct TaskRecurrenceOccurrenceRecord:
 nonisolated struct TaskQuantityGoalRecord:
     Codable,
     Equatable,
-    SyncSnapshotRecord
+    UserDataRecord
 {
     let id: UUID
     let taskID: UUID
@@ -83,7 +83,7 @@ nonisolated struct TaskQuantityGoalRecord:
 nonisolated struct TaskQuantityEntryRecord:
     Codable,
     Equatable,
-    SyncSnapshotRecord
+    UserDataRecord
 {
     let id: UUID
     let taskID: UUID

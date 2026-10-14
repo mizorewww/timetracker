@@ -74,7 +74,7 @@ struct SettingsStatusRow: View {
             .blue
         case .offline, .needsRestart:
             .orange
-        case .failed, .temporaryStore, .conflict:
+        case .failed, .temporaryStore:
             .red
         case .localOnly:
             .secondary

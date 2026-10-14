@@ -3,22 +3,9 @@ import Foundation
 import Observation
 import SwiftData
 
-@concurrent
-private func loadSyncConflictPrompt(
-    from service: SyncConflictService
-) async throws -> SyncConflictPrompt? {
-    try Task.checkCancellation()
-    let prompt = try service.prompt()
-    try Task.checkCancellation()
-    return prompt
-}
-
 @MainActor
 @Observable
 final class TimeTrackerStore {
-    typealias SyncConflictPromptLoader =
-        @Sendable () async throws -> SyncConflictPrompt?
-
     let llmCredentialStore: any LLMCredentialStoring
     let inboxSuggestionService: LLMInboxSuggestionService
     let checklistVisualSuggestionService: LLMChecklistVisualSuggestionService
@@ -33,8 +20,6 @@ final class TimeTrackerStore {
         inboxSuggestionService: LLMInboxSuggestionService? = nil,
         checklistVisualSuggestionService: LLMChecklistVisualSuggestionService? = nil,
         writeAuthorization: StoreWriteAuthorization = .applicationState,
-        syncConflictService: SyncConflictService? = nil,
-        syncConflictPromptLoader: SyncConflictPromptLoader? = nil,
         taskDraftRecoveryStore: TaskDraftRecoveryStore? = nil,
         committedMutationSystemProjectionScheduler:
         CommittedMutationSystemProjectionScheduler? = nil
@@ -46,19 +31,6 @@ final class TimeTrackerStore {
             checklistVisualSuggestionService ??
             LLMChecklistVisualSuggestionService()
         self.writeAuthorization = writeAuthorization
-        let resolvedSyncConflictService =
-            syncConflictService ?? Self.defaultSyncConflictService()
-        self.syncConflictService = resolvedSyncConflictService
-        if let syncConflictPromptLoader {
-            self.syncConflictPromptLoader =
-                syncConflictPromptLoader
-        } else {
-            self.syncConflictPromptLoader = {
-                try await loadSyncConflictPrompt(
-                    from: resolvedSyncConflictService
-                )
-            }
-        }
         taskDraftRecoveryController = TaskDraftRecoveryController(
             store: taskDraftRecoveryStore ?? TaskDraftRecoveryStore()
         )
@@ -75,7 +47,6 @@ final class TimeTrackerStore {
     deinit {
         pomodoroReconciliationTask?.cancel()
         scheduledSyncRefreshTask?.cancel()
-        syncConflictPromptRefreshTask?.cancel()
     }
 
     /// Domain-store passthroughs: the facade keeps no array copies of its own.
@@ -201,15 +172,6 @@ final class TimeTrackerStore {
     var cloudAccountCheck: CloudAccountCheckOutcome?
     @ObservationIgnored var cloudAccountCheckRequestID: UUID?
     var lastSyncActivity: SyncActivityOutcome?
-    var pendingSyncConflict: SyncConflictPrompt?
-    @ObservationIgnored
-    let syncConflictPromptLoader: SyncConflictPromptLoader
-    @ObservationIgnored
-    var syncConflictPromptRefreshRequestID = UUID()
-    @ObservationIgnored
-    var isSyncConflictPromptRefreshRequested = false
-    @ObservationIgnored
-    var syncConflictPromptRefreshTask: Task<Void, Never>?
     /// `configureIfNeeded` can be re-entered by a refresh it triggers; a
     /// re-entrant call only requests one more pass after the current one.
     enum StartupConfigurationPhase {
@@ -219,7 +181,6 @@ final class TimeTrackerStore {
     }
 
     @ObservationIgnored var startupConfigurationPhase = StartupConfigurationPhase.pending
-    @ObservationIgnored var hasBootstrappedSyncConflictState = false
 
     var hasCompletedStartupConfiguration: Bool {
         if case .completed = startupConfigurationPhase {
@@ -279,7 +240,6 @@ final class TimeTrackerStore {
     let refreshPlanner = StoreRefreshPlanner()
     let inboxCommandHandler = InboxCommandHandler()
     let refreshCoordinator = StoreRefreshCoordinator()
-    let syncConflictService: SyncConflictService
     var taskDomainStore = TaskStore()
     var ledgerDomainStore = LedgerStore()
     var checklistDomainStore = ChecklistStore()
@@ -313,6 +273,5 @@ final class TimeTrackerStore {
     var inboxSuggestionByItemID: [UUID: InboxSuggestion] = [:]
     var inboxItemReadModelByItemID: [UUID: InboxItemReadModel] = [:]
     @ObservationIgnored var scheduledSyncRefreshTask: Task<Void, Never>?
-    var scheduledSyncRefreshBatch: SyncRefreshBatch?
-    var completedCloudExportResults: [UUID: Bool] = [:]
+    @ObservationIgnored var pendingSyncActivityReason: SyncRefreshReason?
 }

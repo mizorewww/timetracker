@@ -3,7 +3,7 @@ import Foundation
 nonisolated struct TimeSessionRecord:
     Codable,
     Equatable,
-    SyncSnapshotRecord
+    UserDataRecord
 {
     let id: UUID
     let taskID: UUID
@@ -33,7 +33,7 @@ nonisolated struct TimeSessionRecord:
 nonisolated struct TimeSegmentRecord:
     Codable,
     Equatable,
-    SyncSnapshotRecord
+    UserDataRecord
 {
     let id: UUID
     let sessionID: UUID
@@ -61,7 +61,7 @@ nonisolated struct TimeSegmentRecord:
 nonisolated struct PomodoroRunRecord:
     Codable,
     Equatable,
-    SyncSnapshotRecord
+    UserDataRecord
 {
     let id: UUID
     let taskID: UUID

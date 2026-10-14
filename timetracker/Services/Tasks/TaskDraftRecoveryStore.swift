@@ -19,73 +19,55 @@ nonisolated struct TaskDraftRecoveryStore: @unchecked Sendable {
     nonisolated static let maximumEncodedByteCount = 1 * 1024 * 1024
     nonisolated static let defaultRetentionInterval: TimeInterval = 30 * 24 * 60 * 60
 
-    struct Locations {
-        let directory: URL
-        let durableRoot: URL
-    }
-
     private let directoryURLOverride: URL?
-    private let durableRootURLOverride: URL?
     private let retentionInterval: TimeInterval
     private let maximumEncodedByteCount: Int
     private let now: () -> Date
     private let fileManager: FileManager
-    let localFile: DurableLocalFile
-    private let commandLineArguments: [String]
-    private let processIdentifier: Int32
 
     init(
         directoryURL: URL? = nil,
-        durableRootURL: URL? = nil,
         retentionInterval: TimeInterval = Self.defaultRetentionInterval,
         maximumEncodedByteCount: Int = Self.maximumEncodedByteCount,
         now: @escaping () -> Date = Date.init,
-        fileManager: FileManager = .default,
-        localFile: DurableLocalFile? = nil,
-        commandLineArguments: [String] = CommandLine.arguments,
-        processIdentifier: Int32 = ProcessInfo.processInfo.processIdentifier
+        fileManager: FileManager = .default
     ) {
-        precondition(retentionInterval >= 0)
-        precondition(maximumEncodedByteCount > 0)
         directoryURLOverride = directoryURL
-        durableRootURLOverride = durableRootURL
         self.retentionInterval = retentionInterval
         self.maximumEncodedByteCount = maximumEncodedByteCount
         self.now = now
         self.fileManager = fileManager
-        self.localFile = localFile ?? DurableLocalFile(fileManager: fileManager)
-        self.commandLineArguments = commandLineArguments
-        self.processIdentifier = processIdentifier
     }
 
     func save(_ draft: TaskEditorDraft, for sourceTaskID: UUID) throws {
         guard draft.taskID == sourceTaskID, draft.baseline != nil else {
             throw TaskDraftRecoveryStoreError.invalidExistingTaskDraft
         }
-
-        let envelope = TaskDraftRecoveryEnvelope(
-            schemaVersion: Self.currentSchemaVersion,
-            sourceTaskID: sourceTaskID,
-            savedAt: now(),
-            draft: draft
+        let data = try TaskDraftRecoveryCodec.encode(
+            TaskDraftRecoveryEnvelope(
+                schemaVersion: Self.currentSchemaVersion,
+                sourceTaskID: sourceTaskID,
+                savedAt: now(),
+                draft: draft
+            )
         )
-        let data = try TaskDraftRecoveryCodec.encode(envelope)
         guard data.count <= maximumEncodedByteCount else {
             throw TaskDraftRecoveryStoreError.encodedDraftExceedsMaximumByteCount(
                 actualByteCount: data.count,
                 maximumByteCount: maximumEncodedByteCount
             )
         }
-
-        let locations = try resolvedLocations()
-        try localFile.write(
-            data,
-            to: fileURL(for: sourceTaskID, in: locations.directory),
-            durableRootURL: locations.durableRoot,
-            excludeFromBackup: true
-        )
+        let directory = try directoryURL()
+        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        var url = fileURL(for: sourceTaskID, in: directory)
+        try data.write(to: url, options: .atomic)
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? url.setResourceValues(values)
     }
 
+    /// Returns the saved draft only if it is still valid and differs from what
+    /// is persisted now; anything else is removed.
     func load(
         for sourceTaskID: UUID,
         currentDraft: TaskEditorDraft
@@ -95,168 +77,95 @@ nonisolated struct TaskDraftRecoveryStore: @unchecked Sendable {
         else {
             throw TaskDraftRecoveryStoreError.invalidExistingTaskDraft
         }
-        let locations = try resolvedLocations()
-        let url = fileURL(for: sourceTaskID, in: locations.directory)
-
-        return try localFile.withExclusiveAccess(through: locations.durableRoot) {
-            guard let envelope = try readEnvelope(
-                at: url,
-                locations: locations
-            ) else { return nil }
-
-            guard envelope.schemaVersion == Self.currentSchemaVersion,
-                  envelope.sourceTaskID == sourceTaskID,
-                  envelope.draft.taskID == sourceTaskID,
-                  envelope.draft.baseline != nil,
-                  isExpired(envelope.savedAt) == false,
-                  TaskDraftRecoveryCodec.hasSameRecoverableContent(
-                      envelope.draft,
-                      currentDraft
-                  ) == false
-            else {
-                try removeFile(at: url, locations: locations)
-                return nil
-            }
-            return envelope.draft
+        let url = try fileURL(for: sourceTaskID, in: directoryURL())
+        guard let envelope = try readEnvelope(at: url) else { return nil }
+        guard isRecoverable(envelope, fileName: url.lastPathComponent),
+              TaskDraftRecoveryCodec.hasSameRecoverableContent(envelope.draft, currentDraft) == false
+        else {
+            try removeFile(at: url)
+            return nil
         }
+        return envelope.draft
     }
 
     func remove(for sourceTaskID: UUID) throws {
-        let locations = try resolvedLocations()
-        let url = fileURL(for: sourceTaskID, in: locations.directory)
-        guard fileManager.fileExists(atPath: locations.directory.path) else {
-            return
-        }
-        try removeFile(at: url, locations: locations)
+        try removeFile(at: fileURL(for: sourceTaskID, in: directoryURL()))
     }
 
     /// Removes expired, corrupt, unsupported, or task/file-mismatched entries.
     @discardableResult
     func removeExpired() throws -> Int {
-        let locations = try resolvedLocations()
-        guard fileManager.fileExists(atPath: locations.directory.path) else {
-            return 0
-        }
-
-        return try localFile.withExclusiveAccess(through: locations.durableRoot) {
-            let candidates = try localFile.managedDirectoryContents(
-                at: locations.directory,
-                durableRootURL: locations.durableRoot
-            ).filter { $0.pathExtension == "json" }
-            var removedCount = 0
-            for url in candidates {
-                let envelope = try readEnvelope(
-                    at: url,
-                    locations: locations
-                )
-                let expectedName = envelope.map {
-                    fileName(for: $0.sourceTaskID)
-                }
-                guard let envelope else {
-                    removedCount += 1
-                    continue
-                }
-                let shouldRemove =
-                    envelope.schemaVersion != Self.currentSchemaVersion ||
-                    envelope.draft.taskID != envelope.sourceTaskID ||
-                    envelope.draft.baseline == nil ||
-                    expectedName != url.lastPathComponent ||
-                    isExpired(envelope.savedAt)
-                guard shouldRemove else { continue }
-                try removeFile(at: url, locations: locations)
+        let directory = try directoryURL()
+        guard fileManager.fileExists(atPath: directory.path) else { return 0 }
+        var removedCount = 0
+        for url in try fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+            where url.pathExtension == "json"
+        {
+            guard let envelope = try readEnvelope(at: url) else {
                 removedCount += 1
+                continue
             }
-            return removedCount
+            guard isRecoverable(envelope, fileName: url.lastPathComponent) == false else { continue }
+            try removeFile(at: url)
+            removedCount += 1
         }
+        return removedCount
     }
 
     func fileURL(for sourceTaskID: UUID) throws -> URL {
-        try fileURL(for: sourceTaskID, in: resolvedLocations().directory)
+        try fileURL(for: sourceTaskID, in: directoryURL())
     }
 
-    func resolvedLocations() throws -> Locations {
+    private func directoryURL() throws -> URL {
         if let directoryURLOverride {
-            return Locations(
-                directory: directoryURLOverride.standardizedFileURL,
-                durableRoot: (
-                    durableRootURLOverride ??
-                        directoryURLOverride.deletingLastPathComponent()
-                ).standardizedFileURL
+            return directoryURLOverride
+        }
+        if AppRuntimeEnvironment.isUITesting {
+            return fileManager.temporaryDirectory.appendingPathComponent(
+                "\(Self.directoryName)-\(ProcessInfo.processInfo.processIdentifier)",
+                isDirectory: true
             )
         }
-
-        if commandLineArguments.contains(AppRuntimeEnvironment.uiTestingArgument) {
-            let root = fileManager.temporaryDirectory.standardizedFileURL
-            return Locations(
-                directory: root.appendingPathComponent(
-                    "\(Self.directoryName)-\(processIdentifier)",
-                    isDirectory: true
-                ),
-                durableRoot: root
-            )
-        }
-
-        let root = try fileManager.url(
+        return try fileManager.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
             create: true
-        ).standardizedFileURL
-        return Locations(
-            directory: root.appendingPathComponent(
-                Self.directoryName,
-                isDirectory: true
-            ),
-            durableRoot: root
-        )
+        ).appendingPathComponent(Self.directoryName, isDirectory: true)
     }
 
     private func fileURL(for sourceTaskID: UUID, in directory: URL) -> URL {
         directory.appendingPathComponent(
-            fileName(for: sourceTaskID),
+            "\(sourceTaskID.uuidString.lowercased()).json",
             isDirectory: false
         )
     }
 
-    func fileName(for sourceTaskID: UUID) -> String {
-        "\(sourceTaskID.uuidString.lowercased()).json"
+    private func removeFile(at url: URL) throws {
+        do {
+            try fileManager.removeItem(at: url)
+        } catch CocoaError.fileNoSuchFile {}
     }
 
-    func removeFile(at url: URL, locations: Locations) throws {
-        try localFile.removeIfPresent(
-            at: url,
-            durableRootURL: locations.durableRoot
-        )
-    }
-
-    func readEnvelope(
-        at url: URL,
-        locations: Locations
-    ) throws -> TaskDraftRecoveryEnvelope? {
-        let data: Data
-        do {
-            guard let value = try localFile.read(
-                upTo: maximumEncodedByteCount,
-                from: url,
-                durableRootURL: locations.durableRoot
-            ) else { return nil }
-            data = value
-        } catch let error as DurableLocalFileReadError {
-            switch error {
-            case .exceedsMaximumByteCount:
-                try removeFile(at: url, locations: locations)
-                return nil
-            }
-        }
-        do {
-            return try TaskDraftRecoveryCodec.decode(data)
-        } catch is DecodingError {
-            try removeFile(at: url, locations: locations)
+    /// Reads an envelope; oversized or undecodable files are removed and
+    /// treated as absent.
+    private func readEnvelope(at url: URL) throws -> TaskDraftRecoveryEnvelope? {
+        guard fileManager.fileExists(atPath: url.path) else { return nil }
+        let size = try fileManager.attributesOfItem(atPath: url.path)[.size] as? Int ?? 0
+        guard size <= maximumEncodedByteCount,
+              let envelope = try? TaskDraftRecoveryCodec.decode(Data(contentsOf: url))
+        else {
+            try removeFile(at: url)
             return nil
         }
+        return envelope
     }
 
-    func isExpired(_ savedAt: Date) -> Bool {
-        now().timeIntervalSince(savedAt) > retentionInterval
+    private func isRecoverable(_ envelope: TaskDraftRecoveryEnvelope, fileName: String) -> Bool {
+        envelope.schemaVersion == Self.currentSchemaVersion &&
+            envelope.draft.taskID == envelope.sourceTaskID &&
+            envelope.draft.baseline != nil &&
+            fileName == "\(envelope.sourceTaskID.uuidString.lowercased()).json" &&
+            now().timeIntervalSince(envelope.savedAt) <= retentionInterval
     }
 }

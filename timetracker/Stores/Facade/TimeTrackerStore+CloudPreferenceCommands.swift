@@ -1,33 +1,12 @@
 import Foundation
 
 extension TimeTrackerStore {
-    @discardableResult
-    func setCloudSyncEnabled(_ value: Bool) -> Bool {
-        guard value != preferences.cloudSyncEnabled else { return true }
-        if !value {
-            AppCloudSync.cancelCloudReconciliation()
-            AppDefaults.shared.set(false, forKey: AppCloudSync.enabledKey)
-            preferences.cloudSyncEnabled = false
-            return true
-        }
-
-        do {
-            try writeAuthorization.requireUserWritesAllowed()
-            guard let modelContext else { throw StoreError.notConfigured }
-            if AppCloudSync.persistenceMode != AppCloudSync.modeICloud {
-                _ = try syncConflictService.stageCurrentLocalSnapshotForCloudEnablement(
-                    context: modelContext
-                )
-            }
-            AppDefaults.shared.set(true, forKey: AppCloudSync.enabledKey)
-            preferences.cloudSyncEnabled = true
-            return true
-        } catch {
-            AppDefaults.shared.set(false, forKey: AppCloudSync.enabledKey)
-            preferences.cloudSyncEnabled = false
-            errorMessage = error.localizedDescription
-            return false
-        }
+    /// Device-local and applied on the next launch. Turning iCloud on keeps
+    /// the same store file; CloudKit mirroring exports its existing records.
+    func setCloudSyncEnabled(_ value: Bool) {
+        guard value != preferences.cloudSyncEnabled else { return }
+        AppCloudSync.setEnabled(value)
+        preferences.cloudSyncEnabled = value
     }
 
     @discardableResult

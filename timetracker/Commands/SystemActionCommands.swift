@@ -40,8 +40,7 @@ struct SystemActionPostCommitEffects {
             let scheduler = try schedulerProvider(container)
             scheduler.enqueue(
                 CommittedMutationSystemProjectionRequest(
-                    events: events,
-                    cause: .localCommit
+                    events: events
                 )
             )
         } catch {

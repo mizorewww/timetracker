@@ -121,7 +121,7 @@ nonisolated enum TaskPersistencePolicy {
         try rejectUnsupportedControls(in: trimmed, field: field, allowsMultilineWhitespace: false)
         try enforceByteLimit(
             trimmed,
-            maximum: SyncDataSnapshotRestoreLimits.maximumTitleByteCount,
+            maximum: PersistedFieldLimits.maximumTitleByteCount,
             field: field
         )
         return trimmed
@@ -137,7 +137,7 @@ nonisolated enum TaskPersistencePolicy {
         try rejectUnsupportedControls(in: trimmed, field: field, allowsMultilineWhitespace: false)
         try enforceByteLimit(
             trimmed,
-            maximum: SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount,
+            maximum: PersistedFieldLimits.maximumCompactFieldByteCount,
             field: field
         )
         return trimmed
@@ -151,7 +151,7 @@ nonisolated enum TaskPersistencePolicy {
         try rejectUnsupportedControls(in: value, field: field, allowsMultilineWhitespace: true)
         try enforceByteLimit(
             value,
-            maximum: SyncDataSnapshotRestoreLimits.maximumNoteByteCount,
+            maximum: PersistedFieldLimits.maximumNoteByteCount,
             field: field
         )
         return value

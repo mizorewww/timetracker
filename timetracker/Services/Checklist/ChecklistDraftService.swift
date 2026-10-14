@@ -47,9 +47,9 @@ nonisolated enum ChecklistDraftValidationError: LocalizedError, Equatable {
 }
 
 nonisolated enum ChecklistDraftPersistencePolicy {
-    static let maximumTitleByteCount = SyncDataSnapshotRestoreLimits.maximumTitleByteCount
-    static let maximumIconNameByteCount = SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount
-    static let maximumColorHexByteCount = SyncDataSnapshotRestoreLimits.maximumCompactFieldByteCount
+    static let maximumTitleByteCount = PersistedFieldLimits.maximumTitleByteCount
+    static let maximumIconNameByteCount = PersistedFieldLimits.maximumCompactFieldByteCount
+    static let maximumColorHexByteCount = PersistedFieldLimits.maximumCompactFieldByteCount
 
     static func prepare(_ drafts: [ChecklistEditorDraft]) throws -> [PreparedChecklistDraft] {
         try drafts.enumerated().map { index, draft in

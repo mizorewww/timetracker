@@ -3,7 +3,7 @@ import Foundation
 nonisolated struct ChecklistItemRecord:
     Codable,
     Equatable,
-    SyncSnapshotRecord
+    UserDataRecord
 {
     let id: UUID
     let taskID: UUID
@@ -31,7 +31,7 @@ nonisolated struct ChecklistItemRecord:
 nonisolated struct ChecklistItemVisualRecord:
     Codable,
     Equatable,
-    SyncSnapshotRecord
+    UserDataRecord
 {
     let id: UUID
     let checklistItemID: UUID

@@ -141,9 +141,6 @@ final class CommittedMutationModelContainerReference {
 /// older one: the older publication is skipped rather than made visible again.
 @MainActor
 final class CommittedMutationSystemProjectionWorker {
-    typealias SyncRecorder = @MainActor @Sendable (
-        Set<StoreDomainEvent>
-    ) async throws -> Void
     typealias Materializer = @MainActor @Sendable (
         CommittedMutationSystemProjectionWork
     ) async throws -> CommittedMutationSystemProjectionMaterialization?
@@ -152,7 +149,6 @@ final class CommittedMutationSystemProjectionWorker {
         CommittedMutationSystemProjectionMaterialization
     ) async throws -> Void
 
-    private let syncRecorder: SyncRecorder
     private let materializer: Materializer
     private let publisher: Publisher
     private var cachedGeneration: UInt?
@@ -161,11 +157,9 @@ final class CommittedMutationSystemProjectionWorker {
     private var newestRequestedGeneration: UInt = 0
 
     init(
-        syncRecorder: @escaping SyncRecorder = { _ in },
         materializer: @escaping Materializer,
         publisher: @escaping Publisher
     ) {
-        self.syncRecorder = syncRecorder
         self.materializer = materializer
         self.publisher = publisher
     }
@@ -176,20 +170,6 @@ final class CommittedMutationSystemProjectionWorker {
     ) {
         let widgetWriter = WidgetSnapshotProjectionWriter()
         self.init(
-            syncRecorder: { events in
-                guard let container = containerReference.current else {
-                    throw CommittedMutationSystemProjectionWorkerError
-                        .storeContainerReleased
-                }
-                let worker = try PersistentHistorySyncSnapshotWorker(
-                    container: container
-                )
-                let result = try await worker.record(events: events)
-                if case .recorded = result {
-                    StoreMutationBroadcaster
-                        .publishSyncConflictPromptChange()
-                }
-            },
             materializer: { _ in
                 guard let container = containerReference.current else {
                     throw CommittedMutationSystemProjectionWorkerError
@@ -215,11 +195,6 @@ final class CommittedMutationSystemProjectionWorker {
         sink: CommittedMutationSystemProjectionSink,
         work: CommittedMutationSystemProjectionWork
     ) async throws {
-        if sink == .syncSnapshot {
-            try await syncRecorder(work.events)
-            return
-        }
-
         newestRequestedGeneration = max(
             newestRequestedGeneration,
             work.generation
@@ -274,10 +249,6 @@ final class CommittedMutationSystemProjectionWorker {
         widgetWriter: WidgetSnapshotProjectionWriter
     ) async throws {
         switch sink {
-        case .syncSnapshot:
-            assertionFailure(
-                "Sync snapshot publication bypassed its dedicated recorder."
-            )
         case .widget:
             // Deliberately bypasses TimeTrackerStore.errorMessage. Projection
             // diagnostics belong to the scheduler's per-sink failure state.

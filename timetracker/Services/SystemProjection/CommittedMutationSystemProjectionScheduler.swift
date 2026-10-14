@@ -5,7 +5,6 @@ nonisolated enum CommittedMutationSystemProjectionSink:
     Hashable,
     Sendable
 {
-    case syncSnapshot
     case widget
     case watch
     case liveActivity
@@ -17,33 +16,20 @@ nonisolated enum CommittedMutationSystemProjectionSink:
     ]
 }
 
-nonisolated enum CommittedMutationSystemProjectionCause: Equatable, Sendable {
-    case localCommit
-    case startupCatchUp
-    case surfaceCatchUp
-
-    var recordsSyncSnapshot: Bool {
-        self != .surfaceCatchUp
-    }
-}
-
 nonisolated struct CommittedMutationSystemProjectionRequest:
     Equatable,
     Sendable
 {
     let events: Set<StoreDomainEvent>
-    let cause: CommittedMutationSystemProjectionCause
     let forcedSystemSinks:
         Set<CommittedMutationSystemProjectionSink>
 
     init(
         events: Set<StoreDomainEvent>,
-        cause: CommittedMutationSystemProjectionCause,
         forcedSystemSinks:
         Set<CommittedMutationSystemProjectionSink> = []
     ) {
         self.events = events
-        self.cause = cause
         self.forcedSystemSinks = forcedSystemSinks.intersection(
             CommittedMutationSystemProjectionSink.systemSurfaceCases
         )
@@ -117,11 +103,6 @@ final class CommittedMutationSystemProjectionScheduler {
                 Self.events(request.events, for: $0).isEmpty == false
             }
         )
-        if request.cause.recordsSyncSnapshot,
-           request.events.isEmpty == false
-        {
-            sinks.insert(.syncSnapshot)
-        }
         sinks.formUnion(request.forcedSystemSinks)
         return sinks
     }
@@ -133,8 +114,6 @@ final class CommittedMutationSystemProjectionScheduler {
         StoreDomainEventBatchLimiter.bounded(
             events.filter { event in
                 switch sink {
-                case .syncSnapshot:
-                    true
                 case .widget, .liveActivity:
                     switch event {
                     case .taskChanged,

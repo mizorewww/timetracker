@@ -86,10 +86,7 @@ extension SettingsView {
         Binding {
             store.preferences.cloudSyncEnabled
         } set: { value in
-            handleSettingsStoreMutation(
-                store.setCloudSyncEnabled(value),
-                title: SettingsCategory.dataAndSync.title
-            )
+            store.setCloudSyncEnabled(value)
         }
     }
 

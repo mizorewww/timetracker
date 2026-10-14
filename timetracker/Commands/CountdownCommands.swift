@@ -19,7 +19,7 @@ enum CountdownTitleValidationError: LocalizedError, Equatable {
 }
 
 enum CountdownTitlePolicy {
-    static let maximumUTF8ByteCount = SyncDataSnapshotRestoreLimits.maximumTitleByteCount
+    static let maximumUTF8ByteCount = PersistedFieldLimits.maximumTitleByteCount
 
     static func normalized(_ title: String) throws -> String {
         let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)

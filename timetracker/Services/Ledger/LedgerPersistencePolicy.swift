@@ -39,8 +39,8 @@ enum LedgerPersistenceValidationError: LocalizedError, Equatable {
 }
 
 enum LedgerPersistencePolicy {
-    static let maximumTitleSnapshotByteCount = SyncDataSnapshotRestoreLimits.maximumTitleByteCount
-    static let maximumNoteByteCount = SyncDataSnapshotRestoreLimits.maximumNoteByteCount
+    static let maximumTitleSnapshotByteCount = PersistedFieldLimits.maximumTitleByteCount
+    static let maximumNoteByteCount = PersistedFieldLimits.maximumNoteByteCount
 
     static func prepareNote(_ value: String?) throws -> String? {
         guard let value else { return nil }

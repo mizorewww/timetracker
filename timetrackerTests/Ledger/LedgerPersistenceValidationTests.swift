@@ -17,8 +17,8 @@ struct LedgerPersistenceValidationTests {
             prefix: "第一行\t标签\n第二行\r第三行：",
             byteCount: LedgerPersistencePolicy.maximumNoteByteCount
         )
-        #expect(title.utf8.count == SyncDataSnapshotRestoreLimits.maximumTitleByteCount)
-        #expect(note.utf8.count == SyncDataSnapshotRestoreLimits.maximumNoteByteCount)
+        #expect(title.utf8.count == PersistedFieldLimits.maximumTitleByteCount)
+        #expect(note.utf8.count == PersistedFieldLimits.maximumNoteByteCount)
 
         let task = TaskNode(title: title, parentID: nil, deviceID: "task-device")
         context.insert(task)

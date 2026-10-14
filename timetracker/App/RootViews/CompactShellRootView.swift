@@ -3,9 +3,8 @@ import SwiftUI
 /// Tab bar over a single navigation stack, for widths too narrow for a split
 /// view. Used by iPhone, by an iPad in Split View or Slide Over, and by a Mac
 /// window dragged below `RootLayoutPolicy.regularShellMinimumWidth`.
-struct CompactShellRootView<SyncConflictContent: View>: View {
+struct CompactShellRootView: View {
     let store: TimeTrackerStore
-    let syncConflictContent: SyncConflictContent
     let requestOpenSettings: () -> Bool
     @State private var isTabDiscardConfirmationPresented = false
     @State private var tabNavigationConfirmationRequestID: UUID?
@@ -79,10 +78,6 @@ struct CompactShellRootView<SyncConflictContent: View>: View {
             requestID: $tabNavigationConfirmationRequestID,
             navigationGuard: store.taskDetailNavigationGuard
         )
-        .safeAreaInset(edge: .top, spacing: 0) {
-            syncConflictContent
-                .padding(8)
-        }
         // Kept verbatim: this is the identifier the existing XCUITests select on.
         .accessibilityIdentifier("phone.tabView")
     }

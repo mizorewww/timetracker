@@ -5,7 +5,6 @@ nonisolated enum AppSceneFeedbackContext: Equatable, Sendable {
     case general
     case dataExport
     case databaseMaintenance
-    case syncRecovery
     case presentation
 }
 

@@ -23,7 +23,7 @@ extension timetrackerApp {
             isStoredInMemoryOnly: true,
             cloudKitDatabase: .none
         )
-        AppCloudSync.recordUITesting()
+        AppCloudSync.recordMode(AppCloudSync.modeUITest)
         return try ModelContainer(
             for: schema,
             migrationPlan: TimeTrackerMigrationPlan.self,

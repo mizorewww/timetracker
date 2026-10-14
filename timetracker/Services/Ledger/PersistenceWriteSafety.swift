@@ -2,15 +2,12 @@ import Foundation
 
 enum PersistenceWriteSafety: Equatable {
     case ready
-    case cloudRecoveryPending(String?)
     case ephemeral(String?)
 
     var title: String {
         switch self {
         case .ready:
             ""
-        case .cloudRecoveryPending:
-            AppStrings.localized("persistence.recovery.title")
         case .ephemeral:
             AppStrings.localized("persistence.ephemeral.title")
         }
@@ -20,11 +17,6 @@ enum PersistenceWriteSafety: Equatable {
         switch self {
         case .ready:
             ""
-        case let .cloudRecoveryPending(detail):
-            Self.message(
-                key: "persistence.recovery.message",
-                detail: detail
-            )
         case let .ephemeral(detail):
             Self.message(
                 key: "persistence.ephemeral.message",
@@ -37,8 +29,6 @@ enum PersistenceWriteSafety: Equatable {
         switch self {
         case .ready:
             "checkmark.circle"
-        case .cloudRecoveryPending:
-            "arrow.triangle.2.circlepath.icloud"
         case .ephemeral:
             "externaldrive.badge.exclamationmark"
         }

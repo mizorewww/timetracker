@@ -90,22 +90,6 @@ extension SettingsView {
                 onCheckSync: checkSyncStatus
             )
 
-            SyncRecoverySettingsSection(
-                pendingConflict: store.pendingSyncConflict,
-                isWorking: isCheckingSync,
-                operationMessage: syncOperationMessage,
-                onReplaceCloud: {
-                    pendingDestructiveConfirmation = .replaceCloud(
-                        expectedConflictID: store.pendingSyncConflict?.id
-                    )
-                },
-                onReplaceDevice: {
-                    pendingDestructiveConfirmation = .replaceDevice(
-                        expectedConflictID: store.pendingSyncConflict?.id
-                    )
-                }
-            )
-
         case .intelligence:
             LLMSettingsSection(
                 automaticSuggestionsEnabled: llmAutomaticSuggestionsEnabledBinding,

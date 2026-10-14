@@ -53,28 +53,6 @@ extension TimeTrackerStore {
         }
     }
 
-    func recordSyncActivity(
-        for reason: SyncRefreshReason,
-        completedAt: Date = Date(),
-        processingFailureMessage: String? = nil
-    ) {
-        guard let outcome = reason.activityOutcome(
-            completedAt: completedAt,
-            processingFailureMessage: processingFailureMessage
-        ) else {
-            return
-        }
-        lastSyncActivity = outcome
-    }
-
-    func recordCloudExportStateFailure(_ error: Error, at date: Date = Date()) {
-        lastSyncActivity = SyncActivityOutcome(
-            kind: .exportData,
-            completedAt: date,
-            result: .failed(message: error.localizedDescription)
-        )
-    }
-
     func installSyncObservers() {
         installStoreMutationObserverIfNeeded()
         guard syncObservers.isEmpty else { return }
@@ -90,92 +68,14 @@ extension TimeTrackerStore {
         syncObservers = names.map { name in
             let token = center.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
                 MainActor.assumeIsolated { [weak self] in
-                    guard let store = self else { return }
-                    if let event = notification.userInfo?[
-                        NSPersistentCloudKitContainer.eventNotificationUserInfoKey
-                    ] as? NSPersistentCloudKitContainer.Event,
-                        let receipt = CloudRecoveryContainerEventReceipt(event: event)
-                    {
-                        do {
-                            try store.syncConflictService.recordCloudRecoveryContainerEvent(receipt)
-                        } catch {
-                            store.recordCloudExportStateFailure(error)
-                            return
-                        }
-                    }
-                    if let exportID = store.cloudExportStartIdentifier(
-                        for: name,
-                        notification: notification
-                    ) {
-                        store.recordCloudExportStart(eventID: exportID)
-                        return
-                    }
-                    guard let reason = store.syncRefreshReason(
-                        for: name,
-                        notification: notification
-                    ) else { return }
+                    guard let store = self,
+                          let reason = store.syncRefreshReason(for: name, notification: notification)
+                    else { return }
                     store.scheduleQuietRefresh(reason: reason)
                 }
             }
             return SyncNotificationObserverToken(token)
         }
-        let promptToken = center.addObserver(
-            forName: StoreMutationBroadcaster.syncConflictPromptNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated { [weak self] in
-                self?.scheduleSyncConflictPromptRefresh()
-            }
-        }
-        syncObservers.append(
-            SyncNotificationObserverToken(promptToken)
-        )
-        let recoveryToken = center.addObserver(
-            forName: .appCloudRecoveryStateChanged,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated { [weak self] in
-                self?.refreshCloudRecoveryPresentationState()
-            }
-        }
-        syncObservers.append(SyncNotificationObserverToken(recoveryToken))
-        for reason in CloudRecoveryImportBuffer.shared.stopAndDrain() {
-            scheduleQuietRefresh(reason: reason)
-        }
-        do {
-            if AppCloudSync.isCloudImportRecoveryActive,
-               try syncConflictService.cloudRecoveryImportIsReady(
-                   in: syncConflictService.loadState()
-               )
-            {
-                scheduleQuietRefresh(
-                    reason: .cloudImportFinished(
-                        succeeded: true,
-                        reportsConflict: false,
-                        failureMessage: nil
-                    )
-                )
-            }
-        } catch {
-            recordCloudExportStateFailure(error)
-        }
-    }
-
-    private nonisolated func cloudExportStartIdentifier(
-        for name: Notification.Name,
-        notification: Notification
-    ) -> UUID? {
-        guard name == NSPersistentCloudKitContainer.eventChangedNotification,
-              let event = notification.userInfo?[NSPersistentCloudKitContainer.eventNotificationUserInfoKey]
-              as? NSPersistentCloudKitContainer.Event,
-              event.type == .export,
-              event.endDate == nil
-        else {
-            return nil
-        }
-        return event.identifier
     }
 
     private nonisolated func syncRefreshReason(for name: Notification.Name, notification: Notification) -> SyncRefreshReason? {
@@ -191,14 +91,11 @@ extension TimeTrackerStore {
         case .import:
             return .cloudImportFinished(
                 succeeded: event.succeeded,
-                reportsConflict: SyncConflictService.isConflictLikeCloudError(event.error),
                 failureMessage: event.error?.localizedDescription
             )
         case .export:
             return .cloudExportFinished(
-                eventID: event.identifier,
                 succeeded: event.succeeded,
-                reportsConflict: SyncConflictService.isConflictLikeCloudError(event.error),
                 failureMessage: event.error?.localizedDescription
             )
         case .setup:

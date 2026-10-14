@@ -6,9 +6,8 @@ import SwiftUI
 /// is that an iPad in Split View or Slide Over, and a Mac window dragged narrow,
 /// both get the same compact shell an iPhone gets — instead of a split view
 /// squeezed into a column too narrow to use.
-struct AppRootView<SyncConflictContent: View>: View {
+struct AppRootView: View {
     let store: TimeTrackerStore
-    let syncConflictContent: SyncConflictContent
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #if os(macOS)
@@ -16,14 +15,6 @@ struct AppRootView<SyncConflictContent: View>: View {
     #endif
     @State private var measuredWidthBand: RootLayoutPolicy.WidthBand?
     @State private var lastContentDestination: TimeTrackerStore.DesktopDestination = .today
-
-    init(
-        store: TimeTrackerStore,
-        @ViewBuilder syncConflictContent: () -> SyncConflictContent
-    ) {
-        self.store = store
-        self.syncConflictContent = syncConflictContent()
-    }
 
     private var layoutPolicy: RootLayoutPolicy {
         RootLayoutPolicy(
@@ -40,15 +31,10 @@ struct AppRootView<SyncConflictContent: View>: View {
             case .compact:
                 CompactShellRootView(
                     store: store,
-                    syncConflictContent: syncConflictContent,
                     requestOpenSettings: presentSettings
                 )
             case .regular:
                 RegularShellRootView(store: store)
-                    .safeAreaInset(edge: .top, spacing: 0) {
-                        syncConflictContent
-                            .padding(8)
-                    }
             }
         }
         // Nested views adapt from this instead of re-measuring or, worse,

@@ -153,7 +153,6 @@ nonisolated enum SyncFeedbackState: Equatable, Sendable {
     case failed
     case localOnly
     case temporaryStore
-    case conflict
 
     var symbolName: String {
         switch self {
@@ -173,8 +172,6 @@ nonisolated enum SyncFeedbackState: Equatable, Sendable {
             "externaldrive"
         case .temporaryStore:
             "externaldrive.badge.exclamationmark"
-        case .conflict:
-            "exclamationmark.triangle"
         }
     }
 }

@@ -193,7 +193,7 @@ extension InboxCommandHandler {
             .deduplicatedByID()
             .filter { $0.id != canonicalSuggestion.id }
             .map(prepareSuggestionMutation)
-        let nextSortOrder = ((existingChecklistItems.map(\.sortOrder).max() ?? 0) + 10)
+        let nextSortOrder = SortOrderPolicy.after(existingChecklistItems.map(\.sortOrder).max())
         return try context.performAtomicMutation {
             winner.materializeSuggestionIdentity()
             logicalMutation.materializeDismissal()

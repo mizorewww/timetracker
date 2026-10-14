@@ -45,7 +45,7 @@ nonisolated extension SwiftDataTaskRepository {
             deviceID: deviceID,
             colorHex: values.colorHex,
             iconName: values.iconName,
-            sortOrder: (siblings.last?.sortOrder ?? 0) + 10
+            sortOrder: SortOrderPolicy.after(siblings.last?.sortOrder)
         )
         node.id = proposedID
 

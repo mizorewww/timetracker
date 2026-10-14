@@ -50,6 +50,10 @@ nonisolated enum AITaskWorkspaceOperation: Equatable, Sendable {
 /// durable writes are intentionally left to a later preview/confirmation and
 /// store-scoped coordinator boundary.
 nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
+    /// Deepest ancestor chain a proposed task may have; matches the number of
+    /// path components the task tree displays.
+    static let maximumAncestorDepth = TaskTreeService.maximumDisplayedPathComponents
+
     private(set) var snapshot: AITaskWorkspaceSnapshot
     private(set) var operations: [AITaskWorkspaceOperation] = []
 
@@ -438,7 +442,7 @@ private nonisolated extension AITaskWorkspaceOverlay {
     static let categoryNameLocale = Locale(identifier: "en_US_POSIX")
 
     var nextCategorySortOrder: Double {
-        (snapshot.categories.map(\.sortOrder).max() ?? 0) + 10
+        SortOrderPolicy.after(snapshot.categories.map(\.sortOrder).max())
     }
 
     func nextTaskSortOrder(parentID: UUID?) -> Double {
@@ -549,7 +553,7 @@ private nonisolated extension AITaskWorkspaceOverlay {
                     throw AITaskWorkspaceOverlayError.hierarchyCycle
                 }
                 depth += 1
-                guard depth <= 6 else {
+                guard depth <= Self.maximumAncestorDepth else {
                     throw AITaskWorkspaceOverlayError.depthExceeded
                 }
                 cursor = parentID

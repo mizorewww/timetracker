@@ -161,7 +161,7 @@ struct ChecklistDraftService {
             let now = Date()
 
             for (index, draft) in preparedDrafts.enumerated() {
-                let sortOrder = Double(index + 1) * 10
+                let sortOrder = SortOrderPolicy.position(index)
                 if let existingID = draft.existingID, let item = existingByID[existingID] {
                     let completionChanged = item.isCompleted != draft.isCompleted
                     let itemChanged = item.title != draft.title ||

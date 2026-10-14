@@ -20,7 +20,7 @@ struct InboxCommandHandler {
             suggestionReason: nil
         )
 
-        let nextSortOrder = (existingItems.filter { !$0.isCompleted }.map(\.sortOrder).max() ?? 0) + 10
+        let nextSortOrder = SortOrderPolicy.after(existingItems.filter { !$0.isCompleted }.map(\.sortOrder).max())
         return try context.performAtomicMutation {
             let item = InboxItem(
                 title: preparedText.title,
@@ -175,7 +175,7 @@ struct InboxCommandHandler {
                 item.materializeSuggestionIdentity()
                 logicalMutation.materializeDismissal()
                 logicalMutation.winner.text.apply(to: item)
-                item.sortOrder = Double(index + 1) * 10
+                item.sortOrder = SortOrderPolicy.position(index)
                 item.updatedAt = now
                 item.deviceID = deviceID
                 item.clientMutationID = UUID()

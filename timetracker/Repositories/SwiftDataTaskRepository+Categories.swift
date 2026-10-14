@@ -68,7 +68,7 @@ nonisolated extension SwiftDataTaskRepository {
                 guard let category = categoryByID[categoryID] else {
                     throw TaskRepositoryError.categoryUnavailable
                 }
-                category.sortOrder = Double(index + 1) * 10
+                category.sortOrder = SortOrderPolicy.position(index)
                 category.updatedAt = mutationDate
                 category.deviceID = deviceID
                 category.clientMutationID = batchMutationID
@@ -116,7 +116,7 @@ nonisolated extension SwiftDataTaskRepository {
             colorHex: values.colorHex,
             iconName: values.iconName,
             includesInForecast: includesInForecast,
-            sortOrder: (existing.last?.sortOrder ?? 0) + 10
+            sortOrder: SortOrderPolicy.after(existing.last?.sortOrder)
         )
         category.id = proposedID
         context.insert(category)

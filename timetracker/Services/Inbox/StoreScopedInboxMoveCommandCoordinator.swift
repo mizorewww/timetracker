@@ -227,7 +227,7 @@ extension StoreScopedInboxCommandCoordinator {
                 taskID: taskID,
                 title: content.title,
                 isCompleted: false,
-                sortOrder: (existingChecklistItems.map(\.sortOrder).max() ?? 0) + 10,
+                sortOrder: SortOrderPolicy.after(existingChecklistItems.map(\.sortOrder).max()),
                 deviceID: deviceID
             )
             context.insert(checklistItem)

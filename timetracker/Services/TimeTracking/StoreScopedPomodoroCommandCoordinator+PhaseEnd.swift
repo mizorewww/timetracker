@@ -61,14 +61,7 @@ extension StoreScopedPomodoroCommandCoordinator {
                 now: now,
                 timeRepository: timeRepository
             )
-            try PomodoroCommandHandler(
-                deviceID: resolvedDeviceID,
-                nowProvider: { now }
-            ).cancel(
-                run: run,
-                discardRecord: discardRecord,
-                repository: pomodoroRepository
-            )
+            try pomodoroRepository.cancel(runID: run.id, discardRecord: discardRecord)
             guard run.clientMutationID != phase.mutationID,
                   run.endedAt != nil,
                   run.state == .cancelled || run.state == .completed,
@@ -89,7 +82,7 @@ extension StoreScopedPomodoroCommandCoordinator {
     func reconcileExpiredFocuses(
         observedAt: Date
     ) throws -> StoreScopedPomodoroReconcileOutcome {
-        try withLockedFreshContext { _, mutationNow, _, pomodoroRepository in
+        try withLockedFreshContext { _, _, _, pomodoroRepository in
             let candidates = try pomodoroRepository.activeRuns().filter { run in
                 (run.state == .focusing || run.state == .interrupted) &&
                     run.phaseHasExpired(at: observedAt)
@@ -98,17 +91,10 @@ extension StoreScopedPomodoroCommandCoordinator {
             for run in candidates {
                 let previousPhase = PomodoroPhaseToken(run: run)
                 let sessionIDBefore = run.sessionID
-                guard try PomodoroCommandHandler(
-                    deviceID: resolvedDeviceID,
-                    nowProvider: { mutationNow }
-                ).reconcile(
-                    run: run,
-                    now: observedAt,
-                    repository: pomodoroRepository
-                ),
-                    run.clientMutationID != previousPhase.mutationID,
-                    run.sessionID == nil,
-                    run.state == .shortBreak || run.state == .longBreak || run.state == .completed
+                guard try pomodoroRepository.reconcileExpiredPhase(runID: run.id, now: observedAt),
+                      run.clientMutationID != previousPhase.mutationID,
+                      run.sessionID == nil,
+                      run.state == .shortBreak || run.state == .longBreak || run.state == .completed
                 else {
                     throw StoreScopedPomodoroPhaseEndInvariantError.reconciliationMissing
                 }
@@ -194,7 +180,7 @@ extension StoreScopedPomodoroCommandCoordinator {
             max(0, Int(now.timeIntervalSince($0)))
         } ?? 0
         let effectiveSeconds = max(segmentSeconds, fallbackSeconds)
-        return effectiveSeconds < Int(Double(max(1, run.focusSecondsPlanned)) * 0.2)
+        return effectiveSeconds < PomodoroRun.minimumKeptSeconds(focusSecondsPlanned: run.focusSecondsPlanned)
     }
 
     private func phaseEndSnapshot(

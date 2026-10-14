@@ -209,6 +209,14 @@ extension PomodoroRun {
         return phaseStartedAt.addingTimeInterval(TimeInterval(max(1, duration)))
     }
 
+    /// A cancelled focus attempt shorter than this share of the planned focus
+    /// is discarded instead of kept as a cancelled round.
+    static let minimumKeptFocusFraction = 0.2
+
+    static func minimumKeptSeconds(focusSecondsPlanned: Int) -> Int {
+        Int(Double(max(1, focusSecondsPlanned)) * minimumKeptFocusFraction)
+    }
+
     func phaseHasExpired(at date: Date) -> Bool {
         guard let phaseDeadline else { return false }
         return date >= phaseDeadline

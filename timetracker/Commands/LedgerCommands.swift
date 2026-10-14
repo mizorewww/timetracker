@@ -30,7 +30,7 @@ struct LedgerCommandHandler {
         activePomodoroSessionID: UUID? = nil,
         pomodoroRuns: [PomodoroRun] = [],
         repository: SwiftDataTimeTrackingRepository,
-        context: ModelContext? = nil
+        context: ModelContext
     ) throws {
         let mutation = {
             try updateSegmentMutation(
@@ -42,11 +42,7 @@ struct LedgerCommandHandler {
                 context: context
             )
         }
-        if let context {
-            try context.performAtomicMutation(mutation)
-        } else {
-            try mutation()
-        }
+        try context.performAtomicMutation(mutation)
     }
 
     private func updateSegmentMutation(
@@ -55,7 +51,7 @@ struct LedgerCommandHandler {
         activePomodoroSessionID: UUID?,
         pomodoroRuns: [PomodoroRun],
         repository: SwiftDataTimeTrackingRepository,
-        context: ModelContext?
+        context: ModelContext
     ) throws {
         guard draft.wasActive || draft.isActive == false else {
             throw TimeTrackingRepositoryError.closedSegmentCannotReopen
@@ -95,7 +91,7 @@ struct LedgerCommandHandler {
         activePomodoroSessionID: UUID? = nil,
         pomodoroRuns: [PomodoroRun] = [],
         repository: SwiftDataTimeTrackingRepository,
-        context: ModelContext? = nil
+        context: ModelContext
     ) throws {
         let mutation = {
             if let activePomodoroSessionID {
@@ -110,11 +106,7 @@ struct LedgerCommandHandler {
             }
             try repository.softDeleteSegment(segmentID: segmentID)
         }
-        if let context {
-            try context.performAtomicMutation(mutation)
-        } else {
-            try mutation()
-        }
+        try context.performAtomicMutation(mutation)
     }
 
     private func rebindActivePomodoro(
@@ -122,7 +114,7 @@ struct LedgerCommandHandler {
         taskID: UUID,
         fallbackStartedAt: Date,
         runs: [PomodoroRun],
-        context: ModelContext?
+        context: ModelContext
     ) throws {
         guard let run = runs.first(where: {
             $0.sessionID == sessionID &&
@@ -132,19 +124,10 @@ struct LedgerCommandHandler {
         }) else {
             return
         }
-        let canonicalStartedAt: Date
-        if let context {
-            let targetSessionID = sessionID
-            let descriptor = FetchDescriptor<TimeSession>(
-                predicate: #Predicate { $0.id == targetSessionID }
-            )
-            canonicalStartedAt = try context.fetch(descriptor)
-                .visibleDeduplicatedByID()
-                .first?
-                .startedAt ?? fallbackStartedAt
-        } else {
-            canonicalStartedAt = fallbackStartedAt
-        }
+        let canonicalStartedAt = try SwiftDataTimeTrackingRepository(context: context)
+            .canonicalSessions(ids: [sessionID])
+            .first?
+            .startedAt ?? fallbackStartedAt
         let mutationDate = nowProvider()
         run.taskID = taskID
         run.startedAt = canonicalStartedAt

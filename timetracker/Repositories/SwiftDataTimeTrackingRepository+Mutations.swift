@@ -18,7 +18,7 @@ extension SwiftDataTimeTrackingRepository {
             throw TimeTrackingRepositoryError.closedSegmentCannotReopen
         }
         let linkedSession = try session(id: segment.sessionID)
-        let liveSessionSegments = try segments(in: segment.sessionID).filter {
+        let liveSessionSegments = try sessionSegments(segment.sessionID).filter {
             $0.deletedAt == nil
         }
         let isRebindingTask = liveSessionSegments.contains { $0.taskID != taskID } ||
@@ -71,7 +71,7 @@ extension SwiftDataTimeTrackingRepository {
         let now = nowProvider()
         let linkedSession = try session(id: segment.sessionID)
         let remaining = try linkedSession.map {
-            try segments(in: $0.id).filter {
+            try sessionSegments($0.id).filter {
                 $0.id != segment.id && $0.deletedAt == nil
             }
         } ?? []
@@ -135,7 +135,10 @@ extension SwiftDataTimeTrackingRepository {
         try canonicalSegments(ids: [id]).first
     }
 
-    private func segments(in sessionID: UUID) throws -> [TimeSegment] {
+    /// Canonical segments of one session. Candidates come from the predicate,
+    /// then every copy of each ID is re-fetched so LWW can pick the winner even
+    /// when only a stale copy matched.
+    func sessionSegments(_ sessionID: UUID) throws -> [TimeSegment] {
         let targetSessionID = sessionID
         let descriptor = FetchDescriptor<TimeSegment>(
             predicate: #Predicate { $0.sessionID == targetSessionID }
@@ -152,11 +155,11 @@ extension SwiftDataTimeTrackingRepository {
     }
 
     private func activeSegments(in sessionID: UUID) throws -> [TimeSegment] {
-        try segments(in: sessionID).filter { $0.endedAt == nil }
+        try sessionSegments(sessionID).filter { $0.endedAt == nil }
     }
 
     private func latestEndedAt(for sessionID: UUID) throws -> Date? {
-        let sessionSegments = try segments(in: sessionID).filter { $0.deletedAt == nil }
+        let sessionSegments = try sessionSegments(sessionID).filter { $0.deletedAt == nil }
         if sessionSegments.contains(where: { $0.endedAt == nil }) {
             return nil
         }

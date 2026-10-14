@@ -16,7 +16,7 @@ struct ChecklistCommandHandler {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedTitle.isEmpty == false else { return nil }
 
-        let nextSortOrder = ((existingItems.map(\.sortOrder).max() ?? 0) + 10)
+        let nextSortOrder = SortOrderPolicy.after(existingItems.map(\.sortOrder).max())
         let item = ChecklistItem(
             taskID: taskID,
             title: trimmedTitle,
@@ -74,7 +74,7 @@ struct ChecklistCommandHandler {
             .map(\.sortOrder)
             .max()
         {
-            item.sortOrder = lastSiblingSortOrder + 10
+            item.sortOrder = SortOrderPolicy.after(lastSiblingSortOrder)
         }
         item.isCompleted = isCompleted
         item.completedAt = isCompleted ? now : nil
@@ -105,7 +105,7 @@ struct ChecklistCommandHandler {
         guard orderedItems.count == items.count else { return }
 
         for (index, item) in orderedItems.enumerated() {
-            item.sortOrder = Double(index + 1) * 10
+            item.sortOrder = SortOrderPolicy.position(index)
             item.updatedAt = now
             item.deviceID = deviceID
             item.clientMutationID = UUID()

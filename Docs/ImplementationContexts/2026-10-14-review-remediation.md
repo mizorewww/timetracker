@@ -26,13 +26,13 @@ Delete this file at closeout.
 - [x] Inbox list stops being rebuilt with `.id(completionPresentationRevision)`.
 
 ### G3 — Abstraction cleanup
-- [ ] `ModelContext?` command parameters become non-optional; dead else-branches removed.
-- [ ] One Pomodoro settle/discard implementation (repository-owned); private `segments(in:)` copies use canonical re-fetch.
+- [x] `ModelContext?` command parameters become non-optional; dead else-branches removed.
+- [x] One Pomodoro settle/discard implementation (repository-owned); private `segments(in:)` copies use canonical re-fetch.
 - [ ] One `markMutated` on synced models; one LWW comparator.
 - [ ] Remove dead snapshot-level lane allocation (`lane`, `labelIndex`, `laneCount`).
-- [ ] Remove `TimerModelContextFactory`, pass-through command handlers, unused `AITaskWorkspaceSnapshot` decoding.
+- [ ] Remove `TimerModelContextFactory` (done), pass-through command handlers (Pomodoro reconcile/cancel done), unused `AITaskWorkspaceSnapshot` decoding.
 - [ ] Coordinators share one mutation environment instead of repeating init/session boilerplate.
-- [ ] Named constants for sort-order step, Pomodoro discard ratio, maximum task depth.
+- [x] Named constants for sort-order step, Pomodoro discard ratio, maximum task depth.
 - [x] Live-clock refresh modifier shared by Analytics and Task detail.
 - [ ] AI plan generator state collapsed into one phase enum.
 - [ ] Startup configuration is an explicit state enum; test-launch arguments centralized.

@@ -44,7 +44,7 @@ struct PomodoroCommandHandler {
         pomodoroRuns: [PomodoroRun],
         timeRepository: SwiftDataTimeTrackingRepository,
         pomodoroRepository: SwiftDataPomodoroRepository,
-        context: ModelContext?
+        context: ModelContext
     ) throws -> PomodoroRun {
         let mutation = { () throws -> PomodoroRun in
             if allowParallelTimers == false {
@@ -67,10 +67,7 @@ struct PomodoroCommandHandler {
                 targetRounds: targetRounds
             )
         }
-        if let context {
-            return try context.performAtomicMutation(mutation)
-        }
-        return try mutation()
+        return try context.performAtomicMutation(mutation)
     }
 
     @discardableResult
@@ -181,19 +178,10 @@ struct PomodoroCommandHandler {
         return try context.performAtomicMutation(mutation)
     }
 
-    @discardableResult
-    func reconcile(run: PomodoroRun, now: Date, repository: SwiftDataPomodoroRepository) throws -> Bool {
-        try repository.reconcileExpiredPhase(runID: run.id, now: now)
-    }
-
-    func cancel(run: PomodoroRun, discardRecord: Bool = false, repository: SwiftDataPomodoroRepository) throws {
-        try repository.cancel(runID: run.id, discardRecord: discardRecord)
-    }
-
     func cancelIfNeeded(
         sessionID: UUID,
         runs: [PomodoroRun],
-        context: ModelContext?,
+        context: ModelContext,
         now: Date? = nil,
         discardShortAttempt: Bool = true
     ) throws {
@@ -212,17 +200,13 @@ struct PomodoroCommandHandler {
                 discardShortAttempt: discardShortAttempt
             )
         }
-        if let context {
-            try context.performAtomicMutation(mutation)
-        } else {
-            try mutation()
-        }
+        try context.performAtomicMutation(mutation)
     }
 
     private func cancelIfNeededMutation(
         _ run: PomodoroRun,
         sessionID: UUID,
-        context: ModelContext?,
+        context: ModelContext,
         effectiveEndDate: Date,
         mutationDate: Date,
         discardShortAttempt: Bool
@@ -267,7 +251,7 @@ struct PomodoroCommandHandler {
     func discardIfNeeded(
         sessionID: UUID,
         runs: [PomodoroRun],
-        context: ModelContext?,
+        context: ModelContext,
         now: Date? = nil
     ) throws {
         guard let run = runs.first(where: {
@@ -288,21 +272,16 @@ struct PomodoroCommandHandler {
                 mutationDate: mutationDate
             )
         }
-        if let context {
-            try context.performAtomicMutation(mutation)
-        } else {
-            try mutation()
-        }
+        try context.performAtomicMutation(mutation)
     }
 
     /// General timer commands can close a Pomodoro session without going
-    /// through `SwiftDataPomodoroRepository`. Preserve the same deadline semantics here
-    /// so a stop from a widget, Watch, deep link, or ledger edit cannot record
-    /// suspension time as focus time or incorrectly cancel a completed round.
+    /// through `SwiftDataPomodoroRepository`; settle an expired focus phase at
+    /// its deadline exactly as that repository does.
     private func settleExpiredFocusIfNeeded(
         _ run: PomodoroRun,
         sessionID: UUID,
-        context: ModelContext?,
+        context: ModelContext,
         observedAt: Date,
         mutationDate: Date
     ) throws -> Bool {
@@ -312,35 +291,9 @@ struct PomodoroCommandHandler {
         else {
             return false
         }
-
-        let sessionSegments = try context.map { try segments(in: sessionID, context: $0) } ?? []
-        let phaseEndDate = max(
-            deadline,
-            sessionSegments
-                .filter { $0.deletedAt == nil }
-                .map(\.startedAt)
-                .max() ?? deadline
-        )
-        for segment in sessionSegments where segment.deletedAt == nil {
-            if segment.endedAt.map({ $0 > phaseEndDate }) ?? true {
-                segment.endedAt = max(segment.startedAt, phaseEndDate)
-                segment.updatedAt = mutationDate
-                segment.deviceID = deviceID
-            }
-        }
-
-        if let context,
-           let session = try session(id: sessionID, context: context),
-           session.deletedAt == nil
-        {
-            let latestEnd = sessionSegments
-                .filter { $0.deletedAt == nil }
-                .compactMap(\.endedAt)
-                .max() ?? phaseEndDate
-            session.endedAt = max(session.startedAt, latestEnd)
-            session.markMutated(at: mutationDate, deviceID: deviceID)
-        }
-
+        let ledger = ledgerRepository(context)
+        let phaseEndDate = try ledger.pomodoroPhaseEndDate(sessionID: sessionID, deadline: deadline)
+        try ledger.endPomodoroSession(sessionID, at: phaseEndDate, mutationDate: mutationDate)
         run.completeFocusPhase(
             endedAt: phaseEndDate,
             mutationDate: mutationDate,
@@ -352,31 +305,17 @@ struct PomodoroCommandHandler {
     private func shouldDiscardCancelledRun(
         _ run: PomodoroRun,
         sessionID: UUID,
-        context: ModelContext?,
+        context: ModelContext,
         now: Date
     ) throws -> Bool {
-        guard context != nil else { return false }
-        let effectiveSeconds = try pomodoroEffectiveSeconds(sessionID: sessionID, context: context, now: now)
-        return effectiveSeconds < Int(Double(max(1, run.focusSecondsPlanned)) * 0.2)
-    }
-
-    private func pomodoroEffectiveSeconds(sessionID: UUID, context: ModelContext?, now: Date) throws -> Int {
-        guard let context else { return 0 }
-        let segments = try segments(in: sessionID, context: context)
-        return segments.reduce(0) { total, segment in
-            guard segment.deletedAt == nil else { return total }
-            return total + TrackedTimePolicy.elapsedSeconds(
-                startedAt: segment.startedAt,
-                endedAt: segment.endedAt,
-                now: now
-            )
-        }
+        let trackedSeconds = try ledgerRepository(context).pomodoroSessionTrackedSeconds(sessionID, now: now)
+        return trackedSeconds < PomodoroRun.minimumKeptSeconds(focusSecondsPlanned: run.focusSecondsPlanned)
     }
 
     private func discardRunAndSession(
         _ run: PomodoroRun,
         sessionID: UUID,
-        context: ModelContext?,
+        context: ModelContext,
         effectiveEndDate: Date,
         mutationDate: Date
     ) throws {
@@ -384,38 +323,14 @@ struct PomodoroCommandHandler {
         run.endedAt = run.startedAt.map { max(effectiveEndDate, $0) } ?? effectiveEndDate
         run.deletedAt = mutationDate
         run.markMutated(at: mutationDate, deviceID: deviceID)
-
-        guard let context else { return }
-        let sessionSegments = try segments(in: sessionID, context: context)
-        for segment in sessionSegments {
-            segment.endedAt = max(segment.startedAt, segment.endedAt ?? effectiveEndDate)
-            segment.deletedAt = mutationDate
-            segment.updatedAt = mutationDate
-            segment.deviceID = deviceID
-        }
-        if let session = try session(id: sessionID, context: context) {
-            let latestSegmentEnd = sessionSegments.compactMap(\.endedAt).max() ?? effectiveEndDate
-            session.endedAt = max(session.startedAt, session.endedAt ?? latestSegmentEnd)
-            session.deletedAt = mutationDate
-            session.markMutated(at: mutationDate, deviceID: deviceID)
-        }
+        try ledgerRepository(context).discardPomodoroSession(
+            sessionID,
+            endedAt: effectiveEndDate,
+            mutationDate: mutationDate
+        )
     }
 
-    private func segments(in sessionID: UUID, context: ModelContext) throws -> [TimeSegment] {
-        let targetSessionID = sessionID
-        let descriptor = FetchDescriptor<TimeSegment>(
-            predicate: #Predicate { $0.sessionID == targetSessionID },
-            sortBy: [SortDescriptor(\.startedAt)]
-        )
-        return try context.fetch(descriptor)
-            .visibleDeduplicatedByID()
-    }
-
-    private func session(id: UUID, context: ModelContext) throws -> TimeSession? {
-        let sessionID = id
-        let descriptor = FetchDescriptor<TimeSession>(
-            predicate: #Predicate { $0.id == sessionID }
-        )
-        return try context.fetch(descriptor).visibleDeduplicatedByID().first
+    private func ledgerRepository(_ context: ModelContext) -> SwiftDataTimeTrackingRepository {
+        SwiftDataTimeTrackingRepository(context: context, deviceID: deviceID, nowProvider: nowProvider)
     }
 }

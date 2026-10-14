@@ -233,7 +233,7 @@ extension SeedData {
                 taskID: taskID,
                 title: title,
                 isCompleted: isCompleted,
-                sortOrder: Double(index + 1) * 10,
+                sortOrder: SortOrderPolicy.position(index),
                 deviceID: "demo"
             )
             if item.isCompleted {

@@ -1,17 +1,5 @@
 import SwiftData
 
-nonisolated struct TimerModelContextFactory {
-    private let makeContext: () throws -> ModelContext
-
-    init(container: ModelContainer) {
-        makeContext = { ModelContext(container) }
-    }
-
-    func makeFreshContext() throws -> ModelContext {
-        try makeContext()
-    }
-}
-
 /// Shared transaction boundary for coordinated store reads and writes. The
 /// fresh context is created only after the store lock is held, so it cannot
 /// carry a stale snapshot into the critical section.
@@ -20,7 +8,7 @@ nonisolated struct TimerModelContextFactory {
 /// ledger record editing/deletion, and sync snapshot work use this lock domain.
 nonisolated struct StoreScopedTimerMutationTransaction {
     let scope: TimerStoreScope
-    let contextFactory: TimerModelContextFactory
+    let container: ModelContainer
     let mutationLock: StoreScopedTimerMutationLock
 
     init(
@@ -29,7 +17,7 @@ nonisolated struct StoreScopedTimerMutationTransaction {
         mutationLock: StoreScopedTimerMutationLock = .init()
     ) {
         self.scope = scope
-        contextFactory = TimerModelContextFactory(container: container)
+        self.container = container
         self.mutationLock = mutationLock
     }
 
@@ -51,7 +39,7 @@ nonisolated struct StoreScopedTimerMutationTransaction {
         _ operation: (ModelContext) throws -> Result
     ) throws -> Result {
         try mutationLock.withExclusiveAccess(for: scope) {
-            let context = try contextFactory.makeFreshContext()
+            let context = ModelContext(container)
             context.autosaveEnabled = false
             return try operation(context)
         }

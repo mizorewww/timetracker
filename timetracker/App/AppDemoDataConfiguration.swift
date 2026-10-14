@@ -37,12 +37,6 @@ enum AppDemoDataConfiguration {
         ) {
             return commandLineMode
         }
-        if CommandLine.arguments.contains("--cloud-smoke-test"),
-           CommandLine.arguments.contains("queueDownloadFromDemo"),
-           AppDefaults.shared.string(forKey: overrideKey) == nil
-        {
-            return .seedIfEmpty
-        }
         if let override = AppDefaults.shared.string(forKey: overrideKey),
            let mode = AutomaticDemoDataMode(rawValue: override)
         {

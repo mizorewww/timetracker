@@ -15,12 +15,8 @@ struct AITaskPlanGeneratorSheet: View {
     @State private var requestText = ""
     @State private var reviewDraft: AITaskWorkspaceReviewDraft?
     @State private var disclosedCounts: AITaskWorkspaceCounts?
-    @State private var generationTask: Task<Void, Never>?
-    @State private var applyTask: Task<Void, Never>?
-    @State private var generationRequestID = UUID()
+    @State private var activity = Activity.idle
     @State private var generationProgress: LLMGenerationProgress?
-    @State private var isGenerating = false
-    @State private var isApplying = false
     @State private var errorMessage: String?
     @State private var pendingDiscardAction: PendingDiscardAction?
     @State private var isDiscardConfirmationPresented = false
@@ -145,8 +141,7 @@ struct AITaskPlanGeneratorSheet: View {
             await refreshDisclosureCounts()
         }
         .onDisappear {
-            generationTask?.cancel()
-            applyTask?.cancel()
+            activity.task?.cancel()
         }
         .accessibilityIdentifier("aiTaskPlan.sheet")
     }
@@ -327,21 +322,18 @@ struct AITaskPlanGeneratorSheet: View {
     }
 
     private func generate() {
-        generationTask?.cancel()
+        activity.task?.cancel()
         let request = requestText
         let requestID = UUID()
-        generationRequestID = requestID
         errorMessage = nil
         generationProgress = nil
-        isGenerating = true
 
-        generationTask = Task { @MainActor in
+        let task = Task { @MainActor in
             let progressClock = ContinuousClock()
             var firstProgressInstant: ContinuousClock.Instant?
             defer {
-                if generationRequestID == requestID {
-                    isGenerating = false
-                    generationTask = nil
+                if activity.generationID == requestID {
+                    activity = .idle
                 }
             }
             do {
@@ -358,7 +350,7 @@ struct AITaskPlanGeneratorSheet: View {
                         configuration:
                         store.preferences.llmRequestConfiguration,
                         onProgress: { progress in
-                            guard generationRequestID == requestID,
+                            guard activity.generationID == requestID,
                                   Task.isCancelled == false
                             else {
                                 return
@@ -370,7 +362,7 @@ struct AITaskPlanGeneratorSheet: View {
                         }
                     )
                 guard Task.isCancelled == false,
-                      generationRequestID == requestID
+                      activity.generationID == requestID
                 else {
                     return
                 }
@@ -398,21 +390,20 @@ struct AITaskPlanGeneratorSheet: View {
                 // Stop is a normal user action and preserves the request.
             } catch {
                 guard Task.isCancelled == false,
-                      generationRequestID == requestID
+                      activity.generationID == requestID
                 else {
                     return
                 }
                 errorMessage = error.localizedDescription
             }
         }
+        activity = .generating(id: requestID, task: task)
     }
 
     private func stopGenerating() {
-        generationRequestID = UUID()
-        generationTask?.cancel()
-        generationTask = nil
+        activity.task?.cancel()
+        activity = .idle
         generationProgress = nil
-        isGenerating = false
     }
 
     private func requestApply(_ draft: AITaskWorkspaceReviewDraft) {
@@ -426,11 +417,9 @@ struct AITaskPlanGeneratorSheet: View {
 
     private func apply(_ draft: AITaskWorkspaceReviewDraft) {
         guard isApplying == false else { return }
-        isApplying = true
         errorMessage = nil
-        applyTask = Task { @MainActor in
+        let task = Task { @MainActor in
             let result = await onApply(draft)
-            applyTask = nil
             guard Task.isCancelled == false else { return }
             switch result {
             case .applied:
@@ -438,9 +427,10 @@ struct AITaskPlanGeneratorSheet: View {
             case let .workspaceChanged(message),
                  let .failed(message):
                 errorMessage = message
-                isApplying = false
+                activity = .idle
             }
         }
+        activity = .applying(task)
     }
 
     private func requestDismiss() {
@@ -463,7 +453,7 @@ struct AITaskPlanGeneratorSheet: View {
         isDiscardConfirmationPresented = false
         switch action {
         case .dismissSheet:
-            generationTask?.cancel()
+            activity.task?.cancel()
             dismiss()
         case .returnToRequest:
             errorMessage = nil
@@ -474,6 +464,43 @@ struct AITaskPlanGeneratorSheet: View {
             }
         case nil:
             break
+        }
+    }
+}
+
+extension AITaskPlanGeneratorSheet {
+    /// At most one model request or apply runs at a time; the generation ID
+    /// lets a superseded request ignore its own late results.
+    enum Activity {
+        case idle
+        case generating(id: UUID, task: Task<Void, Never>)
+        case applying(Task<Void, Never>)
+
+        var task: Task<Void, Never>? {
+            switch self {
+            case .idle: nil
+            case let .generating(_, task), let .applying(task): task
+            }
+        }
+
+        var generationID: UUID? {
+            if case let .generating(id, _) = self {
+                id
+            } else {
+                nil
+            }
+        }
+    }
+
+    var isGenerating: Bool {
+        activity.generationID != nil
+    }
+
+    var isApplying: Bool {
+        if case .applying = activity {
+            true
+        } else {
+            false
         }
     }
 }

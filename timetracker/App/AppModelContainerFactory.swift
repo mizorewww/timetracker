@@ -5,7 +5,7 @@ extension timetrackerApp {
     static func makeModelContainer() -> ModelContainer {
         let schema = Self.schema
         #if DEBUG
-        if CommandLine.arguments.contains("--uitesting") {
+        if AppRuntimeEnvironment.isUITesting {
             do {
                 return try makeUITestModelContainer()
             } catch {
@@ -13,7 +13,7 @@ extension timetrackerApp {
             }
         }
         #endif
-        if isUnitTestHost() {
+        if AppRuntimeEnvironment.isUnitTestHost() {
             do {
                 return try makeUnitTestHostModelContainer()
             } catch {

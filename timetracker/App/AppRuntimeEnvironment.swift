@@ -23,6 +23,12 @@ nonisolated enum AppRuntimeEnvironment {
     /// Launch argument passed by every XCUITest target.
     static let uiTestingArgument = "--uitesting"
 
+    /// UI-test run of the app (XCUITest passes `uiTestingArgument`).
+    static let isUITesting = CommandLine.arguments.contains(uiTestingArgument)
+
+    /// Seeds a long-running timer so Live Activity UI tests have content.
+    static let uiTestingLongTimerArgument = "--uitesting-live-activity-long-timer"
+
     /// True when this process is an XCTest host or a UI-test run of the app.
     static let isTestHost: Bool = isTestHost(
         environment: ProcessInfo.processInfo.environment,

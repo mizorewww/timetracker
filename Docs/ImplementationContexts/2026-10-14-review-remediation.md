@@ -30,13 +30,13 @@ Delete this file at closeout.
 - [x] One Pomodoro settle/discard implementation (repository-owned); private `segments(in:)` copies use canonical re-fetch.
 - [x] One `markMutated` on synced models; one LWW comparator.
 - [x] Remove dead snapshot-level lane allocation (`lane`, `labelIndex`, `laneCount`).
-- [ ] Remove `TimerModelContextFactory` (done), pass-through command handlers (Pomodoro reconcile/cancel done), unused `AITaskWorkspaceSnapshot` decoding.
-- [ ] Coordinators share one mutation environment instead of repeating init/session boilerplate.
+- [x] Remove `TimerModelContextFactory` (done), pass-through command handlers (Pomodoro reconcile/cancel done), unused `AITaskWorkspaceSnapshot` decoding.
+- [x] Coordinators share one mutation environment instead of repeating init/session boilerplate.
 - [x] Named constants for sort-order step, Pomodoro discard ratio, maximum task depth.
 - [x] Live-clock refresh modifier shared by Analytics and Task detail.
-- [ ] AI plan generator state collapsed into one phase enum.
-- [ ] Startup configuration is an explicit state enum; test-launch arguments centralized.
-- [ ] Container factory fallback chain de-duplicated.
+- [x] AI plan generator state collapsed into one phase enum.
+- [x] Startup configuration is an explicit state enum; test-launch arguments centralized.
+- [ ] Container factory fallback chain de-duplicated (moved into G5 with the recovery rewrite).
 
 ### G4 — Performance on every-write paths
 - [ ] Ledger relationship visibility maintained incrementally (no full task fetch + full segment filter per refresh).

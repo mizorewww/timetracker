@@ -3,7 +3,7 @@ import SwiftData
 
 extension TimeTrackerStore {
     static func defaultSyncConflictService() -> SyncConflictService {
-        guard CommandLine.arguments.contains("--uitesting") else {
+        guard AppRuntimeEnvironment.isUITesting else {
             return SyncConflictService()
         }
         let stateURL = FileManager.default.temporaryDirectory
@@ -13,17 +13,21 @@ extension TimeTrackerStore {
     }
 
     func configureIfNeeded(context: ModelContext) {
-        guard hasCompletedStartupConfiguration == false else { return }
-        guard isConfiguringStartup == false else {
-            shouldRetryStartupConfiguration = true
+        switch startupConfigurationPhase {
+        case .completed:
             return
+        case .configuring:
+            startupConfigurationPhase = .configuring(retryRequested: true)
+            return
+        case .pending:
+            startupConfigurationPhase = .configuring(retryRequested: false)
         }
-        isConfiguringStartup = true
         defer {
-            isConfiguringStartup = false
-            if shouldRetryStartupConfiguration {
-                shouldRetryStartupConfiguration = false
-                configureIfNeeded(context: context)
+            if case let .configuring(retryRequested) = startupConfigurationPhase {
+                startupConfigurationPhase = .pending
+                if retryRequested {
+                    configureIfNeeded(context: context)
+                }
             }
         }
         if writeAuthorization.usesApplicationState {
@@ -126,7 +130,7 @@ extension TimeTrackerStore {
         if let firstError = startupErrors.first {
             errorMessage = firstError.localizedDescription
         }
-        hasCompletedStartupConfiguration = true
+        startupConfigurationPhase = .completed
         persistenceWriteSafety = writeAuthorization.usesApplicationState
             ? AppCloudSync.persistenceWriteSafety
             : .ready
@@ -140,7 +144,7 @@ extension TimeTrackerStore {
             forcedSystemSinks: [.watch]
         )
         if writeAuthorization.usesApplicationState,
-           timetrackerApp.isUnitTestHost() == false
+           AppRuntimeEnvironment.isUnitTestHost() == false
         {
             Task {
                 await refreshCloudAccountStatus()

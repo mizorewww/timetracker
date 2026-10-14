@@ -150,7 +150,7 @@ extension SeedData {
             note: "Current focus"
         )
         let liveActivityStart = CommandLine.arguments.contains(
-            "--uitesting-live-activity-long-timer"
+            AppRuntimeEnvironment.uiTestingLongTimerArgument
         )
             ? now.addingTimeInterval(-16 * 60 * 60)
             : now.addingTimeInterval(-32 * 60)

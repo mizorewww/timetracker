@@ -25,7 +25,7 @@
 ## 架构与设计边界
 
 - **薄封装**:Intent 只做参数解析与结果包装,所有写入经 `SystemActionCommandHandler` → `StoreScoped*CommandCoordinator` → 与应用内操作完全相同的准入、事务与同步路径;验证落在 store-scoped 命令的可观察原子结果上。
-- **跨进程锁**:快捷指令在独立进程运行,与应用、Widget 共享 `.timer-mutations.lock` 文件锁域(`PathFileLock`),锁获取有 5 秒超时,竞争时干净报错而非卡死。
+- **跨进程锁**:快捷指令在独立进程运行,与应用、Widget 共享 `.store-mutations.lock` 文件锁域(`PathFileLock`),锁获取有 5 秒超时,竞争时干净报错而非卡死。
 - **提交后效果**:每个变更 Intent 在提交后统一执行 `SystemActionPostCommitEffects`(enqueue 精确事件、后台投影追赶),与手表命令同一条路径,不等待投影完成。
 - **`Stop Timer` 只停一段**:多计时并行时必须显式指定目标,避免误停。
 - **`Stop All Timers` 逐段提交**:每段计时是独立已提交事务,部分成功不会让 store 处于中间态。

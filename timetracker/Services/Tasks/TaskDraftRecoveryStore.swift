@@ -185,7 +185,7 @@ nonisolated struct TaskDraftRecoveryStore: @unchecked Sendable {
             )
         }
 
-        if commandLineArguments.contains("--uitesting") {
+        if commandLineArguments.contains(AppRuntimeEnvironment.uiTestingArgument) {
             let root = fileManager.temporaryDirectory.standardizedFileURL
             return Locations(
                 directory: root.appendingPathComponent(

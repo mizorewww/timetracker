@@ -7,13 +7,13 @@ import Testing
 struct TestHostIsolationTests {
     @Test
     func unitTestHostDetectionRecognizesXCTestEnvironment() {
-        #expect(timetrackerApp.isUnitTestHost(environment: [
+        #expect(AppRuntimeEnvironment.isUnitTestHost(environment: [
             "XCTestConfigurationFilePath": "/tmp/timetracker.xctestconfiguration",
         ]))
-        #expect(timetrackerApp.isUnitTestHost(environment: [
+        #expect(AppRuntimeEnvironment.isUnitTestHost(environment: [
             "XCTestBundlePath": "/tmp/timetrackerTests.xctest",
         ]))
-        #expect(timetrackerApp.isUnitTestHost(environment: [:]) == false)
+        #expect(AppRuntimeEnvironment.isUnitTestHost(environment: [:]) == false)
     }
 
     @Test

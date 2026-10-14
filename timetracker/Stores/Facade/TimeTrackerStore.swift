@@ -210,10 +210,24 @@ final class TimeTrackerStore {
     var isSyncConflictPromptRefreshRequested = false
     @ObservationIgnored
     var syncConflictPromptRefreshTask: Task<Void, Never>?
-    @ObservationIgnored var hasCompletedStartupConfiguration = false
+    /// `configureIfNeeded` can be re-entered by a refresh it triggers; a
+    /// re-entrant call only requests one more pass after the current one.
+    enum StartupConfigurationPhase {
+        case pending
+        case configuring(retryRequested: Bool)
+        case completed
+    }
+
+    @ObservationIgnored var startupConfigurationPhase = StartupConfigurationPhase.pending
     @ObservationIgnored var hasBootstrappedSyncConflictState = false
-    @ObservationIgnored var isConfiguringStartup = false
-    @ObservationIgnored var shouldRetryStartupConfiguration = false
+
+    var hasCompletedStartupConfiguration: Bool {
+        if case .completed = startupConfigurationPhase {
+            true
+        } else {
+            false
+        }
+    }
 
     enum DesktopDestination: String, CaseIterable, Identifiable {
         case today = "Today"

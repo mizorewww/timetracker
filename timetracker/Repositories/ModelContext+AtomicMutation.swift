@@ -2,7 +2,6 @@ import SwiftData
 
 nonisolated enum TimeTrackerHistoryAuthor: String, Sendable {
     case localMutation = "me.mezorewww.timetracker.local-mutation.v1"
-    case syncReconciliation = "me.mezorewww.timetracker.sync-reconciliation.v1"
     case bootstrapMaintenance = "me.mezorewww.timetracker.bootstrap-maintenance.v1"
 }
 

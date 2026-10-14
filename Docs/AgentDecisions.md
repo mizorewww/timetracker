@@ -1,7 +1,7 @@
 # TimeTracker Agent 决策文档
 
 状态：有效决策记录
-最近更新：2026-10-08
+最近更新：2026-10-14
 
 本文件只收录跨领域架构、数据安全、兼容性或系统集成的**长期不变量**；每条给出一条规则和一条边界。单一功能内的 UI/展示细节写入对应功能文档或由行为测试表达；一次性验证证据写入交付该工作的 commit/PR；历史与已替代决策由 git 历史承载。
 
@@ -19,11 +19,11 @@
 
 **AD-003：本地优先 CloudKit，禁止静默伪装持久化成功；演示数据显式启用并与用户 store 隔离（合并原 AD-022）。**
 - 规则：正常模式使用持久容器并可启用 CloudKit；fallback 必须显式记录和显示诊断状态，紧急内存存储不能被称为已保存。
-- 边界：iCloud enablement 是设备本地 `UserDefaults` 启动配置，修改后下次启动生效，不进入 `SyncedPreference`、冲突快照或导出。`TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE` 在 Debug/Release 默认均为 `off`；demo 使用无 CloudKit 的独立 store，UI test 使用独立内存 container。
+- 边界：iCloud enablement 是设备本地 `UserDefaults` 启动配置，修改后下次启动生效，不进入 `SyncedPreference` 或导出。`TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE` 在 Debug/Release 默认均为 `off`；demo 使用无 CloudKit 的独立 store，UI test 使用独立内存 container。
 
 **AD-004：系统表面共享领域命令、稳定 DTO 与有界快照。**
 - 规则：App Intents、Live Activity、Widget 和 Watch 只做投影或入口；复用模型容器、用户偏好与原子 mutation，提交后只用窄依赖刷新，投影失败不得把已提交动作报告为失败。Live Activity/Widget 不保存唯一事实。
-- 边界：Widget/Watch producer 按 Unicode 边界裁剪文本并共用 128 KiB 文本预算，不回写 canonical facts；Widget 快照 JSON 256 KiB、active/recent 各 64 项，Watch state 最多 64 active/256 recent，Watch 命令队列各 64 项、编码 512 KiB，非法读取是 corrupted 而非 empty。Widget 真机共享容器与 timeline 验证通过前不列为已完成发行能力；数值上限的准确清单见 [Architecture](Architecture.md) 与 `WidgetSnapshotLimits`/`WatchTransportLimits`。
+- 边界：Widget/Watch producer 按 Unicode 边界裁剪文本并共用文本预算，不回写 canonical facts；快照与命令都有数量和字节上限，非法读取是 corrupted 而非 empty。具体数值只在 `WidgetSnapshotLimits`/`WatchTransportLimits`。Watch 命令是即时控制（直接消息 + reply，超时可重试），不做持久投递。
 
 **AD-005：API 密钥与秘密只保存在本机 Keychain，导出不是备份（合并原 AD-006）。**
 - 规则：API key 存入 `LLMCredentialStore`，AfterFirstUnlockThisDeviceOnly 且关闭 Keychain 同步；同步与 JSON 导出过滤敏感键，遗留明文只用于一次迁移后清除或软删除。“清空全部数据”同时清除本机密钥与设备本地自动建议同意，清理失败时尽力补偿恢复并报告。
@@ -53,7 +53,7 @@
 
 **AD-021：parentID 是层级权威，path 是稳定 locator。**
 - 规则：`TaskNode.parentID` 是层级事实，`depth` 是可重建索引，`path` 固定为 `/<task UUID>`；显示路径由 `TaskTreeService` 按标题即时迭代生成并限制最近六级。
-- 边界：启动、任务域刷新和 sync restore 运行确定性 orphan/cycle 修复；移动任务只写真正变化的节点，不得把 `path` 直接显示给用户。
+- 边界：启动与任务域刷新运行确定性 orphan/cycle 修复；移动任务只写真正变化的节点，不得把 `path` 直接显示给用户。
 
 **AD-054：任务树 projection 由 mutation-owned read index 与有界缓存发布。**
 - 规则：`TaskTreeReadIndex` 保存 canonical 顺序、可见 child ID buckets、section/root IDs、child count 与搜索值；只有语义变化才推进 `taskTreeReadIndexRevision`。`TaskTreeProjectionCache` 以 revision 失效，展开与搜索各保留容量四的 LRU，只保存 ID/value model。
@@ -80,8 +80,8 @@
 - 边界：`PreferenceCommandHandler` 在任何 fetch/insert/update 前准备完整批次，再用 `performAtomicMutation` 一次提交；legacy 无法 checked-encode 的值跳过，不得保存为 `null`。
 
 **AD-036：分批导入的不完整账本采用读模型隔离。**
-- 规则：原始 SwiftData 行保留，显式 snapshot preflight 允许“当前 payload 缺少关联记录”的 staged import；facade 每次 task/ledger 一致性刷新建立 relationship visibility，只有 task 存在、session 存在且 `session.taskID == segment.taskID` 的 segment 才进入可观察数组、indexed query、Pomodoro elapsed 和系统投影。
-- 边界：父记录后续到达时由完整刷新自动解除隔离，不得用数据库清理或 snapshot 拒绝代替隔离，也不得只在某个图表临时过滤。
+- 规则：CloudKit 可能先导入 segment/session、后导入其 task；原始 SwiftData 行保留，facade 每次 task/ledger 刷新建立 relationship visibility，只有 task 存在、session 存在且 `session.taskID == segment.taskID` 的 segment 才进入可观察数组、indexed query、Pomodoro elapsed 和系统投影。
+- 边界：父记录后续到达时由刷新自动解除隔离，不得用数据库清理代替隔离，也不得只在某个图表临时过滤。
 
 **AD-128：一分钟内的普通计时重启续接为一个 canonical 时间片。**
 - 规则：只把普通 stopwatch 来源族（app/shortcut/watch/widget/liveActivity）在同一 canonical task 上 `0 <= gap < 60s`、gap 内无其它可见工作、上一条 session 可见且无可见 Pomodoro 引用时续接：保留原 singleton session、tombstone 旧 closed segment、新建不同 UUID 的 active segment 并把 start 前移。
@@ -109,15 +109,11 @@
 
 **AD-035：设备身份是随机不透明 ID，不是设备指纹。**
 - 规则：只复用当前平台 `mac|ios|watch` 前缀加大写连字符规范 UUID，完整值最多 42 UTF-8 bytes 且不得含控制字符；其余值随机重建并回写。
-- 边界：不得加入主机名、账户名、序列号或硬件标识；Watch 命令去重使用随机 command UUID，而不是设备身份。
+- 边界：不得加入主机名、账户名、序列号或硬件标识；Watch 命令用随机 command UUID 关联回复，start/stop 在 iPhone 侧天然幂等，不另存回执。
 
 **AD-031：系统输入路由必须有界并服从 scene 生命周期。**
 - 规则：deep link 在立即执行或排队前都经过同一个 `AppDeepLinkRouter` 白名单验证（scheme、最长 2,048 bytes、禁止 credential/port/fragment、UUID 语法）；每个 scene 使用容量 16 的按语义去重 `PendingDeepLinkQueue`，scene 消失时清空。
 - 边界：`WatchCommandRouter` 单独拥有进程级 bridge handler，以弱引用注册 scene store 并优先最近 active scene；新的进程级系统 callback 不得由 scene view 强持有业务 store。
-
-**AD-060：恢复关键本机文件共享耐久提交与有界隔离 primitive。**
-- 规则：恢复关键的小型本机文件使用 `DurableLocalFile`/`PathFileLock`，调用方为每个状态家族选择唯一、稳定、已存在的 durable root；写入先完整落盘并同步，再原子 rename；损坏文件统一进入有界 `.TimeTrackerQuarantine`。
-- 边界：调用方负责版本、大小与语义验证；同一 canonical 文件不得混用不同 durable root。该 primitive 不是 JSON validator、ACID 多文件事务或敌对进程防护，也不用于高频 ledger 写入。
 
 ## 同步与并发
 
@@ -129,13 +125,13 @@
 - 规则：`StoreScope` 为每个 store 提供稳定 identity，`StoreMutationLock` 从 scope 派生同目录 `.store-mutations.lock`（复用 `PathFileLockRegistry`/`PathProcessFileLock`），`StoreMutationTransaction` 的固定顺序是“取得 store lock → 创建 fresh `ModelContext` → 关闭 autosave → 一次 `performAtomicMutation`”，离开作用域释放锁。
 - 边界：锁内只做授权、fresh fetch、plan、model mutation 和 commit，网络/UI 等待/post-commit refresh 留在锁外。timer、Pomodoro、手工时间、segment 编辑、task lifecycle/draft、category、checklist、recurrence、countdown、同步偏好、Inbox primary/suggestion、AI workspace apply 与设备本地 LLM Keychain 更新已共用此域（合并原 AD-082、AD-084、AD-098、AD-099、AD-108、AD-114、AD-115）；新增写入口不得退回 scene-owned `ModelContext`。
 
-**AD-023：同步状态使用跨进程锁、有界 slot manifest 与 fail-closed 读（合并原 AD-073、AD-074、AD-104、AD-110、AD-111）。**
-- 规则：每次 `SyncConflictState.json` read-modify-write 在递归进程锁 + POSIX `lockf` 内完成，形成跨进程 compare-and-swap；磁盘权威是 V1 小型 manifest（标量 + 至多八个 A/B slot 引用，带 byte count 与 SHA-256），slot 先经 `DurableLocalFile` 写入并同步，manifest 才是提交点。权威 state 限 128 MiB、mirror/slot 限 64 MiB，读取先做 metadata 预检再用 `FileHandle` 最多读 `limit+1`；损坏或超限进入显式隔离恢复。
-- 边界：`prompt()` 是 throwing read boundary，只有合法 state 中确实没有完整 pending conflict 才返回 `nil`。`pendingConflictID` 同时是用户确认的版本 token：resolution-relevant snapshot 变化时在锁内旋转，`resolveSyncConflict(expectedConflictID:)` 在同一锁内先精确比较，不匹配返回 `conflictChanged` 且零副作用。UI 侧只有 Settings 的恢复区展示两侧摘要与两个明确方向，根场景只显示可忽略的非阻断提示。
+**AD-143：CloudKit 镜像是唯一的同步机制（取代原 AD-023、AD-060 及 AD-142 的恢复部分）。**
+- 规则：`NSPersistentCloudKitContainer` 负责记录级同步与合并，读侧以 AD-014 的确定性 LWW 解决重复；应用不保存整库快照、不检测分叉、不自动合并，也不提供“替换云端/替换本机”。iCloud 开关是设备本地设置，下次启动生效；开启时同一 store 文件由 CloudKit 导出已有记录。
+- 边界：容器打开顺序为 demo → CloudKit → 同一文件不带 CloudKit（记录 local fallback）→ 内存 emergency（阻止写入）；任何失败都不得删除磁盘 store。JSON 导出是 `UserDataSnapshot` 只读快照，不可导入。
 
-**AD-142：恢复门控与提交后投影按显式来源重放（合并原 AD-076、AD-081、AD-094、AD-103、AD-109、AD-137）。**
-- 规则：恢复意图区分 `reconcileWithCloud` 与 `explicitlyReplaceCloud`：自动 fallback 只做比较（保护本机分支、建立 fresh cache、等完整 setup+import 屏障后比较），只有用户明确选择本机赢家才执行 explicit replacement。typed `CloudRecoveryGate.completed/deferred/failed` 与 `CompletedCloudRecovery` token 阻止失败或无法证明安全的恢复进入云容器；`performPendingCloudRecoveryResetAfterProtectingLocalFallback` 用一个外层 store lock 连续覆盖重开 local store、fresh 全域 capture、state/mirror 落盘、destructive reset。
-- 边界：`CommittedMutationSystemProjectionRequest` 必须携带 `.localCommit`/`.startupCatchUp`/`.surfaceCatchUp`；只有前两者记录 sync recovery snapshot，启动固定发送 `.startupCatchUp + .fullSync`，durable mutation/Intent/Watch 终态都不等待投影 I/O，单 sink 失败只在下一次相关 generation 重试。普通本地提交经进程内 broadcaster 让其它 open scene 只刷新 read models（不记录 snapshot、不重复副作用）。
+**AD-142：提交后投影不阻塞提交，按 sink 独立重试（合并原 AD-076、AD-081、AD-094、AD-103、AD-109、AD-137）。**
+- 规则：每个提交（scene、Intent、Watch）把精确 `StoreDomainEvent` 集合交给 `CommittedMutationSystemProjectionScheduler`；Widget/Watch/Live Activity 从 fresh context 物化当前事实，提交方不等待投影 I/O。
+- 边界：单 sink 失败只在下一次相关 generation 重试；普通本地提交经进程内 broadcaster 让其它 open scene 只刷新 read models，不重复副作用。
 
 **AD-100：系统表面的陈旧投影冻结时间而非伪造实时状态（合并原 AD-051、AD-105、AD-118）。**
 - 规则：Widget/Watch 只在快照 current 时用 system timer text；`.stale`/`.clockAdjusted`/Watch stale 时秒数固定为 `generatedAt - startedAt` 并显示 stale/clock-adjusted 状态。Live Activity 是可点开、不可就地修改账本的只读投影：锁屏与 expanded Dynamic Island 共用 extension 内唯一的 `LiveActivityTimerRow`，锁屏对齐 Today/Now 层级，expanded 普通字号只显示图标/标题/elapsed；点按只深链到 Today。

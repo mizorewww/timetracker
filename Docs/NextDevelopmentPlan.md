@@ -13,7 +13,7 @@ Time Tracker should be a reliable local-first time ledger for everyday work and 
 Code-side integrations and provisioning are in place; these still need signed runtime/hardware verification outside a source-only review:
 
 - App Group-backed Widget snapshot sharing on a real device (profiles now include `group.me.mezorewww.timetracker`).
-- Watch durable command queue, typed terminal result, offline recovery, retry/discard, Always On and power behavior on a paired Watch/iPhone.
+- Watch command reply, timeout/retry/discard, Always On and power behavior on a paired Watch/iPhone.
 - Live Activity permission, Dynamic Island, stale/end, concurrent activities, and low-power behavior.
 - CloudKit concurrent edits with an offline old device and mixed app/schema versions.
 
@@ -25,4 +25,4 @@ Team collaboration; billing/invoicing; full calendar two-way sync; black-box Cor
 
 ## Release Gates
 
-Release criteria are owned by [Testing](Testing.md) and [AGENTS.md](../AGENTS.md). Before shipping a minor version: `make test` green on the frozen tree with xcresult evidence and no owned simulator/process residuals; generic iOS and macOS Release builds pass with automatic signing and expected entitlements; a normal-text-size manual smoke test passes on iPhone, iPad, and macOS (Inbox, Tasks, Today, Pomodoro, Analytics, Settings, sync/recovery, JSON export, countdown); no user-facing string is missing from any of the three locales; every schema change has an old-store compatibility test; performance-sensitive changes carry a seeded Release trace; and production Local/iCloud/fallback stores never physically purge tombstones.
+Release criteria are owned by [Testing](Testing.md) and [AGENTS.md](../AGENTS.md). Before shipping a minor version: `make test` green; generic iOS and macOS Release builds pass with automatic signing and expected entitlements; a normal-text-size manual smoke test passes on iPhone, iPad, and macOS (Inbox, Tasks, Today, Pomodoro, Analytics, Settings, iCloud toggle, JSON export, countdown); no user-facing string is missing from any of the three locales; every schema change has an old-store compatibility test; and production Local/iCloud/fallback stores never physically purge tombstones.

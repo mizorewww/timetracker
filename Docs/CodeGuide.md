@@ -25,13 +25,11 @@ SwiftUI View
 
 共享样式与控件只在至少两个 feature 使用（或明确即将使用）时才进入 `SharedUI`（second-caller 规则）；单调用方的一次性布局、行内容或卡片留在所属 feature 内。共享任务行/计时动作/Settings 行的既有所有者见 [ProjectMap](ProjectMap.md)。分层不等于每个文件都已单一职责拆分；仍较集中的文件列在 ProjectMap 的职责集中度表。
 
-`Features/Inspector`、`PhoneChromeViews`、`SettingsSectionsViews.swift`、`TimeTrackerServices.swift` 等已删除代码的名字不是当前模块或扩展点。
-
 ## 3. 持久写入与 refresh
 
 `TimeTrackerStore.perform` 与 `SystemActionCommandHandler` 用 `ModelContext.performAtomicMutation` 包住一个用户动作：命令/仓储内部的 `saveAfterMutationStep` 在独立调用时立即保存，在外层 transaction 中延迟到最后统一 `save()`；动作或最终保存抛错会 rollback 整个 unit of work。当前 scene 提交后只刷新自身必要 read models；这一步失败不能撤销已保存事实，因此 `perform` 仍返回成功并可展示“已保存但重新载入失败”。Feature 只有在 mutation 成功后才能清理 transient success/failure 与 selection/editor 状态。
 
-每个持久 outer save 显式设置稳定的 `TimeTrackerHistoryAuthor`（普通 scene/fresh coordinator `.localMutation`，sync restore `.syncReconciliation`，启动 migration/seed `.bootstrapMaintenance`），嵌套 primitive 继承外层 author。Scene、App Intent 与 Watch 把同一 command outcome 的 exact `StoreDomainEvent` 交给 `SystemActionPostCommitEffects`，由 store-scoped `CommittedMutationSystemProjectionScheduler` 异步投影；调用方不等待投影 I/O，投影失败只保留 lane 诊断/重试，不写共享 `errorMessage`，也不改变业务结果。`StoreMutationBroadcaster` 让同进程其它 scene 只刷新 read models（不记录 snapshot、不重复副作用）。投影 request 显式区分 `.localCommit`/`.startupCatchUp`/`.surfaceCatchUp`；启动固定发送 `.startupCatchUp + .fullSync`。
+每个持久 outer save 显式设置稳定的 `TimeTrackerHistoryAuthor`（普通 scene/fresh coordinator `.localMutation`，启动 migration/seed `.bootstrapMaintenance`），嵌套 primitive 继承外层 author。Scene、App Intent 与 Watch 把同一 command outcome 的 exact `StoreDomainEvent` 交给 store-scoped `CommittedMutationSystemProjectionScheduler` 异步投影；调用方不等待投影 I/O，投影失败只保留 sink 诊断/重试，不写共享 `errorMessage`，也不改变业务结果。`StoreMutationBroadcaster` 让同进程其它 scene 只刷新 read models（不重复副作用）。启动固定发送一次 `.fullSync` 投影。
 
 Keychain 不能加入 SwiftData ACID transaction：LLM 配置先记住旧密钥，把普通偏好批量成一次 SwiftData 保存，提交失败时尽力恢复旧密钥并单独报告补偿失败。任务、账本等 UI selection 也只在 `didSave` 后更新。
 
@@ -55,9 +53,9 @@ Keychain 不能加入 SwiftData ACID transaction：LLM 配置先记住旧密钥�
 - Live resize：`DesktopMainView` 的 geometry 先映射到 Equatable `HomeViewportMeasurement`（8 pt 步长，720/800/1056/1236 pt 精确锚点，1236 pt 封顶）再进入 view state；`HomeLayoutPolicy` 是断点与列宽的唯一 owner。
 - macOS capability：单实例主 `Window`、独立系统 Settings scene、原生菜单与键盘录制属于真实平台能力；主窗口与 Settings 共享一个应用级 Store，各自持有 scene router。`MacKeyboardShortcutSettings` 是设备本地 observable，注入主场景/Settings/`TimeTrackerCommands`；自定义写 `AppDefaults.shared` 的单个原子 blob，不进 `TimeTrackerStore`、SwiftData/CloudKit 或库的全局 hotkey 存储。`Command-N`/`Command-,` 保持标准命令。
 - Scene presentation：每个 scene 一个 `AppPresentationRouter` + 一个 `AppPresentationHost.sheet(item:)`；router 忙时拒绝普通新请求，replace/dismiss 必须匹配当前 presentation ID。主窗口与 macOS Settings 共享 Store 但不共享 sheet。
-- Scene feedback：每个 scene 一个 `AppSceneFeedbackRouter` + `AppSceneFeedbackHost`，FIFO 呈现，dismiss 必须匹配当前 feedback UUID；JSON 导出、数据库清理、同步恢复用 throwing 边界，失败只进入发起 scene 的队列。`ContentView` 对未迁移的 Store `errorMessage` 只作临时桥接，新代码不得扩展该共享槽位。
-- Settings：五类导航 IA（通用/专注/数据与同步/AI 助手/高级），不提供应用级 appearance override，也不放“手动补录”。所有破坏性动作共用一个 `SettingsDestructiveConfirmation?` 状态与一个 `confirmationDialog`，modifier 必须附着在承载按钮的 `Form`；`SyncRecoverySettingsSection` 空间独立，无冲突时默认折叠，冲突时先显示本机/iCloud 摘要再显示两个方向。`CountdownTitleEditor` 用本地标题草稿，只在保存/Return/失焦时提交。
-- Task 生命周期与行语法：任务没有产品层 workflow status；Checklist 是唯一完成/进度语义。普通任务只有 Archive/Restore（`deletedAt` 保留为兼容 tombstone）。`TaskSummaryRow` 是 Tasks/Sidebar/层级选择器/`TaskIdentityRow` 的共享视觉 owner（`.hierarchical` 只显示标题，`.standard` 显示不含自身的父级路径，`.compact` 用完整路径）；`TaskTimerActionButton` 是 Start/Switch/Stop 的共享视觉 owner，命令是独立控件，不能伪装成 metadata glyph 或整行 toggle。`TasksNavigationView` 是唯一任务导航容器，store-owned `TasksRoute?` 是页面事实来源，`selectedTaskID` 是业务选择。
+- Scene feedback：每个 scene 一个 `AppSceneFeedbackRouter` + `AppSceneFeedbackHost`，FIFO 呈现，dismiss 必须匹配当前 feedback UUID；JSON 导出与数据库清理用 throwing 边界，失败只进入发起 scene 的队列。`ContentView` 对未迁移的 Store `errorMessage` 只作临时桥接，新代码不得扩展该共享槽位。
+- Settings：五类导航 IA（通用/专注/数据与同步/AI 助手/高级），不提供应用级 appearance override，也不放“手动补录”。所有破坏性动作共用一个 `SettingsDestructiveConfirmation?` 状态与一个 `confirmationDialog`，modifier 必须附着在承载按钮的 `Form`；`CountdownTitleEditor` 用本地标题草稿，只在保存/Return/失焦时提交。
+- Task 生命周期与行语法：任务没有产品层 workflow status；Checklist 是唯一完成/进度语义。普通任务只有 Archive/Restore（`deletedAt` 保留为兼容 tombstone）。`TaskSummaryRow` 是 Tasks/Sidebar/层级选择器的共享视觉 owner（`.hierarchical` 只显示标题，`.standard` 显示不含自身的父级路径，`.compact` 用完整路径）；`TaskTimerActionButton` 是 Start/Switch/Stop 的共享视觉 owner，命令是独立控件，不能伪装成 metadata glyph 或整行 toggle。`TasksNavigationView` 是唯一任务导航容器，store-owned `TasksRoute?` 是页面事实来源，`selectedTaskID` 是业务选择。
 - Task detail/editor：只读优先详情，身份卡显示标题与父级路径但不重复 Running；分析异步载入时只在自身 section 显示 `ProgressView`。编辑通过同一 workspace 的铅笔入口；stale 保存返回 `.saved/.stale/.failed`，Reload/Keep 必须显式确认并替换 session baseline 与 parent candidates。任务编辑器 checklist 删除按稳定 UUID 回调，行内无常驻 More/垃圾桶/上下按钮：iOS 用 `swipeActions(allowsFullSwipe:false)`，全平台用只含 Delete 的 `contextMenu`。崩溃/终止恢复是单个本地草稿镜像：autosave 是持久事实的唯一写入者，重开任务静默恢复最新镜像并只显示一条 inline notice，没有独立恢复管理界面。
 - 符号/颜色：任务、分类、checklist、Pomodoro 计划共用 `SymbolColorPickerButton`/`SymbolColorWell`。iOS 复用 BlossomColorPickerCore 默认 layout 并按 `44 / BlossomConstants.petalSize` 等比放大；macOS 由所属颜色 well 的真实 `NSView`/`NSWindow` 换算屏幕坐标，不得用 `NSApp.keyWindow` 或复制花瓣几何。任意有效 sRGB 输入规范化为六位持久值；前景对比由 `TaskColorPalette.contrastingForegroundColor` 按实际背景选择。
 - Analytics：`AnalyticsCategory.reviewCategories`/`exploreCategories` 显式定义首页顺序且对 `allCases` 完整无重复；category 用 typed `NavigationLink(value:)`/`navigationDestination`。loading presentation 把 snapshot 与 request 原子发布，跨周期冷缓存保留 section 壳但 redacted/禁用/隐藏旧语义，刷新指示器占用固定布局槽。`AnalyticsRefreshPlan` 只在 active scene 安排下一个分钟/本地日边界，不得恢复整页 `TimelineView`。Heatmaps 是独立 typed destination，复用 Today Heatmap 投影与 Settings 范围。
@@ -70,9 +68,9 @@ Keychain 不能加入 SwiftData ACID transaction：LLM 配置先记住旧密钥�
 
 磁盘兼容 fixture 覆盖 V4 分类迁移、V8 `DailySummary` 移除、V9 Inbox suggestion identity/dismissal、V11→当前 suggestion destination、V12→V13 task progress。它们真实关闭旧容器、打开磁盘 store 并核对事实，但不是已发布版本生成、带固定 hash 的不可变历史 artifact——后者仍是明确缺口（应从发布 tag/当时工具链生成无敏感数据的 SQLite bundle 并附 SHA-256 manifest）。
 
-CloudKit 模式与纯本地模式共用业务模型，容器与同步状态不同；紧急内存 fallback 只用于保持可诊断，绝不描述为持久存储。同步刷新由 `NSPersistentStoreRemoteChange` 与 `eventChangedNotification` 驱动，首个通知建立固定 350 ms 截止时间、后续合并进 batch（不取消后推计时器）；没有常驻 5 秒轮询。`AppCloudSync.enabledKey` 是设备本地启动配置，不进 `SyncedPreference`/快照/导出。Settings 同步状态用 typed `SyncActivityOutcome`，只有带结束时间且 `event.succeeded` 的 import/export/setup 在本机 refresh 与冲突处理都成功后才是 `.succeeded`。
+CloudKit 模式与纯本地模式共用业务模型与同一 store 文件，同步与合并完全交给 CloudKit 镜像（AD-143）；紧急内存 fallback 只用于保持可诊断，绝不描述为持久存储。同步刷新由 `NSPersistentStoreRemoteChange` 与 `eventChangedNotification` 驱动，首个通知建立固定 350 ms 截止时间、后续合并进 batch（不取消后推计时器）；没有常驻 5 秒轮询。`AppCloudSync.enabledKey` 是设备本地启动配置，不进 `SyncedPreference`/导出。Settings 同步状态用 typed `SyncActivityOutcome`，只有带结束时间且 `event.succeeded` 的 import/export/setup 在本机 refresh 成功后才是 `.succeeded`。
 
-`SyncConflictService.swift` 只保留 bootstrap 与 prompt 组装；扩展文件分别拥有 local mutation、Cloud import/export、recovery/resolution、state manifest/lock/locations、slot、filtered export encoding；`SyncDataSnapshot` 加 capture / preflight（结构 + 语义）/ 分域 restore / 版本化 record DTO。同步状态锁、128/64 MiB 上限、slot manifest、`prompt()` throwing 边界与 `pendingConflictID` CAS 见 [AgentDecisions](AgentDecisions.md) AD-023，恢复门控见 AD-142。`DurableLocalFile`/`PathFileLock` 只负责文件系统提交（普通文件、拒绝符号链接、原子 rename + 目录同步、有界 `.TimeTrackerQuarantine`），调用方必须完成 payload 大小/版本/时间/语义预检并传入稳定 durable root。
+JSON 导出由 `Services/Export` 的 `UserDataSnapshot`/`UserDataExport` 在 store lock 内的 fresh read context 中捕获，只编码、不可导入。
 
 演示与测试数据：`TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE` 默认 `off`；Debug 才允许明确 override，启用后容器改用本地无 CloudKit 的 `TimeTracker-Demo.store`，UI tests 用独立内存 container。测试进程必须通过 `AppDefaults.shared`/`AppRuntimeEnvironment` 隔离，绝不直接使用 `UserDefaults.standard`。
 
@@ -88,7 +86,7 @@ CloudKit 模式与纯本地模式共用业务模型，容器与同步状态不�
 
 **Live Activity**：只读状态投影，attributes 小而稳定，extension 不直接写 SwiftData/iCloud。锁屏与 expanded Dynamic Island 共用唯一 `LiveActivityTimerRow`；锁屏沿用 Today/Now 层级，expanded 普通字号只显示图标/标题/elapsed，不显示路径/附加计时数量/停止控件；点按只打开 Today，停止由 Today 行完成。文本按 Unicode 边界投影到受限字段，stale 状态明确。
 
-**Watch**：状态 owner 是同一个 `WatchAppStore` 类型，按 extension 文件拆开（base observable/恢复、Commands queue/timeout/persistence、Connectivity transport/payload/freshness、SessionDelegate callbacks）。每个 `WatchTimerCommand.id` 是幂等键，新命令与恢复命令走 durable `transferUserInfo`，可达时再用 `sendMessage` 加速；typed terminal result（success/duplicate/missingTask/missingSegment/invalid/failed/timeout）durable 回传，timeout 是 Watch 本机 20 秒等待。`WatchCommandProcessor` 在 mutation 前校验 DTO 与时间边界（命令最多 30 秒、允许最多 5 分钟未来偏差），过期/非法命令返回 invalid 且不写 receipt/ledger。三页分页、Quick Start/All Tasks 排序与上限见 AD-119 与 AD-004；payload 常量表是 `WatchTransportLimits`。
+**Watch**：状态 owner 是同一个 `WatchAppStore` 类型，按 extension 文件拆开（base observable、Commands 内存队列/timeout、Connectivity transport/payload/freshness、SessionDelegate callbacks）。命令是即时控制：iPhone 可达时用 `sendMessage` 发送，typed 结果（success/missingTask/missingSegment/invalid/failed/timeout）在 reply 中返回；不可达时保持 pending，Watch 本机 20 秒后转为可重试失败。start/stop 在 iPhone 侧天然幂等，不存回执。`WatchCommandProcessor` 在 mutation 前校验 DTO 与时间边界（`WatchTransportLimits`），过期/非法命令返回 invalid 且不写账本。三页分页与排序见 AD-119。
 
 **Deep link**：`AppDeepLinkRouter` 只接受 `timetracker` scheme、最长 2,048 bytes、无 credential/port/fragment 的白名单路由并校验 UUID；`PendingDeepLinkQueue` 容量 16、按语义去重、满时丢最旧、配置成功后 drain、scene 消失清空。带 `taskID` 的停止链接只停该任务活动 segment，目标已停时 no-op，不回退停止其它并行计时。`WatchCommandRouter` 用弱 store 引用选择最近 active scene，最后注销时移除进程级 bridge closure。
 
@@ -96,11 +94,11 @@ CloudKit 模式与纯本地模式共用业务模型，容器与同步状态不�
 
 ## 8. AI 服务
 
-`LLMService` 面向用户配置的 OpenAI-compatible endpoint：远程必须 HTTPS，HTTP 仅限 `localhost`/`.localhost` 与数值解析确认的 `127.0.0.0/8`/`::1`；带 Authorization 的 redirect 只允许同 scheme/host/有效端口；生产 transport 用 ephemeral session（禁用 cache/cookie、资源 60 秒、2 MiB 实际字节上限、headers 阶段拒绝非 2xx/声明超限）；模型发现逐项解码、只保留升序前 256 个唯一有效 opaque model ID。日志与错误不得打印密钥或完整敏感请求。精确字段与安全边界见 [PrivacyAndSecurity](PrivacyAndSecurity.md)。
+LLM 服务（`LLMModelService`、建议服务与任务计划服务）面向用户配置的 OpenAI-compatible endpoint：远程必须 HTTPS，HTTP 仅限 `localhost`/`.localhost` 与数值解析确认的 `127.0.0.0/8`/`::1`；带 Authorization 的 redirect 只允许同 scheme/host/有效端口；生产 transport 用 ephemeral session（禁用 cache/cookie、资源 60 秒、2 MiB 实际字节上限、headers 阶段拒绝非 2xx/声明超限）；模型发现逐项解码、只保留升序前 256 个唯一有效 opaque model ID。日志与错误不得打印密钥或完整敏感请求。精确字段与安全边界见 [PrivacyAndSecurity](PrivacyAndSecurity.md)。
 
 Settings 用 `LLMConfigurationDraft`：endpoint/API key/模型/思考强度编辑先留在 sheet，“测试连接”只读模型并验证 credential fingerprint、不持久化，只有模型有效时才能“保存”；保存时四项由 `PreferenceCommandHandler.set(values:)` 一次 SwiftData 提交，API key 的 Keychain side effect 用旧值补偿恢复并单独报告失败。自动建议是默认关闭、设备本地的第二开关，不进 CloudKit/JSON。`LLMReasoningEffort` 只允许 DeepSeek 官方 `high`/`max`；三条生产 service 对 DeepSeek V4 显式开启 thinking、发送所选 effort、省略 temperature，workspace 工具会话省略 `tool_choice` 并把每轮完整 `reasoning_content` 原样带回，其它模型不发送这些专属字段。effort 是 request identity 的一部分，切换时取消旧请求。
 
-任务计划链：`LLMTaskWorkspacePlanningService` → `AITaskWorkspaceOverlay` → `AITaskWorkspacePlanGeneratorViews` → `StoreScopedAITaskAtomicMutationCoordinator` → `TimeTrackerStore+AITaskPlanCommands`。捕获/Apply 在共享锁 + fresh context 中做完整 workspace CAS（见 AD-132）；工具只改内存 overlay，schema 全部属性 required 且 `additionalProperties: false`，无效参数返回零变更 `{ok:false}`，未知工具/重复 call ID/混合 finalize 显式失败；只有 `finalize_plan` 结束生成。Finalize 生成 baseline→overlay 只读 diff，预览显示 create/update/archive/delete/reuse、完整路径与 before→after，`Apply N Changes` 是唯一提交入口，破坏性影响用原生确认；Task removal 只 Archive。已替换的 create-only `LLMTaskPlanService`/`saveAITaskPlan` 链不得恢复。
+任务计划链：`LLMTaskWorkspacePlanningService` → `AITaskWorkspaceOverlay` → `AITaskWorkspacePlanGeneratorViews` → `StoreScopedAITaskAtomicMutationCoordinator` → `TimeTrackerStore+AITaskPlanCommands`。捕获/Apply 在共享锁 + fresh context 中做完整 workspace CAS（见 AD-132）；工具只改内存 overlay，schema 全部属性 required 且 `additionalProperties: false`，无效参数返回零变更 `{ok:false}`，未知工具/重复 call ID/混合 finalize 显式失败；只有 `finalize_plan` 结束生成。Finalize 生成 baseline→overlay 只读 diff，预览显示 create/update/archive/delete/reuse、完整路径与 before→after，`Apply N Changes` 是唯一提交入口，破坏性影响用原生确认；Task removal 只 Archive。工具循环最多 `LLMTaskWorkspacePlanningService.maximumToolRounds` 轮。
 
 ## 9. 常见改动方式
 

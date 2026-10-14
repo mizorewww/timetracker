@@ -14,23 +14,18 @@ extension WatchAppStore {
         session.activate()
         applyPayload(session.receivedApplicationContext)
         isReachable = session.isReachable
-        for command in pendingCommands {
-            scheduleConfirmationTimeout(for: command)
-        }
         #endif
     }
 }
 
 #if canImport(WatchConnectivity)
 extension WatchAppStore {
-    /// New and recovered attempts use durable delivery. Reachability changes
-    /// only accelerate an already-durable command with a direct message.
-    func transmit(_ command: WatchTimerCommand, includeDurableDelivery: Bool = true) {
+    /// Sends a command as a direct message when the iPhone is reachable; an
+    /// unreachable command stays pending until reachability returns or it
+    /// times out.
+    func transmit(_ command: WatchTimerCommand) {
         let payload = WatchConnectivityPayloadCodec.encode(command: command)
         let session = WCSession.default
-        if includeDurableDelivery {
-            session.transferUserInfo(payload)
-        }
         isReachable = session.isReachable
 
         guard session.activationState == .activated, session.isReachable else { return }
@@ -71,12 +66,6 @@ extension WatchAppStore {
         hasReceivedSnapshot = true
         hasConnectivityError = false
         scheduleSnapshotFreshness(for: state)
-
-        let confirmedCommandIDs = commandQueue.confirmReflectedCommands(in: state)
-        for commandID in confirmedCommandIDs {
-            confirmationTasks[commandID]?.cancel()
-            confirmationTasks[commandID] = nil
-        }
     }
 
     func scheduleSnapshotFreshness(for state: WatchStateSnapshot) {
@@ -102,10 +91,9 @@ extension WatchAppStore {
         }
     }
 
-    func resumePendingCommands(includeDurableDelivery: Bool = true) {
+    func resumePendingCommands() {
         for command in pendingCommands {
-            scheduleConfirmationTimeout(for: command)
-            transmit(command, includeDurableDelivery: includeDurableDelivery)
+            transmit(command)
         }
     }
 

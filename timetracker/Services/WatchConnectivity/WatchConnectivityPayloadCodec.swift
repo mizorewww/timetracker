@@ -17,7 +17,6 @@ enum WatchConnectivityPayloadCodec {
     private nonisolated static let completedAtKey = "completedAt"
     private nonisolated static let relatedIDKey = "relatedID"
     private nonisolated static let failureCodeKey = "failureCode"
-    private nonisolated static let receivedKey = "received"
 
     private nonisolated static let generatedAtKey = "generatedAt"
     private nonisolated static let todayGrossSecondsKey = "todayGrossSeconds"
@@ -74,9 +73,6 @@ enum WatchConnectivityPayloadCodec {
             commandIDKey: result.commandID.uuidString,
             statusKey: result.status.rawValue,
             completedAtKey: result.completedAt.timeIntervalSinceReferenceDate,
-            // Preserve the legacy receipt bit for older watch builds while newer
-            // builds use the typed terminal status above.
-            receivedKey: true,
         ]
         payload[relatedIDKey] = result.relatedID?.uuidString
         payload[failureCodeKey] = result.failureCode

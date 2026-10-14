@@ -1,40 +1,6 @@
 import Foundation
 import SwiftData
 
-final class UserDefaultsWatchCommandReceiptStore {
-    private let defaults: UserDefaults
-    private let key: String
-    private let maxReceipts: Int
-
-    init(
-        defaults: UserDefaults = AppDefaults.shared,
-        key: String = "watch.processedCommandIDs.v1",
-        maxReceipts: Int = 512
-    ) {
-        self.defaults = defaults
-        self.key = key
-        self.maxReceipts = maxReceipts
-    }
-
-    func contains(_ commandID: UUID) -> Bool {
-        receiptIDs.contains(commandID.uuidString)
-    }
-
-    func markProcessed(_ commandID: UUID) {
-        var ids = receiptIDs
-        ids.removeAll { $0 == commandID.uuidString }
-        ids.insert(commandID.uuidString, at: 0)
-        if ids.count > maxReceipts {
-            ids = Array(ids.prefix(maxReceipts))
-        }
-        defaults.set(ids, forKey: key)
-    }
-
-    private var receiptIDs: [String] {
-        defaults.stringArray(forKey: key) ?? []
-    }
-}
-
 @MainActor
 struct WatchCommandMutationOutcome {
     let result: WatchCommandProcessingResult
@@ -43,7 +9,6 @@ struct WatchCommandMutationOutcome {
 
 @MainActor
 struct WatchCommandProcessor {
-    private let receiptStore = UserDefaultsWatchCommandReceiptStore()
     let writeAuthorization: StoreWriteAuthorization
 
     init(writeAuthorization: StoreWriteAuthorization = .applicationState) {
@@ -55,12 +20,6 @@ struct WatchCommandProcessor {
         context: ModelContext,
         now: Date = Date()
     ) throws -> WatchCommandMutationOutcome {
-        guard receiptStore.contains(command.id) == false else {
-            return WatchCommandMutationOutcome(
-                result: .duplicate(command.id),
-                events: []
-            )
-        }
         guard command.isValid(at: now) else {
             return WatchCommandMutationOutcome(result: .invalid, events: [])
         }
@@ -98,7 +57,6 @@ struct WatchCommandProcessor {
         guard let segmentID = outcome.subjectSegmentID else {
             return WatchCommandMutationOutcome(result: .invalid, events: [])
         }
-        receiptStore.markProcessed(command.id)
         return WatchCommandMutationOutcome(
             result: .started(segmentID),
             events: outcome.events
@@ -124,7 +82,6 @@ struct WatchCommandProcessor {
                 events: []
             )
         }
-        receiptStore.markProcessed(command.id)
         return WatchCommandMutationOutcome(
             result: .stopped(segmentID),
             events: outcome.events

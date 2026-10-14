@@ -24,7 +24,7 @@ extension TimeTrackerStore {
                     refreshStoreScopedTimerReadModels()
                 } else {
                     switch result {
-                    case .duplicate, .missingTask:
+                    case .missingTask:
                         refreshStoreScopedTimerReadModels(includingTasks: true)
                     case .missingSegment:
                         refreshStoreScopedTimerReadModels()

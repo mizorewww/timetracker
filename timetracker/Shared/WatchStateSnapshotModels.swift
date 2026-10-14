@@ -1,8 +1,8 @@
 import Foundation
 
 nonisolated enum WatchTransportLimits {
-    /// Watch commands are immediate controls. A durable delivery that arrives
-    /// later than this must ask the user to retry instead of acting silently.
+    /// Watch commands are immediate controls; an older one is rejected so the
+    /// user retries instead of the iPhone acting on a stale tap.
     static let maximumCommandAge: TimeInterval = 30
     static let maximumFutureClockSkew: TimeInterval = 5 * 60
     static let maximumDeviceIDBytes = 256
@@ -20,10 +20,8 @@ nonisolated enum WatchTransportLimits {
     static let legacyQuickStartTaskLimit = 4
     static let maximumSummarySeconds = 10 * 366 * 24 * 60 * 60
     static let maximumActiveTimerAge: TimeInterval = 10 * 366 * 24 * 60 * 60
-    static let maximumIncomingCommands = 64
-    static let maximumPersistedPendingCommands = 64
-    static let maximumPersistedFailedCommands = 64
-    static let maximumQueueEncodedBytes = 512 * 1024
+    static let maximumPendingCommands = 64
+    static let maximumFailedCommands = 64
 
     static func boundedProjectedStyleValue(_ value: String?) -> String? {
         SystemSurfaceTextBounds.boundedProjectedStyleValue(

@@ -28,7 +28,7 @@ extension WatchAppStore: WCSessionDelegate {
             isReachable = session.isReachable
             if session.isReachable {
                 hasConnectivityError = false
-                resumePendingCommands(includeDurableDelivery: false)
+                resumePendingCommands()
             }
         }
     }
@@ -39,15 +39,6 @@ extension WatchAppStore: WCSessionDelegate {
     ) {
         Task { @MainActor in
             applyPayload(applicationContext)
-        }
-    }
-
-    nonisolated func session(
-        _: WCSession,
-        didReceiveUserInfo userInfo: [String: Any] = [:]
-    ) {
-        Task { @MainActor in
-            applyPayload(userInfo)
         }
     }
 

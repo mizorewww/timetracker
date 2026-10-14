@@ -67,20 +67,4 @@ extension WatchAppStore {
             _ = commandQueue.timeOut(commandID: command.id)
         }
     }
-
-    func persistCommandQueue() {
-        guard !commandQueue.pendingCommands.isEmpty || !commandQueue.failedCommands.isEmpty else {
-            defaults.removeObject(forKey: Self.commandQueueKey)
-            return
-        }
-        guard commandQueue.isSafeForRestoration,
-              let data = try? JSONEncoder().encode(commandQueue),
-              data.count <= WatchTransportLimits.maximumQueueEncodedBytes
-        else {
-            defaults.removeObject(forKey: Self.commandQueueKey)
-            Self.logger.error("Could not persist an unsafe watch command queue")
-            return
-        }
-        defaults.set(data, forKey: Self.commandQueueKey)
-    }
 }

@@ -7,20 +7,6 @@ nonisolated struct WatchTimerCommand: Codable, Equatable, Identifiable, Sendable
     var segmentID: UUID?
     var issuedAt: Date
     var deviceID: String
-
-    nonisolated func isReflected(in snapshot: WatchStateSnapshot) -> Bool {
-        // Ignore an application context generated before this command was issued.
-        guard snapshot.generatedAt >= issuedAt else { return false }
-
-        switch type {
-        case .startTask:
-            guard let taskID else { return false }
-            return snapshot.activeTimers.contains { $0.taskID == taskID }
-        case .stopSegment:
-            guard let segmentID else { return false }
-            return snapshot.activeTimers.contains { $0.id == segmentID } == false
-        }
-    }
 }
 
 nonisolated extension WatchTimerCommand {
@@ -63,7 +49,6 @@ nonisolated enum WatchTimerCommandType: String, Codable, Equatable, Sendable {
 nonisolated enum WatchCommandProcessingResult: Equatable, Sendable {
     case started(UUID)
     case stopped(UUID)
-    case duplicate(UUID)
     case missingTask(UUID)
     case missingSegment(UUID)
     case invalid
@@ -72,7 +57,7 @@ nonisolated enum WatchCommandProcessingResult: Equatable, Sendable {
         switch self {
         case .started, .stopped:
             true
-        case .duplicate, .missingTask, .missingSegment, .invalid:
+        case .missingTask, .missingSegment, .invalid:
             false
         }
     }
@@ -80,8 +65,8 @@ nonisolated enum WatchCommandProcessingResult: Equatable, Sendable {
 
 /// A terminal acknowledgement for one command submitted by Apple Watch.
 ///
-/// `commandID` is the idempotency key. Retrying a failed or timed-out command
-/// keeps that identifier so a command that actually completed cannot run twice.
+/// Start and stop are idempotent on the iPhone (an already-running task keeps
+/// its segment; a stopped segment stays stopped), so a retry is always safe.
 nonisolated struct WatchCommandResult: Codable, Equatable, Identifiable, Sendable {
     var commandID: UUID
     var status: WatchCommandResultStatus
@@ -94,7 +79,7 @@ nonisolated struct WatchCommandResult: Codable, Equatable, Identifiable, Sendabl
     }
 
     var completesWithoutUserAction: Bool {
-        status == .success || status == .duplicate
+        status == .success
     }
 
     static func failed(
@@ -130,7 +115,6 @@ nonisolated extension WatchCommandResult {
 
 nonisolated enum WatchCommandResultStatus: String, Codable, Equatable, Sendable {
     case success
-    case duplicate
     case missingTask
     case missingSegment
     case invalid
@@ -150,14 +134,6 @@ nonisolated extension WatchCommandProcessingResult {
                 status: .success,
                 completedAt: completedAt,
                 relatedID: segmentID,
-                failureCode: nil
-            )
-        case .duplicate:
-            WatchCommandResult(
-                commandID: commandID,
-                status: .duplicate,
-                completedAt: completedAt,
-                relatedID: nil,
                 failureCode: nil
             )
         case let .missingTask(taskID):
@@ -188,7 +164,7 @@ nonisolated extension WatchCommandProcessingResult {
     }
 }
 
-nonisolated struct WatchFailedCommand: Codable, Equatable, Identifiable, Sendable {
+nonisolated struct WatchFailedCommand: Equatable, Identifiable, Sendable {
     var command: WatchTimerCommand
     var result: WatchCommandResult
 
@@ -197,10 +173,9 @@ nonisolated struct WatchFailedCommand: Codable, Equatable, Identifiable, Sendabl
     }
 }
 
-/// Pure, codable command lifecycle state shared by the watch UI and unit tests.
-/// Persistence lets an interrupted watch launch recover pending and retryable
-/// actions instead of silently forgetting them.
-nonisolated struct WatchCommandQueueState: Codable, Equatable, Sendable {
+/// In-memory command lifecycle for the watch UI: a command is pending until
+/// the iPhone answers or it times out, then retryable from the failed list.
+nonisolated struct WatchCommandQueueState: Equatable, Sendable {
     private(set) var pendingCommands: [WatchTimerCommand] = []
     private(set) var failedCommands: [WatchFailedCommand] = []
 
@@ -219,7 +194,7 @@ nonisolated struct WatchCommandQueueState: Codable, Equatable, Sendable {
         pendingCommands.append(command)
         let overflowCount = max(
             0,
-            pendingCommands.count - WatchTransportLimits.maximumPersistedPendingCommands
+            pendingCommands.count - WatchTransportLimits.maximumPendingCommands
         )
         guard overflowCount > 0 else { return true }
         let overflowedCommands = pendingCommands.prefix(overflowCount)
@@ -286,47 +261,12 @@ nonisolated struct WatchCommandQueueState: Codable, Equatable, Sendable {
         failedCommands.removeAll { $0.id == commandID }
     }
 
-    /// Snapshot reflection remains as a compatibility fallback for older iPhone
-    /// versions that don't send typed results.
-    @discardableResult
-    mutating func confirmReflectedCommands(in snapshot: WatchStateSnapshot) -> Set<UUID> {
-        let commands = pendingCommands + failedCommands.map(\.command)
-        let confirmedIDs = Set(
-            commands.lazy
-                .filter { $0.isReflected(in: snapshot) }
-                .map(\.id)
-        )
-        guard !confirmedIDs.isEmpty else { return [] }
-        pendingCommands.removeAll { confirmedIDs.contains($0.id) }
-        failedCommands.removeAll { confirmedIDs.contains($0.id) }
-        return confirmedIDs
-    }
-
-    var isSafeForRestoration: Bool {
-        guard pendingCommands.count <= WatchTransportLimits.maximumPersistedPendingCommands,
-              failedCommands.count <= WatchTransportLimits.maximumPersistedFailedCommands,
-              pendingCommands.allSatisfy(\.isStructurallyValid),
-              failedCommands.allSatisfy({
-                  $0.command.isStructurallyValid &&
-                      $0.result.isStructurallyValid &&
-                      $0.command.id == $0.result.commandID
-              })
-        else {
-            return false
-        }
-        let commands = pendingCommands + failedCommands.map(\.command)
-        guard Set(commands.map(\.id)).count == commands.count else { return false }
-        return commands.indices.allSatisfy { index in
-            !commands[..<index].contains { $0.targetsSameAction(as: commands[index]) }
-        }
-    }
-
     private mutating func appendFailedCommand(_ failedCommand: WatchFailedCommand) {
         failedCommands.removeAll { $0.id == failedCommand.id }
         failedCommands.append(failedCommand)
         let overflowCount = max(
             0,
-            failedCommands.count - WatchTransportLimits.maximumPersistedFailedCommands
+            failedCommands.count - WatchTransportLimits.maximumFailedCommands
         )
         if overflowCount > 0 {
             failedCommands.removeFirst(overflowCount)

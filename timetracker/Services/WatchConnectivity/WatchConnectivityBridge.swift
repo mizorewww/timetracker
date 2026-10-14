@@ -14,10 +14,9 @@ import WatchConnectivity
 
 /// Process-wide WatchConnectivity session owner.
 ///
-/// Commands carry an idempotent ID and are processed by the currently attached
-/// scene; if no scene is attached the legacy receipt acknowledges delivery and
-/// the watch build retries. Terminal results travel through one durable
-/// `transferUserInfo` payload plus the synchronous reply handler when present.
+/// Commands arrive as direct messages and are processed by the currently
+/// attached scene; the result goes back in the message reply. With no scene
+/// attached the reply is a failure the watch can retry.
 @MainActor
 final class WatchConnectivityBridge: NSObject {
     static let shared = WatchConnectivityBridge()
@@ -91,24 +90,9 @@ final class WatchConnectivityBridge: NSObject {
             replyHandler?(["received": false])
             return
         }
-        guard let commandHandler else {
-            // Older watch builds understand this receipt. Current builds keep the
-            // command pending until it is retried or times out.
-            replyHandler?(["received": true])
-            return
-        }
-        let result = commandHandler(command)
+        let result = commandHandler?(command)
+            ?? .failed(commandID: command.id, failureCode: "unavailable")
         replyHandler?(WatchConnectivityPayloadCodec.encode(result: result))
-        deliverDurableCommandResult(result)
-    }
-
-    /// `transferUserInfo` provides a durable terminal result even if the direct
-    /// reply is lost while either device changes reachability.
-    private func deliverDurableCommandResult(_ result: WatchCommandResult) {
-        guard let session, session.isPaired, session.isWatchAppInstalled else { return }
-        session.transferUserInfo(
-            WatchConnectivityPayloadCodec.encode(result: result)
-        )
     }
 
     @discardableResult
@@ -140,15 +124,6 @@ extension WatchConnectivityBridge: WCSessionDelegate {
 
     nonisolated func sessionDidDeactivate(_ session: WCSession) {
         session.activate()
-    }
-
-    nonisolated func session(
-        _: WCSession,
-        didReceiveUserInfo userInfo: [String: Any] = [:]
-    ) {
-        Task { @MainActor [weak self] in
-            self?.handle(userInfo)
-        }
     }
 
     nonisolated func session(

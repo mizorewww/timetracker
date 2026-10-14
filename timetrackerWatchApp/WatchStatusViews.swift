@@ -68,7 +68,7 @@ private extension WatchCommandResultStatus {
         case .invalid: "watch.commandFailure.invalid"
         case .failed: "watch.commandFailure.failed"
         case .timeout: "watch.commandFailure.timeout"
-        case .success, .duplicate: "watch.commandFailure.resolved"
+        case .success: "watch.commandFailure.resolved"
         }
     }
 
@@ -77,7 +77,7 @@ private extension WatchCommandResultStatus {
         case .timeout: "clock.badge.exclamationmark"
         case .missingTask, .missingSegment: "questionmark.circle.fill"
         case .invalid, .failed: "exclamationmark.triangle.fill"
-        case .success, .duplicate: "checkmark.circle.fill"
+        case .success: "checkmark.circle.fill"
         }
     }
 
@@ -85,7 +85,7 @@ private extension WatchCommandResultStatus {
         switch self {
         case .timeout, .missingTask, .missingSegment: .orange
         case .invalid, .failed: .red
-        case .success, .duplicate: .green
+        case .success: .green
         }
     }
 }

@@ -261,10 +261,7 @@ final class LiveActivityCoordinator {
     private func updateOrStart(
         _ request: Request
     ) async -> SynchronizationResult? {
-        guard dismissedSegmentID != request.segmentID else {
-            status = .unavailable(.removed)
-            return nil
-        }
+        guard isDismissed(request) == false else { return nil }
         guard client.areActivitiesEnabled else {
             status = .unavailable(.denied)
             Self.logger.notice(
@@ -298,10 +295,7 @@ final class LiveActivityCoordinator {
                     content: content
                 )
                 didApplyRequest = true
-                guard dismissedSegmentID != request.segmentID else {
-                    status = .unavailable(.removed)
-                    return nil
-                }
+                guard isDismissed(request) == false else { return nil }
             case .ended, .dismissed:
                 current = nil
                 didApplyRequest = false
@@ -317,10 +311,7 @@ final class LiveActivityCoordinator {
             {
                 for stale in activities where stale.id != current.id {
                     await client.end(activityID: stale.id, content: content)
-                    guard dismissedSegmentID != request.segmentID else {
-                        status = .unavailable(.removed)
-                        return nil
-                    }
+                    guard isDismissed(request) == false else { return nil }
                 }
                 return SynchronizationResult(
                     registration: current,
@@ -331,16 +322,10 @@ final class LiveActivityCoordinator {
 
         for stale in activities {
             await client.end(activityID: stale.id, content: content)
-            guard dismissedSegmentID != request.segmentID else {
-                status = .unavailable(.removed)
-                return nil
-            }
+            guard isDismissed(request) == false else { return nil }
         }
 
-        guard dismissedSegmentID != request.segmentID else {
-            status = .unavailable(.removed)
-            return nil
-        }
+        guard isDismissed(request) == false else { return nil }
         do {
             let registration = try client.request(
                 attributes: attributes,
@@ -366,6 +351,14 @@ final class LiveActivityCoordinator {
             )
             return nil
         }
+    }
+
+    /// The user swiped this segment's activity away; every await in
+    /// `updateOrStart` re-checks so a late dismissal stops the work.
+    private func isDismissed(_ request: Request) -> Bool {
+        guard dismissedSegmentID == request.segmentID else { return false }
+        status = .unavailable(.removed)
+        return true
     }
 
     private func observeAuthorizationChanges() {

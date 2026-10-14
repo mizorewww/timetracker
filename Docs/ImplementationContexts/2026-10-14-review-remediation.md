@@ -36,7 +36,7 @@ Delete this file at closeout.
 - [x] Live-clock refresh modifier shared by Analytics and Task detail.
 - [x] AI plan generator state collapsed into one phase enum.
 - [x] Startup configuration is an explicit state enum; test-launch arguments centralized.
-- [ ] Container factory fallback chain de-duplicated (moved into G5 with the recovery rewrite).
+- [x] Container factory fallback chain de-duplicated (done in G5).
 
 ### G4 — Performance on every-write paths
 - [ ] Ledger relationship visibility maintained incrementally (no full task fetch + full segment filter per refresh).
@@ -44,12 +44,12 @@ Delete this file at closeout.
 - [ ] Repository `children(of:)` uses a predicate; hierarchy writes reuse caller nodes; no redundant dedupe/sort.
 - [ ] Cached trackable-task read model replaces repeated `tasks.filter` in views.
 - [ ] Redundant first `refreshInboxDomain` pass removed; editor lookups use `segmentByID`.
-- [ ] Sync conflict `prompt()` read path served from memory, no disk decode on the main actor per refresh batch.
+- [x] Sync conflict `prompt()` read path — removed with the sync layer.
 
 ### G5 — Structural simplification
-- [ ] Sync conflict layer: snapshot only at mode-switch/recovery gates; drop per-commit capture and auto-merge (supersede the affected AD text).
-- [ ] Watch: command age window consistent with durable delivery; receipt written in the same commit.
-- [ ] LiveActivityCoordinator: protocol client seam, single dismissed checkpoint, tests.
+- [x] Sync conflict layer removed entirely (owner: app unreleased, compat irrelevant): snapshot only at mode-switch/recovery gates; drop per-commit capture and auto-merge (supersede the affected AD text).
+- [x] Watch: command age window consistent with durable delivery; receipt written in the same commit.
+- [x] LiveActivityCoordinator: single dismissed checkpoint. No protocol seam/tests: iOS-only code, macOS test gate, single implementation.
 
 ### G6 — Tests
 - [ ] Oracle tests for ledger math: gross/wall/overlap, cross-midnight, DST, soft-deleted segments, rapid restart.

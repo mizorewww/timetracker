@@ -354,6 +354,7 @@
 "aiTaskPlan.error.invalidToolArguments" = "The model supplied invalid arguments to %@. No changes were applied.";
 "aiTaskPlan.error.duplicateToolCall" = "The model repeated tool call %@. No changes were applied.";
 "aiTaskPlan.error.mixedFinalize" = "The model tried to finalize alongside another change. Generate the proposal again.";
+"aiTaskPlan.error.toolRoundLimit" = "The model did not finish the proposal within %d rounds. Generate the proposal again.";
 "aiTaskPlan.error.workspaceRequestRejected" = "The endpoint rejected the complete workspace request (HTTP %d): %d categories, %d tasks, %d checklist items, %d request bytes. The request was not retried and no changes were applied. Check that the model supports the required tools and context size.";
 "aiTaskPlan.error.workspaceChanged" = "The task workspace changed after this preview was generated. Nothing was applied; generate a fresh proposal.";
 "aiTaskPlan.error.invalidOperation" = "The proposal no longer matches its reviewed changes. Nothing was applied.";
@@ -1043,6 +1044,8 @@
 "inbox.persistence.field.reason" = "suggestion reason";
 "inbox.persistence.field.symbol" = "suggestion symbol";
 "inbox.error.changed" = "This inbox changed elsewhere. Review the latest version, then try again.";
+"inbox.error.externalCommandPayloadChanged" = "This capture request was already used for different content.";
+"inbox.error.externalCommandKeyConflict" = "This capture request already has conflicting saved results.";
 "inbox.route.error.taskUnavailable" = "This task is no longer available. Choose another task.";
 "inbox.persistence.field.color" = "suggestion color";
 "inbox.persistence.field.model" = "suggestion model";

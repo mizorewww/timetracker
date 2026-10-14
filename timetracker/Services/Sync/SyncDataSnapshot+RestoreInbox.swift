@@ -127,8 +127,12 @@ extension SyncDataSnapshot {
             itemIdentityByID: itemIdentityByID
         )
         for suggestion in existing.values where !snapshotIDs.contains(suggestion.id) {
-            suggestion.deletedAt = now
-            suggestion.updatedAt = now
+            let deletedAt = PersistentLWWMutationDate.strictlyDominating(
+                preferred: now,
+                observed: suggestion.updatedAt
+            )
+            suggestion.deletedAt = deletedAt
+            suggestion.updatedAt = deletedAt
             suggestion.deviceID = deviceID
             suggestion.clientMutationID = UUID()
         }

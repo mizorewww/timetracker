@@ -354,6 +354,7 @@
 "aiTaskPlan.error.invalidToolArguments" = "模型向 %@ 提供了無效參數，沒有套用任何變更。";
 "aiTaskPlan.error.duplicateToolCall" = "模型重複呼叫了工具 %@，沒有套用任何變更。";
 "aiTaskPlan.error.mixedFinalize" = "模型在完成計畫的同時又提交了其他變更，請重新產生。";
+"aiTaskPlan.error.toolRoundLimit" = "模型在 %d 輪內沒有完成計畫，請重新產生。";
 "aiTaskPlan.error.workspaceRequestRejected" = "端點拒絕了完整工作區請求（HTTP %d）：%d 個分類、%d 個任務、%d 個清單項目，請求實際為 %d 位元組。該請求未重試，也未套用任何變更。請確認模型支援所需工具和內容大小。";
 "aiTaskPlan.error.workspaceChanged" = "產生預覽後任務工作區已發生變化。沒有套用任何變更，請重新產生建議。";
 "aiTaskPlan.error.invalidOperation" = "建議已不再符合審閱時的變更，沒有套用任何內容。";
@@ -1043,6 +1044,8 @@
 "inbox.persistence.field.reason" = "推薦理由";
 "inbox.persistence.field.symbol" = "推薦符號";
 "inbox.error.changed" = "此收件匣已在其他位置發生變更。請查看最新版本後重試。";
+"inbox.error.externalCommandPayloadChanged" = "這個收集請求已用於其他內容。";
+"inbox.error.externalCommandKeyConflict" = "這個收集請求已有互相衝突的儲存結果。";
 "inbox.route.error.taskUnavailable" = "此任務已無法使用，請選擇其他任務。";
 "inbox.persistence.field.color" = "推薦顏色";
 "inbox.persistence.field.model" = "推薦模型";

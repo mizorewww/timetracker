@@ -41,9 +41,9 @@ enum StoreScopedInboxMutationError: LocalizedError, Equatable {
         case .categoryUnavailable:
             AppStrings.localized("taskCategory.error.unavailable")
         case .externalCommandPayloadChanged:
-            "An external Inbox capture command key was reused with different content."
+            AppStrings.localized("inbox.error.externalCommandPayloadChanged")
         case .externalCommandKeyConflict:
-            "An external Inbox capture command key has conflicting committed results."
+            AppStrings.localized("inbox.error.externalCommandKeyConflict")
         }
     }
 }

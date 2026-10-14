@@ -8,8 +8,12 @@ extension SyncDataSnapshot {
             .latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(checklistItems.map(\.id))
         for item in existing.values where !snapshotIDs.contains(item.id) {
-            item.deletedAt = now
-            item.updatedAt = now
+            let deletedAt = PersistentLWWMutationDate.strictlyDominating(
+                preferred: now,
+                observed: item.updatedAt
+            )
+            item.deletedAt = deletedAt
+            item.updatedAt = deletedAt
             item.deviceID = deviceID
             item.clientMutationID = UUID()
         }
@@ -32,7 +36,10 @@ extension SyncDataSnapshot {
             model.sortOrder = record.sortOrder
             model.completedAt = record.completedAt
             model.createdAt = record.createdAt
-            model.updatedAt = max(record.updatedAt, now)
+            model.updatedAt = PersistentLWWMutationDate.strictlyDominating(
+                preferred: now,
+                observed: record.updatedAt, model.updatedAt
+            )
             model.deletedAt = record.deletedAt
             model.deviceID = deviceID
             model.clientMutationID = UUID()

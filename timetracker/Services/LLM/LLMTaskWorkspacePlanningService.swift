@@ -22,6 +22,7 @@ nonisolated enum LLMTaskWorkspacePlanningError:
     case invalidToolArguments(String)
     case duplicateToolCallID(String)
     case mixedFinalizeCall
+    case toolRoundLimitExceeded(Int)
     case workspaceRequestRejected(
         statusCode: Int,
         providerMessage: String?,
@@ -54,6 +55,11 @@ nonisolated enum LLMTaskWorkspacePlanningError:
             )
         case .mixedFinalizeCall:
             return Self.localized("aiTaskPlan.error.mixedFinalize")
+        case let .toolRoundLimitExceeded(limit):
+            return String.localizedStringWithFormat(
+                Self.localized("aiTaskPlan.error.toolRoundLimit"),
+                limit
+            )
         case let .workspaceRequestRejected(
             statusCode,
             providerMessage,
@@ -91,6 +97,10 @@ nonisolated enum LLMTaskWorkspacePlanningError:
 @MainActor
 struct LLMTaskWorkspacePlanningService {
     typealias Transport = @MainActor (URLRequest) async throws -> (Data, URLResponse)
+
+    /// Upper bound on model round trips before `finalize_plan`; every round
+    /// resends the whole conversation, so an unbounded loop is unbounded cost.
+    static let maximumToolRounds = 32
 
     var transport: Transport = { request in
         try await LLMSecureHTTPTransport.data(for: request)
@@ -139,6 +149,11 @@ struct LLMTaskWorkspacePlanningService {
 
         while true {
             round += 1
+            guard round <= Self.maximumToolRounds else {
+                throw LLMTaskWorkspacePlanningError.toolRoundLimitExceeded(
+                    Self.maximumToolRounds
+                )
+            }
             try Task.checkCancellation()
             let urlRequest = try Self.chatRequest(
                 endpointURL: prepared.endpointURL,

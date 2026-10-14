@@ -8,8 +8,12 @@ extension SyncDataSnapshot {
             .latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(tasks.map(\.id))
         for task in existing.values where !snapshotIDs.contains(task.id) {
-            task.deletedAt = now
-            task.updatedAt = now
+            let deletedAt = PersistentLWWMutationDate.strictlyDominating(
+                preferred: now,
+                observed: task.updatedAt
+            )
+            task.deletedAt = deletedAt
+            task.updatedAt = deletedAt
             task.deviceID = deviceID
             task.clientMutationID = UUID()
         }
@@ -37,7 +41,10 @@ extension SyncDataSnapshot {
             model.dueAt = record.dueAt
             model.notes = record.notes
             model.createdAt = record.createdAt
-            model.updatedAt = max(record.updatedAt, now)
+            model.updatedAt = PersistentLWWMutationDate.strictlyDominating(
+                preferred: now,
+                observed: record.updatedAt, model.updatedAt
+            )
             model.archivedAt = record.archivedAt
             model.deletedAt = record.deletedAt
             model.deviceID = deviceID
@@ -59,8 +66,12 @@ extension SyncDataSnapshot {
             .latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(taskCategories.map(\.id))
         for category in existing.values where !snapshotIDs.contains(category.id) {
-            category.deletedAt = now
-            category.updatedAt = now
+            let deletedAt = PersistentLWWMutationDate.strictlyDominating(
+                preferred: now,
+                observed: category.updatedAt
+            )
+            category.deletedAt = deletedAt
+            category.updatedAt = deletedAt
             category.deviceID = deviceID
             category.clientMutationID = UUID()
         }
@@ -80,7 +91,10 @@ extension SyncDataSnapshot {
             model.includesInForecast = record.includesInForecast
             model.sortOrder = record.sortOrder
             model.createdAt = record.createdAt
-            model.updatedAt = max(record.updatedAt, now)
+            model.updatedAt = PersistentLWWMutationDate.strictlyDominating(
+                preferred: now,
+                observed: record.updatedAt, model.updatedAt
+            )
             model.deletedAt = record.deletedAt
             model.deviceID = deviceID
             model.clientMutationID = UUID()

@@ -160,7 +160,7 @@ extension SyncConflictService {
         {
             return true
         }
-        return nsError.localizedDescription.localizedCaseInsensitiveContains("conflict")
+        return false
     }
 
     enum SyncAutoMergeOutcome: Equatable {
@@ -172,9 +172,9 @@ extension SyncConflictService {
     /// cloud branch already contains every winning record the merge is a
     /// no-op accept, which also lets the acknowledged baseline advance again;
     /// otherwise the merged snapshot is validated and restored as the local
-    /// winner. Any merge, validation, or restore failure falls back to the
-    /// explicit copy-choice prompt, which is the remaining "actually
-    /// conflicting" path.
+    /// winner. A merged snapshot that fails restore preflight falls back to
+    /// the explicit copy-choice prompt; I/O, lock, and save failures propagate
+    /// so the prompt never describes a store the restore already changed.
     private func resolveDivergenceByAutoMergeOrPrompt(
         localSnapshot: SyncDataSnapshot,
         cloudSnapshot: SyncDataSnapshot,
@@ -221,7 +221,7 @@ extension SyncConflictService {
             state.clearPendingConflict()
             try saveState(state)
             return .merged
-        } catch {
+        } catch is SyncDataSnapshotPreflightError {
             return .requiresPrompt
         }
     }

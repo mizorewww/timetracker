@@ -20,7 +20,7 @@ struct LedgerCommandHandler {
             taskID: taskID,
             startedAt: draft.startedAt,
             endedAt: draft.endedAt,
-            note: draft.note.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty ?? "Manual"
+            note: draft.note.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         )
     }
 

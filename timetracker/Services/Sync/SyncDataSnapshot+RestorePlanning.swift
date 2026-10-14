@@ -8,8 +8,12 @@ extension SyncDataSnapshot {
             .latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(pomodoroRuns.map(\.id))
         for run in existing.values where !snapshotIDs.contains(run.id) {
-            run.deletedAt = now
-            run.updatedAt = now
+            let deletedAt = PersistentLWWMutationDate.strictlyDominating(
+                preferred: now,
+                observed: run.updatedAt
+            )
+            run.deletedAt = deletedAt
+            run.updatedAt = deletedAt
             run.deviceID = deviceID
             run.clientMutationID = UUID()
         }
@@ -45,7 +49,10 @@ extension SyncDataSnapshot {
             )
             model.targetRounds = targetRounds
             model.createdAt = record.createdAt
-            model.updatedAt = max(record.updatedAt, now)
+            model.updatedAt = PersistentLWWMutationDate.strictlyDominating(
+                preferred: now,
+                observed: record.updatedAt, model.updatedAt
+            )
             model.deletedAt = record.deletedAt
             model.deviceID = deviceID
             model.clientMutationID = UUID()
@@ -57,8 +64,12 @@ extension SyncDataSnapshot {
             .latestByIDMarkingDuplicatesDeleted(now: now, deviceID: deviceID)
         let snapshotIDs = Set(countdownEvents.map(\.id))
         for event in existing.values where !snapshotIDs.contains(event.id) {
-            event.deletedAt = now
-            event.updatedAt = now
+            let deletedAt = PersistentLWWMutationDate.strictlyDominating(
+                preferred: now,
+                observed: event.updatedAt
+            )
+            event.deletedAt = deletedAt
+            event.updatedAt = deletedAt
             event.deviceID = deviceID
             event.clientMutationID = UUID()
         }
@@ -76,7 +87,10 @@ extension SyncDataSnapshot {
             model.title = record.title
             model.date = record.date
             model.createdAt = record.createdAt
-            model.updatedAt = max(record.updatedAt, now)
+            model.updatedAt = PersistentLWWMutationDate.strictlyDominating(
+                preferred: now,
+                observed: record.updatedAt, model.updatedAt
+            )
             model.deletedAt = record.deletedAt
             model.deviceID = deviceID
             model.clientMutationID = UUID()

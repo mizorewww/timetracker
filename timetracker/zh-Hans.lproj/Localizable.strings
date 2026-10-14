@@ -354,6 +354,7 @@
 "aiTaskPlan.error.invalidToolArguments" = "模型向 %@ 提供了无效参数，没有应用任何更改。";
 "aiTaskPlan.error.duplicateToolCall" = "模型重复调用了工具 %@，没有应用任何更改。";
 "aiTaskPlan.error.mixedFinalize" = "模型在完成计划的同时又提交了其他更改，请重新生成。";
+"aiTaskPlan.error.toolRoundLimit" = "模型在 %d 轮内没有完成计划，请重新生成。";
 "aiTaskPlan.error.workspaceRequestRejected" = "端点拒绝了完整工作区请求（HTTP %d）：%d 个分类、%d 个任务、%d 个清单项，请求实际为 %d 字节。该请求未重试，也未应用任何更改。请确认模型支持所需工具和上下文大小。";
 "aiTaskPlan.error.workspaceChanged" = "生成预览后任务工作区已发生变化。没有应用任何更改，请重新生成建议。";
 "aiTaskPlan.error.invalidOperation" = "建议已不再符合审阅时的更改，没有应用任何内容。";
@@ -1043,6 +1044,8 @@
 "inbox.persistence.field.reason" = "推荐理由";
 "inbox.persistence.field.symbol" = "推荐符号";
 "inbox.error.changed" = "此收件箱已在其他位置发生变化。请查看最新版本后重试。";
+"inbox.error.externalCommandPayloadChanged" = "这个收集请求已用于其他内容。";
+"inbox.error.externalCommandKeyConflict" = "这个收集请求已有相互冲突的保存结果。";
 "inbox.route.error.taskUnavailable" = "此任务已不可用，请选择其他任务。";
 "inbox.persistence.field.color" = "推荐颜色";
 "inbox.persistence.field.model" = "推荐模型";

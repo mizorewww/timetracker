@@ -68,7 +68,7 @@ Keychain 不能加入 SwiftData ACID transaction：LLM 配置先记住旧密钥�
 
 磁盘兼容 fixture 覆盖 V4 分类迁移、V8 `DailySummary` 移除、V9 Inbox suggestion identity/dismissal、V11→当前 suggestion destination、V12→V13 task progress。它们真实关闭旧容器、打开磁盘 store 并核对事实，但不是已发布版本生成、带固定 hash 的不可变历史 artifact——后者仍是明确缺口（应从发布 tag/当时工具链生成无敏感数据的 SQLite bundle 并附 SHA-256 manifest）。
 
-CloudKit 模式与纯本地模式共用业务模型与同一 store 文件，同步与合并完全交给 CloudKit 镜像（AD-143）；紧急内存 fallback 只用于保持可诊断，绝不描述为持久存储。同步刷新由 `NSPersistentStoreRemoteChange` 与 `eventChangedNotification` 驱动，首个通知建立固定 350 ms 截止时间、后续合并进 batch（不取消后推计时器）；没有常驻 5 秒轮询。`AppCloudSync.enabledKey` 是设备本地启动配置，不进 `SyncedPreference`/导出。Settings 同步状态用 typed `SyncActivityOutcome`，只有带结束时间且 `event.succeeded` 的 import/export/setup 在本机 refresh 成功后才是 `.succeeded`。
+CloudKit 模式与纯本地模式共用业务模型与同一 store 文件，同步与合并完全交给 CloudKit 镜像（AD-143）；紧急内存 fallback 只用于保持可诊断，绝不描述为持久存储。同步刷新由 `NSPersistentStoreRemoteChange` 与 `eventChangedNotification` 驱动，首个通知建立固定 350 ms 截止时间、后续合并进 batch（不取消后推计时器），截止时由 `RemoteChangeHistoryCursor` 按 persistent history 中变更的模型决定刷新 scope；新增模型须在其映射中登记；没有常驻 5 秒轮询。`AppCloudSync.enabledKey` 是设备本地启动配置，不进 `SyncedPreference`/导出。Settings 同步状态用 typed `SyncActivityOutcome`，只有带结束时间且 `event.succeeded` 的 import/export/setup 在本机 refresh 成功后才是 `.succeeded`。
 
 JSON 导出由 `Services/Export` 的 `UserDataSnapshot`/`UserDataExport` 在 store lock 内的 fresh read context 中捕获，只编码、不可导入。
 
@@ -76,7 +76,7 @@ JSON 导出由 `Services/Export` 的 `UserDataSnapshot`/`UserDataExport` 在 sto
 
 ## 6. 偏好与秘密
 
-普通偏好经 `SyncedPreference` 保存并可同步；`Models/PreferenceJSON.swift` 与 `PreferenceCommandHandler` 定义写边界（单项 256 KiB，整批预检后一次 `performAtomicMutation`，legacy 超限值跳过而不是保存 `null`）。设备启动配置与秘密是例外：iCloud enablement 只在当前设备 `UserDefaults`；LLM API key 写入 `LLMCredentialStore`（AfterFirstUnlockThisDeviceOnly、不同步），同步快照与 JSON 导出自带敏感键过滤，遗留明文只用于一次迁移后清除或软删除。“清空全部数据”同时清除密钥与设备本地自动建议同意。
+普通偏好经 `SyncedPreference` 保存并可同步；`Models/PreferenceJSON.swift` 与 `PreferenceCommandHandler` 定义写边界（单项 256 KiB，整批预检后一次 `performAtomicMutation`）。设备启动配置与秘密是例外：iCloud enablement 只在当前设备 `UserDefaults`；LLM API key 写入 `LLMCredentialStore`（AfterFirstUnlockThisDeviceOnly、不同步），同步快照与 JSON 导出自带敏感键过滤，遗留明文只用于一次迁移后清除或软删除。“清空全部数据”同时清除密钥与设备本地自动建议同意。
 
 `DeviceIdentity` 是本机随机平台前缀 UUID，只用于同步 tie-break 与 mutation metadata；只复用“当前平台前缀 + 大写连字符规范 UUID”的完整值，其余随机重建并回写。Required Reason API 按 target 真实 UserDefaults 边界声明（主 App `1C8F.1`+`CA92.1`、Widget `1C8F.1`、Watch `CA92.1`）；Live Activity 当前无独立 manifest，Archive 时必须核对合并结果。
 

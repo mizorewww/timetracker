@@ -276,4 +276,5 @@ final class TimeTrackerStore {
     var inboxItemReadModelByItemID: [UUID: InboxItemReadModel] = [:]
     @ObservationIgnored var scheduledSyncRefreshTask: Task<Void, Never>?
     @ObservationIgnored var pendingSyncActivityReason: SyncRefreshReason?
+    @ObservationIgnored let remoteChangeHistory = RemoteChangeHistoryCursor()
 }

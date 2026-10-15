@@ -31,7 +31,7 @@ make help                # 列出全部目标
 make test                # macOS 单元测试(默认验证入口;TEST_ONLY=timetrackerTests/Suite 聚焦,CONFIGURATION=Release 收集性能证据)
 make build-macos         # macOS app 构建(generic/platform=macOS)
 make build-ios           # iOS app 构建(generic/platform=iOS,含扩展)
-make build-install-all   # 构建并安装 iOS+Watch 与 macOS(默认 Release,复制到 /Applications)
+make build-install-all   # 构建并安装 iOS+Watch 与 macOS(默认 Release,复制到 /Applications;.device-install-exclusions 可排除设备)
 make export-artifacts    # 归档并导出签名产物(iOS IPA + macOS app/zip,默认到 build/Archives 与 build/Exports)
 make localization-check  # 校验三语种 .strings key 一致(也是 pre-commit 闸门,无需 xcodebuild)
 make format              # SwiftFormat 原地格式化;make format-check 只读校验

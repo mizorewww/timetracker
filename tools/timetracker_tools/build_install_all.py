@@ -4,6 +4,9 @@
 行为等价于原 scripts/build_install_all.sh。iOS 构建会构建依赖型 Watch App 并嵌入,
 安装前校验两端 bundle ID、伴侣关系、签名以及开发 profile 是否覆盖当前可见 Apple Watch。
 看不到物理 Watch 时仅提示并继续安装 iPhone app。macOS app 经临时目录原子替换 /Applications 下目的 app。
+
+设备排除:仓库根 `.device-install-exclusions`(每行一个设备 identifier 或名称,`#` 开头为注释,
+不入库)与环境变量 `DEVICE_EXCLUDE`(逗号分隔)中的设备会被跳过,永不安装。
 """
 
 from __future__ import annotations
@@ -20,6 +23,24 @@ from timetracker_tools.cli_utils import env, run
 
 TRUEISH = {"true", "YES"}
 FALSEISH = {"false", "NO"}
+
+DEVICE_EXCLUSION_FILE = ".device-install-exclusions"
+
+
+def device_exclusions(root: Path) -> set[str]:
+    """永不安装的设备集合:环境变量 `DEVICE_EXCLUDE`(逗号分隔)叠加仓库根
+    `.device-install-exclusions` 文件(每行一个 identifier 或设备名,`#` 注释)。
+    匹配对大小写不敏感。"""
+    raw: list[str] = os.environ.get("DEVICE_EXCLUDE", "").split(",")
+    file_path = root / DEVICE_EXCLUSION_FILE
+    if file_path.is_file():
+        raw.extend(file_path.read_text(encoding="utf-8").splitlines())
+    exclusions: set[str] = set()
+    for entry in raw:
+        entry = entry.strip()
+        if entry and not entry.startswith("#"):
+            exclusions.add(entry.casefold())
+    return exclusions
 
 
 def plist_value(plist_path: Path, key: str) -> str | None:
@@ -184,6 +205,7 @@ def install_app_on_device(
 
 def install_on_available_ios_devices(
     ios_app: Path, bundle_id: str, timeout: str, launch_after_install: bool, failures: list[str],
+    exclusions: set[str],
 ) -> None:
     print("==> Looking for available or connected physical iOS/iPadOS development devices")
     with tempfile.NamedTemporaryFile(prefix="timetracker-devices.", suffix=".json", delete=False) as tmp:
@@ -202,6 +224,9 @@ def install_on_available_ios_devices(
         return
 
     for device_id, device_name in entries:
+        if device_id.casefold() in exclusions or device_name.casefold() in exclusions:
+            print(f"==> Skipping excluded device: {device_name} ({device_id})")
+            continue
         install_app_on_device(
             device_id, device_name, ios_app, "iOS/iPadOS", bundle_id, launch_after_install, failures
         )
@@ -293,7 +318,10 @@ def main() -> int:
     run_xcodebuild(scheme, "-sdk", "iphoneos", "-destination", "generic/platform=iOS", "build")
     require_app_bundle(ios_app, "iOS")
     validate_embedded_watch_companion(ios_app, ios_embedded_watch_app, device_timeout)
-    install_on_available_ios_devices(ios_app, bundle_id, device_timeout, launch_after_install, failures)
+    exclusions = device_exclusions(root)
+    install_on_available_ios_devices(
+        ios_app, bundle_id, device_timeout, launch_after_install, failures, exclusions
+    )
 
     print(f"==> Building macOS app ({configuration}, team {team_id})")
     run_xcodebuild(scheme, "-destination", "generic/platform=macOS", "build")
@@ -312,6 +340,7 @@ def main() -> int:
         "  CONFIGURATION=Debug make build-install-all   # unlocks demo/smoke-test entry points\n"
         "  LAUNCH_AFTER_INSTALL=1 make build-install-all\n"
         "  ALLOW_DEVICE_FAILURES=1 make build-install-all\n"
+        f"  在 {DEVICE_EXCLUSION_FILE} 写入设备 identifier/名称可永久排除该设备\n"
     )
     return 0
 

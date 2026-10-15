@@ -10,4 +10,5 @@ DerivedData/
 *.py[cod]
 .venv/
 .env
+.device-install-exclusions
 Docs/userfeedback.md

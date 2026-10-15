@@ -72,7 +72,9 @@ final class TimelineChartBarLayoutMemo {
 struct TimelineChart: View {
     let timeline: AnalyticsTimelineSnapshot
     var compactHeight: CGFloat = 360
-    var exposesUITestingMarks = false
+    /// The bars stay out of VoiceOver (the legend rows carry that content)
+    /// but are queryable under UI tests.
+    let exposesUITestingMarks = AppRuntimeEnvironment.isUITesting
     @Environment(\.layoutShell) private var layoutShell
     @State private var barLayoutMemo = TimelineChartBarLayoutMemo()
 
@@ -185,15 +187,17 @@ extension TimelineChart {
             )
 
             ZStack(alignment: .topLeading) {
-                horizontalHourGrid(
+                hourGrid(
+                    timeAxis: .horizontal,
                     axisLength: barLayout.axisLength,
-                    plotHeight: proxy.size.height
+                    plotSize: CGSize(width: barLayout.axisLength, height: proxy.size.height)
                 )
                 ForEach(axisCompression.omittedGaps) { gap in
-                    horizontalGapLine(
+                    gapLine(
                         gap,
+                        timeAxis: .horizontal,
                         axisLength: barLayout.axisLength,
-                        plotHeight: proxy.size.height
+                        crossExtent: proxy.size.height
                     )
                 }
                 ForEach(barLayout.placements) { placement in
@@ -284,15 +288,17 @@ extension TimelineChart {
             )
 
             ZStack(alignment: .topLeading) {
-                verticalHourGrid(
-                    width: proxy.size.width,
-                    axisLength: barLayout.axisLength
+                hourGrid(
+                    timeAxis: .vertical,
+                    axisLength: barLayout.axisLength,
+                    plotSize: CGSize(width: proxy.size.width, height: barLayout.axisLength)
                 )
                 ForEach(axisCompression.omittedGaps) { gap in
-                    verticalGapLine(
+                    gapLine(
                         gap,
-                        width: proxy.size.width,
-                        axisLength: barLayout.axisLength
+                        timeAxis: .vertical,
+                        axisLength: barLayout.axisLength,
+                        crossExtent: proxy.size.width
                     )
                 }
                 ForEach(barLayout.placements) { placement in

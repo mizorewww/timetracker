@@ -44,13 +44,13 @@ LLM API 密钥使用 Keychain generic password：AfterFirstUnlockThisDeviceOnly�
 
 工作区 prompt 不包含 Inbox 内容、时间历史、Pomodoro 历史、Keychain 数据、设备 ID、同步 metadata 或任何 `clientMutationID`；本地 revision map 与完整 CAS baseline 只留在内存。API key 不进入 prompt 或工具结果，但按配置作为 Authorization header 发给 endpoint。编码失败不会发出 partial context；endpoint 以 HTTP 400/413/422 拒绝完整请求时以 typed error 报告三类实体 counts 与实际 encoded bytes，客户端不发送截断版也不回退旧 create-only JSON。思考强度是可同步/导出的普通偏好，只允许 DeepSeek 官方 `high`/`max`、默认 `high`；三个生产功能在 DeepSeek V4 下都发送 `thinking.type=enabled` + 当前 effort 并省略 temperature，任务规划还省略 thinking 不支持的 `tool_choice`，工具调用后的 `reasoning_content` 在同一次会话后续请求中完整回传但只用于该次临时预览，不持久化/同步/导出/记录日志；切换 effort 会取消旧请求。模型只能通过严格结构化工具读取/修改一个本机内存 overlay，不能直接访问 SwiftData；已有 Task/Checklist 按稳定 UUID 引用，Category 名称只有唯一规范化匹配时才可复用；Finalize 只产生只读 diff，破坏性影响需再次确认，Apply 在共享 store lock 下对完整 provider-visible snapshot 与本地 revision baseline 做 CAS 后原子应用，Task removal 只 Archive，任何 stale/校验/保存失败均零写入并保留预览。完整规则见 [AgentDecisions](AgentDecisions.md) AD-132。
 
-**凭证与传输**：API key 仅放入 Authorization header；远程地址必须 HTTPS，HTTP 仅允许 localhost / `.localhost` 保留主机及经数值解析确认的 `127.0.0.0/8`/`::1`（字符串前缀不能接受 `127.evil.com`）；带 Authorization 的重定向只允许 scheme/host/有效端口完全相同。响应经禁用缓存与 cookie 的 ephemeral 会话读取，资源超时 60 秒，Content-Length 与实际正文都限制 2 MiB，非 2xx 在 headers 后立即取消。所有 AI 流程的 model ID 为 256 bytes、endpoint/API key 分别最多 4/8 KiB；模型 reason 按 512-byte 持久化字段归一化，icon 必须属于本次已公告目录，task/category UUID 必须属于实际发送候选。请求、响应与错误日志不得输出密钥，生产诊断避免记录完整用户文本。
+**凭证与传输**：API key 仅放入 Authorization header；远程地址必须 HTTPS，HTTP 仅允许 `localhost`、`127.0.0.1`、`::1`；请求经禁用缓存与 cookie 的 ephemeral 会话发送并拒绝一切重定向，超时 90 秒。所有 AI 流程的 model ID 为 256 bytes；模型 reason 按 512-byte 持久化字段归一化，icon 必须属于本次已公告目录，task/category UUID 必须属于实际发送候选。请求、响应与错误日志不得输出密钥，生产诊断避免记录完整用户文本。
 
 选择第三方 endpoint 即授权其按条款处理上述字段；应用只能控制客户端发送边界，不能保证第三方不记录或训练。发行前必须为实际默认/推荐 endpoint 确认并披露运营主体、处理目的、传输地区、日志/内容保留期、训练用途、用户删除渠道与服务条款版本；未锁定则不得以“内容不保留”等措辞发布，自定义 endpoint 也必须在 UI 提醒用户自行审查政策。
 
 ## 5. 系统扩展数据流
 
-提交后更新由 store-scoped projection scheduler 异步追赶（见 AD-142），只改变执行时机与本机恢复 metadata，不改变任何扩展 DTO、字段、接收方、App Group、WatchConnectivity 或 ActivityKit payload；单 sink 失败不会让已提交业务动作变成可重试失败。
+提交后更新由 store-scoped projection scheduler 异步追赶（见 AD-004），只改变执行时机与本机恢复 metadata，不改变任何扩展 DTO、字段、接收方、App Group、WatchConnectivity 或 ActivityKit payload；单 sink 失败不会让已提交业务动作变成可重试失败。
 
 - **Live Activity** 接收当前计时的最小展示状态，不是事实存储；锁屏与灵动岛只展示任务身份与经过时间，点按只打开主应用“今日”，扩展没有停止按钮，也不直接执行 SwiftData/CloudKit 或其它持久 mutation。
 - **Widget** 通过 `group.me.mezorewww.timetracker` 共享版本化快照（自动签名 profile 已含该能力）。Producer 用 Unicode-safe prefix、summary/start clamp、count cap 与文本预算把投影整形到传输范围，不修改 canonical facts；快照在写入和读取都按不可信输入验证（编码大小与条目数上限、有界 UTF-8 字段、有限日期/统计、唯一 ID，数值见 `WidgetSnapshotLimits`），非法读取显示 corrupted 而不回退到 standard UserDefaults 或空数据。仍需真机验证共享读写与刷新；不得用临时公共文件、UserDefaults suite fallback 或关闭 sandbox 绕过。
@@ -90,7 +90,7 @@ LLM API 密钥使用 Keychain generic password：AfterFirstUnlockThisDeviceOnly�
 ## 10. 发行前检查
 
 - [ ] Keychain round-trip、遗留迁移、清空全部数据的秘密/同意清理与失败补偿、导出过滤测试通过；搜索日志/fixture/示例确认无真实 secret。
-- [ ] 远程 HTTP endpoint、伪装 loopback、跨源 redirect 和 HTTPS 降级被拒绝；合法 loopback 与同源 redirect 按预期允许。
+- [ ] 远程 HTTP endpoint 与带凭证/查询串的 endpoint 被拒绝，loopback HTTP 可用；重定向不被跟随。
 - [ ] PrivacyInfo 已加入正确 target 并通过归档验证；`1C8F.1`/`CA92.1` 与各 target 实际 UserDefaults/App Group 用途一致。
 - [ ] App Store 隐私标签与 AI/CloudKit 实际数据流一致；AI 默认/推荐 endpoint 的运营方、用途、保留期、训练用途、跨境处理与删除渠道已确认并写入披露（未确认不作“零保留”承诺）；配置 Test→Save、自动建议默认关闭通过测试。
 - [ ] Inbox/checklist 完整序列化全部候选/Unicode 字段/完整 SF Symbols 目录、非候选 UUID 拒绝、opaque model ID 与结果持久化边界通过回归；任务计划的 counts 披露、完整 workspace/fingerprint、counts+bytes typed failure、严格工具协议、只读 diff、破坏性确认、完整 CAS、stale 预览保留与原子回滚通过回归。

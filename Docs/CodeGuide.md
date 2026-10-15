@@ -86,7 +86,7 @@ JSON 导出由 `Services/Export` 的 `UserDataSnapshot`/`UserDataExport` 在 sto
 
 **Live Activity**：只读状态投影，attributes 小而稳定，extension 不直接写 SwiftData/iCloud。锁屏与 expanded Dynamic Island 共用唯一 `LiveActivityTimerRow`；锁屏沿用 Today/Now 层级，expanded 普通字号只显示图标/标题/elapsed，不显示路径/附加计时数量/停止控件；点按只打开 Today，停止由 Today 行完成。文本按 Unicode 边界投影到受限字段，stale 状态明确。
 
-**Watch**：状态 owner 是同一个 `WatchAppStore` 类型，按 extension 文件拆开（base observable、Commands 内存队列/timeout、Connectivity transport/payload/freshness、SessionDelegate callbacks）。命令是即时控制：iPhone 可达时用 `sendMessage` 发送，typed 结果（success/missingTask/missingSegment/invalid/failed/timeout）在 reply 中返回；不可达时保持 pending，Watch 本机 20 秒后转为可重试失败。start/stop 在 iPhone 侧天然幂等，不存回执。`WatchCommandProcessor` 在 mutation 前校验 DTO 与时间边界（`WatchTransportLimits`），过期/非法命令返回 invalid 且不写账本。三页分页与排序见 AD-119。
+**Watch**：状态 owner 是同一个 `WatchAppStore` 类型，按 extension 文件拆开（base observable、Commands 内存队列/timeout、Connectivity transport/payload/freshness、SessionDelegate callbacks）。命令是即时控制：iPhone 可达时用 `sendMessage` 发送，typed 结果（success/missingTask/missingSegment/invalid/failed/timeout）在 reply 中返回；不可达时保持 pending，Watch 本机 20 秒后转为可重试失败。start/stop 在 iPhone 侧天然幂等，不存回执。`WatchCommandProcessor` 在 mutation 前校验 DTO 与时间边界（`WatchTransportLimits`），过期/非法命令返回 invalid 且不写账本。
 
 **Deep link**：`AppDeepLinkRouter` 只接受 `timetracker` scheme、最长 2,048 bytes、无 credential/port/fragment 的白名单路由并校验 UUID；`PendingDeepLinkQueue` 容量 16、按语义去重、满时丢最旧、配置成功后 drain、scene 消失清空。带 `taskID` 的停止链接只停该任务活动 segment，目标已停时 no-op，不回退停止其它并行计时。`WatchCommandRouter` 用弱 store 引用选择最近 active scene，最后注销时移除进程级 bridge closure。
 
@@ -94,9 +94,9 @@ JSON 导出由 `Services/Export` 的 `UserDataSnapshot`/`UserDataExport` 在 sto
 
 ## 8. AI 服务
 
-LLM 服务（`LLMModelService`、建议服务与任务计划服务）面向用户配置的 OpenAI-compatible endpoint：远程必须 HTTPS，HTTP 仅限 `localhost`/`.localhost` 与数值解析确认的 `127.0.0.0/8`/`::1`；带 Authorization 的 redirect 只允许同 scheme/host/有效端口；生产 transport 用 ephemeral session（禁用 cache/cookie、资源 60 秒、2 MiB 实际字节上限、headers 阶段拒绝非 2xx/声明超限）；模型发现逐项解码、只保留升序前 256 个唯一有效 opaque model ID。日志与错误不得打印密钥或完整敏感请求。精确字段与安全边界见 [PrivacyAndSecurity](PrivacyAndSecurity.md)。
+LLM 请求经 MacPaw `OpenAI` 包（`LLMClient` 封装）发往用户配置的 OpenAI-compatible endpoint，不手写线上模型：远程必须 HTTPS，HTTP 仅限 loopback；endpoint 可粘贴 base URL 或带 `/models`、`/chat/completions` 的地址；专用 ephemeral session 拒绝一切 redirect（避免 Authorization 跨源）；服务通过注入的 `LLMChatSender` 便于测试。所有模型发送同一套参数：不发 `temperature`/`thinking`，`tool_choice` 省略（DeepSeek 思考模式拒绝 `required`），工具轮次把上一轮 `reasoning_content` 原样带回（DeepSeek 带工具时必须回传）。日志与错误不得打印密钥。
 
-Settings 用 `LLMConfigurationDraft`：endpoint/API key/模型/思考强度编辑先留在 sheet，“测试连接”只读模型并验证 credential fingerprint、不持久化，只有模型有效时才能“保存”；保存时四项由 `PreferenceCommandHandler.set(values:)` 一次 SwiftData 提交，API key 的 Keychain side effect 用旧值补偿恢复并单独报告失败。自动建议是默认关闭、设备本地的第二开关，不进 CloudKit/JSON。`LLMReasoningEffort` 只允许 DeepSeek 官方 `high`/`max`；三条生产 service 对 DeepSeek V4 显式开启 thinking、发送所选 effort、省略 temperature，workspace 工具会话省略 `tool_choice` 并把每轮完整 `reasoning_content` 原样带回，其它模型不发送这些专属字段。effort 是 request identity 的一部分，切换时取消旧请求。
+Settings 用 `LLMConfigurationDraft`：endpoint/API key/模型/思考强度编辑先留在 sheet，“测试连接”只读模型并验证 credential fingerprint、不持久化，只有模型有效时才能“保存”；保存时四项由 `PreferenceCommandHandler.set(values:)` 一次 SwiftData 提交，API key 的 Keychain side effect 用旧值补偿恢复并单独报告失败。自动建议是默认关闭、设备本地的第二开关，不进 CloudKit/JSON。`LLMReasoningEffort` 默认 `automatic`（不发 `reasoning_effort`，兼容无思考控制的模型），其余档位原样作为 `reasoning_effort` 发送（`max` 用于 DeepSeek）；effort 是 request identity 的一部分，切换时取消旧请求。
 
 任务计划链：`LLMTaskWorkspacePlanningService` → `AITaskWorkspaceOverlay` → `AITaskWorkspacePlanGeneratorViews` → `StoreScopedAITaskAtomicMutationCoordinator` → `TimeTrackerStore+AITaskPlanCommands`。捕获/Apply 在共享锁 + fresh context 中做完整 workspace CAS（见 AD-132）；工具只改内存 overlay，schema 全部属性 required 且 `additionalProperties: false`，无效参数返回零变更 `{ok:false}`，未知工具/重复 call ID/混合 finalize 显式失败；只有 `finalize_plan` 结束生成。Finalize 生成 baseline→overlay 只读 diff，预览显示 create/update/archive/delete/reuse、完整路径与 before→after，`Apply N Changes` 是唯一提交入口，破坏性影响用原生确认；Task removal 只 Archive。工具循环最多 `LLMTaskWorkspacePlanningService.maximumToolRounds` 轮。
 
@@ -117,7 +117,7 @@ Settings 用 `LLMConfigurationDraft`：endpoint/API key/模型/思考强度编�
 
 签名与系统能力规则（`CODE_SIGN_STYLE = Automatic`、team `LT98S43NKA`、禁止绕过、APS 规范键 `aps-environment`、CLI 优先、模拟器证据边界）的权威出处是 [Testing](Testing.md)。
 
-第三方依赖默认不新增；经审查的例外是 MarkdownView `4.1.7`（任务备注证据态）、BlossomColorPicker 固定 revision `9a1ee3df309e37ae271362818dcdfdb072ea9611`（MIT、无传递依赖）、KeyboardShortcuts `3.0.1`（macOS 菜单录制，经本地 `MacKeyboardShortcuts` 条件包适配）。依赖 revision/version、`Package.resolved` 与 [AgentDecisions](AgentDecisions.md) AD-117 必须同步；移除 BlossomColorPicker 只删 package 引用与 `SymbolColorWell` 适配，六位 sRGB 数据不需迁移。
+第三方依赖默认不新增，经审查的例外都在工程里锁定精确版本/revision：MarkdownView `4.1.7`（任务备注）、BlossomColorPicker `9a1ee3df…`（MIT、无传递依赖）、KeyboardShortcuts `3.0.1`（macOS 菜单录制，经本地 `MacKeyboardShortcuts` 条件包适配）、MacPaw OpenAI `0.5.3`（MIT，OpenAI-compatible 客户端与模型，只依赖 swift-openapi-runtime）。改动时同步 `Package.resolved`。
 
 ## 12. 相关文档
 

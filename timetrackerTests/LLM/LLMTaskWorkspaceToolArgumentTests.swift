@@ -1,4 +1,5 @@
 import Foundation
+import OpenAI
 import Testing
 @testable import timetracker
 
@@ -62,10 +63,9 @@ struct LLMTaskWorkspaceToolArgumentTests {
         "dailyRecurrence":null\(extraField)}
         """
         return try LLMTaskWorkspacePlanningService.execute(
-            OpenAIChatToolCall(
+            .init(
                 id: "call-1",
-                type: "function",
-                function: .init(name: AITaskWorkspaceToolName.createTask.rawValue, arguments: arguments)
+                function: .init(arguments: arguments, name: AITaskWorkspaceToolName.createTask.rawValue)
             ),
             overlay: &overlay,
             makeID: { UUID() }

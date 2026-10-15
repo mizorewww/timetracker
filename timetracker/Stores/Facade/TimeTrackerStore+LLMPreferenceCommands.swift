@@ -71,7 +71,7 @@ extension TimeTrackerStore {
         let normalizedAPIKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedSelectedModel = AppPreferenceValueSanitizer.llmModelID(selectedModel)
         let normalizedModels = AppPreferenceValueSanitizer.llmModelIDs(availableModelIDs)
-        guard LLMModelService.modelsURL(endpoint: normalizedEndpoint) != nil,
+        guard LLMClient.isValidEndpoint(normalizedEndpoint),
               !normalizedAPIKey.isEmpty,
               normalizedModels.contains(normalizedSelectedModel)
         else {

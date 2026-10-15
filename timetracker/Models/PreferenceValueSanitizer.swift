@@ -122,7 +122,7 @@ enum AppPreferenceValueSanitizer {
             rawValue: value.trimmingCharacters(
                 in: .whitespacesAndNewlines
             ).lowercased()
-        ) ?? .high
+        ) ?? .automatic
     }
 
     static func llmPromptInstructions(

@@ -10,6 +10,7 @@
 		F10000000000000000000001 /* MarkdownView in Frameworks */ = {isa = PBXBuildFile; productRef = F10000000000000000000003 /* MarkdownView */; };
 		F20000000000000000000001 /* BlossomColorPicker in Frameworks */ = {isa = PBXBuildFile; productRef = F20000000000000000000003 /* BlossomColorPicker */; };
 		F30000000000000000000001 /* HeapModule in Frameworks */ = {isa = PBXBuildFile; productRef = F30000000000000000000003 /* HeapModule */; };
+		F50000000000000000000001 /* OpenAI in Frameworks */ = {isa = PBXBuildFile; productRef = F50000000000000000000003 /* OpenAI */; };
 		F40000000000000000000001 /* MacKeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = F40000000000000000000003 /* MacKeyboardShortcuts */; };
 		E20000000000000000000001 /* timetrackerLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E20000000000000000000002 /* timetrackerLiveActivityExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E40100000000000000000001 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = E40100000000000000000000 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift */; };
@@ -190,6 +191,7 @@
 				F20000000000000000000001 /* BlossomColorPicker in Frameworks */,
 				F10000000000000000000001 /* MarkdownView in Frameworks */,
 				F30000000000000000000001 /* HeapModule in Frameworks */,
+				F50000000000000000000001 /* OpenAI in Frameworks */,
 				F40000000000000000000001 /* MacKeyboardShortcuts in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -297,6 +299,7 @@
 				F20000000000000000000003 /* BlossomColorPicker */,
 				F10000000000000000000003 /* MarkdownView */,
 				F30000000000000000000003 /* HeapModule */,
+				F50000000000000000000003 /* OpenAI */,
 				F40000000000000000000003 /* MacKeyboardShortcuts */,
 			);
 			productName = timetracker;
@@ -462,6 +465,7 @@
 				F20000000000000000000002 /* XCRemoteSwiftPackageReference "BlossomColorPicker" */,
 				F10000000000000000000002 /* XCRemoteSwiftPackageReference "MarkdownView" */,
 				F30000000000000000000002 /* XCRemoteSwiftPackageReference "swift-collections" */,
+				F50000000000000000000002 /* XCRemoteSwiftPackageReference "OpenAI" */,
 				F40000000000000000000002 /* XCLocalSwiftPackageReference "MacKeyboardShortcuts" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -1269,6 +1273,14 @@
 				version = 1.6.0;
 			};
 		};
+		F50000000000000000000002 /* XCRemoteSwiftPackageReference "OpenAI" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/MacPaw/OpenAI";
+			requirement = {
+				kind = exactVersion;
+				version = 0.5.3;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1286,6 +1298,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F30000000000000000000002 /* XCRemoteSwiftPackageReference "swift-collections" */;
 			productName = HeapModule;
+		};
+		F50000000000000000000003 /* OpenAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F50000000000000000000002 /* XCRemoteSwiftPackageReference "OpenAI" */;
+			productName = OpenAI;
 		};
 		F40000000000000000000003 /* MacKeyboardShortcuts */ = {
 			isa = XCSwiftPackageProductDependency;

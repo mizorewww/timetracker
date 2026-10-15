@@ -209,9 +209,12 @@
 "settings.llm.model" = "模型";
 "settings.llm.modelFooter" = "发送到 endpoint 的是完整且精确的模型 ID。";
 "settings.llm.reasoningEffort" = "思考强度";
+"settings.llm.reasoningEffort.automatic" = "自动";
+"settings.llm.reasoningEffort.low" = "低";
+"settings.llm.reasoningEffort.medium" = "中";
 "settings.llm.reasoningEffort.high" = "高";
 "settings.llm.reasoningEffort.max" = "最大";
-"settings.llm.reasoningEffort.footer" = "DeepSeek V4 会使用思考模式和这里选择的官方 high/max 强度；其他模型系列继续使用各自兼容的控制参数。";
+"settings.llm.reasoningEffort.footer" = "“自动”由模型自行决定思考强度；其他档位会作为 reasoning_effort 发送，不支持思考控制的模型可能会拒绝。";
 "settings.llm.noModels" = "还没有拉取模型";
 "settings.llm.fetching" = "正在拉取模型...";
 "settings.llm.fetchSuccess" = "已加载 %d 个模型。";
@@ -246,7 +249,6 @@
 "settings.llm.prompt.error.controlCharacter" = "请移除不支持的控制字符。允许使用制表符和换行。";
 "settings.llm.prompt.error.tooLongFormat" = "指令占用 %lld 字节，最多允许 %lld 字节。";
 "settings.llm.taskPlan.error.requestRequired" = "请描述你想创建的任务计划。";
-"settings.llm.taskPlan.error.requestTooLarge" = "需求内容过长，请缩短后重试。";
 "settings.llm.taskPlan.error.instructionsTooLarge" = "任务规划指令过长，请前往设置缩短内容。";
 "settings.llm.taskPlan.error.responseTooLarge" = "生成的计划过大，无法安全预览。";
 "settings.llm.taskPlan.error.invalidResponse" = "端点返回的任务计划无法读取。";
@@ -346,7 +348,6 @@
 "aiTaskPlan.error.duplicateToolCall" = "模型重复调用了工具 %@，没有应用任何更改。";
 "aiTaskPlan.error.mixedFinalize" = "模型在完成计划的同时又提交了其他更改，请重新生成。";
 "aiTaskPlan.error.toolRoundLimit" = "模型在 %d 轮内没有完成计划，请重新生成。";
-"aiTaskPlan.error.workspaceRequestRejected" = "端点拒绝了完整工作区请求（HTTP %d）：%d 个分类、%d 个任务、%d 个清单项，请求实际为 %d 字节。该请求未重试，也未应用任何更改。请确认模型支持所需工具和上下文大小。";
 "aiTaskPlan.error.workspaceChanged" = "生成预览后任务工作区已发生变化。没有应用任何更改，请重新生成建议。";
 "aiTaskPlan.error.invalidOperation" = "建议已不再符合审阅时的更改，没有应用任何内容。";
 "aiTaskPlan.error.identityConflict" = "建议项目的身份与现有数据发生冲突，没有应用任何内容。";
@@ -355,8 +356,6 @@
 "settings.llm.error.missingEndpoint" = "请先填写 endpoint。";
 "settings.llm.error.invalidEndpoint" = "请输入有效的 HTTPS endpoint。仅本机回环地址允许使用 HTTP。";
 "settings.llm.error.missingAPIKey" = "请先填写 API key。";
-"settings.llm.error.responseStatus" = "服务器返回 HTTP %d。";
-"settings.llm.error.responseTooLarge" = "服务器返回的内容过大。";
 "settings.llm.error.timeout" = "服务器响应超时。";
 "settings.llm.error.invalidResponse" = "无法读取服务器返回内容。";
 "settings.timeRecords" = "时间记录";
@@ -1123,7 +1122,6 @@
 "inbox.suggestion.reason" = "推荐理由";
 "inbox.suggestion.error.missingModel" = "请先在设置里选择 LLM 模型，再获取推荐。";
 "inbox.suggestion.error.noTaskCandidates" = "请先创建任务或分类，再获取推荐。";
-"inbox.suggestion.error.requestTooLarge" = "推荐请求包含的信息过多。请缩短文本后重试。";
 "inbox.suggestion.error.noValidTask" = "推荐结果没有匹配到可用目的地。";
 "error.savedRefreshFailed" = "更改已保存，但无法重新载入最新数据。%@";
 "preference.error.invalidValue" = "设置值无效，未保存任何更改。";

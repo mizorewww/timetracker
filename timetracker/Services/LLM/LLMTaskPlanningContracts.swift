@@ -3,7 +3,6 @@ import Foundation
 enum LLMTaskPlanningError: LocalizedError, Equatable {
     case missingRequest
     case missingModel
-    case requestTooLarge
     case instructionsTooLarge
     case invalidField
 
@@ -13,8 +12,6 @@ enum LLMTaskPlanningError: LocalizedError, Equatable {
             AppStrings.localized("settings.llm.taskPlan.error.requestRequired")
         case .missingModel:
             AppStrings.localized("inbox.suggestion.error.missingModel")
-        case .requestTooLarge:
-            AppStrings.localized("settings.llm.taskPlan.error.requestTooLarge")
         case .instructionsTooLarge:
             AppStrings.localized("settings.llm.taskPlan.error.instructionsTooLarge")
         case .invalidField:

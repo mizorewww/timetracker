@@ -23,9 +23,9 @@ struct AITaskPlanGeneratorSheet: View {
     @State private var isDestructiveConfirmationPresented = false
 
     private var isConfigured: Bool {
-        LLMModelService.modelsURL(
-            endpoint: store.preferences.llmEndpoint
-        ) != nil &&
+        LLMClient.isValidEndpoint(
+            store.preferences.llmEndpoint
+        ) &&
             store.preferences.llmAPIKey
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .isEmpty == false &&

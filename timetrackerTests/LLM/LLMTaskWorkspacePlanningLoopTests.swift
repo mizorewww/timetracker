@@ -1,4 +1,5 @@
 import Foundation
+import OpenAI
 import Testing
 @testable import timetracker
 
@@ -7,17 +8,15 @@ struct LLMTaskWorkspacePlanningLoopTests {
     @Test
     func modelThatNeverFinalizesStopsAtTheRoundLimit() async throws {
         var requestCount = 0
-        let service = LLMTaskWorkspacePlanningService { request in
+        let service = LLMTaskWorkspacePlanningService { _, _ in
             requestCount += 1
             let body = """
-            {"choices":[{"index":0,"finish_reason":"tool_calls","message":{"role":"assistant","content":null,\
+            {"id":"r\(requestCount)","object":"chat.completion","created":0,"model":"model",\
+            "choices":[{"index":0,"finish_reason":"tool_calls","message":{"role":"assistant","content":null,\
             "tool_calls":[{"id":"call-\(requestCount)","type":"function",\
             "function":{"name":"list_workspace","arguments":"{}"}}]}}]}
             """
-            let response = try #require(
-                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)
-            )
-            return (Data(body.utf8), response)
+            return try JSONDecoder().decode(ChatResult.self, from: Data(body.utf8))
         }
 
         await #expect(
@@ -33,7 +32,7 @@ struct LLMTaskWorkspacePlanningLoopTests {
                     endpoint: "https://example.test/v1",
                     apiKey: "key",
                     modelID: "model",
-                    reasoningEffort: .high
+                    reasoningEffort: .automatic
                 )
             )
         }

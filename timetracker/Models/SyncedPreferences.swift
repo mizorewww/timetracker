@@ -7,6 +7,9 @@ nonisolated enum LLMReasoningEffort:
     Identifiable,
     Sendable
 {
+    case automatic
+    case low
+    case medium
     case high
     case max
 
@@ -58,7 +61,7 @@ struct AppPreferences: Equatable {
     var llmAPIKey = ""
     var llmSelectedModel = ""
     var llmAvailableModelIDs: [String] = []
-    var llmReasoningEffort = LLMReasoningEffort.high
+    var llmReasoningEffort = LLMReasoningEffort.automatic
     var llmInboxSuggestionInstructions = LLMPromptKind.inboxRouting.defaultInstructions
     var llmChecklistVisualInstructions = LLMPromptKind.checklistVisual.defaultInstructions
     var llmTaskPlanInstructions = LLMTaskPlanPrompt.defaultInstructions

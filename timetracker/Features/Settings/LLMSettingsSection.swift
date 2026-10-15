@@ -35,7 +35,7 @@ struct LLMConfigurationDraft: Equatable {
 
     var canSave: Bool {
         let normalizedDraft = normalized
-        return LLMModelService.modelsURL(endpoint: normalizedDraft.endpoint) != nil &&
+        return LLMClient.isValidEndpoint(normalizedDraft.endpoint) &&
             !normalizedDraft.apiKey.isEmpty &&
             normalizedDraft.availableModels.contains(normalizedDraft.selectedModel)
     }
@@ -52,7 +52,7 @@ struct LLMSettingsSection: View {
     let onEditPrompt: (LLMPromptKind) -> Void
 
     private var isConfigured: Bool {
-        LLMModelService.modelsURL(endpoint: endpoint) != nil &&
+        LLMClient.isValidEndpoint(endpoint) &&
             hasAPIKey &&
             availableModels.contains(selectedModel)
     }

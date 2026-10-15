@@ -21,7 +21,7 @@ struct LLMPromptInstructionsEditor: View {
     init(
         kind: LLMPromptKind,
         instructions: String,
-        reasoningEffort: LLMReasoningEffort = .high,
+        reasoningEffort: LLMReasoningEffort = .automatic,
         isEmbeddedInNavigationStack: Bool = false,
         onDismiss: (() -> Void)? = nil,
         onSave: @escaping (String) -> Bool

@@ -1,4 +1,5 @@
 import Foundation
+import OpenAI
 
 nonisolated struct LLMChecklistVisualSuggestionResult: Equatable, Sendable {
     let iconName: String
@@ -8,11 +9,7 @@ nonisolated struct LLMChecklistVisualSuggestionResult: Equatable, Sendable {
 }
 
 struct LLMChecklistVisualSuggestionService {
-    typealias Transport = (URLRequest) async throws -> (Data, URLResponse)
-
-    var transport: Transport = { request in
-        try await LLMSecureHTTPTransport.data(for: request)
-    }
+    var send: LLMChatSender = LLMClient.chat
 
     func suggest(
         checklistTitle: String,
@@ -31,35 +28,33 @@ struct LLMChecklistVisualSuggestionService {
             throw LLMInboxSuggestionServiceError.missingModel
         }
 
-        let request = try suggestionRequest(
+        let query = try suggestionQuery(
             input: input,
             instructions: instructions,
             configuration: configuration
         )
         let contentData = try await LLMSuggestionChatSupport.contentData(
-            for: request,
-            transport: transport
+            send(query, configuration)
         )
         let payload = try JSONDecoder().decode(ChecklistVisualSuggestionPayload.self, from: contentData)
         return Self.sanitize(payload: payload, modelID: input.modelID)
     }
 
-    private func suggestionRequest(
+    private func suggestionQuery(
         input: LLMChecklistVisualSuggestionPreparedInput,
         instructions: String,
         configuration: LLMRequestConfiguration
-    ) throws -> URLRequest {
-        try LLMSuggestionChatSupport.request(
+    ) throws -> ChatQuery {
+        try LLMSuggestionChatSupport.query(
             modelID: input.modelID,
             responseContract: Self.responseContract,
-            configuration: configuration
-        ) {
-            try prompt(
+            configuration: configuration,
+            promptJSON: prompt(
                 input: input,
                 instructions: AppPreferenceValueSanitizer
                     .llmPromptInstructions(instructions, for: .checklistVisual)
             )
-        }
+        )
     }
 
     static func sanitize(

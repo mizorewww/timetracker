@@ -229,7 +229,7 @@ extension LLMPromptKind {
     /// Keep its constants shared with request construction so Settings cannot
     /// describe a different protocol than the App actually sends.
     func effectiveRequestDisclosure(
-        reasoningEffort: LLMReasoningEffort = .high
+        reasoningEffort: LLMReasoningEffort = .automatic
     ) -> String {
         let sharedEnvelope = """
         ## HTTP envelope
@@ -243,6 +243,9 @@ extension LLMPromptKind {
         - `messages[1]`: a JSON user message containing the editable \
         instructions plus the runtime fields listed below.
         """
+        let reasoningControl = reasoningEffort == .automatic
+            ? "`reasoning_effort`: omitted (provider default)."
+            : "`reasoning_effort`: `\(reasoningEffort.rawValue)`."
         let symbolSummary = """
         - `allowedSymbols`: \
         \(SymbolCatalog.symbolNames.count) exact SF Symbol names.
@@ -264,11 +267,7 @@ extension LLMPromptKind {
 
             ## Model controls
 
-            - DeepSeek V4: `temperature` is omitted; `thinking.type` is \
-            `enabled`; `reasoning_effort` is `\(reasoningEffort.rawValue)`.
-            - Other models: `temperature` is \
-            \(LLMChatRequestPolicy.suggestionTemperature), and thinking fields \
-            are omitted.
+            - \(reasoningControl)
             - `response_format.type`: `json_object`
             - `tools` and `tool_choice`: omitted
             """
@@ -286,11 +285,7 @@ extension LLMPromptKind {
 
             ## Model controls
 
-            - DeepSeek V4: `temperature` is omitted; `thinking.type` is \
-            `enabled`; `reasoning_effort` is `\(reasoningEffort.rawValue)`.
-            - Other models: `temperature` is \
-            \(LLMChatRequestPolicy.suggestionTemperature), and thinking fields \
-            are omitted.
+            - \(reasoningControl)
             - `response_format.type`: `json_object`
             - `tools` and `tool_choice`: omitted
             """
@@ -311,12 +306,8 @@ extension LLMPromptKind {
 
             ## Model controls
 
-            - DeepSeek V4: `temperature` and `tool_choice` are omitted; \
-            `thinking.type` is `enabled`; `reasoning_effort` is \
-            `\(reasoningEffort.rawValue)`.
-            - Other models: `temperature` is \
-            \(LLMChatRequestPolicy.taskPlanningTemperature), `tool_choice` is \
-            `required`, and thinking fields are omitted.
+            - \(reasoningControl)
+            - `tool_choice`: omitted (provider default `auto`).
             - `response_format`: omitted because the response is tool calls.
             - Each round appends the assistant tool calls and matching tool \
             results to `messages`; only `finalize_plan` ends generation.
@@ -332,43 +323,6 @@ extension LLMPromptKind {
             ```
             """
         }
-    }
-}
-
-nonisolated enum LLMChatRequestPolicy {
-    static let suggestionTemperature = 0.2
-    static let taskPlanningTemperature = 0.0
-
-    static func usesDeepSeekV4Thinking(modelID: String) -> Bool {
-        let normalizedModelID = modelID
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
-        return normalizedModelID == "deepseek-v4-flash" ||
-            normalizedModelID == "deepseek-v4-pro"
-    }
-
-    static func temperature(
-        modelID: String,
-        fallback: Double
-    ) -> Double? {
-        usesDeepSeekV4Thinking(modelID: modelID) ? nil : fallback
-    }
-
-    static func thinkingConfiguration(
-        modelID: String
-    ) -> OpenAIChatThinkingConfiguration? {
-        usesDeepSeekV4Thinking(modelID: modelID)
-            ? OpenAIChatThinkingConfiguration(type: "enabled")
-            : nil
-    }
-
-    static func reasoningEffort(
-        modelID: String,
-        selected: LLMReasoningEffort
-    ) -> String? {
-        usesDeepSeekV4Thinking(modelID: modelID)
-            ? selected.rawValue
-            : nil
     }
 }
 

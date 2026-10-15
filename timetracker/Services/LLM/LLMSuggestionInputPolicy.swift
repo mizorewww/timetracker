@@ -24,13 +24,9 @@ nonisolated struct LLMChecklistVisualSuggestionPreparedInput: Equatable, Sendabl
 }
 
 nonisolated enum LLMSuggestionInputPolicy {
-    // AI provenance is persisted in sync snapshot compact fields. Keep this
-    // producer limit aligned with the restore contract so locally-created
-    // suggestions always remain restorable.
+    // Model ID and reason are persisted on suggestions; bound them here.
     static let maximumModelIDByteCount = 256
     static let maximumReasonByteCount = 512
-    static let maximumEndpointByteCount = 4 * 1024
-    static let maximumAPIKeyByteCount = 8 * 1024
     static let maximumTaskIDByteCount = 64
 
     static func prepare(

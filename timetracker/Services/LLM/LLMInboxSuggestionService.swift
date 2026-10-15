@@ -1,9 +1,9 @@
 import Foundation
+import OpenAI
 
 enum LLMInboxSuggestionServiceError: LocalizedError, Equatable {
     case missingModel
     case noTaskCandidates
-    case requestTooLarge
     case invalidResponse
     case noValidTask
 
@@ -13,8 +13,6 @@ enum LLMInboxSuggestionServiceError: LocalizedError, Equatable {
             AppStrings.localized("inbox.suggestion.error.missingModel")
         case .noTaskCandidates:
             AppStrings.localized("inbox.suggestion.error.noTaskCandidates")
-        case .requestTooLarge:
-            AppStrings.localized("inbox.suggestion.error.requestTooLarge")
         case .invalidResponse:
             AppStrings.localized("settings.llm.error.invalidResponse")
         case .noValidTask:
@@ -47,11 +45,7 @@ nonisolated struct LLMInboxSuggestionResult: Equatable, Sendable {
 }
 
 struct LLMInboxSuggestionService {
-    typealias Transport = (URLRequest) async throws -> (Data, URLResponse)
-
-    var transport: Transport = { request in
-        try await LLMSecureHTTPTransport.data(for: request)
-    }
+    var send: LLMChatSender = LLMClient.chat
 
     func suggest(
         inboxTitle: String,
@@ -73,14 +67,13 @@ struct LLMInboxSuggestionService {
             throw LLMInboxSuggestionServiceError.noTaskCandidates
         }
 
-        let request = try suggestionRequest(
+        let query = try suggestionQuery(
             input: input,
             instructions: instructions,
             configuration: configuration
         )
         let contentData = try await LLMSuggestionChatSupport.contentData(
-            for: request,
-            transport: transport
+            send(query, configuration)
         )
 
         do {
@@ -98,41 +91,21 @@ struct LLMInboxSuggestionService {
         }
     }
 
-    func suggestionRequest(
+    func suggestionQuery(
         input: LLMInboxSuggestionPreparedInput,
         instructions: String,
         configuration: LLMRequestConfiguration
-    ) throws -> URLRequest {
-        try LLMSuggestionChatSupport.request(
+    ) throws -> ChatQuery {
+        try LLMSuggestionChatSupport.query(
             modelID: input.modelID,
             responseContract: Self.responseContract,
-            configuration: configuration
-        ) {
-            try prompt(
+            configuration: configuration,
+            promptJSON: prompt(
                 input: input,
                 instructions: AppPreferenceValueSanitizer
                     .llmPromptInstructions(instructions, for: .inboxRouting)
             )
-        }
-    }
-
-    static func chatCompletionsURL(endpoint: String) -> URL? {
-        guard var components = LLMModelService.validatedEndpointComponents(endpoint) else {
-            return nil
-        }
-
-        var path = components.path
-        while path.hasSuffix("/") {
-            path.removeLast()
-        }
-        if path.hasSuffix("/models") {
-            path.removeLast("/models".count)
-        }
-        if !path.hasSuffix("/chat/completions") {
-            path += "/chat/completions"
-        }
-        components.path = path
-        return components.url
+        )
     }
 
     static func sanitize(

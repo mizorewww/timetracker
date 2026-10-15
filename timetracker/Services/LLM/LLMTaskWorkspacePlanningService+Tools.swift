@@ -1,4 +1,5 @@
 import Foundation
+import OpenAI
 
 nonisolated enum AITaskWorkspaceToolName: String, CaseIterable, Sendable {
     case listWorkspace = "list_workspace"
@@ -243,7 +244,7 @@ private nonisolated struct AITaskWorkspaceUpdateChecklistArguments:
 
 extension LLMTaskWorkspacePlanningService {
     static func execute(
-        _ call: OpenAIChatToolCall,
+        _ call: ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam,
         overlay: inout AITaskWorkspaceOverlay,
         makeID: @MainActor () -> UUID
     ) throws -> String {

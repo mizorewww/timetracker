@@ -1,4 +1,5 @@
 import Foundation
+import OpenAI
 
 nonisolated struct LLMTaskWorkspacePlan: Equatable, Sendable {
     let originalSnapshot: AITaskWorkspaceSnapshot
@@ -23,66 +24,35 @@ nonisolated enum LLMTaskWorkspacePlanningError:
     case duplicateToolCallID(String)
     case mixedFinalizeCall
     case toolRoundLimitExceeded(Int)
-    case workspaceRequestRejected(
-        statusCode: Int,
-        providerMessage: String?,
-        categoryCount: Int,
-        taskCount: Int,
-        checklistItemCount: Int,
-        requestByteCount: Int
-    )
 
     var errorDescription: String? {
         switch self {
         case .invalidResponse:
-            return Self.localized("aiTaskPlan.error.invalidToolResponse")
+            Self.localized("aiTaskPlan.error.invalidToolResponse")
         case .toolCallRequired:
-            return Self.localized("aiTaskPlan.error.toolCallRequired")
+            Self.localized("aiTaskPlan.error.toolCallRequired")
         case let .unknownTool(name):
-            return String.localizedStringWithFormat(
+            String.localizedStringWithFormat(
                 Self.localized("aiTaskPlan.error.unknownTool"),
                 name
             )
         case let .invalidToolArguments(name):
-            return String.localizedStringWithFormat(
+            String.localizedStringWithFormat(
                 Self.localized("aiTaskPlan.error.invalidToolArguments"),
                 name
             )
         case let .duplicateToolCallID(id):
-            return String.localizedStringWithFormat(
+            String.localizedStringWithFormat(
                 Self.localized("aiTaskPlan.error.duplicateToolCall"),
                 id
             )
         case .mixedFinalizeCall:
-            return Self.localized("aiTaskPlan.error.mixedFinalize")
+            Self.localized("aiTaskPlan.error.mixedFinalize")
         case let .toolRoundLimitExceeded(limit):
-            return String.localizedStringWithFormat(
+            String.localizedStringWithFormat(
                 Self.localized("aiTaskPlan.error.toolRoundLimit"),
                 limit
             )
-        case let .workspaceRequestRejected(
-            statusCode,
-            providerMessage,
-            categoryCount,
-            taskCount,
-            checklistItemCount,
-            requestByteCount
-        ):
-            let summary = String.localizedStringWithFormat(
-                Self.localized(
-                    "aiTaskPlan.error.workspaceRequestRejected"
-                ),
-                statusCode,
-                categoryCount,
-                taskCount,
-                checklistItemCount,
-                requestByteCount
-            )
-            if let providerMessage {
-                return "\(summary) \(providerMessage)"
-            } else {
-                return summary
-            }
         }
     }
 
@@ -96,15 +66,11 @@ nonisolated enum LLMTaskWorkspacePlanningError:
 /// this service has no SwiftData dependency and cannot persist model output.
 @MainActor
 struct LLMTaskWorkspacePlanningService {
-    typealias Transport = @MainActor (URLRequest) async throws -> (Data, URLResponse)
-
     /// Upper bound on model round trips before `finalize_plan`; every round
     /// resends the whole conversation, so an unbounded loop is unbounded cost.
     static let maximumToolRounds = 32
 
-    var transport: Transport = { request in
-        try await LLMSecureHTTPTransport.data(for: request)
-    }
+    var send: LLMChatSender = LLMClient.chat
 
     func generate(
         request: String,
@@ -126,15 +92,9 @@ struct LLMTaskWorkspacePlanningService {
             instructions: prepared.instructions,
             workspace: workspace
         )
-        var messages = [
-            OpenAIChatMessage(
-                role: "system",
-                content: Self.systemContract
-            ),
-            OpenAIChatMessage(
-                role: "user",
-                content: userPrompt
-            ),
+        var messages: [ChatQuery.ChatCompletionMessageParam] = [
+            .system(.init(content: .textContent(Self.systemContract))),
+            .user(.init(content: .string(userPrompt))),
         ]
         var overlay = AITaskWorkspaceOverlay(snapshot: workspace)
         var seenToolCallIDs = Set<String>()
@@ -155,57 +115,18 @@ struct LLMTaskWorkspacePlanningService {
                 )
             }
             try Task.checkCancellation()
-            let urlRequest = try Self.chatRequest(
-                endpointURL: prepared.endpointURL,
-                apiKey: prepared.apiKey,
-                modelID: prepared.modelID,
-                messages: messages,
-                reasoningEffort: configuration.reasoningEffort
+            let completionResponse = try await send(
+                Self.query(
+                    modelID: prepared.modelID,
+                    messages: messages,
+                    reasoningEffort: configuration.reasoningEffort
+                ),
+                configuration
             )
-            let data: Data
-            let urlResponse: URLResponse
-            do {
-                (data, urlResponse) = try await transport(urlRequest)
-            } catch let error as LLMModelServiceError {
-                if case let .responseStatus(
-                    statusCode,
-                    providerMessage
-                ) = error,
-                    Self.isWorkspaceRequestRejection(statusCode)
-                {
-                    throw Self.workspaceRequestRejected(
-                        statusCode: statusCode,
-                        providerMessage: providerMessage,
-                        workspace: workspace,
-                        request: urlRequest
-                    )
-                }
-                throw error
-            }
             try Task.checkCancellation()
-            guard let httpResponse = urlResponse as? HTTPURLResponse else {
-                throw LLMTaskWorkspacePlanningError.invalidResponse
-            }
-            guard (200 ..< 300).contains(httpResponse.statusCode) else {
-                if Self.isWorkspaceRequestRejection(
-                    httpResponse.statusCode
-                ) {
-                    throw Self.workspaceRequestRejected(
-                        statusCode: httpResponse.statusCode,
-                        providerMessage: nil,
-                        workspace: workspace,
-                        request: urlRequest
-                    )
-                }
-                throw LLMModelServiceError.responseStatus(
-                    httpResponse.statusCode
-                )
-            }
-            try LLMSecureHTTPTransport.validateBufferedResponse(data)
-            let completionResponse = try Self.decodeResponse(data)
             let choice = try Self.validatedChoice(completionResponse)
             let calls = try Self.validatedToolCalls(choice)
-            if let rawResponse = String(data: data, encoding: .utf8) {
+            if let rawResponse = Self.rawJSON(completionResponse) {
                 rawResponseParts.append(rawResponse)
             }
             contentCharacterCount += calls.reduce(into: 0) {
@@ -213,11 +134,8 @@ struct LLMTaskWorkspacePlanningService {
                 $0 += $1.function.arguments.count
             }
             contentCharacterCount += choice.message.content?.count ?? 0
-            reasoningCharacterCount +=
-                choice.message.reasoning_content?.count ?? 0
-            if let completionTokens =
-                completionResponse.usage?.completion_tokens
-            {
+            reasoningCharacterCount += choice.message.reasoning?.count ?? 0
+            if let completionTokens = completionResponse.usage?.completionTokens {
                 reportedCompletionTokens += completionTokens
                 hasReportedCompletionTokens = true
             }
@@ -245,19 +163,19 @@ struct LLMTaskWorkspacePlanningService {
             guard finalizeCalls.isEmpty || calls.count == 1 else {
                 throw LLMTaskWorkspacePlanningError.mixedFinalizeCall
             }
-            if let reasoning = choice.message.reasoning_content,
+            if let reasoning = choice.message.reasoning,
                reasoning.isEmpty == false
             {
                 reasoningParts.append(reasoning)
             }
 
-            let assistantMessage = OpenAIChatMessage(
-                role: "assistant",
-                content: choice.message.content ?? "",
-                reasoningContent: choice.message.reasoning_content,
+            // DeepSeek thinking mode rejects a tool round whose assistant turn
+            // omits the reasoning it returned.
+            messages.append(.assistant(.init(
+                content: choice.message.content.map { .textContent($0) },
+                reasoningContent: choice.message.reasoning,
                 toolCalls: calls
-            )
-            messages.append(assistantMessage)
+            )))
 
             if let finalize = finalizeCalls.first {
                 try Self.validateEmptyArguments(
@@ -289,13 +207,10 @@ struct LLMTaskWorkspacePlanningService {
                     overlay: &overlay,
                     makeID: makeID
                 )
-                messages.append(
-                    OpenAIChatMessage(
-                        role: "tool",
-                        content: result,
-                        toolCallID: call.id
-                    )
-                )
+                messages.append(.tool(.init(
+                    content: .textContent(result),
+                    toolCallId: call.id
+                )))
             }
         }
     }
@@ -303,14 +218,27 @@ struct LLMTaskWorkspacePlanningService {
 
 extension LLMTaskWorkspacePlanningService {
     static let responseContract = systemContract
+
+    /// `tool_choice` stays unset (auto): DeepSeek thinking mode rejects
+    /// `required`, and a round without tool calls already fails the loop.
+    static func query(
+        modelID: String,
+        messages: [ChatQuery.ChatCompletionMessageParam],
+        reasoningEffort: LLMReasoningEffort
+    ) -> ChatQuery {
+        ChatQuery(
+            messages: messages,
+            model: modelID,
+            reasoningEffort: reasoningEffort.chatQueryValue,
+            tools: toolDefinitions
+        )
+    }
 }
 
 private extension LLMTaskWorkspacePlanningService {
     struct PreparedInputs {
         let request: String
         let instructions: String
-        let endpointURL: URL
-        let apiKey: String
         let modelID: String
     }
 
@@ -349,10 +277,6 @@ private extension LLMTaskWorkspacePlanningService {
             throw LLMTaskPlanningError.invalidField
         }
 
-        let credentials = try configuration.validated(
-            requestTooLarge: LLMTaskPlanningError.requestTooLarge
-        )
-
         let preparedModelID =
             AppPreferenceValueSanitizer.llmModelID(configuration.modelID)
         guard preparedModelID.isEmpty == false else {
@@ -361,8 +285,6 @@ private extension LLMTaskWorkspacePlanningService {
         return PreparedInputs(
             request: preparedRequest,
             instructions: preparedInstructions,
-            endpointURL: credentials.chatCompletionsURL,
-            apiKey: credentials.apiKey,
             modelID: preparedModelID
         )
     }
@@ -392,98 +314,18 @@ private extension LLMTaskWorkspacePlanningService {
         return result
     }
 
-    static func chatRequest(
-        endpointURL: URL,
-        apiKey: String,
-        modelID: String,
-        messages: [OpenAIChatMessage],
-        reasoningEffort: LLMReasoningEffort = .high
-    ) throws -> URLRequest {
+    static func rawJSON(_ result: ChatResult) -> String? {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        let usesDeepSeekV4Thinking =
-            LLMChatRequestPolicy.usesDeepSeekV4Thinking(
-                modelID: modelID
-            )
-        let body = try encoder.encode(
-            OpenAIChatCompletionRequest(
-                model: modelID,
-                messages: messages,
-                temperature: usesDeepSeekV4Thinking
-                    ? nil
-                    : LLMChatRequestPolicy.taskPlanningTemperature,
-                responseFormat: nil,
-                tools: toolDefinitions,
-                toolChoice: usesDeepSeekV4Thinking ? nil : "required",
-                thinking: LLMChatRequestPolicy.thinkingConfiguration(
-                    modelID: modelID
-                ),
-                reasoningEffort: LLMChatRequestPolicy.reasoningEffort(
-                    modelID: modelID,
-                    selected: reasoningEffort
-                )
-            )
-        )
-        var request = URLRequest(url: endpointURL)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 90
-        request.setValue(
-            "Bearer \(apiKey)",
-            forHTTPHeaderField: "Authorization"
-        )
-        request.setValue(
-            "application/json",
-            forHTTPHeaderField: "Content-Type"
-        )
-        request.setValue(
-            "application/json",
-            forHTTPHeaderField: "Accept"
-        )
-        request.httpBody = body
-        return request
-    }
-
-    static func decodeResponse(
-        _ data: Data
-    ) throws -> OpenAIChatCompletionResponse {
-        let response: OpenAIChatCompletionResponse
-        do {
-            response = try JSONDecoder().decode(
-                OpenAIChatCompletionResponse.self,
-                from: data
-            )
-        } catch {
-            throw LLMTaskWorkspacePlanningError.invalidResponse
-        }
-        return response
-    }
-
-    static func workspaceRequestRejected(
-        statusCode: Int,
-        providerMessage: String?,
-        workspace: AITaskWorkspaceSnapshot,
-        request: URLRequest
-    ) -> LLMTaskWorkspacePlanningError {
-        .workspaceRequestRejected(
-            statusCode: statusCode,
-            providerMessage: providerMessage,
-            categoryCount: workspace.categories.count,
-            taskCount: workspace.tasks.count,
-            checklistItemCount: workspace.checklistItems.count,
-            requestByteCount: request.httpBody?.count ?? 0
-        )
-    }
-
-    static func isWorkspaceRequestRejection(_ statusCode: Int) -> Bool {
-        statusCode == 400 || statusCode == 413 || statusCode == 422
+        return (try? encoder.encode(result)).flatMap { String(data: $0, encoding: .utf8) }
     }
 
     static func validatedChoice(
-        _ response: OpenAIChatCompletionResponse
-    ) throws -> OpenAIChatCompletionResponse.Choice {
+        _ response: ChatResult
+    ) throws -> ChatResult.Choice {
         guard response.choices.count == 1,
               let choice = response.choices.first,
-              choice.index == nil || choice.index == 0
+              choice.index == 0
         else {
             throw LLMTaskWorkspacePlanningError.invalidResponse
         }
@@ -491,16 +333,16 @@ private extension LLMTaskWorkspacePlanningService {
     }
 
     static func validatedToolCalls(
-        _ choice: OpenAIChatCompletionResponse.Choice
-    ) throws -> [OpenAIChatToolCall] {
-        guard choice.finish_reason == "tool_calls",
-              let calls = choice.message.tool_calls,
+        _ choice: ChatResult.Choice
+    ) throws -> [ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam] {
+        guard choice.finishReason == "tool_calls",
+              let calls = choice.message.toolCalls,
               calls.isEmpty == false
         else {
             throw LLMTaskWorkspacePlanningError.toolCallRequired
         }
         for call in calls {
-            guard call.type == "function",
+            guard call.type == .function,
                   call.id.trimmingCharacters(
                       in: .whitespacesAndNewlines
                   ).isEmpty == false,

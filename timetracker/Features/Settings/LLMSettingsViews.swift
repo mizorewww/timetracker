@@ -163,7 +163,7 @@ struct LLMConfigurationEditor: View {
     }
 
     private var credentialsAreValid: Bool {
-        LLMModelService.modelsURL(endpoint: draft.endpoint) != nil &&
+        LLMClient.isValidEndpoint(draft.endpoint) &&
             !draft.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
@@ -208,7 +208,7 @@ struct LLMConfigurationEditor: View {
 
         fetchTask = Task {
             do {
-                let models = try await LLMModelService().fetchModels(endpoint: endpoint, apiKey: apiKey)
+                let models = try await LLMClient.modelIDs(endpoint: endpoint, apiKey: apiKey)
                 guard !Task.isCancelled,
                       fetchRequestID == requestID,
                       draft.credentialFingerprint == fingerprint else { return }

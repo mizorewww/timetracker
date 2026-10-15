@@ -1,7 +1,8 @@
 import Foundation
+import OpenAI
 
 extension LLMTaskWorkspacePlanningService {
-    static let toolDefinitions: [OpenAIChatToolDefinition] = [
+    static let toolDefinitions: [ChatQuery.ChatCompletionToolParam] = [
         definition(
             .listWorkspace,
             "Read the complete current in-memory proposal workspace.",
@@ -153,79 +154,25 @@ extension LLMTaskWorkspacePlanningService {
 }
 
 private extension LLMTaskWorkspacePlanningService {
-    static let stringSchema = OpenAIJSONValue.object([
-        "type": .string("string"),
+    static let stringSchema = JSONSchema(.type(.string))
+    static let boolSchema = JSONSchema(.type(.boolean))
+    static let uuidSchema = JSONSchema(.type(.string), .format("uuid"))
+    static let nullableUUIDSchema = JSONSchema(.type(.types(["string", "null"])), .format("uuid"))
+    static let nullableIntegerSchema = JSONSchema(.type(.types(["integer", "null"])))
+    static let nullableDateSchema = JSONSchema(.type(.types(["string", "null"])), .format("date-time"))
+
+    static let nullableQuantityGoalSchema = nullableObject([
+        "targetAmount": JSONSchema(.type(.integer)),
+        "unitLabel": stringSchema,
     ])
 
-    static let boolSchema = OpenAIJSONValue.object([
-        "type": .string("boolean"),
+    static let nullableDailyRecurrenceSchema = nullableObject([
+        "isEnabled": boolSchema,
+        "startDayKey": stringSchema,
+        "timeZoneIdentifier": stringSchema,
     ])
 
-    static let uuidSchema = OpenAIJSONValue.object([
-        "type": .string("string"),
-        "format": .string("uuid"),
-    ])
-
-    static let nullableUUIDSchema = OpenAIJSONValue.object([
-        "type": .array([
-            .string("string"),
-            .string("null"),
-        ]),
-        "format": .string("uuid"),
-    ])
-
-    static let nullableIntegerSchema = OpenAIJSONValue.object([
-        "type": .array([
-            .string("integer"),
-            .string("null"),
-        ]),
-    ])
-
-    static let nullableDateSchema = OpenAIJSONValue.object([
-        "type": .array([
-            .string("string"),
-            .string("null"),
-        ]),
-        "format": .string("date-time"),
-    ])
-
-    static let nullableQuantityGoalSchema = OpenAIJSONValue.object([
-        "type": .array([
-            .string("object"),
-            .string("null"),
-        ]),
-        "properties": .object([
-            "targetAmount": .object([
-                "type": .string("integer"),
-            ]),
-            "unitLabel": stringSchema,
-        ]),
-        "required": .array([
-            .string("targetAmount"),
-            .string("unitLabel"),
-        ]),
-        "additionalProperties": .bool(false),
-    ])
-
-    static let nullableDailyRecurrenceSchema = OpenAIJSONValue.object([
-        "type": .array([
-            .string("object"),
-            .string("null"),
-        ]),
-        "properties": .object([
-            "isEnabled": boolSchema,
-            "startDayKey": stringSchema,
-            "timeZoneIdentifier": stringSchema,
-        ]),
-        "required": .array([
-            .string("isEnabled"),
-            .string("startDayKey"),
-            .string("timeZoneIdentifier"),
-        ]),
-        "additionalProperties": .bool(false),
-    ])
-
-    static let taskProperties: [String: OpenAIJSONValue] = [
+    static let taskProperties: [String: JSONSchema] = [
         "title": stringSchema,
         "parentID": nullableUUIDSchema,
         "categoryID": nullableUUIDSchema,
@@ -238,26 +185,30 @@ private extension LLMTaskWorkspacePlanningService {
         "dailyRecurrence": nullableDailyRecurrenceSchema,
     ]
 
+    /// Every property is required (nullable ones as `null`) and no other key
+    /// is allowed, matching the strict argument decoding in `+Tools`.
+    static func exactObject(_ properties: [String: JSONSchema], type: JSONSchemaInstanceType = .object) -> JSONSchema {
+        JSONSchema(
+            .type(type),
+            .properties(properties),
+            .required(properties.keys.sorted()),
+            .additionalProperties(.boolean(false))
+        )
+    }
+
+    static func nullableObject(_ properties: [String: JSONSchema]) -> JSONSchema {
+        exactObject(properties, type: .types(["object", "null"]))
+    }
+
     static func definition(
         _ name: AITaskWorkspaceToolName,
         _ description: String,
-        properties: [String: OpenAIJSONValue]
-    ) -> OpenAIChatToolDefinition {
-        OpenAIChatToolDefinition(
-            function: .init(
-                name: name.rawValue,
-                description: description,
-                parameters: .object([
-                    "type": .string("object"),
-                    "properties": .object(properties),
-                    "required": .array(
-                        properties.keys.sorted().map(
-                            OpenAIJSONValue.string
-                        )
-                    ),
-                    "additionalProperties": .bool(false),
-                ])
-            )
-        )
+        properties: [String: JSONSchema]
+    ) -> ChatQuery.ChatCompletionToolParam {
+        .init(function: .init(
+            name: name.rawValue,
+            description: description,
+            parameters: exactObject(properties)
+        ))
     }
 }

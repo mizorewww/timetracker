@@ -50,7 +50,7 @@ def main() -> int:
     if current_hooks_path != EXPECTED_HOOKS_PATH:
         raise SystemExit(
             "Git hooks are not installed for this clone.\n"
-            "Run: scripts/install_git_hooks.sh"
+            "Run: make install-hooks"
         )
 
     resolved = git_text(repo, "rev-parse", "--git-path", "hooks/pre-commit")

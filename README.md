@@ -24,7 +24,7 @@
 
 ## 常用命令
 
-所有开发命令经 **Makefile** 入口;`scripts/*.sh` 只是 `uv run` 薄 wrapper,实际逻辑在 `tools/timetracker_tools/` 的纯标准库 Python 模块(无第三方运行依赖)。`uv` 会在首次运行时自动建好 `.venv`。
+所有开发命令经 **Makefile** 唯一入口(Xcode `Write Build Info` 构建阶段与 pre-commit 钩子也调用 `make`);Makefile 经 `uv run` 调用 `tools/timetracker_tools/` 的纯标准库 Python 模块(无第三方运行依赖)。`uv` 会在首次运行时自动建好 `.venv`。
 
 ```sh
 make help                # 列出全部目标

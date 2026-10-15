@@ -12,8 +12,8 @@ This increments the patch component of `MARKETING_VERSION` by `0.0.1` and `CURRE
 
 ## Local Git Hook
 
-`.githooks/pre-commit` runs only the localization parity gate (`scripts/localization_check.sh --quiet`): every commit must keep `.strings` keys identical across `en`, `zh-Hans`, and `zh-Hant`. It does not touch version fields. Install it once per clone (`make install-hooks`) and check it read-only with `make check-hooks`.
+`.githooks/pre-commit` runs only the localization parity gate (`make localization-check LOCALIZATION_FLAGS=--quiet`): every commit must keep `.strings` keys identical across `en`, `zh-Hans`, and `zh-Hant`. It does not touch version fields. Install it once per clone (`make install-hooks`) and check it read-only with `make check-hooks`.
 
 ## Build Metadata
 
-The app target's `Write Build Info` build phase runs `scripts/write_build_info_plist.sh` (a thin wrapper around the `timetracker_tools.write_build_info_plist` Python module) and writes `AppBuildInfo.plist` into the built bundle with Git branch, short/full commit hash, dirty-worktree flag, and UTC build date. Settings > About reads that plist at runtime; do not hard-code Git metadata in Swift source.
+The app target's `Write Build Info` build phase runs `make build-info` (the `timetracker_tools.write_build_info_plist` Python module) and writes `AppBuildInfo.plist` into the built bundle with Git branch, short/full commit hash, dirty-worktree flag, and UTC build date. Settings > About reads that plist at runtime; do not hard-code Git metadata in Swift source.

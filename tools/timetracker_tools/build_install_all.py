@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """构建含 Watch 伴侣的 iOS/iPadOS app 与 macOS app,安装到物理 iOS 设备并将 macOS app 复制到 /Applications。
 
-行为等价于原 scripts/build_install_all.sh。iOS 构建会构建依赖型 Watch App 并嵌入,
+iOS 构建会构建依赖型 Watch App 并嵌入,
 安装前校验两端 bundle ID、伴侣关系、签名以及开发 profile 是否覆盖当前可见 Apple Watch。
 看不到物理 Watch 时仅提示并继续安装 iPhone app。macOS app 经临时目录原子替换 /Applications 下目的 app。
 

@@ -1,6 +1,5 @@
-# Timetracker — 统一入口:构建、发布、版本与钩子。
-# 详见 `make help` 与 Docs/DevelopmentTools.md。脚本本体退化为 scripts/ 下的 uv run wrapper,
-# 实现位于 tools/timetracker_tools/。
+# Timetracker — 唯一开发入口:构建、测试、发布、版本与钩子。
+# Xcode 构建阶段与 pre-commit 钩子也经由本文件;Python 实现位于 tools/timetracker_tools/。
 
 SHELL       := /bin/bash
 .SHELLFLAGS := -eu -o pipefail -c
@@ -11,7 +10,9 @@ SCHEME           := timetracker
 DEVELOPMENT_TEAM ?= LT98S43NKA
 CONFIGURATION    ?= Debug
 TEST_ONLY        ?= timetrackerTests
-SCRIPTS          := scripts
+SWIFT_ROOTS      := timetracker timetrackerTests timetrackerUITests timetrackerWatchApp \
+                    timetrackerWidgetExtension timetrackerLiveActivityExtension SharedLiveActivity
+LOCALIZATION_FLAGS ?=
 UI_TEST_DEVICE_TYPE ?= com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro
 UI_TEST_RUNTIME ?= com.apple.CoreSimulator.SimRuntime.iOS-27-0
 UI_TEST_ONLY ?= timetrackerUITests/AdaptiveShellUITests
@@ -20,9 +21,13 @@ UI_TEST_RESULT_ROOT ?= build/UITestResults
 
 -include .env
 
+# Xcode 构建阶段与 GUI git 客户端的 PATH 不含 Homebrew / uv 安装目录。
+export PATH := /opt/homebrew/bin:/usr/local/bin:$(HOME)/.local/bin:$(HOME)/.cargo/bin:$(PATH)
+TOOL := uv run --quiet --project $(CURDIR) python -m timetracker_tools
+
 .PHONY: help
 help: ## 列出所有目标
-	@echo "Timetracker 开发入口(详见 Docs/DevelopmentTools.md)。运行 make <目标> 即可。"
+	@echo "Timetracker 开发入口(详见 README.md)。运行 make <目标> 即可。"
 	@echo
 	@awk 'BEGIN {FS = ":.*##"} \
 	         /^# ── / { sub(/^# ── +/,""); sub(/ +──+$$/,""); print "\n" $$0; next } \
@@ -30,21 +35,21 @@ help: ## 列出所有目标
 
 # ── 概览 ──────────────────────────────────────────────────────
 .PHONY: venv
-venv: ## 用 uv 创建/同步 .venv(也可由 wrapper 自举)
+venv: ## 用 uv 创建/同步 .venv(工具目标首次运行时也会自举)
 	uv sync
 
 # ── Hooks & 版本 ──────────────────────────────────────────────
 .PHONY: install-hooks
 install-hooks: ## 安装 pre-commit localization 闸门钩子(clone 后执行一次)
-	@$(SCRIPTS)/install_git_hooks.sh
+	@$(TOOL).install_git_hooks
 
 .PHONY: check-hooks
 check-hooks: ## 只读校验钩子是否就位
-	@$(SCRIPTS)/install_git_hooks.sh --check
+	@$(TOOL).install_git_hooks --check
 
 .PHONY: bump-version
 bump-version: ## 发布前手动递增 marketing/build 版本(见 Docs/Versioning.md)
-	@$(SCRIPTS)/bump_marketing_version.sh
+	@$(TOOL).bump_marketing_version
 
 # ── 构建 / 测试 ────────────────────────────────────────────────
 .PHONY: build-ios
@@ -61,7 +66,7 @@ build-macos: ## 构建 macOS app(generic/platform=macOS)
 
 .PHONY: build-install-all
 build-install-all: ## 构建 iOS+Watch 与 macOS(默认 Release),安装到设备并复制到 /Applications
-	@$(SCRIPTS)/build_install_all.sh
+	@$(TOOL).build_install_all
 
 .PHONY: test
 test: ## macOS 单元测试(timetrackerTests)
@@ -116,25 +121,25 @@ test-ui-macos: ## 在 macOS 上运行所选 XCUITest
 # ── 校验 ──────────────────────────────────────────────────────
 .PHONY: localization-check
 localization-check: ## 校验所有 .strings 资源在三语种间 key 一致
-	@$(SCRIPTS)/localization_check.sh
+	@$(TOOL).localization_check $(LOCALIZATION_FLAGS)
 
 # ── 格式化 ────────────────────────────────────────────────────
 .PHONY: format
 format: ## 用 SwiftFormat 原地格式化所有 Swift 源
-	@$(SCRIPTS)/format.sh
+	swiftformat --config .swiftformat $(SWIFT_ROOTS)
 
 .PHONY: format-check
 format-check: ## 只读校验 Swift 源是否符合 SwiftFormat(不修改)
-	@$(SCRIPTS)/format.sh --check
+	swiftformat $(SWIFT_ROOTS) --config .swiftformat --lint
 
 # ── 发布 ──────────────────────────────────────────────────────
 .PHONY: export-artifacts
 export-artifacts: ## 归档并导出签名产物(iOS IPA + macOS app/zip)
-	@$(SCRIPTS)/export_signed_artifacts.sh
+	@$(TOOL).export_signed_artifacts
 
 .PHONY: build-info
 build-info: ## 写入 AppBuildInfo.plist(通常由 Xcode 构建阶段调用)
-	@$(SCRIPTS)/write_build_info_plist.sh
+	@$(TOOL).write_build_info_plist
 
 # ── 清理 ──────────────────────────────────────────────────────
 .PHONY: clean

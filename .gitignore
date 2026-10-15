@@ -12,3 +12,4 @@ DerivedData/
 .env
 .device-install-exclusions
 Docs/userfeedback.md
+.pi/git/

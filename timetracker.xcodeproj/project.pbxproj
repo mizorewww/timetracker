@@ -534,7 +534,7 @@
 			inputFileListPaths = (
 			);
 			inputPaths = (
-				"$(SRCROOT)/scripts/write_build_info_plist.sh",
+				"$(SRCROOT)/tools/timetracker_tools/write_build_info_plist.py",
 				"$(SRCROOT)/.git",
 			);
 			name = "Write Build Info";
@@ -545,7 +545,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"$SRCROOT/scripts/write_build_info_plist.sh\"\n";
+			shellScript = "exec /usr/bin/make -C \"$SRCROOT\" --no-print-directory build-info\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

@@ -37,30 +37,142 @@ private nonisolated struct AITaskWorkspaceToolFailureResult: Encodable {
     let error: String
 }
 
-private nonisolated struct AITaskWorkspaceIDArguments: Decodable {
+/// Tool arguments are schema-strict: every declared key must be present
+/// (optionals as `null`) and no undeclared key is accepted. Declaring
+/// `CodingKeys` as `CaseIterable` makes the type its own key list.
+private nonisolated protocol AITaskWorkspaceToolArguments: Decodable {
+    associatedtype CodingKeys: CodingKey, CaseIterable
+}
+
+private nonisolated struct AITaskWorkspaceArgumentKey: CodingKey {
+    let stringValue: String
+    var intValue: Int? {
+        nil
+    }
+
+    init(stringValue: String) {
+        self.stringValue = stringValue
+    }
+
+    init?(intValue _: Int) {
+        nil
+    }
+}
+
+/// Decodes `Value` only when the JSON object carries exactly its keys.
+private nonisolated struct ExactToolArguments<
+    Value: AITaskWorkspaceToolArguments
+>: Decodable {
+    let value: Value
+
+    init(from decoder: Decoder) throws {
+        let presentKeys = try decoder
+            .container(keyedBy: AITaskWorkspaceArgumentKey.self)
+            .allKeys.map(\.stringValue)
+        let declaredKeys = Value.CodingKeys.allCases.map(\.stringValue)
+        guard Set(presentKeys) == Set(declaredKeys) else {
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Tool arguments must match the schema keys."
+                )
+            )
+        }
+        value = try Value(from: decoder)
+    }
+}
+
+private nonisolated struct AITaskWorkspaceEmptyArguments:
+    AITaskWorkspaceToolArguments
+{
+    enum CodingKeys: CodingKey, CaseIterable {}
+}
+
+private nonisolated struct AITaskWorkspaceIDArguments:
+    AITaskWorkspaceToolArguments
+{
     let id: UUID
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case id
+    }
 }
 
-private nonisolated struct AITaskWorkspaceCategoryNameArguments: Decodable {
+private nonisolated struct AITaskWorkspaceCategoryNameArguments:
+    AITaskWorkspaceToolArguments
+{
     let title: String
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case title
+    }
 }
 
-private nonisolated struct AITaskWorkspaceCreateCategoryArguments: Decodable {
+private nonisolated struct AITaskWorkspaceCreateCategoryArguments:
+    AITaskWorkspaceToolArguments
+{
     let title: String
     let iconName: String
     let colorHex: String
     let includesInForecast: Bool
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case title, iconName, colorHex, includesInForecast
+    }
 }
 
-private nonisolated struct AITaskWorkspaceUpdateCategoryArguments: Decodable {
+private nonisolated struct AITaskWorkspaceUpdateCategoryArguments:
+    AITaskWorkspaceToolArguments
+{
     let id: UUID
     let title: String
     let iconName: String
     let colorHex: String
     let includesInForecast: Bool
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case id, title, iconName, colorHex, includesInForecast
+    }
 }
 
-private nonisolated struct AITaskWorkspaceCreateTaskArguments: Decodable {
+private nonisolated struct AITaskWorkspaceQuantityGoalArguments:
+    AITaskWorkspaceToolArguments
+{
+    let targetAmount: Int
+    let unitLabel: String
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case targetAmount, unitLabel
+    }
+
+    var draft: TaskQuantityGoalDraft {
+        TaskQuantityGoalDraft(targetAmount: targetAmount, unitLabel: unitLabel)
+    }
+}
+
+private nonisolated struct AITaskWorkspaceDailyRecurrenceArguments:
+    AITaskWorkspaceToolArguments
+{
+    let isEnabled: Bool
+    let startDayKey: String
+    let timeZoneIdentifier: String
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case isEnabled, startDayKey, timeZoneIdentifier
+    }
+
+    var draft: TaskDailyRecurrenceDraft {
+        TaskDailyRecurrenceDraft(
+            isEnabled: isEnabled,
+            startDayKey: startDayKey,
+            timeZoneIdentifier: timeZoneIdentifier
+        )
+    }
+}
+
+private nonisolated struct AITaskWorkspaceCreateTaskArguments:
+    AITaskWorkspaceToolArguments
+{
     let title: String
     let parentID: UUID?
     let categoryID: UUID?
@@ -69,11 +181,19 @@ private nonisolated struct AITaskWorkspaceCreateTaskArguments: Decodable {
     let dueAt: String?
     let iconName: String
     let colorHex: String
-    let quantityGoal: TaskQuantityGoalDraft?
-    let dailyRecurrence: TaskDailyRecurrenceDraft?
+    let quantityGoal: ExactToolArguments<AITaskWorkspaceQuantityGoalArguments>?
+    let dailyRecurrence:
+        ExactToolArguments<AITaskWorkspaceDailyRecurrenceArguments>?
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case title, parentID, categoryID, notes, estimatedMinutes, dueAt
+        case iconName, colorHex, quantityGoal, dailyRecurrence
+    }
 }
 
-private nonisolated struct AITaskWorkspaceUpdateTaskArguments: Decodable {
+private nonisolated struct AITaskWorkspaceUpdateTaskArguments:
+    AITaskWorkspaceToolArguments
+{
     let id: UUID
     let title: String
     let parentID: UUID?
@@ -83,24 +203,42 @@ private nonisolated struct AITaskWorkspaceUpdateTaskArguments: Decodable {
     let dueAt: String?
     let iconName: String
     let colorHex: String
-    let quantityGoal: TaskQuantityGoalDraft?
-    let dailyRecurrence: TaskDailyRecurrenceDraft?
+    let quantityGoal: ExactToolArguments<AITaskWorkspaceQuantityGoalArguments>?
+    let dailyRecurrence:
+        ExactToolArguments<AITaskWorkspaceDailyRecurrenceArguments>?
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case id, title, parentID, categoryID, notes, estimatedMinutes, dueAt
+        case iconName, colorHex, quantityGoal, dailyRecurrence
+    }
 }
 
-private nonisolated struct AITaskWorkspaceCreateChecklistArguments: Decodable {
+private nonisolated struct AITaskWorkspaceCreateChecklistArguments:
+    AITaskWorkspaceToolArguments
+{
     let taskID: UUID
     let title: String
     let isCompleted: Bool
     let iconName: String
     let colorHex: String
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case taskID, title, isCompleted, iconName, colorHex
+    }
 }
 
-private nonisolated struct AITaskWorkspaceUpdateChecklistArguments: Decodable {
+private nonisolated struct AITaskWorkspaceUpdateChecklistArguments:
+    AITaskWorkspaceToolArguments
+{
     let id: UUID
     let title: String
     let isCompleted: Bool
     let iconName: String
     let colorHex: String
+
+    enum CodingKeys: String, CodingKey, CaseIterable {
+        case id, title, isCompleted, iconName, colorHex
+    }
 }
 
 extension LLMTaskWorkspacePlanningService {
@@ -133,8 +271,7 @@ extension LLMTaskWorkspacePlanningService {
             case .getCategory:
                 let arguments: AITaskWorkspaceIDArguments = try decodeArguments(
                     call.function.arguments,
-                    toolName: tool.rawValue,
-                    keys: ["id"]
+                    toolName: tool.rawValue
                 )
                 return try encodeToolResult(
                     AITaskWorkspaceToolOptionalResult(
@@ -145,8 +282,7 @@ extension LLMTaskWorkspacePlanningService {
             case .getTask:
                 let arguments: AITaskWorkspaceIDArguments = try decodeArguments(
                     call.function.arguments,
-                    toolName: tool.rawValue,
-                    keys: ["id"]
+                    toolName: tool.rawValue
                 )
                 return try encodeToolResult(
                     AITaskWorkspaceToolOptionalResult(
@@ -157,8 +293,7 @@ extension LLMTaskWorkspacePlanningService {
             case .getChecklistItem:
                 let arguments: AITaskWorkspaceIDArguments = try decodeArguments(
                     call.function.arguments,
-                    toolName: tool.rawValue,
-                    keys: ["id"]
+                    toolName: tool.rawValue
                 )
                 return try encodeToolResult(
                     AITaskWorkspaceToolOptionalResult(
@@ -170,8 +305,7 @@ extension LLMTaskWorkspacePlanningService {
                 let arguments: AITaskWorkspaceCategoryNameArguments =
                     try decodeArguments(
                         call.function.arguments,
-                        toolName: tool.rawValue,
-                        keys: ["title"]
+                        toolName: tool.rawValue
                     )
                 return try encodeToolResult(
                     AITaskWorkspaceToolEntityResult(
@@ -185,13 +319,7 @@ extension LLMTaskWorkspacePlanningService {
                 let arguments: AITaskWorkspaceCreateCategoryArguments =
                     try decodeArguments(
                         call.function.arguments,
-                        toolName: tool.rawValue,
-                        keys: [
-                            "title",
-                            "iconName",
-                            "colorHex",
-                            "includesInForecast",
-                        ]
+                        toolName: tool.rawValue
                     )
                 try validateVisual(
                     iconName: arguments.iconName,
@@ -215,14 +343,7 @@ extension LLMTaskWorkspacePlanningService {
                 let arguments: AITaskWorkspaceUpdateCategoryArguments =
                     try decodeArguments(
                         call.function.arguments,
-                        toolName: tool.rawValue,
-                        keys: [
-                            "id",
-                            "title",
-                            "iconName",
-                            "colorHex",
-                            "includesInForecast",
-                        ]
+                        toolName: tool.rawValue
                     )
                 try validateVisual(
                     iconName: arguments.iconName,
@@ -245,8 +366,7 @@ extension LLMTaskWorkspacePlanningService {
             case .deleteCategory:
                 let arguments: AITaskWorkspaceIDArguments = try decodeArguments(
                     call.function.arguments,
-                    toolName: tool.rawValue,
-                    keys: ["id"]
+                    toolName: tool.rawValue
                 )
                 return try encodeToolResult(
                     AITaskWorkspaceToolEntityResult(
@@ -258,13 +378,8 @@ extension LLMTaskWorkspacePlanningService {
                 let arguments: AITaskWorkspaceCreateTaskArguments =
                     try decodeArguments(
                         call.function.arguments,
-                        toolName: tool.rawValue,
-                        keys: Self.taskCreateKeys
+                        toolName: tool.rawValue
                     )
-                try validateTaskProgressArguments(
-                    call.function.arguments,
-                    toolName: tool.rawValue
-                )
                 try validateVisual(
                     iconName: arguments.iconName,
                     colorHex: arguments.colorHex,
@@ -286,8 +401,9 @@ extension LLMTaskWorkspacePlanningService {
                             ),
                             iconName: arguments.iconName,
                             colorHex: arguments.colorHex,
-                            quantityGoal: arguments.quantityGoal,
-                            dailyRecurrence: arguments.dailyRecurrence
+                            quantityGoal: arguments.quantityGoal?.value.draft,
+                            dailyRecurrence:
+                            arguments.dailyRecurrence?.value.draft
                         )
                     )
                 )
@@ -296,13 +412,8 @@ extension LLMTaskWorkspacePlanningService {
                 let arguments: AITaskWorkspaceUpdateTaskArguments =
                     try decodeArguments(
                         call.function.arguments,
-                        toolName: tool.rawValue,
-                        keys: Self.taskCreateKeys.union(["id"])
+                        toolName: tool.rawValue
                     )
-                try validateTaskProgressArguments(
-                    call.function.arguments,
-                    toolName: tool.rawValue
-                )
                 try validateVisual(
                     iconName: arguments.iconName,
                     colorHex: arguments.colorHex,
@@ -324,8 +435,9 @@ extension LLMTaskWorkspacePlanningService {
                             ),
                             iconName: arguments.iconName,
                             colorHex: arguments.colorHex,
-                            quantityGoal: arguments.quantityGoal,
-                            dailyRecurrence: arguments.dailyRecurrence
+                            quantityGoal: arguments.quantityGoal?.value.draft,
+                            dailyRecurrence:
+                            arguments.dailyRecurrence?.value.draft
                         )
                     )
                 )
@@ -333,8 +445,7 @@ extension LLMTaskWorkspacePlanningService {
             case .archiveTask:
                 let arguments: AITaskWorkspaceIDArguments = try decodeArguments(
                     call.function.arguments,
-                    toolName: tool.rawValue,
-                    keys: ["id"]
+                    toolName: tool.rawValue
                 )
                 return try encodeToolResult(
                     AITaskWorkspaceToolEntityResult(
@@ -346,14 +457,7 @@ extension LLMTaskWorkspacePlanningService {
                 let arguments: AITaskWorkspaceCreateChecklistArguments =
                     try decodeArguments(
                         call.function.arguments,
-                        toolName: tool.rawValue,
-                        keys: [
-                            "taskID",
-                            "title",
-                            "isCompleted",
-                            "iconName",
-                            "colorHex",
-                        ]
+                        toolName: tool.rawValue
                     )
                 try validateVisual(
                     iconName: arguments.iconName,
@@ -377,14 +481,7 @@ extension LLMTaskWorkspacePlanningService {
                 let arguments: AITaskWorkspaceUpdateChecklistArguments =
                     try decodeArguments(
                         call.function.arguments,
-                        toolName: tool.rawValue,
-                        keys: [
-                            "id",
-                            "title",
-                            "isCompleted",
-                            "iconName",
-                            "colorHex",
-                        ]
+                        toolName: tool.rawValue
                     )
                 try validateVisual(
                     iconName: arguments.iconName,
@@ -406,8 +503,7 @@ extension LLMTaskWorkspacePlanningService {
             case .deleteChecklistItem:
                 let arguments: AITaskWorkspaceIDArguments = try decodeArguments(
                     call.function.arguments,
-                    toolName: tool.rawValue,
-                    keys: ["id"]
+                    toolName: tool.rawValue
                 )
                 return try encodeToolResult(
                     AITaskWorkspaceToolEntityResult(
@@ -440,35 +536,15 @@ extension LLMTaskWorkspacePlanningService {
 }
 
 extension LLMTaskWorkspacePlanningService {
-    static let taskCreateKeys: Set<String> = [
-        "title",
-        "parentID",
-        "categoryID",
-        "notes",
-        "estimatedMinutes",
-        "dueAt",
-        "iconName",
-        "colorHex",
-        "quantityGoal",
-        "dailyRecurrence",
-    ]
-
-    static func decodeArguments<Value: Decodable>(
+    private static func decodeArguments<Value: AITaskWorkspaceToolArguments>(
         _ arguments: String,
-        toolName: String,
-        keys: Set<String>
+        toolName: String
     ) throws -> Value {
-        guard let data = arguments.data(using: .utf8),
-              let object = try? JSONSerialization.jsonObject(with: data),
-              let dictionary = object as? [String: Any],
-              Set(dictionary.keys) == keys
-        else {
-            throw LLMTaskWorkspacePlanningError.invalidToolArguments(
-                toolName
-            )
-        }
         do {
-            return try JSONDecoder().decode(Value.self, from: data)
+            return try JSONDecoder().decode(
+                ExactToolArguments<Value>.self,
+                from: Data(arguments.utf8)
+            ).value
         } catch {
             throw LLMTaskWorkspacePlanningError.invalidToolArguments(
                 toolName
@@ -480,10 +556,9 @@ extension LLMTaskWorkspacePlanningService {
         _ arguments: String,
         toolName: String
     ) throws {
-        let _: EmptyToolArguments = try decodeArguments(
+        let _: AITaskWorkspaceEmptyArguments = try decodeArguments(
             arguments,
-            toolName: toolName,
-            keys: []
+            toolName: toolName
         )
     }
 
@@ -499,45 +574,6 @@ extension LLMTaskWorkspacePlanningService {
                 toolName
             )
         }
-    }
-
-    static func validateTaskProgressArguments(
-        _ arguments: String,
-        toolName: String
-    ) throws {
-        guard let data = arguments.data(using: .utf8),
-              let object = try? JSONSerialization.jsonObject(with: data),
-              let dictionary = object as? [String: Any],
-              hasExactNestedKeys(
-                  dictionary["quantityGoal"],
-                  keys: ["targetAmount", "unitLabel"]
-              ),
-              hasExactNestedKeys(
-                  dictionary["dailyRecurrence"],
-                  keys: [
-                      "isEnabled",
-                      "startDayKey",
-                      "timeZoneIdentifier",
-                  ]
-              )
-        else {
-            throw LLMTaskWorkspacePlanningError.invalidToolArguments(
-                toolName
-            )
-        }
-    }
-
-    static func hasExactNestedKeys(
-        _ value: Any?,
-        keys: Set<String>
-    ) -> Bool {
-        if value is NSNull {
-            return true
-        }
-        guard let dictionary = value as? [String: Any] else {
-            return false
-        }
-        return Set(dictionary.keys) == keys
     }
 
     static func preparedDate(
@@ -565,6 +601,4 @@ extension LLMTaskWorkspacePlanningService {
         }
         return result
     }
-
-    struct EmptyToolArguments: Decodable {}
 }

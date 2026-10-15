@@ -43,20 +43,6 @@ extension TimeTrackerStore {
         }
         do {
             try context.withHistoryAuthor(.bootstrapMaintenance) {
-                try SyncedPreferenceService.migrateLegacyPreferencesIfNeeded(context: context)
-            }
-        } catch {
-            startupErrors.append(error)
-        }
-        do {
-            try context.withHistoryAuthor(.bootstrapMaintenance) {
-                try migrateLegacyCountdownEventsIfNeeded(context: context)
-            }
-        } catch {
-            startupErrors.append(error)
-        }
-        do {
-            try context.withHistoryAuthor(.bootstrapMaintenance) {
                 try SeedData.ensureSeeded(context: context)
             }
         } catch {

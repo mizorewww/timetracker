@@ -186,18 +186,6 @@ enum AppPreferenceValueSanitizer {
         return instructions
     }
 
-    static func llmTaskPlanInstructions(_ value: String) throws -> String {
-        try llmPromptInstructions(value, for: .taskPlan)
-    }
-
-    static func llmInboxSuggestionInstructions(_ value: String) throws -> String {
-        try llmPromptInstructions(value, for: .inboxRouting)
-    }
-
-    static func llmChecklistVisualInstructions(_ value: String) throws -> String {
-        try llmPromptInstructions(value, for: .checklistVisual)
-    }
-
     private static func boundedTrimmed(_ value: String, maximumLength: Int) -> String {
         let bounded = String(value.prefix(maximumLength + 1))
             .trimmingCharacters(in: .whitespacesAndNewlines)

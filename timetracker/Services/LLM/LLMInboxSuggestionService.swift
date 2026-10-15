@@ -111,7 +111,7 @@ struct LLMInboxSuggestionService {
             try prompt(
                 input: input,
                 instructions: AppPreferenceValueSanitizer
-                    .llmInboxSuggestionInstructions(instructions)
+                    .llmPromptInstructions(instructions, for: .inboxRouting)
             )
         }
     }

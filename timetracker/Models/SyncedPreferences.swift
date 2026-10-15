@@ -143,32 +143,11 @@ struct AppPreferences: Equatable {
                     )
                 )
         case .llmInboxSuggestionInstructions:
-            let storedValue = PreferenceJSON.decode(
-                String.self,
-                from: preference.valueJSON,
-                default: LLMPromptKind.inboxRouting.defaultInstructions
-            )
-            llmInboxSuggestionInstructions = (
-                try? AppPreferenceValueSanitizer.llmInboxSuggestionInstructions(storedValue)
-            ) ?? LLMPromptKind.inboxRouting.defaultInstructions
+            llmInboxSuggestionInstructions = Self.storedInstructions(preference.valueJSON, for: .inboxRouting)
         case .llmChecklistVisualInstructions:
-            let storedValue = PreferenceJSON.decode(
-                String.self,
-                from: preference.valueJSON,
-                default: LLMPromptKind.checklistVisual.defaultInstructions
-            )
-            llmChecklistVisualInstructions = (
-                try? AppPreferenceValueSanitizer.llmChecklistVisualInstructions(storedValue)
-            ) ?? LLMPromptKind.checklistVisual.defaultInstructions
+            llmChecklistVisualInstructions = Self.storedInstructions(preference.valueJSON, for: .checklistVisual)
         case .llmTaskPlanInstructions:
-            let storedValue = PreferenceJSON.decode(
-                String.self,
-                from: preference.valueJSON,
-                default: LLMTaskPlanPrompt.defaultInstructions
-            )
-            llmTaskPlanInstructions = (try? AppPreferenceValueSanitizer.llmTaskPlanInstructions(
-                storedValue
-            )) ?? LLMTaskPlanPrompt.defaultInstructions
+            llmTaskPlanInstructions = Self.storedInstructions(preference.valueJSON, for: .taskPlan)
         }
     }
 
@@ -181,61 +160,60 @@ struct AppPreferences: Equatable {
     func valueJSON(for key: AppPreferenceKey) -> String {
         switch key {
         case .preferredColorScheme:
-            return PreferenceJSON.encode(AppPreferenceValueSanitizer.preferredColorScheme(preferredColorScheme))
+            PreferenceJSON.encode(AppPreferenceValueSanitizer.preferredColorScheme(preferredColorScheme))
         case .pomodoroDefaultMode:
-            return PreferenceJSON.encode(AppPreferenceValueSanitizer.pomodoroMode(pomodoroDefaultMode))
+            PreferenceJSON.encode(AppPreferenceValueSanitizer.pomodoroMode(pomodoroDefaultMode))
         case .defaultFocusMinutes:
-            return PreferenceJSON.encode(defaultFocusMinutes)
+            PreferenceJSON.encode(defaultFocusMinutes)
         case .defaultBreakMinutes:
-            return PreferenceJSON.encode(defaultBreakMinutes)
+            PreferenceJSON.encode(defaultBreakMinutes)
         case .defaultPomodoroRounds:
-            return PreferenceJSON.encode(defaultPomodoroRounds)
+            PreferenceJSON.encode(defaultPomodoroRounds)
         case .pomodoroPlans:
-            return PreferenceJSON.encode(AppPreferenceValueSanitizer.pomodoroPlans(pomodoroPlans))
+            PreferenceJSON.encode(AppPreferenceValueSanitizer.pomodoroPlans(pomodoroPlans))
         case .allowParallelTimers:
-            return PreferenceJSON.encode(allowParallelTimers)
+            PreferenceJSON.encode(allowParallelTimers)
         case .showGrossAndWallTogether:
-            return PreferenceJSON.encode(showGrossAndWallTogether)
+            PreferenceJSON.encode(showGrossAndWallTogether)
         case .quickStartTaskIDs:
-            return PreferenceJSON.encode(
+            PreferenceJSON.encode(
                 AppPreferenceValueSanitizer.quickStartTaskIDs(quickStartTaskIDs).map(\.uuidString)
             )
         case .todayHeatmapTaskIDs:
-            return PreferenceJSON.encode(
+            PreferenceJSON.encode(
                 AppPreferenceValueSanitizer.todayHeatmapTaskIDs(todayHeatmapTaskIDs).map(\.uuidString)
             )
         case .todayHeatmapPeriod:
-            return PreferenceJSON.encode(
+            PreferenceJSON.encode(
                 AppPreferenceValueSanitizer.todayHeatmapPeriod(todayHeatmapPeriod.rawValue).rawValue
             )
         case .llmEndpoint:
-            return PreferenceJSON.encode(AppPreferenceValueSanitizer.llmEndpoint(llmEndpoint))
+            PreferenceJSON.encode(AppPreferenceValueSanitizer.llmEndpoint(llmEndpoint))
         case .llmSelectedModel:
-            return PreferenceJSON.encode(AppPreferenceValueSanitizer.llmModelID(llmSelectedModel))
+            PreferenceJSON.encode(AppPreferenceValueSanitizer.llmModelID(llmSelectedModel))
         case .llmAvailableModelIDs:
-            return PreferenceJSON.encode(AppPreferenceValueSanitizer.llmModelIDs(llmAvailableModelIDs))
+            PreferenceJSON.encode(AppPreferenceValueSanitizer.llmModelIDs(llmAvailableModelIDs))
         case .llmReasoningEffort:
-            return PreferenceJSON.encode(llmReasoningEffort.rawValue)
+            PreferenceJSON.encode(llmReasoningEffort.rawValue)
         case .llmInboxSuggestionInstructions:
-            let instructions = (
-                try? AppPreferenceValueSanitizer.llmInboxSuggestionInstructions(
-                    llmInboxSuggestionInstructions
-                )
-            ) ?? LLMPromptKind.inboxRouting.defaultInstructions
-            return PreferenceJSON.encode(instructions)
+            PreferenceJSON.encode(Self.sanitizedInstructions(llmInboxSuggestionInstructions, for: .inboxRouting))
         case .llmChecklistVisualInstructions:
-            let instructions = (
-                try? AppPreferenceValueSanitizer.llmChecklistVisualInstructions(
-                    llmChecklistVisualInstructions
-                )
-            ) ?? LLMPromptKind.checklistVisual.defaultInstructions
-            return PreferenceJSON.encode(instructions)
+            PreferenceJSON.encode(Self.sanitizedInstructions(llmChecklistVisualInstructions, for: .checklistVisual))
         case .llmTaskPlanInstructions:
-            let instructions = (try? AppPreferenceValueSanitizer.llmTaskPlanInstructions(
-                llmTaskPlanInstructions
-            )) ?? LLMTaskPlanPrompt.defaultInstructions
-            return PreferenceJSON.encode(instructions)
+            PreferenceJSON.encode(Self.sanitizedInstructions(llmTaskPlanInstructions, for: .taskPlan))
         }
+    }
+
+    /// Invalid stored instructions fall back to the prompt's defaults.
+    private static func sanitizedInstructions(_ value: String, for kind: LLMPromptKind) -> String {
+        (try? AppPreferenceValueSanitizer.llmPromptInstructions(value, for: kind)) ?? kind.defaultInstructions
+    }
+
+    private static func storedInstructions(_ valueJSON: String, for kind: LLMPromptKind) -> String {
+        sanitizedInstructions(
+            PreferenceJSON.decode(String.self, from: valueJSON, default: kind.defaultInstructions),
+            for: kind
+        )
     }
 
     func llmInstructions(for kind: LLMPromptKind) -> String {
@@ -251,8 +229,6 @@ struct AppPreferences: Equatable {
 }
 
 enum SyncedPreferenceService {
-    nonisolated static let migrationKey =
-        "SyncedPreferencesMigratedToSwiftDataV1"
     nonisolated static let legacyLLMAPIKey = "LLMAPIKey"
     nonisolated static let legacyCloudSyncEnabledKey =
         AppCloudSync.enabledKey

@@ -337,7 +337,7 @@ private extension LLMTaskWorkspacePlanningService {
         let preparedInstructions: String
         do {
             preparedInstructions = try AppPreferenceValueSanitizer
-                .llmTaskPlanInstructions(instructions)
+                .llmPromptInstructions(instructions, for: .taskPlan)
         } catch let error as LLMTaskPlanInstructionsValidationError {
             switch error {
             case .controlCharacter:

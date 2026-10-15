@@ -218,29 +218,6 @@ struct PreferenceCommandValidationTests {
         #expect(stored.deletedAt == nil)
     }
 
-    @Test @MainActor
-    func oversizedLegacyValueIsSkippedInsteadOfBecomingJSONNull() throws {
-        let suiteName = "PreferenceCommandValidationTests-\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        defaults.set(
-            String(repeating: "x", count: PreferenceJSON.maximumPayloadByteCount + 1),
-            forKey: AppPreferenceKey.llmEndpoint.rawValue
-        )
-        let context = try makeTestContext()
-
-        try SyncedPreferenceService.migrateLegacyPreferencesIfNeeded(
-            context: context,
-            defaults: defaults,
-            deviceID: "migration-device"
-        )
-
-        let stored = try context.fetch(FetchDescriptor<SyncedPreference>())
-        #expect(stored.isEmpty)
-        #expect(defaults.bool(forKey: SyncedPreferenceService.migrationKey))
-        #expect(stored.allSatisfy { $0.valueJSON != "null" })
-    }
-
     @Test
     func checkedEncodingReportsEncodingFailuresInsteadOfReturningJSONNull() {
         #expect(throws: PreferenceJSONError.encodingFailed) {

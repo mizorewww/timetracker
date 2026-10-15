@@ -6,32 +6,6 @@ import Testing
 @Suite(.serialized)
 struct SyncedPreferenceMigrationFailureTests {
     @Test @MainActor
-    func legacyMigrationRollsBackPendingRecordsWhenSaveFails() throws {
-        let defaults = try makeDefaults()
-        defer { clear(defaults) }
-        defaults.set(55, forKey: AppPreferenceKey.defaultFocusMinutes.rawValue)
-
-        let storeDirectory = try makeStoreDirectory()
-        let storeURL = storeDirectory.appending(path: "legacy-preferences.store")
-        let schema = TimeTrackerModelRegistry.currentSchema
-        try initializeWritableStore(at: storeURL, schema: schema)
-        let readOnlyContainer = try makeReadOnlyContainer(at: storeURL, schema: schema)
-        let context = ModelContext(readOnlyContainer)
-
-        #expect(throws: (any Error).self) {
-            try SyncedPreferenceService.migrateLegacyPreferencesIfNeeded(
-                context: context,
-                defaults: defaults,
-                deviceID: "migration"
-            )
-        }
-
-        #expect(try context.fetch(FetchDescriptor<SyncedPreference>()).isEmpty)
-        #expect(!defaults.bool(forKey: SyncedPreferenceService.migrationKey))
-        #expect(defaults.object(forKey: AppPreferenceKey.defaultFocusMinutes.rawValue) as? Int == 55)
-    }
-
-    @Test @MainActor
     func sensitiveMigrationRollsBackRedactionWhenSaveFails() throws {
         let defaults = try makeDefaults()
         defer { clear(defaults) }
@@ -133,7 +107,6 @@ struct SyncedPreferenceMigrationFailureTests {
 
     private func clear(_ defaults: UserDefaults) {
         for key in AppPreferenceKey.allCases.map(\.rawValue) + [
-            SyncedPreferenceService.migrationKey,
             SyncedPreferenceService.legacyLLMAPIKey,
         ] {
             defaults.removeObject(forKey: key)

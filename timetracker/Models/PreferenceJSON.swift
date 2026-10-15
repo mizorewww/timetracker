@@ -118,20 +118,16 @@ enum PreferenceJSON {
                 AppPreferenceValueSanitizer.llmReasoningEffort(value).rawValue
             )
         case .llmInboxSuggestionInstructions:
-            let value = try decodeChecked(String.self, from: valueJSON)
-            return try encodeChecked(
-                AppPreferenceValueSanitizer.llmInboxSuggestionInstructions(value)
-            )
+            return try canonicalInstructions(valueJSON, for: .inboxRouting)
         case .llmChecklistVisualInstructions:
-            let value = try decodeChecked(String.self, from: valueJSON)
-            return try encodeChecked(
-                AppPreferenceValueSanitizer.llmChecklistVisualInstructions(value)
-            )
+            return try canonicalInstructions(valueJSON, for: .checklistVisual)
         case .llmTaskPlanInstructions:
-            let value = try decodeChecked(String.self, from: valueJSON)
-            return try encodeChecked(
-                AppPreferenceValueSanitizer.llmTaskPlanInstructions(value)
-            )
+            return try canonicalInstructions(valueJSON, for: .taskPlan)
         }
+    }
+
+    private static func canonicalInstructions(_ valueJSON: String, for kind: LLMPromptKind) throws -> String {
+        let value = try decodeChecked(String.self, from: valueJSON)
+        return try encodeChecked(AppPreferenceValueSanitizer.llmPromptInstructions(value, for: kind))
     }
 }

@@ -471,9 +471,6 @@
 "persistence.openSettingsFailed" = "無法開啟設定。請從主畫面開啟「設定」，並檢查時間追蹤器的 iCloud 存取權限。";
 "persistence.reopenHint" = "檢查 iCloud 存取權限後，請從 App 切換器關閉時間追蹤器，然後重新開啟。";
 "persistence.quit" = "結束時間追蹤器";
-"migration.countdown.error.payloadTooLarge" = "舊版倒數歸檔過大，無法安全移轉。原始歸檔已保留以便復原。";
-"migration.countdown.error.tooManyEvents" = "舊版倒數歸檔中的事件過多，無法安全移轉。原始歸檔已保留以便復原。";
-"migration.countdown.error.invalidPayload" = "舊版倒數歸檔已損毀或無法讀取。原始歸檔已保留以便復原。";
 "settings.countdown.error.unavailable" = "此倒數已不存在。已重新載入最新的倒數列表。";
 "settings.countdown.error.changed" = "此倒數已在其他視窗或裝置上發生變更。請檢查最新內容後再試一次。";
 "tab.home" = "首頁";

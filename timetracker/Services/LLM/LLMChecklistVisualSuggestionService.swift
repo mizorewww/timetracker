@@ -57,7 +57,7 @@ struct LLMChecklistVisualSuggestionService {
             try prompt(
                 input: input,
                 instructions: AppPreferenceValueSanitizer
-                    .llmChecklistVisualInstructions(instructions)
+                    .llmPromptInstructions(instructions, for: .checklistVisual)
             )
         }
     }

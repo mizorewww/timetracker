@@ -13,6 +13,8 @@ struct AnalyticsStore {
     var snapshots: [AnalyticsRange: AnalyticsSnapshot] = [:]
     var snapshotEvaluationKeys: [AnalyticsRange: AnalyticsEvaluationCacheKey] = [:]
     var taskSnapshots: [TaskSnapshotCacheKey: TaskAnalyticsSnapshot] = [:]
+    /// Insertion order of `taskSnapshots`, oldest first, for eviction.
+    var taskSnapshotOrder: [TaskSnapshotCacheKey] = []
 
     @discardableResult
     mutating func refreshSnapshot(

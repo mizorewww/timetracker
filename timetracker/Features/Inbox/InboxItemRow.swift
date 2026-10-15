@@ -32,6 +32,7 @@ struct InboxItemRow: View {
                     completionAccessibilityIdentifier:
                     "inbox.item.completion.\(item.id.uuidString)",
                     textFieldAccessibilityIdentifier: "inbox.item.\(item.id.uuidString)",
+                    persistedTitle: item.title,
                     toggle: {
                         toggleCompletion()
                     },
@@ -47,12 +48,6 @@ struct InboxItemRow: View {
             reduceMotion ? nil : AppMotion.stateChange,
             value: suggestionPresentationKey
         )
-        .onAppear {
-            draftTitle = item.title
-        }
-        .onChange(of: item.title) { _, newValue in
-            draftTitle = newValue
-        }
     }
 
     private var itemMenu: some View {

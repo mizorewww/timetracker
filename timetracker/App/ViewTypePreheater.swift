@@ -109,6 +109,9 @@ enum ViewTypePreheater {
             .first(where: { $0.keyWindow != nil })?
             .keyWindow
         else { return }
+        // Only the compact tab shell switches between whole pages; a regular
+        // split-view window never pays the first-switch cost this hides.
+        guard window.bounds.width < RootLayoutPolicy.regularShellMinimumWidth else { return }
         window.addSubview(host.view)
         host.view.layoutIfNeeded()
         DispatchQueue.main.async {

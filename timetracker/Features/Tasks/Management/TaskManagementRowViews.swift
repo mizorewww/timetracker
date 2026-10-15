@@ -10,7 +10,6 @@ struct TaskManagementFlatRow: View {
     var toggleExpansion: (() -> Void)?
     var identityContext: TaskIdentityPresentation.Context = .hierarchical
     let openTaskDetail: (TaskNode) -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
@@ -73,34 +72,15 @@ struct TaskManagementFlatRow: View {
         dynamicTypeSize.isAccessibilitySize ? .top : .center
     }
 
-    @ViewBuilder
     private var disclosureButton: some View {
-        switch TaskTreeDisclosureSlot(depth: treeDepth, hasChildren: childCount > 0) {
-        case .control:
-            Button {
-                toggleExpansion?()
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                    .animation(
-                        reduceMotion ? nil : AppMotion.stateChange,
-                        value: isExpanded
-                    )
-                    .foregroundStyle(.secondary)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("tasks.disclosure.\(task.id.uuidString)")
-            .accessibilityLabel(isExpanded ? AppStrings.localized("tasks.collapse") : AppStrings.localized("tasks.expand"))
-            .accessibilityValue(task.title)
-        case .reserved:
-            Color.clear
-                .frame(width: 44, height: 44)
-                .accessibilityHidden(true)
-        case .none:
-            EmptyView()
+        TaskTreeDisclosureControl(
+            slot: TaskTreeDisclosureSlot(depth: treeDepth, hasChildren: childCount > 0),
+            isExpanded: isExpanded,
+            targetSize: 44,
+            accessibilityIdentifier: "tasks.disclosure.\(task.id.uuidString)",
+            taskTitle: task.title
+        ) {
+            toggleExpansion?()
         }
     }
 

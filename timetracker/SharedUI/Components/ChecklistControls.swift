@@ -181,6 +181,9 @@ struct EditableChecklistTextRow: View {
     var contentAlignment: VerticalAlignment = .top
     var completionAccessibilityIdentifier: String?
     var textFieldAccessibilityIdentifier: String?
+    /// The persisted title; adopted into `title` whenever it changes while
+    /// the field is not being edited, so a remote edit never clobbers typing.
+    var persistedTitle: String?
     let toggle: () -> Void
     let commit: () -> Void
 
@@ -203,6 +206,10 @@ struct EditableChecklistTextRow: View {
             if !focused {
                 commit()
             }
+        }
+        .onChange(of: persistedTitle, initial: true) { _, persisted in
+            guard let persisted, isFocused == false else { return }
+            title = persisted
         }
     }
 

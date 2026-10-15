@@ -3,7 +3,7 @@ import SwiftData
 
 extension TimeTrackerStore {
     func replaceWithDemoData() {
-        let didReplace = perform {
+        let didReplace = perform(events: [.fullSync]) {
             guard let modelContext else { throw StoreError.notConfigured }
             try SeedData.replaceWithDemoData(context: modelContext)
         }
@@ -26,7 +26,7 @@ extension TimeTrackerStore {
             forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
         )
         var localSettingsWereCleared = false
-        let didClear = perform {
+        let didClear = perform(events: [.fullSync]) {
             guard let modelContext else { throw StoreError.notConfigured }
             try llmCredentialStore.writeAPIKey("")
             defaults.removeObject(forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
@@ -70,7 +70,7 @@ extension TimeTrackerStore {
         })?.taskID ?? tasks.first(where: {
             $0.deviceID != "demo" && isTaskAvailableForTracking($0)
         })?.id
-        let didClear = perform {
+        let didClear = perform(events: [.fullSync]) {
             guard let modelContext else { throw StoreError.notConfigured }
             try SeedData.clearDemoData(context: modelContext)
         }

@@ -453,6 +453,7 @@ private struct TimelineChartHorizontalLayout: Layout {
         cache _: inout ()
     ) {
         let metrics = metrics(width: bounds.width, subviews: subviews)
+        let placementByID = metrics.placementByID
 
         for subview in subviews {
             switch subview[TimelineChartLayoutSubviewRoleKey.self] {
@@ -479,9 +480,7 @@ private struct TimelineChartHorizontalLayout: Layout {
                     )
                 )
             case let .gapLabel(id):
-                guard let placement = metrics.gapLayout.placements.first(
-                    where: { $0.id == id }
-                ), let size = metrics.labelSizes[id] else {
+                guard let placement = placementByID[id], let size = metrics.labelSizes[id] else {
                     continue
                 }
                 let rowOrigin = bounds.minY + metrics.plotHeight +
@@ -554,6 +553,7 @@ private struct TimelineChartVerticalLayout: Layout {
             height: bounds.height,
             subviews: subviews
         )
+        let placementByID = metrics.placementByID
 
         for subview in subviews {
             switch subview[TimelineChartLayoutSubviewRoleKey.self] {
@@ -579,9 +579,7 @@ private struct TimelineChartVerticalLayout: Layout {
                     )
                 )
             case let .gapLabel(id):
-                guard let placement = metrics.gapLayout.placements.first(
-                    where: { $0.id == id }
-                ), let size = metrics.labelSizes[id] else {
+                guard let placement = placementByID[id], let size = metrics.labelSizes[id] else {
                     continue
                 }
                 subview.place(
@@ -597,9 +595,7 @@ private struct TimelineChartVerticalLayout: Layout {
                     )
                 )
             case let .gapConnector(id):
-                guard let placement = metrics.gapLayout.placements.first(
-                    where: { $0.id == id }
-                ), let size = metrics.labelSizes[id] else {
+                guard let placement = placementByID[id], let size = metrics.labelSizes[id] else {
                     continue
                 }
                 let labelTrailing = bounds.minX +
@@ -675,6 +671,10 @@ private struct TimelineChartVerticalLayout: Layout {
         let axisLabelWidth: CGFloat
         let labelSizes: [String: CGSize]
         let gapLayout: TimelineChartVerticalGapLabelLayout
+
+        var placementByID: [String: TimelineChartVerticalGapLabelPlacement] {
+            Dictionary(gapLayout.placements.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        }
     }
 }
 
@@ -686,6 +686,10 @@ private struct TimelineChartHorizontalMetrics {
     let totalHeight: CGFloat
     let labelSizes: [String: CGSize]
     let gapLayout: TimelineChartHorizontalGapLabelLayout
+
+    var placementByID: [String: TimelineChartHorizontalGapLabelPlacement] {
+        Dictionary(gapLayout.placements.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    }
 }
 
 private func timelineChartHorizontalMetrics(

@@ -10,11 +10,7 @@ private enum CommittedMutationProjectionDiagnostics {
 }
 
 extension TimeTrackerStore {
-    @discardableResult
-    func perform(event: StoreDomainEvent = .fullSync, _ action: () throws -> Void) -> Bool {
-        perform(events: [event], action)
-    }
-
+    /// Whole-store maintenance mutation; failures go to the shared error slot.
     @discardableResult
     func perform(events: Set<StoreDomainEvent>, _ action: () throws -> Void) -> Bool {
         do {

@@ -22,7 +22,6 @@ struct SidebarTaskTreeRow: View {
     let task: TaskNode
     let row: TaskTreeRowModel
     @Binding var expansionState: TaskExpansionState
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 8) {
@@ -45,36 +44,15 @@ struct SidebarTaskTreeRow: View {
         )
     }
 
-    @ViewBuilder
     private var disclosureControl: some View {
-        switch TaskTreeDisclosureSlot(depth: row.depth, hasChildren: row.hasChildren) {
-        case .control:
-            Button {
-                expansionState.toggle(task.id)
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .rotationEffect(.degrees(row.isExpanded ? 90 : 0))
-                    .animation(
-                        reduceMotion ? nil : AppMotion.stateChange,
-                        value: row.isExpanded
-                    )
-                    .foregroundStyle(.secondary)
-                    .frame(width: 14, height: 18)
-            }
-            .buttonStyle(.plain)
-            .frame(width: disclosureTargetSize, height: disclosureTargetSize)
-            .contentShape(Rectangle())
-            .accessibilityIdentifier("sidebar.disclosure.\(task.id.uuidString)")
-            .accessibilityLabel(
-                "\(task.title), \(row.isExpanded ? AppStrings.localized("task.tree.collapse") : AppStrings.localized("task.tree.expand"))"
-            )
-        case .reserved:
-            Color.clear
-                .frame(width: disclosureTargetSize, height: disclosureTargetSize)
-                .accessibilityHidden(true)
-        case .none:
-            EmptyView()
+        TaskTreeDisclosureControl(
+            slot: TaskTreeDisclosureSlot(depth: row.depth, hasChildren: row.hasChildren),
+            isExpanded: row.isExpanded,
+            targetSize: disclosureTargetSize,
+            accessibilityIdentifier: "sidebar.disclosure.\(task.id.uuidString)",
+            taskTitle: task.title
+        ) {
+            expansionState.toggle(task.id)
         }
     }
 

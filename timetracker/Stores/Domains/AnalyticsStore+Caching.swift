@@ -84,14 +84,13 @@ extension AnalyticsStore {
         for staleKey in staleKeys {
             taskSnapshots.removeValue(forKey: staleKey)
         }
+        taskSnapshotOrder.removeAll { staleKeys.contains($0) || $0 == cacheKey }
         taskSnapshots[cacheKey] = snapshot
+        taskSnapshotOrder.append(cacheKey)
 
-        let excessCount = taskSnapshots.count - Self.maximumTaskSnapshotCount
-        if excessCount > 0 {
-            let evictionKeys = taskSnapshots.keys.filter { $0 != cacheKey }.prefix(excessCount)
-            for evictionKey in evictionKeys {
-                taskSnapshots.removeValue(forKey: evictionKey)
-            }
+        // Evict the least recently stored task snapshots first.
+        while taskSnapshotOrder.count > Self.maximumTaskSnapshotCount {
+            taskSnapshots.removeValue(forKey: taskSnapshotOrder.removeFirst())
         }
     }
 
@@ -162,6 +161,7 @@ extension AnalyticsStore {
         snapshots.removeAll(keepingCapacity: true)
         snapshotEvaluationKeys.removeAll(keepingCapacity: true)
         taskSnapshots.removeAll(keepingCapacity: true)
+        taskSnapshotOrder.removeAll(keepingCapacity: true)
         if invalidatedIntervals.isEmpty {
             ledgerBucketCache.removeAll()
         } else {

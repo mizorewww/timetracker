@@ -10,6 +10,12 @@ struct LedgerStore {
         sessionIndex.sessions
     }
 
+    /// Changes whenever segment or session membership/values change, so
+    /// derived relationship visibility can skip unchanged history.
+    var relationshipRevision: UInt64 {
+        segmentRevision &+ sessionIndex.revision
+    }
+
     var segmentByID: [UUID: TimeSegment] = [:]
     var segmentSnapshotByID: [UUID: LedgerSegmentSnapshot] = [:]
     var segmentArrayIndexByID: [UUID: Int] = [:]
@@ -21,6 +27,9 @@ struct LedgerStore {
     var activeSegmentIDs: Set<UUID> = []
     var timeSensitiveSegmentIDs: Set<UUID> = []
     var pendingRollupChangeByID: [UUID: LedgerSegmentChange] = [:]
+    /// Advances whenever a visible segment is added, removed, replaced, or
+    /// changes value; time-only refreshes of running segments do not count.
+    var segmentRevision: UInt64 = 0
     var segmentIndexEvaluationDate = Date.distantPast
     var segmentIndexCalendar = Calendar.current
     private(set) var hasLoadedHistory = false

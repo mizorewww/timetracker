@@ -242,6 +242,8 @@ extension TimeTrackerStore {
         )
     }
 
+    /// Rebuilds every facade task lookup, then the tree and forecast indexes
+    /// that depend on both tasks and categories.
     func rebuildTaskIndexes() {
         let indexes = taskTreeService.indexes(tasks: tasks)
         taskTreeIndexes = indexes
@@ -266,12 +268,13 @@ extension TimeTrackerStore {
             incompleteGeneratedTaskIDs:
             incompleteRecurrenceGeneratedTaskIDs
         )
+        rebuildTaskCategoryIndexes()
         rebuildTaskTreeReadIndex()
         rebuildForecastEligibilityIndex()
         taskReadModelRevision &+= 1
     }
 
-    func rebuildTaskCategoryIndexes() {
+    private func rebuildTaskCategoryIndexes() {
         taskCategoryByID = taskCategories.visibleDeduplicatedByID().latestByID()
         let logicalWinners = taskCategoryAssignments
             .deduplicatedByID()
@@ -284,8 +287,6 @@ extension TimeTrackerStore {
             return assignment.categoryID
         }
         taskCategoryIDByRootTaskID = categoryIDs
-        rebuildTaskTreeReadIndex()
-        rebuildForecastEligibilityIndex()
     }
 
     func taskAndDescendantIDs(for taskID: UUID, visited: Set<UUID> = []) -> Set<UUID> {

@@ -4,9 +4,12 @@ import Foundation
 /// sorting the complete session history after a segment-sized mutation.
 struct LedgerSessionIndex {
     private(set) var sessions: [TimeSession] = []
+    /// Advances whenever membership, order, or a session's task changes.
+    private(set) var revision: UInt64 = 0
 
     private var arrayIndexByID: [UUID: Int] = [:]
     private var startedAtByID: [UUID: Date] = [:]
+    private var taskIDByID: [UUID: UUID] = [:]
 
     mutating func rebuild(_ fetchedSessions: [TimeSession]) {
         sessions = fetchedSessions.visibleDeduplicatedByID().sorted(by: sessionOrder)
@@ -16,6 +19,10 @@ struct LedgerSessionIndex {
         startedAtByID = Dictionary(uniqueKeysWithValues: sessions.map {
             ($0.id, $0.startedAt)
         })
+        taskIDByID = Dictionary(uniqueKeysWithValues: sessions.map {
+            ($0.id, $0.taskID)
+        })
+        revision &+= 1
     }
 
     mutating func replace(ids: Set<UUID>, with fetchedSessions: [TimeSession]) {
@@ -55,21 +62,25 @@ struct LedgerSessionIndex {
                 sessions.remove(at: existingIndex)
                 arrayIndexByID.removeValue(forKey: id)
                 startedAtByID.removeValue(forKey: id)
+                taskIDByID.removeValue(forKey: id)
                 reindex(from: existingIndex)
+                revision &+= 1
                 return
             }
 
             if previousStartedAt == session.startedAt {
-                if sessions[existingIndex] !== session {
+                if sessions[existingIndex] !== session || taskIDByID[id] != session.taskID {
                     sessions[existingIndex] = session
+                    taskIDByID[id] = session.taskID
+                    revision &+= 1
                 }
-                startedAtByID[id] = session.startedAt
                 return
             }
 
             sessions.remove(at: existingIndex)
             arrayIndexByID.removeValue(forKey: id)
             startedAtByID.removeValue(forKey: id)
+            taskIDByID.removeValue(forKey: id)
             reindex(from: existingIndex)
         }
 
@@ -77,7 +88,9 @@ struct LedgerSessionIndex {
         let insertionIndex = insertionIndex(for: session)
         sessions.insert(session, at: insertionIndex)
         startedAtByID[id] = session.startedAt
+        taskIDByID[id] = session.taskID
         reindex(from: insertionIndex)
+        revision &+= 1
     }
 
     private mutating func reindex(from startIndex: Int) {

@@ -25,28 +25,31 @@ extension TimeTrackerStore {
         if referencesUnknownTask {
             try refreshExistingTaskIDs()
         }
-        let readableSessions = ledgerDomainStore.sessions.filter {
-            existingTaskIDs.contains($0.taskID)
-        }
-        let taskIDBySessionID = Dictionary(
-            readableSessions.map { ($0.id, $0.taskID) },
-            uniquingKeysWith: { first, _ in first }
-        )
-        readableLedgerSegmentIDs = Set(ledgerDomainStore.allSegments.lazy.compactMap { segment in
-            guard self.existingTaskIDs.contains(segment.taskID),
-                  taskIDBySessionID[segment.sessionID] == segment.taskID
-            else {
-                return nil
+        let ledgerRevision = ledgerDomainStore.relationshipRevision
+        let historyChanged = ledgerRelationshipVisibilityKey.map {
+            $0.ledgerRevision != ledgerRevision || $0.existingTaskIDs != existingTaskIDs
+        } ?? true
+        if historyChanged {
+            let readableSessions = ledgerDomainStore.sessions.filter {
+                existingTaskIDs.contains($0.taskID)
             }
-            return segment.id
-        })
-
-        // Assign only on change: each of these is observed, and an unchanged
-        // reassignment would still invalidate every view that reads it.
+            let taskIDBySessionID = Dictionary(
+                readableSessions.map { ($0.id, $0.taskID) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            let readableSegments = ledgerDomainStore.allSegments.filter { segment in
+                existingTaskIDs.contains(segment.taskID) &&
+                    taskIDBySessionID[segment.sessionID] == segment.taskID
+            }
+            readableLedgerSegmentIDs = Set(readableSegments.map(\.id))
+            ledgerRelationshipVisibilityKey = (ledgerRevision, existingTaskIDs)
+            // Assign only on change: each of these is observed, and an
+            // unchanged reassignment would still invalidate every reader.
+            publishIfChanged(\.allSegments, readableSegments)
+            publishIfChanged(\.sessions, readableSessions)
+        }
         publishIfChanged(\.activeSegments, ledgerDomainStore.activeSegments.filter(isReadableLedgerSegment))
         publishIfChanged(\.todaySegments, ledgerDomainStore.todaySegments.filter(isReadableLedgerSegment))
-        publishIfChanged(\.allSegments, ledgerDomainStore.allSegments.filter(isReadableLedgerSegment))
-        publishIfChanged(\.sessions, readableSessions)
     }
 
     func isReadableLedgerSegment(_ segment: TimeSegment) -> Bool {

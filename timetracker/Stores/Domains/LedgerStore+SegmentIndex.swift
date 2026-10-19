@@ -15,6 +15,7 @@ extension LedgerStore {
         segmentArrayIndexByID = Dictionary(uniqueKeysWithValues: allSegments.indices.map {
             (allSegments[$0].id, $0)
         })
+        segmentRevision &+= 1
         segmentIndexEvaluationDate = now
         segmentIndexCalendar = calendar
         activeSegmentIDs = Set(segmentSnapshotByID.values.filter { $0.endedAt == nil }.map(\.id))
@@ -63,6 +64,9 @@ extension LedgerStore {
                 (refreshUnchangedTimeSensitiveSegments && after?.isTimeSensitive(at: now) == true)
             if shouldRefresh {
                 recordRollupChange(id: id, before: before, after: after)
+            }
+            if before != after || segmentByID[id] !== afterModel {
+                segmentRevision &+= 1
             }
 
             if let before {

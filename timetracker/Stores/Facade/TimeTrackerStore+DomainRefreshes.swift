@@ -11,7 +11,6 @@ extension TimeTrackerStore {
         // Domain-store arrays are the single owner; the facade exposes them as
         // passthroughs, so only the derived facade indexes need rebuilding.
         rebuildTaskIndexes()
-        rebuildTaskCategoryIndexes()
         try refreshExistingTaskIDs()
         try refreshLedgerRelationshipVisibility()
         cancelInvalidChecklistVisualSuggestionRequests()

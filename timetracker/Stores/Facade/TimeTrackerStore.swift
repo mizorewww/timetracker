@@ -269,6 +269,9 @@ final class TimeTrackerStore {
     var activeSegmentByTaskID: [UUID: TimeSegment] = [:]
     var sortedTodaySegments: [TimeSegment] = []
     @ObservationIgnored var readableLedgerSegmentIDs: Set<UUID> = []
+    /// Inputs `readableLedgerSegmentIDs` was last derived from.
+    @ObservationIgnored var ledgerRelationshipVisibilityKey:
+        (ledgerRevision: UInt64, existingTaskIDs: Set<UUID>)?
     @ObservationIgnored var existingTaskIDs: Set<UUID> = []
     @ObservationIgnored var trackableTasksCache: (revision: UInt64, tasks: [TaskNode])?
     var checklistVisualByItemID: [UUID: ChecklistItemVisual] = [:]

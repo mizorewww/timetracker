@@ -16,6 +16,7 @@ extension timetrackerApp {
         )
     }
 
+    #if DEBUG
     static func makeUITestModelContainer() throws -> ModelContainer {
         let configuration = ModelConfiguration(
             "TimeTrackerUITests",
@@ -30,4 +31,5 @@ extension timetrackerApp {
             configurations: [configuration]
         )
     }
+    #endif
 }

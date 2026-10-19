@@ -6,7 +6,6 @@ import SwiftUI
 @MainActor
 final class TimeTrackerAppDelegate: NSObject, NSApplicationDelegate {
     #if DEBUG
-    private static var uiTestBootstrapScheduled = false
     private static var uiTestWindow: NSWindow?
     private static var uiTestWindowObserver: NSObjectProtocol?
     #endif
@@ -15,14 +14,11 @@ final class TimeTrackerAppDelegate: NSObject, NSApplicationDelegate {
         Self.scheduleUITestWindowBootstrap()
     }
 
-    static func scheduleUITestWindowBootstrap() {
+    private static func scheduleUITestWindowBootstrap() {
         #if DEBUG
-        guard CommandLine.arguments.contains(AppRuntimeEnvironment.uiTestingArgument),
-              uiTestBootstrapScheduled == false
-        else {
+        guard CommandLine.arguments.contains(AppRuntimeEnvironment.uiTestingArgument) else {
             return
         }
-        uiTestBootstrapScheduled = true
 
         AppDefaults.shared.set(false, forKey: "NSQuitAlwaysKeepsWindows")
         installUITestWindowObserver()

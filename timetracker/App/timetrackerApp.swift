@@ -21,9 +21,6 @@ struct timetrackerApp: App {
     var sharedModelContainer: ModelContainer = Self.applicationModelContainer
 
     init() {
-        #if os(macOS)
-        TimeTrackerAppDelegate.scheduleUITestWindowBootstrap()
-        #endif
         #if os(iOS) && canImport(WatchConnectivity)
         // WCSession must be activated during application startup so background
         // transfers are not dependent on a SwiftUI view having appeared.

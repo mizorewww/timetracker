@@ -664,7 +664,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = timetracker/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_TimeTrackerAutomaticDemoDataMode = "$(TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE)";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = NO;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = NO;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -693,7 +692,6 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE = off;
 				XROS_DEPLOYMENT_TARGET = 26.2;
 			};
 			name = Debug;
@@ -719,7 +717,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = timetracker/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_TimeTrackerAutomaticDemoDataMode = "$(TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE)";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = NO;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = NO;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -748,7 +745,6 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TIMETRACKER_AUTOMATIC_DEMO_DATA_MODE = off;
 				XROS_DEPLOYMENT_TARGET = 26.2;
 			};
 			name = Release;

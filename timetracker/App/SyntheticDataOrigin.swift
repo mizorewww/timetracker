@@ -1,3 +1,4 @@
+#if DEBUG
 import Foundation
 
 /// The single registry of `deviceID` values that mark a row as synthetic —
@@ -26,3 +27,4 @@ enum SyntheticDataOrigin {
         all.contains(deviceID)
     }
 }
+#endif

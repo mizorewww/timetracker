@@ -41,6 +41,7 @@ extension TimeTrackerStore {
         } catch {
             startupErrors.append(error)
         }
+        #if DEBUG
         do {
             try context.withHistoryAuthor(.bootstrapMaintenance) {
                 try SeedData.ensureSeeded(context: context)
@@ -48,6 +49,7 @@ extension TimeTrackerStore {
         } catch {
             startupErrors.append(error)
         }
+        #endif
         do {
             try context.withHistoryAuthor(.bootstrapMaintenance) {
                 try AppleHealthCatalogCleanup.removeLegacyCatalogRowsIfNeeded(context: context)

@@ -83,9 +83,11 @@ enum AppCloudSync {
     }
 
     static func setEnabled(_ isEnabled: Bool) {
+        #if DEBUG
         if isEnabled {
-            AppDemoDataConfiguration.disableLocalDemoStoreForCloudSync()
+            SeedData.setAutomaticDemoSeedingDisabled(true)
         }
+        #endif
         AppDefaults.shared.set(isEnabled, forKey: enabledKey)
     }
 

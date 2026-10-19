@@ -107,13 +107,31 @@ extension SettingsView {
                 pomodoroCount: store.pomodoroRuns.count,
                 cloudAccount: store.syncStatus.accountStatus,
                 cloudContainer: store.syncStatus.containerIdentifier,
-                allowsDemoDataCreation: AppDemoDataConfiguration.allowsDemoDataMutation,
-                hasDemoData: hasDemoData,
+                allowsDemoDataCreation: allowsDemoDataCreation,
+                hasDemoData: hasDemoDataInDebugBuild,
                 onRebuildDemoData: { pendingDestructiveConfirmation = .rebuildDemo },
                 onClearDemoData: { pendingDestructiveConfirmation = .clearDemo },
                 onResetAllData: { pendingDestructiveConfirmation = .resetAllData }
             )
             AboutSettingsSection()
         }
+    }
+}
+
+extension SettingsView {
+    var allowsDemoDataCreation: Bool {
+        #if DEBUG
+        AppDemoDataConfiguration.allowsDemoDataMutation
+        #else
+        false
+        #endif
+    }
+
+    var hasDemoDataInDebugBuild: Bool {
+        #if DEBUG
+        hasDemoData
+        #else
+        false
+        #endif
     }
 }

@@ -1,3 +1,4 @@
+#if DEBUG
 import Foundation
 
 enum AutomaticDemoDataMode: String {
@@ -6,48 +7,19 @@ enum AutomaticDemoDataMode: String {
     case replaceOnLaunch
 }
 
+/// Debug-only demo data, selected by one launch argument:
+/// `-TimeTrackerAutomaticDemoDataModeOverride <mode>`.
 enum AppDemoDataConfiguration {
-    static let infoDictionaryKey = "TimeTrackerAutomaticDemoDataMode"
     static let overrideKey = "TimeTrackerAutomaticDemoDataModeOverride"
 
-    static var allowsDemoDataCreation: Bool {
-        #if DEBUG
-        true
-        #else
-        false
-        #endif
-    }
+    static let currentMode: AutomaticDemoDataMode =
+        commandLineMode(arguments: CommandLine.arguments) ?? .off
 
-    /// Whether demo rows may actually be written right now.
-    ///
-    /// `allowsDemoDataCreation` only says the *build* has the demo code. It is
-    /// not sufficient on its own: with the shipping mode `off`, a Debug build
-    /// opens the production CloudKit store, so seeding there tombstones the
-    /// user's real data and syncs both the deletions and the demo rows to their
-    /// iCloud. Demo writes are therefore confined to the isolated demo store.
+    /// Demo writes are confined to the isolated demo store: with the mode
+    /// `off`, a Debug build opens the production CloudKit store, and seeding
+    /// there would tombstone the user's real data and sync it to iCloud.
     static var allowsDemoDataMutation: Bool {
-        allowsDemoDataCreation && usesLocalDemoStore
-    }
-
-    static var currentMode: AutomaticDemoDataMode {
-        guard allowsDemoDataCreation else { return .off }
-
-        if let commandLineMode = commandLineMode(
-            arguments: CommandLine.arguments
-        ) {
-            return commandLineMode
-        }
-        if let override = AppDefaults.shared.string(forKey: overrideKey),
-           let mode = AutomaticDemoDataMode(rawValue: override)
-        {
-            return mode
-        }
-        if let configured = Bundle.main.object(forInfoDictionaryKey: infoDictionaryKey) as? String,
-           let mode = AutomaticDemoDataMode(rawValue: configured)
-        {
-            return mode
-        }
-        return .off
+        usesLocalDemoStore
     }
 
     static func commandLineMode(
@@ -82,9 +54,5 @@ enum AppDemoDataConfiguration {
             .deletingLastPathComponent()
             .appendingPathComponent("TimeTracker-Demo.store")
     }
-
-    static func disableLocalDemoStoreForCloudSync() {
-        AppDefaults.shared.set(AutomaticDemoDataMode.off.rawValue, forKey: overrideKey)
-        SeedData.setAutomaticDemoSeedingDisabled(true)
-    }
 }
+#endif

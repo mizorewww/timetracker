@@ -259,10 +259,4 @@ extension SeedData {
         }
     }
 }
-#else
-extension SeedData {
-    static func buildDemoData(context _: ModelContext) throws {
-        throw SeedDataError.demoDataCreationUnavailable
-    }
-}
 #endif

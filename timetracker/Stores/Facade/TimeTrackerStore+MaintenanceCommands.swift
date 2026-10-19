@@ -2,17 +2,6 @@ import Foundation
 import SwiftData
 
 extension TimeTrackerStore {
-    func replaceWithDemoData() {
-        let didReplace = perform(events: [.fullSync]) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try SeedData.replaceWithDemoData(context: modelContext)
-        }
-        if didReplace {
-            tasksRoute = nil
-            todayTaskRoute = nil
-        }
-    }
-
     func clearAllData() {
         let previousAPIKey: String?
         do {
@@ -55,6 +44,35 @@ extension TimeTrackerStore {
         }
     }
 
+    @discardableResult
+    func optimizeDatabase() throws -> Int {
+        try performThrowingMutation(eventsForOutcome: { removedCount in
+            removedCount == 0 ? [] : [.fullSync]
+        }) {
+            guard let modelContext else { throw StoreError.notConfigured }
+            return try databaseMaintenanceService.optimizeDatabase(context: modelContext)
+        }
+    }
+
+    func jsonExport() throws -> String {
+        guard let modelContext else { throw StoreError.notConfigured }
+        return try UserDataExport.encodedJSON(container: modelContext.container)
+    }
+}
+
+#if DEBUG
+extension TimeTrackerStore {
+    func replaceWithDemoData() {
+        let didReplace = perform(events: [.fullSync]) {
+            guard let modelContext else { throw StoreError.notConfigured }
+            try SeedData.replaceWithDemoData(context: modelContext)
+        }
+        if didReplace {
+            tasksRoute = nil
+            todayTaskRoute = nil
+        }
+    }
+
     func clearDemoData() {
         let selectedDemoTaskID = selectedTaskID.flatMap { selectedID in
             tasks.first { $0.id == selectedID && $0.deviceID == "demo" }?.id
@@ -84,19 +102,5 @@ extension TimeTrackerStore {
             todayTaskRoute = nil
         }
     }
-
-    @discardableResult
-    func optimizeDatabase() throws -> Int {
-        try performThrowingMutation(eventsForOutcome: { removedCount in
-            removedCount == 0 ? [] : [.fullSync]
-        }) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            return try databaseMaintenanceService.optimizeDatabase(context: modelContext)
-        }
-    }
-
-    func jsonExport() throws -> String {
-        guard let modelContext else { throw StoreError.notConfigured }
-        return try UserDataExport.encodedJSON(container: modelContext.container)
-    }
 }
+#endif

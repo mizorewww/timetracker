@@ -49,9 +49,13 @@ extension SettingsView {
     func performDestructiveConfirmation(_ confirmation: SettingsDestructiveConfirmation) {
         switch confirmation {
         case .rebuildDemo:
+            #if DEBUG
             store.replaceWithDemoData()
+            #endif
         case .clearDemo:
+            #if DEBUG
             store.clearDemoData()
+            #endif
         case .resetAllData:
             store.clearAllData()
         case .optimizeDatabase:

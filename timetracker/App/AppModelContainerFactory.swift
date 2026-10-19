@@ -25,12 +25,14 @@ extension timetrackerApp {
 
         let storeURL = AppCloudSync.persistentStoreURL
 
+        #if DEBUG
         if AppDemoDataConfiguration.usesLocalDemoStore {
             AppCloudSync.recordMode(AppCloudSync.modeDemoData)
             return openOrEmergency(
                 ModelConfiguration("TimeTrackerDemo", schema: schema, url: AppDemoDataConfiguration.persistentStoreURL, cloudKitDatabase: .none)
             )
         }
+        #endif
 
         let localConfiguration = ModelConfiguration("TimeTracker", schema: schema, url: storeURL, cloudKitDatabase: .none)
         guard AppCloudSync.isEnabled else {

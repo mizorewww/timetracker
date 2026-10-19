@@ -85,11 +85,11 @@ extension TimeTrackerStore {
             return
         }
 
-        let delay = max(0, deadline.timeIntervalSince(now))
-        let nanoseconds = UInt64(min(delay, 24 * 60 * 60) * 1_000_000_000)
+        // Re-arm at least daily so a far deadline never needs one huge sleep.
+        let delay = min(max(0, deadline.timeIntervalSince(now)), 24 * 60 * 60)
         pomodoroReconciliationTask = Task { @MainActor [weak self] in
             do {
-                try await Task.sleep(nanoseconds: nanoseconds)
+                try await Task.sleep(for: .seconds(delay))
             } catch {
                 return
             }

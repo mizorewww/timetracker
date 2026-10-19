@@ -5,7 +5,7 @@ enum InboxCommandIdentityError: LocalizedError {
     case staleSuggestion
 
     var errorDescription: String? {
-        "The inbox suggestion changed before this action completed."
+        AppStrings.localized("inbox.error.changed")
     }
 }
 

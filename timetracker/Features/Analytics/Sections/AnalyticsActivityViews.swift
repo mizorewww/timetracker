@@ -73,17 +73,16 @@ struct TodayActivityContent: View {
     private var activityBars: some View {
         let scale = hourScale
 
-        return GeometryReader { proxy in
-            HStack(alignment: .bottom, spacing: 3) {
-                ForEach(activity) { point in
-                    HourTaskActivityBar(
-                        point: point,
-                        scale: scale,
-                        availableHeight: proxy.size.height
-                    )
-                }
+        return HStack(alignment: .bottom, spacing: 3) {
+            ForEach(activity) { point in
+                HourTaskActivityBar(
+                    point: point,
+                    scale: scale,
+                    availableHeight: chartHeight
+                )
             }
         }
+        .frame(maxWidth: .infinity)
         .frame(height: chartHeight)
         .padding(.horizontal, 2)
         .padding(.top, 8)

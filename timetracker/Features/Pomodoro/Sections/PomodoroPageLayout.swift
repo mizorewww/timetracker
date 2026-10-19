@@ -4,6 +4,9 @@ struct PomodoroPageLayout<Primary: View, Secondary: View>: View {
     private let primary: Primary
     private let secondary: Secondary
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    /// Only the width drives the layout, so height changes (keyboard, bars)
+    /// do not rebuild the page.
+    @State private var viewportWidth: CGFloat?
 
     init(
         @ViewBuilder primary: () -> Primary,
@@ -14,34 +17,37 @@ struct PomodoroPageLayout<Primary: View, Secondary: View>: View {
     }
 
     var body: some View {
-        GeometryReader { proxy in
-            let layout = PomodoroPageLayoutPolicy(
-                viewportWidth: proxy.size.width,
-                prefersSingleColumn: dynamicTypeSize.isAccessibilitySize
-            )
+        let layout = PomodoroPageLayoutPolicy(
+            viewportWidth: viewportWidth ?? 0,
+            prefersSingleColumn: dynamicTypeSize.isAccessibilitySize
+        )
 
-            ScrollView {
-                Group {
-                    if layout.usesTwoColumnContent {
-                        HStack(alignment: .top, spacing: layout.columnSpacing) {
-                            primary
-                                .frame(maxWidth: layout.primaryColumnMaxWidth)
-                            secondary
-                                .frame(width: layout.supportingColumnWidth)
-                        }
-                    } else {
-                        VStack(spacing: layout.singleColumnSpacing) {
-                            primary
-                            secondary
-                        }
-                        .frame(maxWidth: layout.singleColumnMaxWidth)
+        ScrollView {
+            Group {
+                if layout.usesTwoColumnContent {
+                    HStack(alignment: .top, spacing: layout.columnSpacing) {
+                        primary
+                            .frame(maxWidth: layout.primaryColumnMaxWidth)
+                        secondary
+                            .frame(width: layout.supportingColumnWidth)
                     }
+                } else {
+                    VStack(spacing: layout.singleColumnSpacing) {
+                        primary
+                        secondary
+                    }
+                    .frame(maxWidth: layout.singleColumnMaxWidth)
                 }
-                .frame(width: layout.contentWidth)
-                .padding(.vertical, layout.verticalPadding)
-                .frame(maxWidth: .infinity)
             }
-            .bottomScrollClearance(accessibilitySize: 144)
+            .frame(width: viewportWidth == nil ? nil : layout.contentWidth)
+            .padding(.vertical, layout.verticalPadding)
+            .frame(maxWidth: .infinity)
+        }
+        .bottomScrollClearance(accessibilitySize: 144)
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.width
+        } action: { width in
+            viewportWidth = width
         }
         .accessibilityIdentifier("pomodoro.dashboard")
     }

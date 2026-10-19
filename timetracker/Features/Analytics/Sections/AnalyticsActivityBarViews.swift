@@ -63,9 +63,7 @@ struct HourTaskActivityBar: View {
             }
 
         guard !taskValues.isEmpty else { return total }
-        let formatter = ListFormatter()
-        formatter.locale = locale
-        let tasks = formatter.string(from: taskValues) ?? taskValues.joined(separator: ", ")
+        let tasks = taskValues.formatted(.list(type: .and).locale(locale))
         return "\(total). \(tasks)"
     }
 

@@ -65,11 +65,8 @@ struct AnalyticsOverlapRow: View {
     }
 
     private var participantText: String {
-        let formatter = ListFormatter()
-        formatter.locale = locale
-        let names = overlap.visibleParticipants.map(\.title)
-        let visibleNames = formatter.string(from: names)
-            ?? names.joined(separator: ", ")
+        let visibleNames = overlap.visibleParticipants.map(\.title)
+            .formatted(.list(type: .and).locale(locale))
 
         guard overlap.hiddenParticipantCount > 0 else { return visibleNames }
         return String.localizedStringWithFormat(

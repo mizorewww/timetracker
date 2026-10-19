@@ -61,7 +61,7 @@ struct CountdownTitleEditor: View {
                 .onSubmit(commitTitle)
                 .accessibilityLabel(AppStrings.localized("settings.countdown.eventName"))
                 .accessibilityHint(
-                    draft.error?.localizedMessage
+                    draft.error?.localizedDescription
                         ?? AppStrings.localized("settings.countdown.title.hint")
                 )
                 .accessibilityIdentifier("settings.countdown.title.field")
@@ -73,12 +73,12 @@ struct CountdownTitleEditor: View {
             }
 
             if let error = draft.error {
-                Label(error.localizedMessage, systemImage: "exclamationmark.circle.fill")
+                Label(error.localizedDescription, systemImage: "exclamationmark.circle.fill")
                     .font(.caption)
                     .foregroundStyle(.red)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
-                    .accessibilityLabel(error.localizedMessage)
+                    .accessibilityLabel(error.localizedDescription)
                     .accessibilityIdentifier("settings.countdown.title.error")
             }
         }

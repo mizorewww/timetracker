@@ -4,8 +4,8 @@ import Foundation
 ///
 /// WatchConnectivity owns one process-wide callback while SwiftUI can create
 /// multiple scenes. This registry selects the most recently active scene and
-/// removes the callback when no scene remains, allowing the bridge to durably
-/// queue commands during startup and scene teardown.
+/// removes the callback when no scene remains; a command arriving without a
+/// scene fails with `sceneUnavailable` and the watch shows it as failed.
 @MainActor
 final class WatchCommandRouter {
     static let shared = WatchCommandRouter()
@@ -24,6 +24,8 @@ final class WatchCommandRouter {
         var activationOrder: UInt64
         var isActive: Bool
     }
+
+    static let sceneUnavailableFailureCode = "sceneUnavailable"
 
     private var routes: [UUID: Route] = [:]
     private var nextOrder: UInt64 = 0
@@ -70,7 +72,7 @@ final class WatchCommandRouter {
         let target = preferredRoute?.store.value
         guard let target else {
             reconcileBridgeHandler()
-            return .failed(commandID: command.id, failureCode: "sceneUnavailable")
+            return .failed(commandID: command.id, failureCode: Self.sceneUnavailableFailureCode)
         }
         return target.handleWatchCommand(command)
     }
@@ -97,7 +99,10 @@ final class WatchCommandRouter {
             guard !isBridgeHandlerInstalled else { return }
             WatchConnectivityBridge.shared.commandHandler = { [weak self] command in
                 self?.route(command)
-                    ?? .failed(commandID: command.id, failureCode: "routerUnavailable")
+                    ?? .failed(
+                        commandID: command.id,
+                        failureCode: WatchCommandRouter.sceneUnavailableFailureCode
+                    )
             }
             isBridgeHandlerInstalled = true
         }

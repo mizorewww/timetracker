@@ -1,19 +1,5 @@
 import Foundation
 
-enum CountdownTitleDraftError: Equatable {
-    case validation(CountdownTitleValidationError)
-    case saveFailed
-
-    var localizedMessage: String {
-        switch self {
-        case let .validation(error):
-            error.localizedDescription
-        case .saveFailed:
-            AppStrings.localized("settings.countdown.title.error.saveFailed")
-        }
-    }
-}
-
 struct CountdownTitleDraft: Equatable {
     var text: String {
         didSet {
@@ -23,7 +9,9 @@ struct CountdownTitleDraft: Equatable {
         }
     }
 
-    private(set) var error: CountdownTitleDraftError?
+    /// Why the edit was not saved. A failed save keeps the edit and is reported
+    /// by the caller, so only validation problems are shown in place.
+    private(set) var error: CountdownTitleValidationError?
     private var persistedTitle: String
 
     init(persistedTitle: String) {
@@ -49,11 +37,8 @@ struct CountdownTitleDraft: Equatable {
         let normalizedTitle: String
         do {
             normalizedTitle = try CountdownTitlePolicy.normalized(text)
-        } catch let validationError as CountdownTitleValidationError {
-            error = .validation(validationError)
-            return false
         } catch {
-            self.error = .saveFailed
+            self.error = error as? CountdownTitleValidationError ?? .empty
             return false
         }
 
@@ -62,10 +47,7 @@ struct CountdownTitleDraft: Equatable {
             error = nil
             return true
         }
-        guard save(normalizedTitle) else {
-            error = .saveFailed
-            return false
-        }
+        guard save(normalizedTitle) else { return false }
 
         persistedTitle = normalizedTitle
         text = normalizedTitle

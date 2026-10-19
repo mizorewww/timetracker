@@ -9,6 +9,8 @@
 "widget.action.open" = "打開 Time Tracker";
 "widget.intent.start.description" = "打開 Time Tracker 並為此任務開始計時。";
 "widget.intent.parameter.task" = "任務";
+"widget.intent.stop.description" = "打開 Time Tracker 以停止這個正在執行的計時器。";
+"widget.intent.parameter.timer" = "計時器";
 "widget.quickStart.title" = "快速開始";
 "widget.preview.task" = "製作週報";
 "widget.preview.path" = "工作";

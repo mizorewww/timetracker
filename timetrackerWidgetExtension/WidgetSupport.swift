@@ -42,13 +42,11 @@ struct WidgetStartTimerIntent: AppIntent {
 }
 
 struct WidgetStopTimerIntent: AppIntent {
-    static var title: LocalizedStringResource = "Open Time Tracker to Stop"
-    static var description = IntentDescription(
-        "Open Time Tracker to stop this specific running timer."
-    )
+    static var title: LocalizedStringResource = "widget.action.openToStop"
+    static var description = IntentDescription("widget.intent.stop.description")
     static var openAppWhenRun = false
 
-    @Parameter(title: "Timer")
+    @Parameter(title: "widget.intent.parameter.timer")
     var segmentID: String
 
     init() {}

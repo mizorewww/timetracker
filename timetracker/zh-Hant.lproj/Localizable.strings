@@ -175,7 +175,6 @@
 "settings.countdown.title.error.empty" = "請輸入事件名稱。";
 "settings.countdown.title.error.tooLong" = "事件名稱不可超過 4 KB。";
 "settings.countdown.title.error.controlCharacters" = "請移除換行符號和控制字元。";
-"settings.countdown.title.error.saveFailed" = "無法儲存事件名稱。你的編輯內容仍保留在這裡。";
 "settings.exportJSON" = "匯出 JSON";
 "settings.export.saved" = "JSON 匯出已儲存。";
 "settings.data" = "資料";

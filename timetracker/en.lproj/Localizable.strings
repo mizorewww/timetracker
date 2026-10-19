@@ -175,7 +175,6 @@
 "settings.countdown.title.error.empty" = "Enter an event name.";
 "settings.countdown.title.error.tooLong" = "Use an event name no larger than 4 KB.";
 "settings.countdown.title.error.controlCharacters" = "Remove line breaks and control characters.";
-"settings.countdown.title.error.saveFailed" = "The event name couldn’t be saved. Your edit is still here.";
 "settings.exportJSON" = "Export JSON";
 "settings.export.saved" = "JSON export saved.";
 "settings.data" = "Data";

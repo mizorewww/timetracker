@@ -91,7 +91,10 @@ final class WatchConnectivityBridge: NSObject {
             return
         }
         let result = commandHandler?(command)
-            ?? .failed(commandID: command.id, failureCode: "unavailable")
+            ?? .failed(
+                commandID: command.id,
+                failureCode: WatchCommandRouter.sceneUnavailableFailureCode
+            )
         replyHandler?(WatchConnectivityPayloadCodec.encode(result: result))
     }
 

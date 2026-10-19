@@ -60,12 +60,6 @@ enum AppCloudSync {
         persistenceWriteSafety == .ready
     }
 
-    /// Permanent tombstone deletion is safe only for stores that cannot later
-    /// rejoin CloudKit with an offline device carrying an older visible copy.
-    static var allowsPermanentTombstonePurge: Bool {
-        persistenceMode == modeUITest || persistenceMode == modeDemoData
-    }
-
     static func requireUserWritesAllowed() throws {
         guard allowsUserWrites else {
             throw PersistenceWriteError.blocked(persistenceWriteSafety.message)

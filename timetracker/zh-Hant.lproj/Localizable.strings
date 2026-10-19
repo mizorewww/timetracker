@@ -178,10 +178,8 @@
 "settings.countdown.title.error.saveFailed" = "無法儲存事件名稱。你的編輯內容仍保留在這裡。";
 "settings.exportJSON" = "匯出 JSON";
 "settings.export.saved" = "JSON 匯出已儲存。";
-"settings.optimizeDatabase" = "清理已刪除記錄";
 "settings.data" = "資料";
 "settings.data.footer" = "JSON 會匯出使用者原始記錄和同步偏好。檔案可能包含敏感資料，請妥善保存。可重建的分析快取和同步檢查點不包含在內。";
-"settings.data.cleanupFooter" = "測試和示範資料庫可永久清理超過 90 天的墓碑。正式資料庫會保留墓碑，避免離線裝置恢復已刪除資料。";
 "settings.icloud" = "iCloud 同步";
 "settings.currentStorage" = "目前儲存";
 "settings.localWillRetryCloud" = "本機，重新啟動後嘗試 iCloud";
@@ -373,13 +371,6 @@
 "dialog.resetData.title" = "刪除所有資料？";
 "dialog.resetData.confirm" = "刪除所有資料";
 "dialog.resetData.message" = "這會永久刪除任務、時間記錄、番茄鐘、倒數日、收件匣內容、分類、已同步設定、本機儲存的 LLM API 金鑰，以及此裝置上的自動建議同意狀態。如果已開啟 iCloud 同步，刪除可能會同步到 iCloud。此操作無法復原。";
-"dialog.optimize.title" = "清理較早的已刪除記錄？";
-"dialog.optimize.confirm" = "清理記錄";
-"dialog.optimize.none" = "沒有發現超過 90 天的已刪除記錄。";
-"dialog.optimize.removed" = "已清理 %d 筆較早的已刪除記錄。";
-"dialog.optimize.failed" = "無法清理較早的已刪除記錄：%@";
-"dialog.optimize.message" = "這會永久移除超過 90 天的墓碑及其關聯歷史。若可見記錄的父項尚未從 iCloud 到達，該記錄不會被移除。";
-"alert.optimize.title" = "已刪除記錄";
 "common.save" = "儲存";
 "editor.discard.title" = "放棄變更？";
 "editor.discard.message" = "尚未儲存的變更將會遺失。";

@@ -72,10 +72,8 @@ extension SettingsView {
 
         case .dataAndSync:
             DataSettingsSection(
-                allowsPermanentCleanup: AppCloudSync.allowsPermanentTombstonePurge,
                 operationMessage: dataOperationMessage,
-                onExport: prepareJSONExport,
-                onOptimize: { pendingDestructiveConfirmation = .optimizeDatabase }
+                onExport: prepareJSONExport
             )
 
             SyncSettingsSection(

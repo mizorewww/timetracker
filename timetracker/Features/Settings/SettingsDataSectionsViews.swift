@@ -1,10 +1,8 @@
 import SwiftUI
 
 struct DataSettingsSection: View {
-    let allowsPermanentCleanup: Bool
     let operationMessage: String?
     let onExport: () -> Void
-    let onOptimize: () -> Void
 
     var body: some View {
         Section {
@@ -16,16 +14,6 @@ struct DataSettingsSection: View {
                 )
             }
             .buttonStyle(.plain)
-
-            if allowsPermanentCleanup {
-                Button(role: .destructive, action: onOptimize) {
-                    SettingsDestructiveActionLabel(
-                        title: AppStrings.localized("settings.optimizeDatabase"),
-                        systemImage: "externaldrive.badge.checkmark"
-                    )
-                }
-                .buttonStyle(.plain)
-            }
 
             if let operationMessage {
                 Label {
@@ -42,12 +30,7 @@ struct DataSettingsSection: View {
         } header: {
             SettingsHeader(symbol: "doc.text.fill", title: AppStrings.localized("settings.data"))
         } footer: {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(.app("settings.data.footer"))
-                if allowsPermanentCleanup {
-                    Text(.app("settings.data.cleanupFooter"))
-                }
-            }
+            Text(.app("settings.data.footer"))
         }
     }
 }

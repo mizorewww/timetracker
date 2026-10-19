@@ -23,21 +23,6 @@ extension TimeTrackerStore {
         finishCommittedMutation(events: events)
     }
 
-    /// Runs a committed mutation while preserving its original failure for a
-    /// scene-local caller to present. The outcome decides whether any domain
-    /// refresh is required, so a successful no-op can avoid full invalidation.
-    func performThrowingMutation<Outcome>(
-        eventsForOutcome: (Outcome) -> Set<StoreDomainEvent>,
-        _ action: () throws -> Outcome
-    ) throws -> Outcome {
-        let outcome = try executeAuthorizedMutation(action)
-        let events = eventsForOutcome(outcome)
-        if events.isEmpty == false {
-            finishCommittedMutation(events: events)
-        }
-        return outcome
-    }
-
     /// The mutation session for the configured store, or
     /// `StoreError.notConfigured` when the store has not been configured yet.
     func requireMutationSession() throws -> StoreMutationSession {

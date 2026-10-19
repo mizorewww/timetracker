@@ -38,16 +38,6 @@ extension TimeTrackerStore {
         todayTaskRoute = nil
     }
 
-    @discardableResult
-    func optimizeDatabase() throws -> Int {
-        try performThrowingMutation(eventsForOutcome: { removedCount in
-            removedCount == 0 ? [] : [.fullSync]
-        }) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            return try DatabaseMaintenanceService.optimizeDatabase(context: modelContext)
-        }
-    }
-
     func jsonExport() throws -> String {
         guard let modelContext else { throw StoreError.notConfigured }
         return try UserDataExport.encodedJSON(container: modelContext.container)

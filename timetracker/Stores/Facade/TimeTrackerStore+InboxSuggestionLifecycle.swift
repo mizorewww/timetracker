@@ -24,21 +24,25 @@ extension TimeTrackerStore {
             return
         }
 
-        let outcome = performStoreScopedInboxMutation(
-            refreshScopes: [.inbox, .tasks],
-            eventsForOutcome: { (outcome: InboxMutationOutcome) in outcome.events }
-        ) { coordinator in
-            try coordinator.storeGeneratedSuggestion(
-                itemID: request.itemID,
-                requestedTitle: request.requestedTitle,
-                requestedIdentity: request.requestedIdentity,
-                result: result
-            )
+        let outcome: InboxMutationOutcome
+        do {
+            outcome = try performStoreScopedInboxMutation(
+                refreshScopes: [.inbox, .tasks],
+                eventsForOutcome: { (outcome: InboxMutationOutcome) in outcome.events }
+            ) { coordinator in
+                try coordinator.storeGeneratedSuggestion(
+                    itemID: request.itemID,
+                    requestedTitle: request.requestedTitle,
+                    requestedIdentity: request.requestedIdentity,
+                    result: result
+                )
+            }
+        } catch {
+            inboxSuggestionLifecycle.failureByItemID[request.itemID] = error.localizedDescription
+            return
         }
-        if outcome?.didMutate == true {
+        if outcome.didMutate {
             inboxSuggestionLifecycle.failureByItemID[request.itemID] = nil
-        } else if outcome == nil {
-            inboxSuggestionLifecycle.failureByItemID[request.itemID] = errorMessage
         } else {
             refreshStoreScopedInboxReadModels(scopes: [.inbox, .tasks])
         }
@@ -84,9 +88,6 @@ extension TimeTrackerStore {
             return
         }
         inboxSuggestionLifecycle.failureByItemID[request.itemID] = error.localizedDescription
-        if request.showsErrors {
-            errorMessage = error.localizedDescription
-        }
     }
 
     private func finishInboxSuggestionRequest(

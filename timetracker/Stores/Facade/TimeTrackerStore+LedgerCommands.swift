@@ -2,21 +2,17 @@ import Foundation
 import SwiftData
 
 extension TimeTrackerStore {
-    @discardableResult
-    func saveManualTimeDraft(_ draft: ManualTimeDraft) -> Bool {
+    func saveManualTimeDraft(_ draft: ManualTimeDraft) throws {
         guard let taskID = draft.taskID else {
-            fail(.taskSelectionRequired)
-            return false
+            throw StoreError.taskSelectionRequired
         }
         guard draft.endedAt > draft.startedAt else {
-            fail(.invalidTimeRange)
-            return false
+            throw StoreError.invalidTimeRange
         }
         guard trackableTaskIDs.contains(taskID) else {
-            fail(.taskTrackingUnavailable)
-            return false
+            throw StoreError.taskTrackingUnavailable
         }
-        return performStoreCommand(
+        try performStoreCommand(
             onError: handleSegmentMutationFailure,
             command: { session in
                 try StoreScopedSegmentCommandCoordinator(
@@ -35,23 +31,21 @@ extension TimeTrackerStore {
                     ),
                 ])
             }
-        ) != nil
+        )
     }
 
-    @discardableResult
     func deleteSegment(
         _ segmentID: UUID,
         expectedBaseline: SegmentEditorDraftBaseline? = nil
-    ) -> Bool {
+    ) throws {
         do {
             try commitSegmentDeletion(
                 segmentID,
                 expectedBaseline: expectedBaseline
             )
-            return true
         } catch {
             handleSegmentMutationFailure(error)
-            return false
+            throw error
         }
     }
 
@@ -99,16 +93,11 @@ extension TimeTrackerStore {
         } else {
             error as? TimeTrackingRepositoryError == .taskUnavailable
         }
-        guard needsRefresh else {
-            errorMessage = error.localizedDescription
-            return
-        }
-
+        guard needsRefresh else { return }
         do {
             try refreshSegmentEditorReadModels()
-            errorMessage = error.localizedDescription
-        } catch let refreshError {
-            errorMessage = savedRefreshFailedMessage(refreshError)
+        } catch {
+            logReadModelRefreshFailure(error)
         }
     }
 }

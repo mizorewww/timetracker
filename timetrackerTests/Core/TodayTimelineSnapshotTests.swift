@@ -17,7 +17,7 @@ struct TodayTimelineSnapshotTests {
     ) throws -> (TimeTrackerStore, TaskNode, TimeSegment) {
         let context = try makeTestContext()
         let store = makeTestStore()
-        store.configureIfNeeded(context: context)
+        try store.configureIfNeeded(context: context)
         let task = try SwiftDataTaskRepository(
             context: context,
             deviceID: "seed"
@@ -61,7 +61,7 @@ struct TodayTimelineSnapshotTests {
         #expect(before.entries.count == 1)
 
         // Durable ledger write through the facade path (starts a second timer).
-        #expect(store.startTask(task))
+        #expect(try store.startTask(task))
         let afterNow = Date()
         let after = store.todaySnapshot(now: afterNow).live.timeline
 
@@ -101,7 +101,7 @@ struct TodayTimelineSnapshotTests {
     func minuteAdvanceRefreshesLiveActiveSegment() throws {
         let now = Date()
         let (store, task, _) = try makeStoreWithSegments(now: now)
-        #expect(store.startTask(task))
+        #expect(try store.startTask(task))
 
         let firstNow = now.addingTimeInterval(60)
         let first = store.todaySnapshot(now: firstNow).live.timeline
@@ -126,7 +126,7 @@ struct TodayTimelineSnapshotTests {
         #expect(before.content.activeSegments.isEmpty)
         #expect(before.live.isLive == false)
 
-        #expect(store.startTask(task))
+        #expect(try store.startTask(task))
         let later = Date()
         let after = store.todaySnapshot(now: later)
 

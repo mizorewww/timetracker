@@ -41,21 +41,35 @@ extension TimeTrackerStore {
         tasksRoute = nil
     }
 
-    func archiveTaskProtectingUnsavedChanges(_ taskID: UUID) {
+    func archiveTaskProtectingUnsavedChanges(
+        _ taskID: UUID,
+        onFailure: @escaping (Error) -> Void
+    ) {
         let activeTaskID = taskDetailNavigationGuard.activeTaskID
         let archiveInvalidatesActiveDetail = activeTaskID.map {
             $0 == taskID || ancestorTaskIDs(for: $0).contains(taskID)
         } ?? false
 
         guard archiveInvalidatesActiveDetail else {
-            archiveSelectedTask(taskID: taskID)
+            do {
+                try archiveSelectedTask(taskID: taskID)
+            } catch {
+                onFailure(error)
+            }
             return
         }
 
         taskDetailNavigationGuard.requestNavigation(
             dismissingActiveDetail: true,
             beforeDiscardingChanges: { [weak self] in
-                self?.archiveSelectedTask(taskID: taskID) == true
+                guard let self else { return false }
+                do {
+                    try archiveSelectedTask(taskID: taskID)
+                    return true
+                } catch {
+                    onFailure(error)
+                    return false
+                }
             }
         ) {}
     }

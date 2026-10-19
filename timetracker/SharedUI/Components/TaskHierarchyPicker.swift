@@ -28,6 +28,7 @@ struct TaskHierarchyPicker: View {
     let onCreateTask: (() -> Void)?
 
     @Environment(\.accessibilityReduceMotion) var reduceMotion
+    @Environment(AppSceneFeedbackRouter.self) var feedbackRouter
     @State var searchText = ""
     @State var expandedTaskIDs: Set<UUID> = []
 

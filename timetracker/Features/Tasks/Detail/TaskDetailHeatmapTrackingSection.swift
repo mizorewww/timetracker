@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TaskDetailHeatmapTrackingSection: View {
+    @Environment(AppSceneFeedbackRouter.self) private var feedbackRouter
     let store: TimeTrackerStore
     let task: TaskNode
     let colorHex: String
@@ -89,10 +90,12 @@ struct TaskDetailHeatmapTrackingSection: View {
         Binding {
             isTracking
         } set: { isEnabled in
-            _ = store.setTodayHeatmapTrackingEnabled(
-                isEnabled,
-                for: task.id
-            )
+            feedbackRouter.perform {
+                try store.setTodayHeatmapTrackingEnabled(
+                    isEnabled,
+                    for: task.id
+                )
+            }
         }
     }
 }

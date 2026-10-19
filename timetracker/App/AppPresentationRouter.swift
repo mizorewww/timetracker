@@ -50,11 +50,18 @@ struct SingleTaskCategoryPickerPresentation {
 @Observable
 final class AppPresentationRouter {
     var sheet: AppPresentation?
+    /// The scene's feedback router; a presentation that cannot open because
+    /// its target is stale reports why there.
+    @ObservationIgnored let feedbackRouter: AppSceneFeedbackRouter
     #if os(macOS)
     /// Settings is a native window on macOS, not a sheet. Set by the root view
     /// from the `openSettings` environment action.
     @ObservationIgnored var openNativeSettings: (() -> Void)?
     #endif
+
+    init(feedbackRouter: AppSceneFeedbackRouter) {
+        self.feedbackRouter = feedbackRouter
+    }
 
     var canPresent: Bool {
         sheet == nil
@@ -130,7 +137,7 @@ extension AppPresentationRouter {
             return false
         }
         guard let draft = store.segmentEditorDraft(for: entryID) else {
-            store.errorMessage = SegmentMutationError.staleDraft.localizedDescription
+            feedbackRouter.present(SegmentMutationError.staleDraft)
             return false
         }
         return present(.segmentEditor(draft))
@@ -196,7 +203,10 @@ extension AppPresentationRouter {
         if let parentID,
            store.parentEligibleTaskIDs.contains(parentID) == false
         {
-            store.errorMessage = AppStrings.localized("task.parentUnavailable")
+            feedbackRouter.present(
+                title: AppStrings.localized("error.title"),
+                message: AppStrings.localized("task.parentUnavailable")
+            )
             return nil
         }
         return .taskEditor(

@@ -11,8 +11,8 @@ struct StoreScopedChecklistCommandCoordinatorTests {
         let context = try makeTestContext()
         let task = try makeTask(in: context, title: "Checklist owner")
         let store = makeTestStore()
-        store.configureIfNeeded(context: context)
-        #expect(store.addChecklistItem(taskID: task.id, title: "Delete elsewhere"))
+        try store.configureIfNeeded(context: context)
+        try store.addChecklistItem(taskID: task.id, title: "Delete elsewhere")
         let staleItem = try #require(store.checklistItems(for: task.id).first)
 
         try ChecklistDraftService().save(
@@ -22,8 +22,10 @@ struct StoreScopedChecklistCommandCoordinatorTests {
             deviceID: "sibling"
         )
 
-        #expect(store.toggleChecklistItem(staleItem) == false)
-        #expect(store.errorMessage == AppStrings.localized("checklist.error.unavailable"))
+        let error = #expect(throws: (any Error).self) {
+            try store.toggleChecklistItem(staleItem)
+        }
+        #expect(error?.localizedDescription == AppStrings.localized("checklist.error.unavailable"))
         #expect(store.checklistItems(for: task.id).isEmpty)
         let persisted = try ModelContext(context.container)
             .fetch(FetchDescriptor<ChecklistItem>())
@@ -36,7 +38,7 @@ struct StoreScopedChecklistCommandCoordinatorTests {
         let context = try makeTestContext()
         let task = try makeTask(in: context, title: "Delete before add")
         let store = makeTestStore()
-        store.configureIfNeeded(context: context)
+        try store.configureIfNeeded(context: context)
 
         let siblingContext = ModelContext(context.container)
         let siblingTask = try #require(
@@ -50,8 +52,10 @@ struct StoreScopedChecklistCommandCoordinatorTests {
         siblingTask.clientMutationID = UUID()
         try siblingContext.save()
 
-        #expect(store.addChecklistItem(taskID: task.id, title: "Must not orphan") == false)
-        #expect(store.errorMessage == AppStrings.localized("systemAction.error.taskNotFound"))
+        let error = #expect(throws: (any Error).self) {
+            try store.addChecklistItem(taskID: task.id, title: "Must not orphan")
+        }
+        #expect(error?.localizedDescription == AppStrings.localized("systemAction.error.taskNotFound"))
         let freshContext = ModelContext(context.container)
         #expect(try freshContext.fetch(FetchDescriptor<ChecklistItem>()).isEmpty)
         #expect(try freshContext.fetch(FetchDescriptor<ChecklistItemVisual>()).isEmpty)
@@ -97,7 +101,7 @@ struct StoreScopedChecklistCommandCoordinatorTests {
             iconName: nil
         )
         let store = makeTestStore()
-        store.configureIfNeeded(context: context)
+        try store.configureIfNeeded(context: context)
         var draft = try store.editorDraft(for: #require(store.task(for: child.id)))
         draft.parentID = newParent.id
         _ = try StoreScopedTaskLifecycleCommandCoordinator(

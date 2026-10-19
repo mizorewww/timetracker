@@ -11,6 +11,7 @@ struct TaskDetailList: View {
     @Binding var range: AnalyticsRange
     @State private var quantityEditorRoute:
         TaskQuantityEntryEditorRoute?
+    @Environment(AppSceneFeedbackRouter.self) private var feedbackRouter
 
     var body: some View {
         @Bindable var session = session
@@ -113,18 +114,21 @@ struct TaskDetailList: View {
 
         switch store.taskQuantityDetail(for: task.id) {
         case .none:
-            store.errorMessage = TaskQuantityEntryMutationError
-                .quantityGoalUnavailable.localizedDescription
+            feedbackRouter.present(
+                TaskQuantityEntryMutationError.quantityGoalUnavailable
+            )
         case .incomplete:
-            store.errorMessage = TaskQuantityEntryMutationError
-                .incompleteQuantityGraph.localizedDescription
+            feedbackRouter.present(
+                TaskQuantityEntryMutationError.incompleteQuantityGraph
+            )
         case let .available(detail):
             if let entryID {
                 guard let entry = detail.entries.first(where: {
                     $0.id == entryID
                 }) else {
-                    store.errorMessage = TaskQuantityEntryMutationError
-                        .entryUnavailable.localizedDescription
+                    feedbackRouter.present(
+                        TaskQuantityEntryMutationError.entryUnavailable
+                    )
                     return
                 }
                 quantityEditorRoute = .edit(
@@ -134,8 +138,8 @@ struct TaskDetailList: View {
                 return
             }
             guard detail.progress.isRecordingAllowed else {
-                store.errorMessage = recordingUnavailableMessage(
-                    role: detail.recurrenceRole
+                feedbackRouter.present(
+                    recordingUnavailableError(role: detail.recurrenceRole)
                 )
                 return
             }
@@ -143,16 +147,13 @@ struct TaskDetailList: View {
         }
     }
 
-    private func recordingUnavailableMessage(
+    private func recordingUnavailableError(
         role: TaskQuantityRecurrenceRole
-    ) -> String {
+    ) -> TaskQuantityEntryMutationError {
         if case .template = role {
-            return TaskQuantityEntryMutationError
-                .recurrenceTemplateRequiresGeneratedTask
-                .localizedDescription
+            return .recurrenceTemplateRequiresGeneratedTask
         }
-        return TaskQuantityEntryMutationError.taskUnavailable
-            .localizedDescription
+        return .taskUnavailable
     }
 
     @ViewBuilder

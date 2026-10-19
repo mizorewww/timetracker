@@ -17,7 +17,7 @@ struct TaskManagementRowSupplementProjectionTests {
     func freshStoreReportsNoQuantitySupplement() throws {
         let context = try makeTestContext()
         let store = makeTestStore()
-        store.configureIfNeeded(context: context)
+        try store.configureIfNeeded(context: context)
         let task = try SwiftDataTaskRepository(
             context: context,
             deviceID: "seed"
@@ -39,7 +39,7 @@ struct TaskManagementRowSupplementProjectionTests {
     func quantityMutationIsReflectedAfterCachedRead() throws {
         let context = try makeTestContext()
         let store = makeTestStore()
-        store.configureIfNeeded(context: context)
+        try store.configureIfNeeded(context: context)
         let task = try SwiftDataTaskRepository(
             context: context,
             deviceID: "seed"
@@ -66,12 +66,10 @@ struct TaskManagementRowSupplementProjectionTests {
             Issue.record("Goal save failed: \(saveResult)")
             return
         }
-        #expect(
-            store.recordTaskQuantity(
-                taskID: savedTaskID,
-                amount: 3,
-                entryID: UUID()
-            )
+        try store.recordTaskQuantity(
+            taskID: savedTaskID,
+            amount: 3,
+            entryID: UUID()
         )
 
         let after = store.taskManagementRowSupplementProjection()

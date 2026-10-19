@@ -12,7 +12,7 @@ struct LedgerRelationshipVisibilityTests {
     func ledgerRowsAppearOnceTheirTaskArrives() throws {
         let context = try makeTestContext()
         let store = makeTestStore()
-        store.configureIfNeeded(context: context)
+        try store.configureIfNeeded(context: context)
 
         let taskID = UUID()
         let startedAt = Date().addingTimeInterval(-7200)

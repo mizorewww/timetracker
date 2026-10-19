@@ -14,59 +14,50 @@ extension TimeTrackerStore {
         }
     }
 
-    @discardableResult
     func setLLMPromptInstructions(
         _ value: String,
         for kind: LLMPromptKind
-    ) -> Bool {
-        do {
-            let normalized = try AppPreferenceValueSanitizer.llmPromptInstructions(
-                value,
-                for: kind
+    ) throws {
+        let normalized = try AppPreferenceValueSanitizer.llmPromptInstructions(
+            value,
+            for: kind
+        )
+        let changed = normalized != preferences.llmInstructions(for: kind)
+        let inboxRequestSnapshot = inboxSuggestionLifecycle.requestSnapshot()
+        let checklistRequestSnapshot = checklistVisualSuggestionLifecycle
+            .requestSnapshot()
+        let preferenceKey: AppPreferenceKey = switch kind {
+        case .inboxRouting:
+            .llmInboxSuggestionInstructions
+        case .checklistVisual:
+            .llmChecklistVisualInstructions
+        case .taskPlan:
+            .llmTaskPlanInstructions
+        }
+        try setPreference(
+            preferenceKey,
+            valueJSON: PreferenceJSON.encode(normalized)
+        )
+        guard changed else { return }
+        switch kind {
+        case .inboxRouting:
+            cancelInboxSuggestionRequests(matching: inboxRequestSnapshot)
+        case .checklistVisual:
+            cancelChecklistVisualSuggestionRequests(
+                matching: checklistRequestSnapshot
             )
-            let changed = normalized != preferences.llmInstructions(for: kind)
-            let inboxRequestSnapshot = inboxSuggestionLifecycle.requestSnapshot()
-            let checklistRequestSnapshot = checklistVisualSuggestionLifecycle
-                .requestSnapshot()
-            let preferenceKey: AppPreferenceKey = switch kind {
-            case .inboxRouting:
-                .llmInboxSuggestionInstructions
-            case .checklistVisual:
-                .llmChecklistVisualInstructions
-            case .taskPlan:
-                .llmTaskPlanInstructions
-            }
-            let didSet = setPreference(
-                preferenceKey,
-                valueJSON: PreferenceJSON.encode(normalized)
-            )
-            if didSet, changed {
-                switch kind {
-                case .inboxRouting:
-                    cancelInboxSuggestionRequests(matching: inboxRequestSnapshot)
-                case .checklistVisual:
-                    cancelChecklistVisualSuggestionRequests(
-                        matching: checklistRequestSnapshot
-                    )
-                case .taskPlan:
-                    break
-                }
-            }
-            return didSet
-        } catch {
-            errorMessage = error.localizedDescription
-            return false
+        case .taskPlan:
+            break
         }
     }
 
-    @discardableResult
     func setLLMConfiguration(
         endpoint: String,
         apiKey: String,
         selectedModel: String,
         availableModelIDs: [String],
         reasoningEffort: LLMReasoningEffort
-    ) -> Bool {
+    ) throws {
         let normalizedEndpoint = AppPreferenceValueSanitizer.llmEndpoint(endpoint)
         let normalizedAPIKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedSelectedModel = AppPreferenceValueSanitizer.llmModelID(selectedModel)
@@ -75,8 +66,7 @@ extension TimeTrackerStore {
               !normalizedAPIKey.isEmpty,
               normalizedModels.contains(normalizedSelectedModel)
         else {
-            errorMessage = AppStrings.localized("settings.llm.needsSetup")
-            return false
+            throw StoreError.llmConfigurationIncomplete
         }
         let configurationChanged = !matchesCurrentLLMConfiguration(
             LLMRequestConfiguration(
@@ -90,7 +80,6 @@ extension TimeTrackerStore {
 
         var previousAPIKey: String?
         var credentialWasWritten = false
-        let didCommit: Bool
         do {
             try StoreScopedPreferenceCommandCoordinator(
                 session: requireMutationSession()
@@ -111,37 +100,30 @@ extension TimeTrackerStore {
                 }
             )
             finishStoreScopedMutation(events: [.preferenceChanged(key: nil)])
-            didCommit = true
         } catch {
-            errorMessage = error.localizedDescription
-            didCommit = false
+            if credentialWasWritten {
+                // Report the save failure; a failed key restore only leaves the
+                // new key in place, which the user is re-entering anyway.
+                try? llmCredentialStore.writeAPIKey(previousAPIKey ?? "")
+            }
+            throw error
         }
 
-        if !didCommit, credentialWasWritten {
-            do {
-                try llmCredentialStore.writeAPIKey(previousAPIKey ?? "")
-            } catch {
-                errorMessage = error.localizedDescription
-            }
+        if configurationChanged {
+            cancelLLMSuggestionTasks(matching: taskSnapshot)
         }
-        if didCommit {
-            if configurationChanged {
-                cancelLLMSuggestionTasks(matching: taskSnapshot)
-            }
-            inboxSuggestionFailureByItemID.removeAll(keepingCapacity: true)
-            if matchesCurrentLLMConfiguration(
-                LLMRequestConfiguration(
-                    endpoint: normalizedEndpoint,
-                    apiKey: normalizedAPIKey,
-                    modelID: normalizedSelectedModel,
-                    reasoningEffort: reasoningEffort
-                )
-            ) {
-                autoSuggestInboxItemsIfNeeded()
-                autoSuggestChecklistVisualsIfNeeded()
-            }
+        inboxSuggestionFailureByItemID.removeAll(keepingCapacity: true)
+        if matchesCurrentLLMConfiguration(
+            LLMRequestConfiguration(
+                endpoint: normalizedEndpoint,
+                apiKey: normalizedAPIKey,
+                modelID: normalizedSelectedModel,
+                reasoningEffort: reasoningEffort
+            )
+        ) {
+            autoSuggestInboxItemsIfNeeded()
+            autoSuggestChecklistVisualsIfNeeded()
         }
-        return didCommit
     }
 
     private func llmSuggestionTaskSnapshot() -> LLMSuggestionTaskSnapshot {

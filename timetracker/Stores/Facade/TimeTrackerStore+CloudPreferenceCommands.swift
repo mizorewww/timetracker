@@ -9,29 +9,26 @@ extension TimeTrackerStore {
         preferences.cloudSyncEnabled = value
     }
 
-    @discardableResult
-    func setQuickStartTaskIDs(_ ids: [UUID]) -> Bool {
+    func setQuickStartTaskIDs(_ ids: [UUID]) throws {
         let normalized = AppPreferenceValueSanitizer.quickStartTaskIDs(ids)
-        return setPreference(
+        try setPreference(
             .quickStartTaskIDs,
             valueJSON: PreferenceJSON.encode(normalized.map(\.uuidString))
         )
     }
 
-    @discardableResult
-    func setTodayHeatmapTaskIDs(_ ids: [UUID]) -> Bool {
+    func setTodayHeatmapTaskIDs(_ ids: [UUID]) throws {
         let normalized = AppPreferenceValueSanitizer.todayHeatmapTaskIDs(
             todayHeatmapRecurrenceProjection.canonicalTaskIDs(ids)
         )
-        return setPreference(
+        try setPreference(
             .todayHeatmapTaskIDs,
             valueJSON: PreferenceJSON.encode(normalized.map(\.uuidString))
         )
     }
 
-    @discardableResult
-    func setTodayHeatmapPeriod(_ period: ActivityHeatmapPeriod) -> Bool {
-        setPreference(
+    func setTodayHeatmapPeriod(_ period: ActivityHeatmapPeriod) throws {
+        try setPreference(
             .todayHeatmapPeriod,
             valueJSON: PreferenceJSON.encode(period.rawValue)
         )
@@ -41,7 +38,7 @@ extension TimeTrackerStore {
     func setTodayHeatmapTrackingEnabled(
         _ isEnabled: Bool,
         for taskID: UUID
-    ) -> Bool {
+    ) throws -> Bool {
         guard let ownerTaskID = todayHeatmapOwnerTaskID(for: taskID) else {
             return false
         }
@@ -60,6 +57,7 @@ extension TimeTrackerStore {
         else {
             return false
         }
-        return setTodayHeatmapTaskIDs(updated)
+        try setTodayHeatmapTaskIDs(updated)
+        return true
     }
 }

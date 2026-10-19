@@ -87,7 +87,7 @@ struct WatchAndQuantityCommandTests {
     func quantityEntriesRejectInvalidAmountsAndReplayByEntryID() throws {
         let context = try makeTestContext()
         let store = makeTestStore()
-        store.configureIfNeeded(context: context)
+        try store.configureIfNeeded(context: context)
         let task = try SwiftDataTaskRepository(context: context, deviceID: "seed")
             .createTask(title: "Water", parentID: nil)
         var draft = TaskEditorDraft(task: task, checklistItems: [])
@@ -98,9 +98,11 @@ struct WatchAndQuantityCommandTests {
         }
         let entryID = UUID()
 
-        #expect(store.recordTaskQuantity(taskID: taskID, amount: 0, entryID: UUID()) == false)
-        #expect(store.recordTaskQuantity(taskID: taskID, amount: 2, entryID: entryID))
-        _ = store.recordTaskQuantity(taskID: taskID, amount: 2, entryID: entryID)
+        #expect(throws: (any Error).self) {
+            try store.recordTaskQuantity(taskID: taskID, amount: 0, entryID: UUID())
+        }
+        try store.recordTaskQuantity(taskID: taskID, amount: 2, entryID: entryID)
+        try? store.recordTaskQuantity(taskID: taskID, amount: 2, entryID: entryID)
 
         let entries = try ModelContext(context.container)
             .fetch(FetchDescriptor<TaskQuantityEntry>())

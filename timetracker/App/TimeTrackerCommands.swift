@@ -36,7 +36,7 @@ struct TimeTrackerCommands: Commands {
             .disabled(canChooseTaskToStart == false)
 
             Button(AppStrings.localized("menu.startSelectedTask")) {
-                store?.startSelectedTask()
+                runCommand { try store?.startSelectedTask() }
             }
             .timeTrackerShortcut(
                 .startSelectedTask,
@@ -46,7 +46,7 @@ struct TimeTrackerCommands: Commands {
 
             Button(AppStrings.localized("menu.stopSelectedTask")) {
                 guard let store, let activeSelectedTaskSegment else { return }
-                store.stop(segment: activeSelectedTaskSegment)
+                runCommand { try store.stop(segment: activeSelectedTaskSegment) }
             }
             .timeTrackerShortcut(
                 .stopSelectedTask,
@@ -55,7 +55,7 @@ struct TimeTrackerCommands: Commands {
             .disabled(activeSelectedTaskSegment == nil)
 
             Button(AppStrings.localized("menu.startPomodoro")) {
-                store?.startPomodoroForSelectedTask()
+                runCommand { try store?.startPomodoroForSelectedTask() }
             }
             .timeTrackerShortcut(
                 .startPomodoro,
@@ -115,7 +115,10 @@ struct TimeTrackerCommands: Commands {
                 guard let store, let selectedTask = store.selectedTask else {
                     return
                 }
-                store.archiveTaskProtectingUnsavedChanges(selectedTask.id)
+                store.archiveTaskProtectingUnsavedChanges(
+                    selectedTask.id,
+                    onFailure: { presentationRouter?.feedbackRouter.present($0) }
+                )
             }
             .timeTrackerShortcut(
                 .archiveSelectedTask,
@@ -140,6 +143,15 @@ struct TimeTrackerCommands: Commands {
             }
             .timeTrackerShortcut(.refreshData, settings: shortcutSettings)
             .disabled(store == nil)
+        }
+    }
+
+    /// Runs a menu command and presents its failure in the focused scene.
+    private func runCommand(_ command: () throws -> Void) {
+        do {
+            try command()
+        } catch {
+            presentationRouter?.feedbackRouter.present(error)
         }
     }
 

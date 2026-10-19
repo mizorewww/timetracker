@@ -6,8 +6,8 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @State private var store: TimeTrackerStore
-    @State private var presentationRouter = AppPresentationRouter()
-    @State private var feedbackRouter = AppSceneFeedbackRouter()
+    @State private var presentationRouter: AppPresentationRouter
+    @State private var feedbackRouter: AppSceneFeedbackRouter
     @State private var pendingDeepLink = PendingDeepLink()
     @State private var hasFinishedInitialConfiguration = false
     #if os(iOS) && canImport(WatchConnectivity)
@@ -15,11 +15,16 @@ struct ContentView: View {
     #endif
 
     init() {
-        _store = State(initialValue: TimeTrackerStore())
+        self.init(store: TimeTrackerStore())
     }
 
     init(store: TimeTrackerStore) {
         _store = State(initialValue: store)
+        let feedbackRouter = AppSceneFeedbackRouter()
+        _feedbackRouter = State(initialValue: feedbackRouter)
+        _presentationRouter = State(
+            initialValue: AppPresentationRouter(feedbackRouter: feedbackRouter)
+        )
     }
 
     var body: some View {
@@ -40,7 +45,11 @@ struct ContentView: View {
         )
         .appSceneFeedbackHost(router: feedbackRouter)
         .task {
-            store.configureIfNeeded(context: modelContext)
+            do {
+                try store.configureIfNeeded(context: modelContext)
+            } catch {
+                feedbackRouter.present(error)
+            }
             guard store.persistenceWriteSafety == .ready else { return }
             hasFinishedInitialConfiguration = true
             drainPendingDeepLinks()
@@ -83,9 +92,6 @@ struct ContentView: View {
             pendingDeepLink.clear()
             hasFinishedInitialConfiguration = false
             unregisterFromWatchCommands()
-        }
-        .onChange(of: store.errorMessage) { _, message in
-            relayStoreError(message)
         }
         .onChange(of: presentationRouter.sheet?.id) { _, presentationID in
             guard presentationID == nil else { return }
@@ -136,16 +142,5 @@ struct ContentView: View {
         WatchCommandRouter.shared.unregister(registrationID: watchCommandRegistrationID)
         self.watchCommandRegistrationID = nil
         #endif
-    }
-
-    private func relayStoreError(_ message: String?) {
-        guard let message, !message.isEmpty else { return }
-        feedbackRouter.present(
-            title: AppStrings.localized("error.title"),
-            message: message
-        )
-        if store.errorMessage == message {
-            store.errorMessage = nil
-        }
     }
 }

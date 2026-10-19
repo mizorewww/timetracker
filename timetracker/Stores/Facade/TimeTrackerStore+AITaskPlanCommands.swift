@@ -14,9 +14,7 @@ extension TimeTrackerStore {
         _ draft: AITaskWorkspaceReviewDraft
     ) async -> AITaskWorkspaceApplyResult {
         guard let modelContext else {
-            let message = StoreError.notConfigured.localizedDescription
-            errorMessage = message
-            return .failed(message: message)
+            return .failed(message: StoreError.notConfigured.localizedDescription)
         }
 
         let firstCreatedRootTaskID = draft.plan.operations.compactMap {
@@ -54,14 +52,11 @@ extension TimeTrackerStore {
                 firstCreatedRootTaskID: firstCreatedRootTaskID
             )
         } catch AITaskAtomicMutationError.workspaceChanged {
-            let message = AITaskAtomicMutationError.workspaceChanged
-                .localizedDescription
-            errorMessage = message
-            return .workspaceChanged(message: message)
+            return .workspaceChanged(
+                message: AITaskAtomicMutationError.workspaceChanged.localizedDescription
+            )
         } catch {
-            let message = error.localizedDescription
-            errorMessage = message
-            return .failed(message: message)
+            return .failed(message: error.localizedDescription)
         }
     }
 }

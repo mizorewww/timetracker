@@ -1,12 +1,6 @@
 import Foundation
 
 extension TimeTrackerStore {
-    @discardableResult
-    func fail(_ error: StoreError) -> Bool {
-        errorMessage = error.localizedDescription
-        return false
-    }
-
     enum StoreError: LocalizedError {
         case notConfigured
         case taskSelectionRequired
@@ -15,6 +9,7 @@ extension TimeTrackerStore {
         case taskCategoryNameRequired
         case invalidInboxSuggestion
         case taskTrackingUnavailable
+        case llmConfigurationIncomplete
 
         var errorDescription: String? {
             switch self {
@@ -32,6 +27,8 @@ extension TimeTrackerStore {
                 Self.localized("inbox.suggestion.error.noValidTask")
             case .taskTrackingUnavailable:
                 Self.localized("task.archived.trackingUnavailable")
+            case .llmConfigurationIncomplete:
+                Self.localized("settings.llm.needsSetup")
             }
         }
 

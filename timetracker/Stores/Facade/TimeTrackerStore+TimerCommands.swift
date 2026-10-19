@@ -2,14 +2,14 @@ import Foundation
 import SwiftData
 
 extension TimeTrackerStore {
-    func startSelectedTask() {
+    func startSelectedTask() throws {
         guard let selectedTaskID else { return }
-        _ = startTask(taskID: selectedTaskID)
+        try startTask(taskID: selectedTaskID)
     }
 
     @discardableResult
-    func startTask(_ task: TaskNode) -> Bool {
-        let didStart = startTask(taskID: task.id)
+    func startTask(_ task: TaskNode) throws -> Bool {
+        let didStart = try startTask(taskID: task.id)
         if didStart {
             selectTask(task.id, revealInToday: false)
         }
@@ -20,14 +20,14 @@ extension TimeTrackerStore {
     func startTask(
         taskID: UUID,
         source: TimeSessionSource = .timer
-    ) -> Bool {
-        performStoreCommand(
+    ) throws -> Bool {
+        try performStoreCommand(
             command: { session in
                 try StoreScopedTimerCommandCoordinator(session: session)
                     .start(taskID: taskID, source: source)
             },
             finishResult: finishStoreScopedTimerCommand
-        ) ?? false
+        )
     }
 
     var timerPickerMode: TimerPickerMode {
@@ -41,29 +41,29 @@ extension TimeTrackerStore {
     }
 
     @discardableResult
-    func performTimerPickerSelection(_ task: TaskNode) -> TimerPickerSelectionOutcome {
+    func performTimerPickerSelection(_ task: TaskNode) throws -> TimerPickerSelectionOutcome {
         let command = timerPickerSelectionCommand(for: task)
         guard command != .alreadyRunning else { return .alreadyRunning }
-        guard startTask(task) else { return .failed }
+        guard try startTask(task) else { return .failed }
         return command == .switchTimer ? .switched : .started
     }
 
     @discardableResult
-    func stop(segment: TimeSegment) -> Bool {
-        stopTimer(segmentID: segment.id)
+    func stop(segment: TimeSegment) throws -> Bool {
+        try stopTimer(segmentID: segment.id)
     }
 
     @discardableResult
     func stopTimer(
         segmentID: UUID? = nil,
         taskID: UUID? = nil
-    ) -> Bool {
-        performStoreCommand(
+    ) throws -> Bool {
+        try performStoreCommand(
             command: { session in
                 try StoreScopedTimerCommandCoordinator(session: session)
                     .stop(segmentID: segmentID, taskID: taskID)
             },
             finishResult: finishStoreScopedTimerCommand
-        ) ?? false
+        )
     }
 }

@@ -66,12 +66,11 @@ struct UserDataExportTests {
     }
 
     @Test
-    func jsonExportFailureThrowsWithoutMutatingGlobalFeedback() {
+    func jsonExportFailureThrows() {
         let store = makeTestStore()
 
         #expect(throws: TimeTrackerStore.StoreError.self) {
             try store.jsonExport()
         }
-        #expect(store.errorMessage == nil)
     }
 }

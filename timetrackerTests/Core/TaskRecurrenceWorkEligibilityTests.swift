@@ -308,7 +308,7 @@ struct TaskRecurrenceWorkEligibilityTests {
     {
         let fixture = try makeFixture()
         let store = makeTestStore()
-        store.configureIfNeeded(
+        try store.configureIfNeeded(
             context: ModelContext(fixture.container)
         )
         let template = try #require(

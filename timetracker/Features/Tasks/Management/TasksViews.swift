@@ -142,7 +142,9 @@ struct TasksView: View {
                 if let categoryPendingDeletionID,
                    let category = store.taskCategory(for: categoryPendingDeletionID)
                 {
-                    store.deleteTaskCategory(category)
+                    presentationRouter.feedbackRouter.perform {
+                        try store.deleteTaskCategory(category)
+                    }
                 }
                 categoryPendingDeletionID = nil
             }

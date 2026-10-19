@@ -105,8 +105,10 @@ struct SettingsView: View {
                 instructions: store.preferences.llmInstructions(for: kind),
                 isEmbeddedInNavigationStack: true,
                 onDismiss: { selectedLLMPromptKind = nil }
-            ) {
-                store.setLLMPromptInstructions($0, for: kind)
+            ) { instructions in
+                feedbackRouter.perform {
+                    try store.setLLMPromptInstructions(instructions, for: kind)
+                } != nil
             }
         }
         #endif
@@ -140,15 +142,8 @@ struct SettingsView: View {
         )
     }
 
-    func handleSettingsStoreMutation(_ didSucceed: Bool, title: String) {
-        guard !didSucceed, let message = store.errorMessage, !message.isEmpty else { return }
-        feedbackRouter.present(
-            title: title,
-            message: message
-        )
-        if store.errorMessage == message {
-            store.errorMessage = nil
-        }
+    func performSettingsMutation(title: String, _ mutation: () throws -> Void) {
+        feedbackRouter.perform(title: title, mutation)
     }
 
     func presentLLMConfiguration() {

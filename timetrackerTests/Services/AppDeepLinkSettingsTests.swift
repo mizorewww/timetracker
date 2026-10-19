@@ -10,7 +10,7 @@ struct AppDeepLinkSettingsTests {
     func settingsLinkPresentsSettingsWithoutChangingThePage() {
         let store = makeTestStore()
         store.desktopDestination = .tasks
-        let router = AppPresentationRouter()
+        let router = AppPresentationRouter(feedbackRouter: AppSceneFeedbackRouter())
 
         let disposition = store.handleDeepLink(settingsURL, presentationRouter: router)
 
@@ -25,7 +25,7 @@ struct AppDeepLinkSettingsTests {
     @Test
     func settingsLinkWaitsWhileAnotherSheetIsPresented() {
         let store = makeTestStore()
-        let router = AppPresentationRouter()
+        let router = AppPresentationRouter(feedbackRouter: AppSceneFeedbackRouter())
         router.present(.startTaskPicker)
 
         let disposition = store.handleDeepLink(settingsURL, presentationRouter: router)

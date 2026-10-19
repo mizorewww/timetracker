@@ -5,18 +5,29 @@ extension TimeTrackerStore {
     @discardableResult
     func cancelActivePomodoro(
         phase: PomodoroPhaseToken
-    ) -> Bool {
-        performStoreScopedPomodoroPhaseMutation { coordinator in
+    ) throws -> Bool {
+        try performStoreScopedPomodoroPhaseMutation { coordinator in
             try coordinator.cancel(phase: phase)
         }
     }
 
     /// Reconciles every expired focus phase from canonical store state.
     /// Break completion remains a user action so returning from suspension
-    /// never backdates a new focus segment.
+    /// never backdates a new focus segment. Runs from lifecycle and timer
+    /// paths with no initiating view, so a failure is logged and retried on
+    /// the next reconciliation.
     @discardableResult
     func reconcileActivePomodoro(now: Date = Date()) -> Bool {
-        performStoreCommand(
+        do {
+            return try reconcileActivePomodoroThrowing(now: now)
+        } catch {
+            logUnpresentedFailure("Pomodoro reconciliation", error)
+            return false
+        }
+    }
+
+    private func reconcileActivePomodoroThrowing(now: Date) throws -> Bool {
+        try performStoreCommand(
             command: { session in
                 try StoreScopedPomodoroCommandCoordinator(
                     session: session
@@ -37,7 +48,7 @@ extension TimeTrackerStore {
                     try convergeLiveTimerReadModels()
                 }
             }
-        )?.didMutate ?? false
+        ).didMutate
     }
 
     /// Lightweight convergence for page-appear paths: re-fetches pomodoro
@@ -106,8 +117,8 @@ extension TimeTrackerStore {
         _ mutation: (
             StoreScopedPomodoroCommandCoordinator
         ) throws -> StoreScopedPomodoroPhaseMutationOutcome
-    ) -> Bool {
-        performStoreCommand(
+    ) throws -> Bool {
+        try performStoreCommand(
             command: { session in
                 try mutation(
                     StoreScopedPomodoroCommandCoordinator(
@@ -128,6 +139,6 @@ extension TimeTrackerStore {
                     return false
                 }
             }
-        ) ?? false
+        )
     }
 }

@@ -98,6 +98,7 @@ struct TaskQuantityEntryEditorSheet: View {
     let store: TimeTrackerStore
     let route: TaskQuantityEntryEditorRoute
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppSceneFeedbackRouter.self) private var feedbackRouter
     @State private var draft: TaskQuantityEntryEditorDraft
     @State private var isDiscardConfirmationPresented = false
     @State private var isDeleteConfirmationPresented = false
@@ -255,25 +256,27 @@ struct TaskQuantityEntryEditorSheet: View {
 
     private func save() {
         isAmountFocused = false
-        let didCommit: Bool = switch route.mode {
-        case let .add(entryID):
-            store.recordTaskQuantity(
-                taskID: route.taskID,
-                goalBaseline: route.goalBaseline,
-                amount: draft.amount,
-                entryID: entryID,
-                recordedAt: draft.recordedAt
-            )
-        case let .edit(entryBaseline, operationID, _):
-            store.updateTaskQuantityEntry(
-                baseline: entryBaseline,
-                goalBaseline: route.goalBaseline,
-                amount: draft.amount,
-                recordedAt: draft.recordedAt,
-                operationID: operationID
-            )
+        let didCommit: Void? = feedbackRouter.perform {
+            switch route.mode {
+            case let .add(entryID):
+                try store.recordTaskQuantity(
+                    taskID: route.taskID,
+                    goalBaseline: route.goalBaseline,
+                    amount: draft.amount,
+                    entryID: entryID,
+                    recordedAt: draft.recordedAt
+                )
+            case let .edit(entryBaseline, operationID, _):
+                try store.updateTaskQuantityEntry(
+                    baseline: entryBaseline,
+                    goalBaseline: route.goalBaseline,
+                    amount: draft.amount,
+                    recordedAt: draft.recordedAt,
+                    operationID: operationID
+                )
+            }
         }
-        if didCommit {
+        if didCommit != nil {
             dismiss()
         }
     }
@@ -283,10 +286,13 @@ struct TaskQuantityEntryEditorSheet: View {
         else {
             return
         }
-        if store.deleteTaskQuantityEntry(
-            baseline: entryBaseline,
-            operationID: operationID
-        ) {
+        let didDelete: Void? = feedbackRouter.perform {
+            try store.deleteTaskQuantityEntry(
+                baseline: entryBaseline,
+                operationID: operationID
+            )
+        }
+        if didDelete != nil {
             dismiss()
         }
     }

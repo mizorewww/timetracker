@@ -154,7 +154,6 @@ final class TimeTrackerStore {
     @ObservationIgnored var taskIDsWithActiveTimerInSubtreeCache:
         (taskRevision: UInt64, analyticsRevision: UInt, taskIDs: Set<UUID>)?
     var selectedTaskID: UUID?
-    var errorMessage: String?
     var desktopDestination: DesktopDestination = .today
     var tasksRoute: TasksRoute?
     var todayTaskRoute: TasksRoute?

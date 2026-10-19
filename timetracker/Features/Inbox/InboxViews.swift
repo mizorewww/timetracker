@@ -8,6 +8,7 @@ struct InboxView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.layoutShell) private var layoutShell
+    @Environment(AppSceneFeedbackRouter.self) private var feedbackRouter
 
     private var openItems: [InboxItem] {
         store.openInboxItems
@@ -119,7 +120,9 @@ struct InboxView: View {
     }
 
     private func moveInboxItems(from sourceOffsets: IndexSet, to destination: Int) {
-        store.reorderInboxItems(sourceOffsets: sourceOffsets, destination: destination)
+        feedbackRouter.perform {
+            try store.reorderInboxItems(sourceOffsets: sourceOffsets, destination: destination)
+        }
     }
 
     private func toggleCompletion(_ itemID: UUID) {
@@ -129,13 +132,15 @@ struct InboxView: View {
         if currentItem.isCompleted == false {
             showsCompleted = true
         }
-        store.toggleInboxItem(currentItem)
+        feedbackRouter.perform { try store.toggleInboxItem(currentItem) }
     }
 
     @discardableResult
     private func submitDraft() -> Bool {
         let didAdd = withAnimation(reduceMotion ? nil : AppMotion.stateChange) {
-            draft.submit(using: store.addInboxItem(title:))
+            draft.submit { title in
+                feedbackRouter.perform { try store.addInboxItem(title: title) } ?? false
+            }
         }
         focusCaptureField()
         return didAdd

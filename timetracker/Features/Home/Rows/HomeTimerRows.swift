@@ -146,6 +146,7 @@ struct ActiveTimerRow: View {
     let segment: TimeSegment
     let actionLabelStyle: TaskTimerActionLabelStyle
     var openTaskDetail: ((UUID) -> Void)?
+    @Environment(AppSceneFeedbackRouter.self) private var feedbackRouter
 
     private var presentation: TaskIdentityPresentation {
         guard let task = store.task(for: segment.taskID) else {
@@ -174,7 +175,7 @@ struct ActiveTimerRow: View {
             actionLabelStyle: actionLabelStyle,
             openTask: openTask,
             performTimerAction: {
-                store.stop(segment: segment)
+                feedbackRouter.perform { try store.stop(segment: segment) }
             },
             taskAccessibilityIdentifier: "home.activeTimer.task.\(segment.taskID.uuidString)",
             actionAccessibilityIdentifier: "home.timer.stop.\(segment.id.uuidString)"

@@ -3,6 +3,7 @@ import SwiftUI
 struct ManualTimeSheet: View {
     let store: TimeTrackerStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppSceneFeedbackRouter.self) private var feedbackRouter
     let initialDraft: ManualTimeDraft
 
     var body: some View {
@@ -13,7 +14,7 @@ struct ManualTimeSheet: View {
                 dismiss()
             },
             onSave: { draft in
-                if store.saveManualTimeDraft(draft) {
+                if feedbackRouter.perform({ try store.saveManualTimeDraft(draft) }) != nil {
                     dismiss()
                 }
             }

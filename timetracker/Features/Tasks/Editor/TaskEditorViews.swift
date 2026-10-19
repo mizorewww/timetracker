@@ -31,6 +31,7 @@ struct TaskEditorSheet: View {
 struct TaskEditorPanel: View {
     let store: TimeTrackerStore
     @State private var session: TaskEditorSession
+    @Environment(AppSceneFeedbackRouter.self) private var feedbackRouter
     @FocusState private var focusedTextField: TaskEditorTextField?
     @FocusState private var focusedChecklistDraftID: UUID?
     let isInteractionDisabled: Bool
@@ -110,10 +111,15 @@ struct TaskEditorPanel: View {
             ToolbarItem(placement: .confirmationAction) {
                 Button(AppStrings.localized("common.save")) {
                     clearInputFocus()
-                    session.save(
+                    if let failureMessage = session.save(
                         using: onSave,
                         onSaved: { _ in onSaved() }
-                    )
+                    ) {
+                        feedbackRouter.present(
+                            title: AppStrings.localized("error.title"),
+                            message: failureMessage
+                        )
+                    }
                 }
                 .keyboardShortcut(.defaultAction)
                 .disabled(

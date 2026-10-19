@@ -16,6 +16,7 @@ struct InboxItemRow: View {
     let requestDelete: () -> Void
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(AppSceneFeedbackRouter.self) private var feedbackRouter
     @State private var draftTitle = ""
 
     var body: some View {
@@ -122,10 +123,12 @@ struct InboxItemRow: View {
             selectedTaskID: nil,
             context: .inboxChildTaskParent
         ) { parentTaskID in
-            store.routeInboxItemAsChildTask(
-                baseline: baseline,
-                parentTaskID: parentTaskID
-            )
+            feedbackRouter.perform {
+                try store.routeInboxItemAsChildTask(
+                    baseline: baseline,
+                    parentTaskID: parentTaskID
+                )
+            } ?? false
         }
     }
 
@@ -135,10 +138,12 @@ struct InboxItemRow: View {
             selectedCategoryID: nil,
             context: .inboxTaskDestination
         ) { categoryID in
-            store.routeInboxItemToCategory(
-                baseline: baseline,
-                categoryID: categoryID
-            )
+            feedbackRouter.perform {
+                try store.routeInboxItemToCategory(
+                    baseline: baseline,
+                    categoryID: categoryID
+                )
+            } ?? false
         }
     }
 
@@ -148,10 +153,12 @@ struct InboxItemRow: View {
             selectedTaskID: nil,
             context: .inboxChecklistTarget
         ) { taskID in
-            store.routeInboxItemAsChecklist(
-                baseline: baseline,
-                taskID: taskID
-            )
+            feedbackRouter.perform {
+                try store.routeInboxItemAsChecklist(
+                    baseline: baseline,
+                    taskID: taskID
+                )
+            } ?? false
         }
     }
 
@@ -194,12 +201,12 @@ struct InboxItemRow: View {
                 isCompact: isCompact,
                 discard: {
                     performAnimated {
-                        store.discardInboxSuggestion(item)
+                        try store.discardInboxSuggestion(item)
                     }
                 },
                 apply: {
                     performAnimated {
-                        store.applyInboxSuggestion(baseline: applyBaseline)
+                        try store.applyInboxSuggestion(baseline: applyBaseline)
                     }
                 }
             )
@@ -233,15 +240,15 @@ struct InboxItemRow: View {
         store.inboxSuggestion(for: item)
     }
 
-    private func performAnimated(_ action: () -> Void) {
+    private func performAnimated(_ action: () throws -> Void) {
         withAnimation(reduceMotion ? nil : AppMotion.stateChange) {
-            action()
+            feedbackRouter.perform(action)
         }
     }
 
     private func commitTitleIfNeeded() {
         let normalizedDraft = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard normalizedDraft != item.title else { return }
-        store.updateInboxItemTitle(item, title: normalizedDraft)
+        feedbackRouter.perform { try store.updateInboxItemTitle(item, title: normalizedDraft) }
     }
 }

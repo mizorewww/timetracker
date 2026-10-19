@@ -9,6 +9,7 @@ struct PomodoroActiveCountdownView: View {
     let taskColor: Color
     let canResumeFocus: Bool
     @Environment(\.pageLiveClocksActive) private var liveClocksActive
+    @Environment(AppSceneFeedbackRouter.self) private var feedbackRouter
 
     private var isBreak: Bool {
         run.state == .shortBreak || run.state == .longBreak
@@ -81,7 +82,9 @@ struct PomodoroActiveCountdownView: View {
         let presentation = PomodoroBreakActionPresentation(remainingSeconds: remaining)
         let phase = PomodoroPhaseToken(run: run)
         return Button {
-            store.resumeActivePomodoroAfterBreak(phase: phase)
+            feedbackRouter.perform {
+                try store.resumeActivePomodoroAfterBreak(phase: phase)
+            }
         } label: {
             Label(
                 AppStrings.localized(presentation.titleKey),

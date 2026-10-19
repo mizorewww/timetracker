@@ -57,12 +57,8 @@ extension TimeTrackerStore {
             }
             return .saved(taskID: outcome.savedTaskID)
         } catch {
-            var refreshFailureMessage: String?
             if error is TaskLifecycleMutationError {
-                refreshFailureMessage = refreshStoreScopedTaskLifecycleReadModels()
-            }
-            if let refreshFailureMessage {
-                return .failed(message: refreshFailureMessage)
+                refreshStoreScopedTaskLifecycleReadModels()
             }
             if error as? TaskLifecycleMutationError == .staleDraft {
                 return .stale
@@ -71,21 +67,18 @@ extension TimeTrackerStore {
         }
     }
 
-    @discardableResult
-    func archiveSelectedTask(taskID: UUID? = nil) -> Bool {
+    func archiveSelectedTask(taskID: UUID? = nil) throws {
         let targetID = taskID ?? selectedTaskID
-        guard let targetID else { return false }
+        guard let targetID else { return }
         let wasSelected = selectedTaskID == targetID
-        let didArchive = performStoreScopedTaskArchive(taskID: targetID)
-        if didArchive, wasSelected {
+        try performStoreScopedTaskArchive(taskID: targetID)
+        if wasSelected {
             selectedTaskID = tasks.first(where: { $0.id != targetID && isTaskAvailableForTracking($0) })?.id
         }
-        return didArchive
     }
 
-    @discardableResult
-    func unarchiveTask(taskID: UUID) -> Bool {
-        performStoreCommand(
+    func unarchiveTask(taskID: UUID) throws {
+        try performStoreCommand(
             onError: handleStoreScopedTaskLifecycleError,
             command: { session in
                 try StoreScopedTaskLifecycleCommandCoordinator(
@@ -99,11 +92,11 @@ extension TimeTrackerStore {
                     try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
                 }
             }
-        ) != nil
+        )
     }
 
-    private func performStoreScopedTaskArchive(taskID: UUID) -> Bool {
-        performStoreCommand(
+    private func performStoreScopedTaskArchive(taskID: UUID) throws {
+        try performStoreCommand(
             onError: handleStoreScopedTaskLifecycleError,
             command: { session in
                 try StoreScopedTaskLifecycleCommandCoordinator(
@@ -118,31 +111,22 @@ extension TimeTrackerStore {
                 }
                 refreshStoreScopedTimerReadModels()
             }
-        ) != nil
+        )
     }
 
     private func handleStoreScopedTaskLifecycleError(_ error: Error) {
         if error is TaskLifecycleMutationError {
             refreshStoreScopedTaskLifecycleReadModels()
         }
-        errorMessage = error.localizedDescription
     }
 
     /// Converges every read model used by a task-lifecycle admission check
     /// after a fresh-context command rejects stale scene input.
-    @discardableResult
-    private func refreshStoreScopedTaskLifecycleReadModels() -> String? {
-        do {
-            try refresh(
-                plan: StoreRefreshPlan(
-                    scopes: [.tasks, .ledgerVisible, .pomodoro, .checklist]
-                )
+    private func refreshStoreScopedTaskLifecycleReadModels() {
+        refreshLoggingFailure(
+            plan: StoreRefreshPlan(
+                scopes: [.tasks, .ledgerVisible, .pomodoro, .checklist]
             )
-            return nil
-        } catch {
-            let message = savedRefreshFailedMessage(error)
-            errorMessage = message
-            return message
-        }
+        )
     }
 }

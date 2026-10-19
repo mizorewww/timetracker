@@ -3,6 +3,7 @@ import SwiftUI
 struct TaskCategoryEditorSheet: View {
     let store: TimeTrackerStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppSceneFeedbackRouter.self) private var feedbackRouter
     let initialDraft: TaskCategoryEditorDraft
     @State private var draft: TaskCategoryEditorDraft
     @State private var isDiscardConfirmationPresented = false
@@ -76,7 +77,7 @@ struct TaskCategoryEditorSheet: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button(AppStrings.localized("common.save")) {
-                        if store.saveTaskCategoryDraft(draft) {
+                        if feedbackRouter.perform({ try store.saveTaskCategoryDraft(draft) }) != nil {
                             dismiss()
                         }
                     }
@@ -140,7 +141,7 @@ struct TaskCategoryEditorSheet: View {
 
     private func deleteCategory() {
         guard let baseline = draft.baseline else { return }
-        if store.deleteTaskCategory(baseline: baseline) {
+        if feedbackRouter.perform({ try store.deleteTaskCategory(baseline: baseline) }) != nil {
             dismiss()
         }
     }

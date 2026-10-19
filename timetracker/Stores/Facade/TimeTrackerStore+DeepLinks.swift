@@ -37,7 +37,10 @@ extension TimeTrackerStore {
             desktopDestination = .today
             return .handled
         case let .startTimer(taskID, source):
-            guard startTask(taskID: taskID, source: source) else {
+            let feedback = presentationRouter.feedbackRouter
+            guard feedback.perform({
+                try startTask(taskID: taskID, source: source)
+            }) == true else {
                 return .rejected
             }
             if routesAfterSystemAction {
@@ -46,15 +49,17 @@ extension TimeTrackerStore {
             }
             return .handled
         case let .stopTimer(target):
-            let didStop: Bool = switch target {
-            case let .some(.segment(segmentID)):
-                stopTimer(segmentID: segmentID)
-            case let .some(.task(taskID)):
-                stopTimer(taskID: taskID)
-            case .none:
-                stopTimer()
+            let didStop = presentationRouter.feedbackRouter.perform {
+                switch target {
+                case let .some(.segment(segmentID)):
+                    try stopTimer(segmentID: segmentID)
+                case let .some(.task(taskID)):
+                    try stopTimer(taskID: taskID)
+                case .none:
+                    try stopTimer()
+                }
             }
-            guard didStop else {
+            guard didStop == true else {
                 return .rejected
             }
             if routesAfterSystemAction {

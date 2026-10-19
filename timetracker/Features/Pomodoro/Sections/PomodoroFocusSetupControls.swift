@@ -9,6 +9,7 @@ struct PomodoroFocusSetupControls: View {
     @Binding var focusTaskID: UUID?
     let selectFocusTask: () -> Void
     let contentSpacing: CGFloat
+    @Environment(AppSceneFeedbackRouter.self) private var feedbackRouter
 
     private var taskColor: Color {
         Color(hex: selectedTask?.colorHex) ?? PomodoroStyle.accent
@@ -59,13 +60,15 @@ struct PomodoroFocusSetupControls: View {
 
     private func startPomodoro() {
         guard let focusTaskID else { return }
-        store.startPomodoro(
-            taskID: focusTaskID,
-            focusSeconds: plan.focusSeconds,
-            breakSeconds: plan.shortBreakSeconds,
-            longBreakSeconds: plan.longBreakSeconds,
-            targetRounds: plan.rounds
-        )
+        feedbackRouter.perform {
+            try store.startPomodoro(
+                taskID: focusTaskID,
+                focusSeconds: plan.focusSeconds,
+                breakSeconds: plan.shortBreakSeconds,
+                longBreakSeconds: plan.longBreakSeconds,
+                targetRounds: plan.rounds
+            )
+        }
     }
 }
 

@@ -3,6 +3,7 @@ import SwiftUI
 struct TaskCategoryOrderingSheet: View {
     let store: TimeTrackerStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppSceneFeedbackRouter.self) private var feedbackRouter
     @State private var orderedCategories: [TaskCategoryOrderingItem]
 
     init(store: TimeTrackerStore) {
@@ -45,9 +46,12 @@ struct TaskCategoryOrderingSheet: View {
 
                 ToolbarItem(placement: .confirmationAction) {
                     Button(AppStrings.done) {
-                        if store.reorderTaskCategories(
-                            orderedCategoryIDs: orderedCategories.map(\.id)
-                        ) {
+                        let didReorder: Void? = feedbackRouter.perform {
+                            try store.reorderTaskCategories(
+                                orderedCategoryIDs: orderedCategories.map(\.id)
+                            )
+                        }
+                        if didReorder != nil {
                             dismiss()
                         }
                     }

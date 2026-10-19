@@ -170,8 +170,7 @@ final class CommittedMutationSystemProjectionScheduler {
     ) async throws {
         switch sink {
         case .widget:
-            // Deliberately bypasses TimeTrackerStore.errorMessage: projection
-            // failures never surface as command failures.
+            // Projection failures never surface as command failures.
             try await widgetWriter.save(materialization.widgetSnapshot)
         case .watch:
             try publishWatch(materialization.watchSnapshot)

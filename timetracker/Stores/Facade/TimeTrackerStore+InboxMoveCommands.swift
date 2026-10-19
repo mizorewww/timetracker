@@ -5,8 +5,8 @@ extension TimeTrackerStore {
     func routeInboxItemAsChildTask(
         baseline: InboxManualRouteBaseline,
         parentTaskID: UUID
-    ) -> Bool {
-        routeInboxItem(
+    ) throws -> Bool {
+        try routeInboxItem(
             baseline: baseline,
             destination: .childTask(parentTaskID: parentTaskID)
         )
@@ -16,8 +16,8 @@ extension TimeTrackerStore {
     func routeInboxItemToCategory(
         baseline: InboxManualRouteBaseline,
         categoryID: UUID
-    ) -> Bool {
-        routeInboxItem(
+    ) throws -> Bool {
+        try routeInboxItem(
             baseline: baseline,
             destination: .category(categoryID: categoryID)
         )
@@ -27,8 +27,8 @@ extension TimeTrackerStore {
     func routeInboxItemAsChecklist(
         baseline: InboxManualRouteBaseline,
         taskID: UUID
-    ) -> Bool {
-        routeInboxItem(
+    ) throws -> Bool {
+        try routeInboxItem(
             baseline: baseline,
             destination: .checklist(taskID: taskID)
         )
@@ -37,8 +37,8 @@ extension TimeTrackerStore {
     private func routeInboxItem(
         baseline: InboxManualRouteBaseline,
         destination: InboxManualRouteDestination
-    ) -> Bool {
-        let outcome = performStoreScopedInboxMutation(
+    ) throws -> Bool {
+        let outcome = try performStoreScopedInboxMutation(
             refreshScopes: [.inbox, .tasks, .checklist],
             eventsForOutcome: { (outcome: InboxManualRouteOutcome) in
                 outcome.events
@@ -49,7 +49,7 @@ extension TimeTrackerStore {
                 destination: destination
             )
         }
-        if let outcome, outcome.didMutate {
+        if outcome.didMutate {
             inboxSuggestionFailureByItemID[baseline.itemID] = nil
             inboxSuggestionFailureByItemID[outcome.inboxItemID] = nil
             return true

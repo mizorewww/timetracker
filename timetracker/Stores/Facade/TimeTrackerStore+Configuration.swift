@@ -2,7 +2,9 @@ import Foundation
 import SwiftData
 
 extension TimeTrackerStore {
-    func configureIfNeeded(context: ModelContext) {
+    /// Throws the first startup step failure (after every step has run) so the
+    /// scene that started configuration can present it.
+    func configureIfNeeded(context: ModelContext) throws {
         switch startupConfigurationPhase {
         case .completed:
             return
@@ -16,7 +18,11 @@ extension TimeTrackerStore {
             if case let .configuring(retryRequested) = startupConfigurationPhase {
                 startupConfigurationPhase = .pending
                 if retryRequested {
-                    configureIfNeeded(context: context)
+                    do {
+                        try configureIfNeeded(context: context)
+                    } catch {
+                        logUnpresentedFailure("Startup configuration retry", error)
+                    }
                 }
             }
         }
@@ -63,9 +69,6 @@ extension TimeTrackerStore {
             startupErrors.append(error)
         }
         reconcileActivePomodoro(now: Date())
-        if let firstError = startupErrors.first {
-            errorMessage = firstError.localizedDescription
-        }
         startupConfigurationPhase = .completed
         enqueueCommittedMutationSystemProjections(
             events: [.fullSync],
@@ -81,6 +84,9 @@ extension TimeTrackerStore {
             Task {
                 await refreshCloudAccountStatus()
             }
+        }
+        if let firstError = startupErrors.first {
+            throw firstError
         }
     }
 

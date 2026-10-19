@@ -2,46 +2,40 @@ import Foundation
 import SwiftData
 
 extension TimeTrackerStore {
-    func clearAllData() {
-        let previousAPIKey: String?
-        do {
-            previousAPIKey = try llmCredentialStore.readAPIKey()
-        } catch {
-            errorMessage = error.localizedDescription
-            return
-        }
+    func clearAllData() throws {
+        let previousAPIKey = try llmCredentialStore.readAPIKey()
         let defaults = AppDefaults.shared
         let previousAutomaticSuggestions = defaults.object(
             forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
         )
         var localSettingsWereCleared = false
-        let didClear = perform(events: [.fullSync]) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try llmCredentialStore.writeAPIKey("")
-            defaults.removeObject(forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
-            localSettingsWereCleared = true
-            try SeedData.clearAll(context: modelContext)
-        }
-        if !didClear, localSettingsWereCleared {
-            do {
-                try llmCredentialStore.writeAPIKey(previousAPIKey ?? "")
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-            if let previousAutomaticSuggestions {
-                defaults.set(
-                    previousAutomaticSuggestions,
-                    forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
-                )
-            } else {
+        do {
+            try perform(events: [.fullSync]) {
+                guard let modelContext else { throw StoreError.notConfigured }
+                try llmCredentialStore.writeAPIKey("")
                 defaults.removeObject(forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
+                localSettingsWereCleared = true
+                try SeedData.clearAll(context: modelContext)
             }
+        } catch {
+            if localSettingsWereCleared {
+                // The clear failure is the one to report; a failed key restore
+                // leaves the key empty, which the user can re-enter.
+                try? llmCredentialStore.writeAPIKey(previousAPIKey ?? "")
+                if let previousAutomaticSuggestions {
+                    defaults.set(
+                        previousAutomaticSuggestions,
+                        forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled
+                    )
+                } else {
+                    defaults.removeObject(forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
+                }
+            }
+            throw error
         }
-        if didClear {
-            selectedTaskID = nil
-            tasksRoute = nil
-            todayTaskRoute = nil
-        }
+        selectedTaskID = nil
+        tasksRoute = nil
+        todayTaskRoute = nil
     }
 
     @discardableResult
@@ -62,18 +56,16 @@ extension TimeTrackerStore {
 
 #if DEBUG
 extension TimeTrackerStore {
-    func replaceWithDemoData() {
-        let didReplace = perform(events: [.fullSync]) {
+    func replaceWithDemoData() throws {
+        try perform(events: [.fullSync]) {
             guard let modelContext else { throw StoreError.notConfigured }
             try SeedData.replaceWithDemoData(context: modelContext)
         }
-        if didReplace {
-            tasksRoute = nil
-            todayTaskRoute = nil
-        }
+        tasksRoute = nil
+        todayTaskRoute = nil
     }
 
-    func clearDemoData() {
+    func clearDemoData() throws {
         let selectedDemoTaskID = selectedTaskID.flatMap { selectedID in
             tasks.first { $0.id == selectedID && $0.deviceID == "demo" }?.id
         }
@@ -88,17 +80,17 @@ extension TimeTrackerStore {
         })?.taskID ?? tasks.first(where: {
             $0.deviceID != "demo" && isTaskAvailableForTracking($0)
         })?.id
-        let didClear = perform(events: [.fullSync]) {
+        try perform(events: [.fullSync]) {
             guard let modelContext else { throw StoreError.notConfigured }
             try SeedData.clearDemoData(context: modelContext)
         }
-        if didClear, selectedDemoTaskID != nil {
+        if selectedDemoTaskID != nil {
             selectedTaskID = replacementSelectionID
         }
-        if didClear, routedDemoTaskID != nil {
+        if routedDemoTaskID != nil {
             tasksRoute = nil
         }
-        if didClear, todayRoutedDemoTaskID != nil {
+        if todayRoutedDemoTaskID != nil {
             todayTaskRoute = nil
         }
     }

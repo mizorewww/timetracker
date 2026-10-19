@@ -3,6 +3,7 @@ import SwiftUI
 struct PomodoroView: View {
     let store: TimeTrackerStore
     @Environment(AppPresentationRouter.self) private var presentationRouter
+    @Environment(AppSceneFeedbackRouter.self) private var feedbackRouter
     @State private var selectedPlanID: UUID?
     @State private var focusTaskID: UUID?
     @State private var isStopConfirmationPresented = false
@@ -78,7 +79,9 @@ struct PomodoroView: View {
                 guard let stopConfirmationPhase else {
                     return
                 }
-                store.cancelActivePomodoro(phase: stopConfirmationPhase)
+                feedbackRouter.perform {
+                    try store.cancelActivePomodoro(phase: stopConfirmationPhase)
+                }
                 self.stopConfirmationPhase = nil
             }
             Button(AppStrings.cancel, role: .cancel) {

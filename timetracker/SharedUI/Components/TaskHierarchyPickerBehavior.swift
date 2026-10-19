@@ -42,8 +42,10 @@ extension TaskHierarchyPicker {
         case .timer:
             guard mode.selectionEligibleTaskIDs(in: store)
                 .contains(task.id) else { return }
-            let outcome = store.performTimerPickerSelection(task)
-            if outcome.shouldDismissPicker {
+            let outcome = feedbackRouter.perform {
+                try store.performTimerPickerSelection(task)
+            }
+            if outcome?.shouldDismissPicker == true {
                 onDismiss()
             }
         case .singleSelection:

@@ -44,6 +44,26 @@ final class AppSceneFeedbackRouter {
         return feedback.id
     }
 
+    /// Presents a failed command's error under the generic error title.
+    func present(_ error: Error, title: String = AppStrings.localized("error.title")) {
+        present(title: title, message: error.localizedDescription)
+    }
+
+    /// Runs a user-initiated command and presents its failure, returning nil
+    /// when it threw.
+    @discardableResult
+    func perform<Result>(
+        title: String = AppStrings.localized("error.title"),
+        _ command: () throws -> Result
+    ) -> Result? {
+        do {
+            return try command()
+        } catch {
+            present(error, title: title)
+            return nil
+        }
+    }
+
     func dismiss(feedbackID: UUID) {
         guard current?.id == feedbackID else { return }
         current = pending.isEmpty ? nil : pending.removeFirst()

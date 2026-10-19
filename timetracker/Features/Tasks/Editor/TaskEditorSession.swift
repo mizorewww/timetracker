@@ -104,23 +104,20 @@ final class TaskEditorSession {
         navigationConfirmationRequestID = nil
     }
 
+    /// Saves the draft; returns the failure message for the caller to present.
     func save(
         using saveDraft: (TaskEditorDraft) -> TaskDraftSaveResult,
-        onSaved: (UUID) -> Void,
-        onStale: (() -> Void)? = nil
-    ) {
+        onSaved: (UUID) -> Void
+    ) -> String? {
         switch saveDraft(draft) {
         case let .saved(taskID):
             onSaved(taskID)
         case .stale:
-            if let onStale {
-                onStale()
-            } else {
-                prepareLatestDraft()
-            }
+            prepareLatestDraft()
         case let .failed(message):
-            store.errorMessage = message
+            return message
         }
+        return nil
     }
 
     func acceptLatestDraft(for taskID: UUID) {
@@ -292,13 +289,12 @@ final class TaskEditorSession {
         replace(with: latestDraft)
     }
 
+    /// A task that no longer exists has no latest draft to offer; its detail
+    /// closes when the route becomes invalid.
     private func prepareLatestDraft() {
         guard let taskID = draft.taskID,
               let latestTask = store.task(for: taskID)
         else {
-            store.errorMessage = AppStrings.localized(
-                "systemAction.error.taskNotFound"
-            )
             return
         }
         pendingReloadDraft = store.editorDraft(for: latestTask)

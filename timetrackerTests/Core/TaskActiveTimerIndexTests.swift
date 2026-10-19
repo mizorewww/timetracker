@@ -20,7 +20,7 @@ struct TaskActiveTimerIndexTests {
     ) {
         let context = try makeTestContext()
         let store = makeTestStore()
-        store.configureIfNeeded(context: context)
+        try store.configureIfNeeded(context: context)
         let repository = SwiftDataTaskRepository(
             context: context,
             deviceID: "seed"
@@ -53,7 +53,7 @@ struct TaskActiveTimerIndexTests {
             iconName: nil
         )
 
-        #expect(store.startTask(child))
+        #expect(try store.startTask(child))
 
         #expect(store.hasActiveTimer(inTaskSubtree: child.id))
         #expect(store.hasActiveTimer(inTaskSubtree: parent.id))
@@ -63,14 +63,14 @@ struct TaskActiveTimerIndexTests {
     @Test
     func stoppingTheTimerInvalidatesTheIndex() throws {
         let (store, parent, child) = try makeStoreWithHierarchy()
-        #expect(store.startTask(child))
+        #expect(try store.startTask(child))
         #expect(store.hasActiveTimer(inTaskSubtree: parent.id))
 
         guard let active = store.activeSegment(for: child.id) else {
             Issue.record("Expected an active segment")
             return
         }
-        #expect(store.stop(segment: active))
+        #expect(try store.stop(segment: active))
 
         #expect(store.hasActiveTimer(inTaskSubtree: child.id) == false)
         #expect(store.hasActiveTimer(inTaskSubtree: parent.id) == false)

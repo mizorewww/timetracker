@@ -17,6 +17,7 @@ SwiftUI View
 - View 不直接写 SwiftData，也不在 `body` 里算统计/rollup/forecast。
 - 所有已记录时长经 `TrackedTimePolicy` 读取（`min(endedAt ?? now, now)` 再裁到区间）；不得在别处用 `endedAt ?? Date()`。
 - Scene、App Intent、Watch 写入共用同一套 store-scoped coordinator；提交后只投递 exact `StoreDomainEvent`，不等待投影，投影失败不影响命令结果。
+- 命令失败抛给调用方，由发起的 view 经 scene 的 `AppSceneFeedbackRouter` 展示；store 没有全局错误槽。无发起 view 的生命周期、同步与提交后读模型刷新失败只写日志，下一次刷新重试。
 - CloudKit 远端变更经 notification 合并后由 `RemoteChangeHistoryCursor` 按 persistent history 决定刷新范围；没有轮询。
 - 布局只按窗口宽度在 `AppRootView` 选择 compact（<720 pt，TabView）或 regular（NavigationSplitView）shell；`#if os(...)` 只用于平台独有 API。
 

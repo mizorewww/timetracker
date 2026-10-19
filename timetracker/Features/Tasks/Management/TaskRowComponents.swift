@@ -49,13 +49,13 @@ struct TaskMenuContent: View {
     var body: some View {
         if let activeSegment = eligibility.activeSegment {
             Button {
-                store.stop(segment: activeSegment)
+                presentationRouter.feedbackRouter.perform { try store.stop(segment: activeSegment) }
             } label: {
                 Label(AppStrings.localized("timer.action.stop"), systemImage: "stop.fill")
             }
         } else if eligibility.isAvailableForTracking {
             Button {
-                store.startTask(task)
+                presentationRouter.feedbackRouter.perform { try store.startTask(task) }
             } label: {
                 Label(AppStrings.localized("task.action.startTimer"), systemImage: "play.fill")
             }
@@ -93,7 +93,10 @@ struct TaskMenuContent: View {
 
     private var archiveButton: some View {
         Button {
-            store.archiveTaskProtectingUnsavedChanges(task.id)
+            store.archiveTaskProtectingUnsavedChanges(
+                task.id,
+                onFailure: { presentationRouter.feedbackRouter.present($0) }
+            )
         } label: {
             Label(AppStrings.localized("task.action.archive"), systemImage: "archivebox")
         }
@@ -122,14 +125,14 @@ struct TaskRowSwipeActions: ViewModifier {
             .swipeActions(edge: .leading) {
                 if let activeSegment = eligibility.activeSegment {
                     Button(role: .destructive) {
-                        store.stop(segment: activeSegment)
+                        presentationRouter.feedbackRouter.perform { try store.stop(segment: activeSegment) }
                     } label: {
                         actionLabel(AppStrings.localized("timer.action.stop"), systemImage: "stop.fill")
                     }
                     .tint(.red)
                 } else if eligibility.isAvailableForTracking {
                     Button {
-                        store.startTask(task)
+                        presentationRouter.feedbackRouter.perform { try store.startTask(task) }
                     } label: {
                         actionLabel(AppStrings.localized("task.swipe.start"), systemImage: "play.fill")
                     }
@@ -152,7 +155,10 @@ struct TaskRowSwipeActions: ViewModifier {
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 if eligibility.hasActiveTimerInSubtree == false {
                     Button {
-                        store.archiveTaskProtectingUnsavedChanges(task.id)
+                        store.archiveTaskProtectingUnsavedChanges(
+                            task.id,
+                            onFailure: { presentationRouter.feedbackRouter.present($0) }
+                        )
                     } label: {
                         actionLabel(
                             AppStrings.localized("task.action.archive"),

@@ -7,12 +7,11 @@ extension TimeTrackerStore {
         breakSeconds: Int = 5 * 60,
         longBreakSeconds: Int? = nil,
         targetRounds: Int = 1
-    ) {
+    ) throws {
         guard let selectedTaskID else {
-            fail(.pomodoroTaskSelectionRequired)
-            return
+            throw StoreError.pomodoroTaskSelectionRequired
         }
-        _ = startPomodoro(
+        try startPomodoro(
             taskID: selectedTaskID,
             focusSeconds: focusSeconds,
             breakSeconds: breakSeconds,
@@ -21,15 +20,14 @@ extension TimeTrackerStore {
         )
     }
 
-    @discardableResult
     func startPomodoro(
         taskID: UUID,
         focusSeconds: Int = 25 * 60,
         breakSeconds: Int = 5 * 60,
         longBreakSeconds: Int? = nil,
         targetRounds: Int = 1
-    ) -> Bool {
-        performStoreCommand(
+    ) throws {
+        try performStoreCommand(
             command: { session in
                 try StoreScopedPomodoroCommandCoordinator(
                     session: session
@@ -47,14 +45,14 @@ extension TimeTrackerStore {
                     referencedTaskIDs: outcome.referencedTaskIDs
                 )
             }
-        ) != nil
+        )
     }
 
     @discardableResult
     func resumeActivePomodoroAfterBreak(
         phase: PomodoroPhaseToken
-    ) -> Bool {
-        performStoreCommand(
+    ) throws -> Bool {
+        try performStoreCommand(
             command: { session in
                 try StoreScopedPomodoroCommandCoordinator(
                     session: session
@@ -75,7 +73,7 @@ extension TimeTrackerStore {
                     return false
                 }
             }
-        ) ?? false
+        )
     }
 
     func finishStoreScopedPomodoroMutation(
@@ -92,19 +90,15 @@ extension TimeTrackerStore {
         }
         finishStoreScopedMutation(events: events)
         if let missingTaskRefreshError {
-            errorMessage = savedRefreshFailedMessage(missingTaskRefreshError)
+            logReadModelRefreshFailure(missingTaskRefreshError)
         }
     }
 
     func refreshStoreScopedPomodoroAdmissionReadModels() {
-        do {
-            try refresh(
-                plan: StoreRefreshPlan(
-                    scopes: [.tasks, .ledgerVisible, .pomodoro]
-                )
+        refreshLoggingFailure(
+            plan: StoreRefreshPlan(
+                scopes: [.tasks, .ledgerVisible, .pomodoro]
             )
-        } catch {
-            errorMessage = savedRefreshFailedMessage(error)
-        }
+        )
     }
 }

@@ -39,7 +39,7 @@ extension TimeTrackerStore {
 
             return terminalResult
         } catch {
-            errorMessage = error.localizedDescription
+            logUnpresentedFailure("Watch command", error)
             enqueueWatchCurrentStateProjection()
             return .failed(commandID: command.id)
         }

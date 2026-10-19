@@ -4,12 +4,17 @@ import SwiftData
 extension TimeTrackerStore {
     /// Materializes only each rule's current local day. It is intentionally
     /// called from safe app-lifecycle points, never from raw CloudKit import.
-    @discardableResult
+    /// No view initiates it, so a failure is logged and retried at the next
+    /// lifecycle point.
     func materializeCurrentDailyTaskRecurrences(
         now: Date = Date()
-    ) -> Bool {
-        performTaskRecurrenceMutation {
-            try $0.materializeCurrentDay(now: now)
+    ) {
+        do {
+            try performTaskRecurrenceMutation {
+                try $0.materializeCurrentDay(now: now)
+            }
+        } catch {
+            logUnpresentedFailure("Daily recurrence materialization", error)
         }
     }
 
@@ -47,21 +52,15 @@ private extension TimeTrackerStore {
         _ operation: (
             StoreScopedTaskRecurrenceCommandCoordinator
         ) throws -> TaskRecurrenceMutationOutcome
-    ) -> Bool {
-        performStoreCommand(
+    ) throws {
+        try performStoreCommand(
             eventsForOutcome: { $0.events },
             onError: { error in
                 if error is TaskRecurrenceMutationError {
-                    do {
-                        try self.refresh(
-                            plan: StoreRefreshPlan(scopes: [.tasks])
-                        )
-                    } catch {
-                        self.errorMessage = self.savedRefreshFailedMessage(error)
-                        return
-                    }
+                    self.refreshLoggingFailure(
+                        plan: StoreRefreshPlan(scopes: [.tasks])
+                    )
                 }
-                self.errorMessage = error.localizedDescription
             },
             command: { session in
                 try operation(
@@ -70,6 +69,6 @@ private extension TimeTrackerStore {
                     )
                 )
             }
-        ) != nil
+        )
     }
 }

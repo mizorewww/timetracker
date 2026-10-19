@@ -133,7 +133,9 @@ extension TaskHierarchyPicker {
                 activeSegment: activeSegment,
                 command: .alreadyRunning,
                 labelStyle: pickerActionLabelStyle,
-                action: { store.stop(segment: activeSegment) },
+                action: {
+                    feedbackRouter.perform { try store.stop(segment: activeSegment) }
+                },
                 accessibilityIdentifier: "timer.taskPicker.stop.\(item.id.uuidString)"
             )
             .accessibilityValue(accessibilityValue(for: item))

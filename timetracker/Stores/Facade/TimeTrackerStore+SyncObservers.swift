@@ -49,7 +49,7 @@ extension TimeTrackerStore {
                 validateSelectedTask()
             }
         } catch {
-            errorMessage = savedRefreshFailedMessage(error)
+            logReadModelRefreshFailure(error)
         }
     }
 

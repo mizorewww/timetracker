@@ -5,8 +5,17 @@ import SwiftUI
 struct SettingsSceneView: View {
     @Environment(\.modelContext) private var modelContext
     let store: TimeTrackerStore
-    @State private var presentationRouter = AppPresentationRouter()
-    @State private var feedbackRouter = AppSceneFeedbackRouter()
+    @State private var feedbackRouter: AppSceneFeedbackRouter
+    @State private var presentationRouter: AppPresentationRouter
+
+    init(store: TimeTrackerStore) {
+        self.store = store
+        let feedbackRouter = AppSceneFeedbackRouter()
+        _feedbackRouter = State(initialValue: feedbackRouter)
+        _presentationRouter = State(
+            initialValue: AppPresentationRouter(feedbackRouter: feedbackRouter)
+        )
+    }
 
     var body: some View {
         Group {
@@ -25,7 +34,11 @@ struct SettingsSceneView: View {
         )
         .appSceneFeedbackHost(router: feedbackRouter)
         .task {
-            store.configureIfNeeded(context: modelContext)
+            do {
+                try store.configureIfNeeded(context: modelContext)
+            } catch {
+                feedbackRouter.present(error)
+            }
         }
     }
 }

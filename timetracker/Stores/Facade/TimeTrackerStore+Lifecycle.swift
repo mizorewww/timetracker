@@ -9,19 +9,18 @@ private enum CommittedMutationProjectionDiagnostics {
     )
 }
 
-extension TimeTrackerStore {
-    /// Whole-store maintenance mutation; failures go to the shared error slot.
-    @discardableResult
-    func perform(events: Set<StoreDomainEvent>, _ action: () throws -> Void) -> Bool {
-        do {
-            try executeAuthorizedMutation(action)
-        } catch {
-            errorMessage = error.localizedDescription
-            return false
-        }
+private enum UnpresentedFailureDiagnostics {
+    static let logger = Logger(
+        subsystem: AppIdentity.loggingSubsystem,
+        category: "UnpresentedFailure"
+    )
+}
 
+extension TimeTrackerStore {
+    /// Whole-store maintenance mutation; failures are thrown to the caller.
+    func perform(events: Set<StoreDomainEvent>, _ action: () throws -> Void) throws {
+        try executeAuthorizedMutation(action)
         finishCommittedMutation(events: events)
-        return true
     }
 
     /// Runs a committed mutation while preserving its original failure for a
@@ -49,26 +48,42 @@ extension TimeTrackerStore {
         )
     }
 
-    /// Formats the standard post-commit refresh failure message.
-    func savedRefreshFailedMessage(_ error: Error) -> String {
-        String(
-            format: AppStrings.localized("error.savedRefreshFailed"),
-            error.localizedDescription
+    /// Logs a failure that has no initiating view to present it: lifecycle,
+    /// sync and timer work that the next pass retries.
+    func logUnpresentedFailure(_ operation: String, _ error: Error) {
+        UnpresentedFailureDiagnostics.logger.error(
+            "\(operation, privacy: .public) failed: \(error.localizedDescription, privacy: .public)"
         )
     }
 
+    /// Read-model refreshes run after a command already committed, or while
+    /// converging after a rejected one. Their failure never changes the
+    /// command's result and the next refresh retries, so it is only logged.
+    func logReadModelRefreshFailure(_ error: Error) {
+        logUnpresentedFailure("Read-model refresh", error)
+    }
+
+    /// Runs a convergence refresh whose failure must not change a command's
+    /// result; see `logReadModelRefreshFailure`.
+    func refreshLoggingFailure(plan: StoreRefreshPlan) {
+        do {
+            try refresh(plan: plan)
+        } catch {
+            logReadModelRefreshFailure(error)
+        }
+    }
+
     /// Shared tail for store-scoped command methods: resolves the configured
-    /// mutation session, runs the command, applies `finish` to the committed outcome,
-    /// and maps any thrown error to `errorMessage`. Pass `onError` when the
-    /// domain must converge stale read models before the message is assigned;
-    /// it then owns the whole failure path, including the final assignment.
+    /// mutation session, runs the command, applies `finish` to the committed
+    /// outcome, and rethrows any failure to the caller. Pass `onError` when the
+    /// domain must converge stale read models before the error propagates.
     @discardableResult
     func performStoreCommand<Outcome>(
         onError: ((Error) -> Void)? = nil,
         command: (StoreMutationSession) throws -> Outcome,
         finish: (Outcome) throws -> Void
-    ) -> Outcome? {
-        performStoreCommand(
+    ) throws -> Outcome {
+        try performStoreCommand(
             onError: onError,
             command: command,
             finishResult: { outcome in
@@ -85,16 +100,12 @@ extension TimeTrackerStore {
         onError: ((Error) -> Void)? = nil,
         command: (StoreMutationSession) throws -> Outcome,
         finishResult: (Outcome) throws -> Result
-    ) -> Result? {
+    ) throws -> Result {
         do {
             return try finishResult(command(requireMutationSession()))
         } catch {
-            if let onError {
-                onError(error)
-            } else {
-                errorMessage = error.localizedDescription
-            }
-            return nil
+            onError?(error)
+            throw error
         }
     }
 
@@ -105,8 +116,8 @@ extension TimeTrackerStore {
         eventsForOutcome: (Outcome) -> Set<StoreDomainEvent>,
         onError: ((Error) -> Void)? = nil,
         command: (StoreMutationSession) throws -> Outcome
-    ) -> Outcome? {
-        performStoreCommand(onError: onError, command: command) { outcome in
+    ) throws -> Outcome {
+        try performStoreCommand(onError: onError, command: command) { outcome in
             finishStoreScopedMutation(events: eventsForOutcome(outcome))
         }
     }
@@ -140,11 +151,11 @@ extension TimeTrackerStore {
             do {
                 try refresh(plan: StoreRefreshPlanner.plan(after: refreshEvents))
             } catch {
-                errorMessage = savedRefreshFailedMessage(error)
+                logReadModelRefreshFailure(error)
             }
         }
         if let missingTaskRefreshError {
-            errorMessage = savedRefreshFailedMessage(missingTaskRefreshError)
+            logReadModelRefreshFailure(missingTaskRefreshError)
         }
         return outcome.subjectSegmentID != nil
     }
@@ -179,7 +190,7 @@ extension TimeTrackerStore {
                 validateSelectedTask()
             }
         } catch {
-            errorMessage = savedRefreshFailedMessage(error)
+            logReadModelRefreshFailure(error)
         }
     }
 
@@ -225,7 +236,7 @@ extension TimeTrackerStore {
         )
 
         if let postCommitError {
-            errorMessage = savedRefreshFailedMessage(postCommitError)
+            logReadModelRefreshFailure(postCommitError)
         }
     }
 

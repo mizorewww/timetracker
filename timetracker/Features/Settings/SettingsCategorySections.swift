@@ -17,41 +17,38 @@ extension SettingsView {
             TodayHeatmapSettingsSection(
                 store: store,
                 onChangePeriod: { period in
-                    handleSettingsStoreMutation(
-                        store.setTodayHeatmapPeriod(period),
-                        title: AppStrings.localized("heatmap.settings.title")
-                    )
+                    performSettingsMutation(title: AppStrings.localized("heatmap.settings.title")) {
+                        try store.setTodayHeatmapPeriod(period)
+                    }
                 },
                 onChangeSelection: { taskIDs in
-                    handleSettingsStoreMutation(
-                        store.setTodayHeatmapTaskIDs(taskIDs),
-                        title: AppStrings.localized("heatmap.settings.title")
-                    )
+                    performSettingsMutation(title: AppStrings.localized("heatmap.settings.title")) {
+                        try store.setTodayHeatmapTaskIDs(taskIDs)
+                    }
                 }
             )
 
             CountdownSettingsSection(
                 events: store.countdownEvents,
                 onChangeTitle: { event, title in
-                    store.updateCountdownEvent(event, title: title)
+                    feedbackRouter.perform(title: AppStrings.localized("settings.countdown")) {
+                        try store.updateCountdownEvent(event, title: title)
+                    } != nil
                 },
                 onChangeDate: { event, date in
-                    handleSettingsStoreMutation(
-                        store.updateCountdownEvent(event, date: date),
-                        title: AppStrings.localized("settings.countdown")
-                    )
+                    performSettingsMutation(title: AppStrings.localized("settings.countdown")) {
+                        try store.updateCountdownEvent(event, date: date)
+                    }
                 },
                 onDelete: { event in
-                    handleSettingsStoreMutation(
-                        store.deleteCountdownEvent(event),
-                        title: AppStrings.localized("settings.countdown")
-                    )
+                    performSettingsMutation(title: AppStrings.localized("settings.countdown")) {
+                        try store.deleteCountdownEvent(event)
+                    }
                 },
                 onAdd: {
-                    handleSettingsStoreMutation(
-                        store.addCountdownEvent(),
-                        title: AppStrings.localized("settings.countdown")
-                    )
+                    performSettingsMutation(title: AppStrings.localized("settings.countdown")) {
+                        try store.addCountdownEvent()
+                    }
                 }
             )
 
@@ -64,10 +61,9 @@ extension SettingsView {
             ArchivedTasksSettingsSection(
                 store: store,
                 onUnarchive: { task in
-                    handleSettingsStoreMutation(
-                        store.unarchiveTask(taskID: task.id),
-                        title: AppStrings.localized("task.action.unarchive")
-                    )
+                    performSettingsMutation(title: AppStrings.localized("task.action.unarchive")) {
+                        try store.unarchiveTask(taskID: task.id)
+                    }
                 }
             )
 

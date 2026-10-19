@@ -8,6 +8,7 @@ struct TaskDetailIdentityRow: View {
     let focusedTextField: FocusState<TaskEditorTextField?>.Binding
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.layoutShell) private var layoutShell
+    @Environment(AppSceneFeedbackRouter.self) private var feedbackRouter
 
     var body: some View {
         Group {
@@ -147,10 +148,12 @@ struct TaskDetailIdentityRow: View {
     }
 
     private func performTimerAction(activeSegment: TimeSegment?) {
-        if let activeSegment {
-            store.stop(segment: activeSegment)
-        } else {
-            store.performTimerPickerSelection(task)
+        feedbackRouter.perform {
+            if let activeSegment {
+                try store.stop(segment: activeSegment)
+            } else {
+                try store.performTimerPickerSelection(task)
+            }
         }
     }
 }

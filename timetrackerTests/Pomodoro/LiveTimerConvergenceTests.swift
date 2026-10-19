@@ -13,7 +13,7 @@ struct LiveTimerConvergenceTests {
     func segmentClosedElsewhereReachesRollupsThroughLiveConvergence() throws {
         let context = try makeTestContext()
         let store = makeTestStore()
-        store.configureIfNeeded(context: context)
+        try store.configureIfNeeded(context: context)
         let task = try SwiftDataTaskRepository(
             context: context,
             deviceID: "seed"

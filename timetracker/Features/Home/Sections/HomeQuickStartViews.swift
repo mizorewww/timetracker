@@ -108,6 +108,7 @@ struct HomeQuickStartSection: View {
 /// One quick-start task: opens the task, and starts or stops its timer.
 struct HomeQuickStartTaskRow: View {
     let store: TimeTrackerStore
+    @Environment(AppSceneFeedbackRouter.self) private var feedbackRouter
     let task: TaskNode
     let actionLabelStyle: TaskTimerActionLabelStyle
     let openTask: (UUID) -> Void
@@ -123,10 +124,12 @@ struct HomeQuickStartTaskRow: View {
                 openTask(task.id)
             },
             performTimerAction: {
-                if let activeSegment {
-                    store.stop(segment: activeSegment)
-                } else {
-                    store.performTimerPickerSelection(task)
+                feedbackRouter.perform {
+                    if let activeSegment {
+                        try store.stop(segment: activeSegment)
+                    } else {
+                        try store.performTimerPickerSelection(task)
+                    }
                 }
             },
             taskAccessibilityIdentifier: "home.quickStart.task.\(task.id.uuidString)",

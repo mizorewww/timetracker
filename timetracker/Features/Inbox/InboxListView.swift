@@ -7,6 +7,7 @@ struct InboxListRow: View {
     let toggleCompletion: () -> Void
     @State private var isDeleteConfirmationPresented = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(AppSceneFeedbackRouter.self) private var feedbackRouter
 
     var body: some View {
         InboxItemRow(
@@ -20,7 +21,7 @@ struct InboxListRow: View {
             if let action = applicableSuggestionAction {
                 Button {
                     performAnimated {
-                        store.applyInboxSuggestion(baseline: action.baseline)
+                        try store.applyInboxSuggestion(baseline: action.baseline)
                     }
                 } label: {
                     Label(action.destination.applyTitle, systemImage: "checkmark")
@@ -38,7 +39,7 @@ struct InboxListRow: View {
             if canDiscardSuggestion {
                 Button {
                     performAnimated {
-                        store.discardInboxSuggestion(item)
+                        try store.discardInboxSuggestion(item)
                     }
                 } label: {
                     Label(AppStrings.localized("inbox.suggestion.discard"), systemImage: "xmark")
@@ -53,7 +54,7 @@ struct InboxListRow: View {
         ) {
             Button(AppStrings.delete, role: .destructive) {
                 performAnimated {
-                    store.deleteInboxItem(item)
+                    try store.deleteInboxItem(item)
                 }
             }
             Button(AppStrings.cancel, role: .cancel) {}
@@ -62,9 +63,9 @@ struct InboxListRow: View {
         }
     }
 
-    private func performAnimated(_ action: () -> Void) {
+    private func performAnimated(_ action: () throws -> Void) {
         withAnimation(reduceMotion ? nil : AppMotion.stateChange) {
-            action()
+            feedbackRouter.perform(action)
         }
     }
 

@@ -62,10 +62,12 @@ struct TimelineRow: View {
                 role: .destructive
             ) {
                 guard let pendingDeletionRequest else { return }
-                store.deleteSegment(
-                    segment.id,
-                    expectedBaseline: pendingDeletionRequest
-                )
+                presentationRouter.feedbackRouter.perform {
+                    try store.deleteSegment(
+                        segment.id,
+                        expectedBaseline: pendingDeletionRequest
+                    )
+                }
                 self.pendingDeletionRequest = nil
             }
             Button(AppStrings.cancel, role: .cancel) {}
@@ -135,7 +137,7 @@ struct TimelineRow: View {
 
         Button(role: .destructive) {
             guard let draft = store.segmentEditorDraft(for: segment) else {
-                store.errorMessage = SegmentMutationError.inconsistentSession.localizedDescription
+                presentationRouter.feedbackRouter.present(SegmentMutationError.inconsistentSession)
                 return
             }
             pendingDeletionRequest = draft.baseline

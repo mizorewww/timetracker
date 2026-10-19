@@ -47,7 +47,7 @@ extension TimeTrackerStore {
     }
 
     func completeChecklistVisualSuggestionFailure(
-        _ error: Error,
+        _: Error,
         request: ChecklistVisualSuggestionRequest,
         requestID: UUID,
         showsErrors: Bool,
@@ -77,9 +77,6 @@ extension TimeTrackerStore {
               showsErrors || preferences.llmAutomaticSuggestionsEnabled
         else {
             return
-        }
-        if showsErrors {
-            errorMessage = error.localizedDescription
         }
         checklistVisualSuggestionLifecycle.failureByItemID[request.itemID] =
             ChecklistVisualSuggestionFailure(

@@ -2,20 +2,18 @@ import Foundation
 import SwiftData
 
 extension TimeTrackerStore {
-    @discardableResult
     func recordTaskQuantity(
         taskID: UUID,
         amount: Int,
         entryID: UUID,
         recordedAt: Date = Date()
-    ) -> Bool {
+    ) throws {
         guard let goalBaseline = taskQuantityGoalBaseline(for: taskID) else {
-            handleTaskQuantityCommandError(
-                taskQuantityReadModelError(taskID: taskID)
-            )
-            return false
+            let error = taskQuantityReadModelError(taskID: taskID)
+            handleTaskQuantityCommandError(error)
+            throw error
         }
-        return recordTaskQuantity(
+        try recordTaskQuantity(
             taskID: taskID,
             goalBaseline: goalBaseline,
             amount: amount,
@@ -24,15 +22,14 @@ extension TimeTrackerStore {
         )
     }
 
-    @discardableResult
     func recordTaskQuantity(
         taskID: UUID,
         goalBaseline: TaskQuantityGoalMutationBaseline,
         amount: Int,
         entryID: UUID,
         recordedAt: Date = Date()
-    ) -> Bool {
-        performTaskQuantityCommand { coordinator in
+    ) throws {
+        try performTaskQuantityCommand { coordinator in
             try coordinator.record(
                 command: TaskQuantityEntryRecordCommand(
                     taskID: taskID,
@@ -45,22 +42,20 @@ extension TimeTrackerStore {
         }
     }
 
-    @discardableResult
     func updateTaskQuantityEntry(
         baseline: TaskQuantityEntryMutationBaseline,
         amount: Int,
         recordedAt: Date,
         operationID: UUID
-    ) -> Bool {
+    ) throws {
         guard let goalBaseline = taskQuantityGoalBaseline(
             for: baseline.taskID
         ) else {
-            handleTaskQuantityCommandError(
-                taskQuantityReadModelError(taskID: baseline.taskID)
-            )
-            return false
+            let error = taskQuantityReadModelError(taskID: baseline.taskID)
+            handleTaskQuantityCommandError(error)
+            throw error
         }
-        return updateTaskQuantityEntry(
+        try updateTaskQuantityEntry(
             baseline: baseline,
             goalBaseline: goalBaseline,
             amount: amount,
@@ -69,15 +64,14 @@ extension TimeTrackerStore {
         )
     }
 
-    @discardableResult
     func updateTaskQuantityEntry(
         baseline: TaskQuantityEntryMutationBaseline,
         goalBaseline: TaskQuantityGoalMutationBaseline,
         amount: Int,
         recordedAt: Date,
         operationID: UUID
-    ) -> Bool {
-        performTaskQuantityCommand { coordinator in
+    ) throws {
+        try performTaskQuantityCommand { coordinator in
             try coordinator.update(
                 command: TaskQuantityEntryUpdateCommand(
                     entryBaseline: baseline,
@@ -90,12 +84,11 @@ extension TimeTrackerStore {
         }
     }
 
-    @discardableResult
     func deleteTaskQuantityEntry(
         baseline: TaskQuantityEntryMutationBaseline,
         operationID: UUID
-    ) -> Bool {
-        performTaskQuantityCommand { coordinator in
+    ) throws {
+        try performTaskQuantityCommand { coordinator in
             try coordinator.delete(
                 command: TaskQuantityEntryDeleteCommand(
                     entryBaseline: baseline,
@@ -109,8 +102,8 @@ extension TimeTrackerStore {
         operation: (
             StoreScopedTaskQuantityEntryCommandCoordinator
         ) throws -> TaskQuantityEntryMutationOutcome
-    ) -> Bool {
-        performStoreCommand(
+    ) throws {
+        try performStoreCommand(
             onError: handleTaskQuantityCommandError,
             command: { session in
                 try operation(
@@ -130,27 +123,15 @@ extension TimeTrackerStore {
                     )
                 }
             }
-        ) != nil
+        )
     }
 
     private func handleTaskQuantityCommandError(
         _ error: Error
     ) {
         if error is TaskQuantityEntryMutationError {
-            do {
-                try refreshTaskQuantityConvergence()
-            } catch {
-                errorMessage = savedRefreshFailedMessage(error)
-                return
-            }
+            refreshLoggingFailure(plan: StoreRefreshPlan(scopes: [.tasks]))
         }
-        errorMessage = error.localizedDescription
-    }
-
-    private func refreshTaskQuantityConvergence() throws {
-        try refresh(
-            plan: StoreRefreshPlan(scopes: [.tasks])
-        )
     }
 
     private func taskQuantityReadModelError(

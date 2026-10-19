@@ -89,7 +89,9 @@ private struct AppPresentationSheet: View {
             QuickStartEditorSheet(
                 store: store,
                 selectedIDs: selectedIDs,
-                onSave: store.setQuickStartTaskIDs
+                onSave: { ids in
+                    feedbackRouter.perform { try store.setQuickStartTaskIDs(ids) } != nil
+                }
             )
         case .settings:
             AppSettingsSheet(
@@ -106,21 +108,25 @@ private struct AppPresentationSheet: View {
                 availableModels: draft.availableModels,
                 reasoningEffort: draft.reasoningEffort
             ) { configuration in
-                store.setLLMConfiguration(
-                    endpoint: configuration.endpoint,
-                    apiKey: configuration.apiKey,
-                    selectedModel: configuration.selectedModel,
-                    availableModelIDs: configuration.availableModels,
-                    reasoningEffort: configuration.reasoningEffort
-                )
+                feedbackRouter.perform {
+                    try store.setLLMConfiguration(
+                        endpoint: configuration.endpoint,
+                        apiKey: configuration.apiKey,
+                        selectedModel: configuration.selectedModel,
+                        availableModelIDs: configuration.availableModels,
+                        reasoningEffort: configuration.reasoningEffort
+                    )
+                } != nil
             }
         case let .llmPrompt(kind, instructions, reasoningEffort):
             LLMPromptInstructionsEditor(
                 kind: kind,
                 instructions: instructions,
                 reasoningEffort: reasoningEffort
-            ) {
-                store.setLLMPromptInstructions($0, for: kind)
+            ) { instructions in
+                feedbackRouter.perform {
+                    try store.setLLMPromptInstructions(instructions, for: kind)
+                } != nil
             }
         case .aiTaskPlanGenerator:
             AITaskPlanGeneratorSheet(
@@ -148,7 +154,22 @@ private struct AppSettingsSheet: View {
     let parentRouter: AppPresentationRouter
     let feedbackRouter: AppSceneFeedbackRouter
     let presentationID: UUID
-    @State private var childRouter = AppPresentationRouter()
+    @State private var childRouter: AppPresentationRouter
+
+    init(
+        store: TimeTrackerStore,
+        parentRouter: AppPresentationRouter,
+        feedbackRouter: AppSceneFeedbackRouter,
+        presentationID: UUID
+    ) {
+        self.store = store
+        self.parentRouter = parentRouter
+        self.feedbackRouter = feedbackRouter
+        self.presentationID = presentationID
+        _childRouter = State(
+            initialValue: AppPresentationRouter(feedbackRouter: feedbackRouter)
+        )
+    }
 
     var body: some View {
         NavigationStack {

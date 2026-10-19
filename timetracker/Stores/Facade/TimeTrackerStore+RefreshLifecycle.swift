@@ -6,7 +6,7 @@ extension TimeTrackerStore {
         do {
             try refresh()
         } catch {
-            errorMessage = error.localizedDescription
+            logUnpresentedFailure("Refresh", error)
         }
     }
 

@@ -3,28 +3,28 @@ import SwiftData
 
 extension TimeTrackerStore {
     @discardableResult
-    func addInboxItem(title: String) -> Bool {
-        performStoreScopedInboxMutation { coordinator in
+    func addInboxItem(title: String) throws -> Bool {
+        try performStoreScopedInboxMutation { coordinator in
             try coordinator.add(title: title)
-        }?.didMutate == true
+        }.didMutate
     }
 
-    func toggleInboxItem(_ item: InboxItem) {
-        _ = performStoreScopedInboxMutation { coordinator in
+    func toggleInboxItem(_ item: InboxItem) throws {
+        try performStoreScopedInboxMutation { coordinator in
             try coordinator.toggle(itemID: item.id)
         }
     }
 
-    func updateInboxItemTitle(_ item: InboxItem, title: String) {
+    func updateInboxItemTitle(_ item: InboxItem, title: String) throws {
         let oldTitle = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
         let newTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let outcome = performStoreScopedInboxMutation { coordinator in
+        let outcome = try performStoreScopedInboxMutation { coordinator in
             try coordinator.updateTitle(
                 itemID: item.id,
                 title: title
             )
         }
-        if outcome?.didMutate == true,
+        if outcome.didMutate,
            !newTitle.isEmpty,
            newTitle != oldTitle,
            let updatedItem = inboxItems.first(where: { $0.id == item.id })
@@ -34,41 +34,41 @@ extension TimeTrackerStore {
         }
     }
 
-    func deleteInboxItem(_ item: InboxItem) {
-        let outcome = performStoreScopedInboxMutation { coordinator in
+    func deleteInboxItem(_ item: InboxItem) throws {
+        let outcome = try performStoreScopedInboxMutation { coordinator in
             try coordinator.delete(itemID: item.id)
         }
-        if outcome?.didMutate == true {
+        if outcome.didMutate {
             inboxSuggestionFailureByItemID[item.id] = nil
         }
     }
 
-    func discardInboxSuggestion(_ item: InboxItem) {
-        let outcome = performStoreScopedInboxMutation { coordinator in
+    func discardInboxSuggestion(_ item: InboxItem) throws {
+        let outcome = try performStoreScopedInboxMutation { coordinator in
             try coordinator.discardSuggestion(itemID: item.id)
         }
-        if outcome?.didMutate == true {
+        if outcome.didMutate {
             inboxSuggestionFailureByItemID[item.id] = nil
         }
     }
 
-    @discardableResult
-    func reorderInboxItems(sourceOffsets: IndexSet, destination: Int) -> Bool {
+    func reorderInboxItems(sourceOffsets: IndexSet, destination: Int) throws {
         let currentItems = openInboxItems
         let orderedIDs = StoreScopedInboxCommandCoordinator.reorderedOpenItemIDs(
             items: currentItems,
             sourceOffsets: sourceOffsets,
             destination: destination
         )
-        return performStoreScopedInboxMutation { coordinator in
+        try performStoreScopedInboxMutation { coordinator in
             try coordinator.reorder(orderedItemIDs: orderedIDs)
-        } != nil
+        }
     }
 
+    @discardableResult
     func performStoreScopedInboxMutation(
         _ action: (StoreScopedInboxCommandCoordinator) throws -> InboxMutationOutcome
-    ) -> InboxMutationOutcome? {
-        performStoreScopedInboxMutation(
+    ) throws -> InboxMutationOutcome {
+        try performStoreScopedInboxMutation(
             refreshScopes: [.inbox],
             eventsForOutcome: { $0.events },
             action
@@ -79,19 +79,15 @@ extension TimeTrackerStore {
         refreshScopes: Set<StoreRefreshScope>,
         eventsForOutcome: @escaping (Outcome) -> Set<StoreDomainEvent>,
         _ action: (StoreScopedInboxCommandCoordinator) throws -> Outcome
-    ) -> Outcome? {
-        performStoreCommand(
+    ) throws -> Outcome {
+        try performStoreCommand(
             eventsForOutcome: eventsForOutcome,
             onError: { error in
                 if error is StoreScopedInboxMutationError {
-                    do {
-                        try self.refresh(plan: StoreRefreshPlan(scopes: refreshScopes))
-                    } catch {
-                        self.errorMessage = self.savedRefreshFailedMessage(error)
-                        return
-                    }
+                    self.refreshLoggingFailure(
+                        plan: StoreRefreshPlan(scopes: refreshScopes)
+                    )
                 }
-                self.errorMessage = error.localizedDescription
             },
             command: { session in
                 try action(
@@ -104,10 +100,6 @@ extension TimeTrackerStore {
     }
 
     func refreshStoreScopedInboxReadModels(scopes: Set<StoreRefreshScope>) {
-        do {
-            try refresh(plan: StoreRefreshPlan(scopes: scopes))
-        } catch {
-            errorMessage = savedRefreshFailedMessage(error)
-        }
+        refreshLoggingFailure(plan: StoreRefreshPlan(scopes: scopes))
     }
 }

@@ -50,14 +50,14 @@ extension SettingsView {
         switch confirmation {
         case .rebuildDemo:
             #if DEBUG
-            store.replaceWithDemoData()
+            feedbackRouter.perform { try store.replaceWithDemoData() }
             #endif
         case .clearDemo:
             #if DEBUG
-            store.clearDemoData()
+            feedbackRouter.perform { try store.clearDemoData() }
             #endif
         case .resetAllData:
-            store.clearAllData()
+            feedbackRouter.perform { try store.clearAllData() }
         case .optimizeDatabase:
             dataOperationMessage = nil
             do {

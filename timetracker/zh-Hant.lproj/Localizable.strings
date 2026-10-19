@@ -1103,7 +1103,6 @@
 "inbox.suggestion.error.missingModel" = "請先在設定裡選擇 LLM 模型，再取得推薦。";
 "inbox.suggestion.error.noTaskCandidates" = "請先建立任務或分類，再取得推薦。";
 "inbox.suggestion.error.noValidTask" = "推薦結果沒有匹配到可用目的地。";
-"error.savedRefreshFailed" = "變更已儲存，但無法重新載入最新資料。%@";
 "preference.error.invalidValue" = "設定值無效，未儲存任何變更。";
 "preference.error.payloadTooLarge" = "設定包含的資料過多，未儲存任何變更。";
 "preference.error.encodingFailed" = "無法安全編碼此設定，未儲存任何變更。";

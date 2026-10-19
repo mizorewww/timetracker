@@ -236,8 +236,7 @@ struct TaskRecurrenceWorkEligibilityTests {
     {
         let fixture = try makeFixture()
         let timer = StoreScopedTimerCommandCoordinator(
-            container: fixture.container,
-            writeAuthorization: .isolatedTestHarness,
+            session: .testHarness(fixture.container),
             deviceID: "timer",
             nowProvider: { fixture.now }
         )
@@ -259,8 +258,7 @@ struct TaskRecurrenceWorkEligibilityTests {
         )
 
         let pomodoro = StoreScopedPomodoroCommandCoordinator(
-            container: fixture.container,
-            writeAuthorization: .isolatedTestHarness,
+            session: .testHarness(fixture.container),
             deviceID: "pomodoro",
             nowProvider: { fixture.now }
         )
@@ -423,8 +421,7 @@ private extension TaskRecurrenceWorkEligibilityTests {
             hour: 12
         )
         let outcome = try StoreScopedTaskRecurrenceCommandCoordinator(
-            container: context.container,
-            writeAuthorization: .isolatedTestHarness,
+            session: .testHarness(context.container),
             deviceID: "recurrence"
         ).createDailyRule(
             templateTaskID: template.id,
@@ -469,8 +466,7 @@ private extension TaskRecurrenceWorkEligibilityTests {
         container: ModelContainer
     ) -> StoreScopedTaskRecurrenceCommandCoordinator {
         StoreScopedTaskRecurrenceCommandCoordinator(
-            container: container,
-            writeAuthorization: .isolatedTestHarness,
+            session: .testHarness(container),
             deviceID: "recurrence"
         )
     }

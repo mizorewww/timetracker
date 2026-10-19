@@ -176,8 +176,7 @@ struct StoreScopedTimerCommandCoordinatorTests {
             deviceID: "test"
         ).startTask(taskID: task.id, source: .timer)
         let coordinator = StoreScopedTimerCommandCoordinator(
-            container: container,
-            writeAuthorization: .isolatedTestHarness,
+            session: .testHarness(container),
             deviceID: "test"
         )
 

@@ -63,11 +63,10 @@ private extension TimeTrackerStore {
                 }
                 self.errorMessage = error.localizedDescription
             },
-            command: { container in
+            command: { session in
                 try operation(
                     StoreScopedTaskRecurrenceCommandCoordinator(
-                        container: container,
-                        writeAuthorization: writeAuthorization
+                        session: session
                     )
                 )
             }

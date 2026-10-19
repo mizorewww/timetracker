@@ -136,20 +136,17 @@ enum TimerAdmissionPreferenceResolver {
 /// store. Every decision is made from a fresh context created after acquiring
 /// the store lock; no facade or caller cache participates in admission.
 @MainActor
-struct StoreScopedTimerCommandCoordinator: StoreScopedCommandCoordinator {
-    let container: ModelContainer
-    let writeAuthorization: StoreWriteAuthorization
+struct StoreScopedTimerCommandCoordinator {
+    let session: StoreMutationSession
     let deviceID: String?
     let nowProvider: () -> Date
 
     init(
-        container: ModelContainer,
-        writeAuthorization: StoreWriteAuthorization = .applicationState,
+        session: StoreMutationSession,
         deviceID: String? = nil,
         nowProvider: @escaping () -> Date = Date.init
     ) {
-        self.container = container
-        self.writeAuthorization = writeAuthorization
+        self.session = session
         self.deviceID = deviceID
         self.nowProvider = nowProvider
     }
@@ -159,7 +156,7 @@ struct StoreScopedTimerCommandCoordinator: StoreScopedCommandCoordinator {
         sameTaskBehavior: TimerSameTaskStartBehavior = .reuseOldest,
         source: TimeSessionSource = .timer
     ) throws -> StoreScopedTimerCommandOutcome {
-        try mutationSession.withFreshMutationContext { context in
+        try session.withFreshMutationContext { context in
             let mutationDate = nowProvider()
             let taskRepository = SwiftDataTaskRepository(
                 context: context,
@@ -253,7 +250,7 @@ struct StoreScopedTimerCommandCoordinator: StoreScopedCommandCoordinator {
         segmentID: UUID? = nil,
         taskID: UUID? = nil
     ) throws -> StoreScopedTimerCommandOutcome {
-        try mutationSession.withFreshMutationContext { context in
+        try session.withFreshMutationContext { context in
             let mutationDate = nowProvider()
             guard segmentID == nil || taskID == nil else {
                 return Self.noOpOutcome

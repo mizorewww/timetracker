@@ -258,8 +258,7 @@ struct StoreScopedPomodoroPhaseEndCoordinatorTests {
         now: Date = Date()
     ) -> StoreScopedPomodoroCommandCoordinator {
         StoreScopedPomodoroCommandCoordinator(
-            container: container,
-            writeAuthorization: .isolatedTestHarness,
+            session: .testHarness(container),
             deviceID: "test",
             nowProvider: { now }
         )

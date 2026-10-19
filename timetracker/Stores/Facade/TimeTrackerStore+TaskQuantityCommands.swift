@@ -112,11 +112,10 @@ extension TimeTrackerStore {
     ) -> Bool {
         performStoreCommand(
             onError: handleTaskQuantityCommandError,
-            command: { container in
+            command: { session in
                 try operation(
                     StoreScopedTaskQuantityEntryCommandCoordinator(
-                        container: container,
-                        writeAuthorization: writeAuthorization
+                        session: session
                     )
                 )
             },

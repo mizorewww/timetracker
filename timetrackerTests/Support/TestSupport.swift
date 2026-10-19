@@ -27,6 +27,14 @@ func makeTestStore() -> TimeTrackerStore {
     )
 }
 
+extension StoreMutationSession {
+    /// A session for in-memory fixtures that never consults the developer's
+    /// real write-safety state.
+    static func testHarness(_ container: ModelContainer) -> StoreMutationSession {
+        StoreMutationSession(container: container, writeAuthorization: .isolatedTestHarness)
+    }
+}
+
 @MainActor
 func makeTestSystemActionCommandHandler() -> SystemActionCommandHandler {
     SystemActionCommandHandler(writeAuthorization: .isolatedTestHarness)

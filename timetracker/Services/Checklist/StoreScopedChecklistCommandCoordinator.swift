@@ -63,20 +63,17 @@ struct ChecklistMutationOutcome: Equatable {
 /// lifecycle writes. Every command resolves its task, item, ordering, and
 /// hierarchy only after the shared store lock is held.
 @MainActor
-struct StoreScopedChecklistCommandCoordinator: StoreScopedCommandCoordinator {
-    let container: ModelContainer
-    let writeAuthorization: StoreWriteAuthorization
+struct StoreScopedChecklistCommandCoordinator {
+    let session: StoreMutationSession
     let deviceID: String
     let nowProvider: () -> Date
 
     init(
-        container: ModelContainer,
-        writeAuthorization: StoreWriteAuthorization = .applicationState,
+        session: StoreMutationSession,
         deviceID: String = DeviceIdentity.current,
         nowProvider: @escaping () -> Date = Date.init
     ) {
-        self.container = container
-        self.writeAuthorization = writeAuthorization
+        self.session = session
         self.deviceID = deviceID
         self.nowProvider = nowProvider
     }
@@ -161,7 +158,7 @@ struct StoreScopedChecklistCommandCoordinator: StoreScopedCommandCoordinator {
         taskID: UUID,
         operation: (ModelContext, [TaskNode]) throws -> (itemID: UUID?, didMutate: Bool)
     ) throws -> ChecklistMutationOutcome {
-        try mutationSession.withFreshMutationContext { context in
+        try session.withFreshMutationContext { context in
             let tasks = try SwiftDataTaskRepository(
                 context: context,
                 deviceID: deviceID

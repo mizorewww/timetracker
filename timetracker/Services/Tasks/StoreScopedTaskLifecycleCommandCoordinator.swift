@@ -5,28 +5,25 @@ import SwiftData
 /// the same SwiftData store. The canonical subtree and active work set are
 /// fetched only after the shared timer lock is held.
 @MainActor
-struct StoreScopedTaskLifecycleCommandCoordinator: StoreScopedCommandCoordinator {
-    let container: ModelContainer
-    let writeAuthorization: StoreWriteAuthorization
+struct StoreScopedTaskLifecycleCommandCoordinator {
+    let session: StoreMutationSession
     let deviceID: String?
     let didReachDraftCheckpoint:
         @Sendable (TaskDraftMutationCheckpoint) throws -> Void
 
     init(
-        container: ModelContainer,
-        writeAuthorization: StoreWriteAuthorization = .applicationState,
+        session: StoreMutationSession,
         deviceID: String? = nil,
         didReachDraftCheckpoint: @escaping
         @Sendable (TaskDraftMutationCheckpoint) throws -> Void = { _ in }
     ) {
-        self.container = container
-        self.writeAuthorization = writeAuthorization
+        self.session = session
         self.deviceID = deviceID
         self.didReachDraftCheckpoint = didReachDraftCheckpoint
     }
 
     func archive(taskID: UUID) throws -> TaskArchiveMutationOutcome {
-        try mutationSession.withFreshMutationContext { context in
+        try session.withFreshMutationContext { context in
             let taskRepository = SwiftDataTaskRepository(
                 context: context,
                 deviceID: deviceID
@@ -81,7 +78,7 @@ struct StoreScopedTaskLifecycleCommandCoordinator: StoreScopedCommandCoordinator
     }
 
     func unarchive(taskID: UUID) throws -> TaskUnarchiveMutationOutcome {
-        try mutationSession.withFreshMutationContext { context in
+        try session.withFreshMutationContext { context in
             let taskRepository = SwiftDataTaskRepository(
                 context: context,
                 deviceID: deviceID
@@ -147,7 +144,7 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
     ) throws -> TaskDraftMutationOutcome {
         // Authorization must reject a read-only store before any draft
         // validation work; the session re-checks it before taking the lock.
-        try writeAuthorization.requireUserWritesAllowed()
+        try session.writeAuthorization.requireUserWritesAllowed()
         let preparedProgress = try TaskProgressDraftPersistencePolicy
             .prepare(
                 quantityGoal: draft.quantityGoal,
@@ -155,7 +152,7 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
                 confirmsQuantityProgressReset:
                 draft.confirmsQuantityProgressReset
             )
-        return try mutationSession.withFreshMutationContext { context in
+        return try session.withFreshMutationContext { context in
             let resolvedDeviceID = deviceID ?? DeviceIdentity.current
             let taskRepository = SwiftDataTaskRepository(
                 context: context,
@@ -227,8 +224,7 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
 
             let recurrenceOutcome = try TaskDraftProgressMutationService(
                 context: context,
-                container: container,
-                writeAuthorization: writeAuthorization,
+                session: session,
                 deviceID: resolvedDeviceID,
                 didReachCheckpoint: didReachDraftCheckpoint
             ).apply(

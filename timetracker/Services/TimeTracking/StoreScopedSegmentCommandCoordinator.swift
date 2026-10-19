@@ -2,20 +2,17 @@ import Foundation
 import SwiftData
 
 @MainActor
-struct StoreScopedSegmentCommandCoordinator: StoreScopedCommandCoordinator {
-    let container: ModelContainer
-    let writeAuthorization: StoreWriteAuthorization
+struct StoreScopedSegmentCommandCoordinator {
+    let session: StoreMutationSession
     let deviceID: String?
     let nowProvider: () -> Date
 
     init(
-        container: ModelContainer,
-        writeAuthorization: StoreWriteAuthorization = .applicationState,
+        session: StoreMutationSession,
         deviceID: String? = nil,
         nowProvider: @escaping () -> Date = Date.init
     ) {
-        self.container = container
-        self.writeAuthorization = writeAuthorization
+        self.session = session
         self.deviceID = deviceID
         self.nowProvider = nowProvider
     }
@@ -171,7 +168,7 @@ struct StoreScopedSegmentCommandCoordinator: StoreScopedCommandCoordinator {
             SwiftDataPomodoroRepository
         ) throws -> Result
     ) throws -> Result {
-        try mutationSession.withFreshMutationContext { context in
+        try session.withFreshMutationContext { context in
             let now = nowProvider()
             let timeRepository = SwiftDataTimeTrackingRepository(
                 context: context,

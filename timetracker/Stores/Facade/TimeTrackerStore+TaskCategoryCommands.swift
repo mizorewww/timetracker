@@ -20,10 +20,9 @@ extension TimeTrackerStore {
         performStoreCommand(
             eventsForOutcome: { $0.events },
             onError: handleStoreScopedTaskCategoryError
-        ) { container in
+        ) { session in
             try StoreScopedTaskCategoryCommandCoordinator(
-                container: container,
-                writeAuthorization: writeAuthorization
+                session: session
             ).reorder(
                 orderedCategoryIDs: orderedCategoryIDs,
                 baseline: baseline
@@ -43,10 +42,9 @@ extension TimeTrackerStore {
         return performStoreCommand(
             eventsForOutcome: { $0.events },
             onError: handleStoreScopedTaskCategoryError
-        ) { container in
+        ) { session in
             try StoreScopedTaskCategoryCommandCoordinator(
-                container: container,
-                writeAuthorization: writeAuthorization
+                session: session
             ).save(draft: preparedDraft)
         } != nil
     }
@@ -61,10 +59,9 @@ extension TimeTrackerStore {
         performStoreCommand(
             eventsForOutcome: { $0.events },
             onError: handleStoreScopedTaskCategoryError
-        ) { container in
+        ) { session in
             try StoreScopedTaskCategoryCommandCoordinator(
-                container: container,
-                writeAuthorization: writeAuthorization
+                session: session
             ).delete(baseline: baseline)
         } != nil
     }

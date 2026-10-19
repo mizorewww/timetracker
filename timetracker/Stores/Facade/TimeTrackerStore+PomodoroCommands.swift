@@ -30,10 +30,9 @@ extension TimeTrackerStore {
         targetRounds: Int = 1
     ) -> Bool {
         performStoreCommand(
-            command: { container in
+            command: { session in
                 try StoreScopedPomodoroCommandCoordinator(
-                    container: container,
-                    writeAuthorization: writeAuthorization
+                    session: session
                 ).start(
                     taskID: taskID,
                     focusSeconds: focusSeconds,
@@ -56,10 +55,9 @@ extension TimeTrackerStore {
         phase: PomodoroPhaseToken
     ) -> Bool {
         performStoreCommand(
-            command: { container in
+            command: { session in
                 try StoreScopedPomodoroCommandCoordinator(
-                    container: container,
-                    writeAuthorization: writeAuthorization
+                    session: session
                 ).resume(
                     phase: phase
                 )

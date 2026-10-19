@@ -71,8 +71,7 @@ struct StoreScopedPomodoroReconcileCoordinatorTests {
         try context.save()
 
         let outcome = try StoreScopedPomodoroCommandCoordinator(
-            container: context.container,
-            writeAuthorization: .isolatedTestHarness,
+            session: .testHarness(context.container),
             deviceID: "test",
             nowProvider: { now }
         ).reconcileExpiredFocuses(observedAt: now)

@@ -5,17 +5,8 @@ import SwiftData
 /// because timer admission and other commands read those rows under the shared
 /// store lock.
 @MainActor
-struct StoreScopedPreferenceCommandCoordinator: StoreScopedCommandCoordinator {
-    let container: ModelContainer
-    let writeAuthorization: StoreWriteAuthorization
-
-    init(
-        container: ModelContainer,
-        writeAuthorization: StoreWriteAuthorization = .applicationState
-    ) {
-        self.container = container
-        self.writeAuthorization = writeAuthorization
-    }
+struct StoreScopedPreferenceCommandCoordinator {
+    let session: StoreMutationSession
 
     func set(key: AppPreferenceKey, valueJSON: String) throws {
         try set(values: [(key, valueJSON)])
@@ -42,6 +33,6 @@ struct StoreScopedPreferenceCommandCoordinator: StoreScopedCommandCoordinator {
     private func withFreshMutationContext(
         _ operation: (ModelContext) throws -> Void
     ) throws {
-        try mutationSession.withFreshMutationContext(operation)
+        try session.withFreshMutationContext(operation)
     }
 }

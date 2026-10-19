@@ -31,8 +31,7 @@ extension TimeTrackerStore {
 
         do {
             let outcome = try StoreScopedChecklistCommandCoordinator(
-                container: modelContext.container,
-                writeAuthorization: writeAuthorization
+                session: requireMutationSession()
             ).applyVisualSuggestion(baseline: request.baseline, result: result)
             if outcome.didMutate {
                 finishStoreScopedMutation(events: outcome.events)

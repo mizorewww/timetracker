@@ -39,11 +39,14 @@ extension TimeTrackerStore {
         return outcome
     }
 
-    /// The configured store container, or `StoreError.notConfigured` when the
-    /// store has not been configured yet.
-    func requireStoreContainer() throws -> ModelContainer {
+    /// The mutation session for the configured store, or
+    /// `StoreError.notConfigured` when the store has not been configured yet.
+    func requireMutationSession() throws -> StoreMutationSession {
         guard let modelContext else { throw StoreError.notConfigured }
-        return modelContext.container
+        return StoreMutationSession(
+            container: modelContext.container,
+            writeAuthorization: writeAuthorization
+        )
     }
 
     /// Formats the standard post-commit refresh failure message.
@@ -55,14 +58,14 @@ extension TimeTrackerStore {
     }
 
     /// Shared tail for store-scoped command methods: resolves the configured
-    /// container, runs the command, applies `finish` to the committed outcome,
+    /// mutation session, runs the command, applies `finish` to the committed outcome,
     /// and maps any thrown error to `errorMessage`. Pass `onError` when the
     /// domain must converge stale read models before the message is assigned;
     /// it then owns the whole failure path, including the final assignment.
     @discardableResult
     func performStoreCommand<Outcome>(
         onError: ((Error) -> Void)? = nil,
-        command: (ModelContainer) throws -> Outcome,
+        command: (StoreMutationSession) throws -> Outcome,
         finish: (Outcome) throws -> Void
     ) -> Outcome? {
         performStoreCommand(
@@ -80,15 +83,11 @@ extension TimeTrackerStore {
     @discardableResult
     func performStoreCommand<Outcome, Result>(
         onError: ((Error) -> Void)? = nil,
-        command: (ModelContainer) throws -> Outcome,
+        command: (StoreMutationSession) throws -> Outcome,
         finishResult: (Outcome) throws -> Result
     ) -> Result? {
-        guard let modelContext else {
-            errorMessage = StoreError.notConfigured.localizedDescription
-            return nil
-        }
         do {
-            return try finishResult(command(modelContext.container))
+            return try finishResult(command(requireMutationSession()))
         } catch {
             if let onError {
                 onError(error)
@@ -105,7 +104,7 @@ extension TimeTrackerStore {
     func performStoreCommand<Outcome>(
         eventsForOutcome: (Outcome) -> Set<StoreDomainEvent>,
         onError: ((Error) -> Void)? = nil,
-        command: (ModelContainer) throws -> Outcome
+        command: (StoreMutationSession) throws -> Outcome
     ) -> Outcome? {
         performStoreCommand(onError: onError, command: command) { outcome in
             finishStoreScopedMutation(events: eventsForOutcome(outcome))

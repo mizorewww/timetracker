@@ -93,8 +93,7 @@ extension TimeTrackerStore {
         let didCommit: Bool
         do {
             try StoreScopedPreferenceCommandCoordinator(
-                container: requireStoreContainer(),
-                writeAuthorization: writeAuthorization
+                session: requireMutationSession()
             ).set(
                 values: [
                     (.llmEndpoint, PreferenceJSON.encode(normalizedEndpoint)),

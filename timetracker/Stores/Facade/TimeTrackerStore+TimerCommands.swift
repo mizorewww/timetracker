@@ -22,13 +22,13 @@ extension TimeTrackerStore {
         source: TimeSessionSource = .timer
     ) -> Bool {
         performStoreCommand(
-            command: { container in
+            command: { session in
                 try SystemActionCommandHandler(
                     writeAuthorization: writeAuthorization
                 ).startTimerMutation(
                     taskID: taskID,
                     source: source,
-                    container: container
+                    container: session.container
                 )
             },
             finishResult: finishStoreScopedTimerCommand
@@ -64,13 +64,13 @@ extension TimeTrackerStore {
         taskID: UUID? = nil
     ) -> Bool {
         performStoreCommand(
-            command: { container in
+            command: { session in
                 try SystemActionCommandHandler(
                     writeAuthorization: writeAuthorization
                 ).stopTimerMutation(
                     segmentID: segmentID,
                     taskID: taskID,
-                    container: container
+                    container: session.container
                 )
             },
             finishResult: finishStoreScopedTimerCommand

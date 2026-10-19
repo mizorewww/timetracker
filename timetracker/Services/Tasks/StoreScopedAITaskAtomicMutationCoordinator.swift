@@ -5,9 +5,8 @@ import SwiftData
 /// checklist, timer, and lifecycle commands. Provider-facing tools never call
 /// this type directly.
 actor StoreScopedAITaskAtomicMutationCoordinator {
-    let container: ModelContainer
+    let session: StoreMutationSession
     let scope: StoreScope
-    let writeAuthorization: StoreWriteAuthorization
     let deviceID: String
     let nowProvider: @Sendable () -> Date
     private let didReachCheckpoint:
@@ -15,16 +14,14 @@ actor StoreScopedAITaskAtomicMutationCoordinator {
 
     @MainActor
     init(
-        container: ModelContainer,
-        writeAuthorization: StoreWriteAuthorization = .applicationState,
+        session: StoreMutationSession,
         deviceID: String = DeviceIdentity.current,
         nowProvider: @escaping @Sendable () -> Date = Date.init,
         didReachCheckpoint: @escaping
         @Sendable (AITaskAtomicMutationCheckpoint) throws -> Void = { _ in }
     ) throws {
-        self.container = container
-        scope = try StoreScope(container: container)
-        self.writeAuthorization = writeAuthorization
+        self.session = session
+        scope = try StoreScope(container: session.container)
         self.deviceID = deviceID
         self.nowProvider = nowProvider
         self.didReachCheckpoint = didReachCheckpoint
@@ -34,7 +31,7 @@ actor StoreScopedAITaskAtomicMutationCoordinator {
         try PerformanceSignpost.interval("AI workspace baseline capture") {
             try StoreMutationSession.withLockedFreshContext(
                 scope: scope,
-                container: container
+                container: session.container
             ) { context in
                 try Self.captureBaseline(in: context)
             }
@@ -44,11 +41,11 @@ actor StoreScopedAITaskAtomicMutationCoordinator {
     func apply(
         _ plan: AITaskAtomicMutationPlan
     ) async throws -> AITaskAtomicMutationOutcome {
-        try await writeAuthorization.requireUserWritesAllowed()
+        try await session.writeAuthorization.requireUserWritesAllowed()
         return try PerformanceSignpost.interval("AI workspace atomic apply") {
             try StoreMutationSession.withLockedFreshContext(
                 scope: scope,
-                container: container
+                container: session.container
             ) { context in
                 try context.performAtomicMutation(author: .localMutation) {
                     let current = try Self.captureBaseline(in: context)
@@ -317,8 +314,7 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
         )
         _ = try TaskDraftProgressMutationService(
             context: context,
-            container: container,
-            writeAuthorization: writeAuthorization,
+            session: session,
             deviceID: deviceID,
             didReachCheckpoint: { _ in }
         ).apply(

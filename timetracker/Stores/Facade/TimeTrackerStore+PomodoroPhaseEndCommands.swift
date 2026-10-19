@@ -17,10 +17,9 @@ extension TimeTrackerStore {
     @discardableResult
     func reconcileActivePomodoro(now: Date = Date()) -> Bool {
         performStoreCommand(
-            command: { container in
+            command: { session in
                 try StoreScopedPomodoroCommandCoordinator(
-                    container: container,
-                    writeAuthorization: writeAuthorization
+                    session: session
                 ).reconcileExpiredFocuses(observedAt: now)
             },
             finish: { outcome in
@@ -111,11 +110,10 @@ extension TimeTrackerStore {
         ) throws -> StoreScopedPomodoroPhaseMutationOutcome
     ) -> Bool {
         performStoreCommand(
-            command: { container in
+            command: { session in
                 try mutation(
                     StoreScopedPomodoroCommandCoordinator(
-                        container: container,
-                        writeAuthorization: writeAuthorization
+                        session: session
                     )
                 )
             },

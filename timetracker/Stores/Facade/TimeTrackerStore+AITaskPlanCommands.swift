@@ -6,8 +6,7 @@ extension TimeTrackerStore {
         -> AITaskAtomicMutationBaseline
     {
         try await StoreScopedAITaskAtomicMutationCoordinator(
-            container: requireStoreContainer(),
-            writeAuthorization: writeAuthorization
+            session: requireMutationSession()
         ).captureBaseline()
     }
 
@@ -32,8 +31,7 @@ extension TimeTrackerStore {
 
         do {
             let outcome = try await StoreScopedAITaskAtomicMutationCoordinator(
-                container: modelContext.container,
-                writeAuthorization: writeAuthorization
+                session: requireMutationSession()
             ).apply(
                 AITaskAtomicMutationPlan(
                     baseline: draft.baseline,

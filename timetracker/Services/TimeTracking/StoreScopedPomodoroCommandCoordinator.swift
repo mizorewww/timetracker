@@ -10,20 +10,17 @@ private enum StoreScopedPomodoroCommandInvariantError: Error {
 /// Serializes Pomodoro admission and phase changes with ordinary timer commands
 /// and task lifecycle writes for one concrete SwiftData store.
 @MainActor
-struct StoreScopedPomodoroCommandCoordinator: StoreScopedCommandCoordinator {
-    let container: ModelContainer
-    let writeAuthorization: StoreWriteAuthorization
+struct StoreScopedPomodoroCommandCoordinator {
+    let session: StoreMutationSession
     let deviceID: String?
     let nowProvider: () -> Date
 
     init(
-        container: ModelContainer,
-        writeAuthorization: StoreWriteAuthorization = .applicationState,
+        session: StoreMutationSession,
         deviceID: String? = nil,
         nowProvider: @escaping () -> Date = Date.init
     ) {
-        self.container = container
-        self.writeAuthorization = writeAuthorization
+        self.session = session
         self.deviceID = deviceID
         self.nowProvider = nowProvider
     }
@@ -35,7 +32,7 @@ struct StoreScopedPomodoroCommandCoordinator: StoreScopedCommandCoordinator {
         longBreakSeconds: Int?,
         targetRounds: Int
     ) throws -> StoreScopedPomodoroStartOutcome {
-        try mutationSession.withFreshMutationContext { context in
+        try session.withFreshMutationContext { context in
             let now = nowProvider()
             let resolvedDeviceID = deviceID ?? DeviceIdentity.current
             let taskRepository = SwiftDataTaskRepository(
@@ -112,7 +109,7 @@ struct StoreScopedPomodoroCommandCoordinator: StoreScopedCommandCoordinator {
     func resume(
         phase: PomodoroPhaseToken
     ) throws -> StoreScopedPomodoroResumeOutcome {
-        try mutationSession.withFreshMutationContext { context in
+        try session.withFreshMutationContext { context in
             let now = nowProvider()
             let resolvedDeviceID = deviceID ?? DeviceIdentity.current
             let timeRepository = SwiftDataTimeTrackingRepository(

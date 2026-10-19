@@ -18,10 +18,9 @@ extension TimeTrackerStore {
         }
         return performStoreCommand(
             onError: handleSegmentMutationFailure,
-            command: { container in
+            command: { session in
                 try StoreScopedSegmentCommandCoordinator(
-                    container: container,
-                    writeAuthorization: writeAuthorization
+                    session: session
                 ).addManualTime(draft: draft, taskID: taskID)
             },
             finish: { _ in
@@ -61,8 +60,7 @@ extension TimeTrackerStore {
             throw StoreError.taskSelectionRequired
         }
         let outcome = try StoreScopedSegmentCommandCoordinator(
-            container: requireStoreContainer(),
-            writeAuthorization: writeAuthorization
+            session: requireMutationSession()
         ).update(
             draft: draft,
             taskID: taskID
@@ -78,8 +76,7 @@ extension TimeTrackerStore {
         expectedBaseline: SegmentEditorDraftBaseline?
     ) throws {
         let outcome = try StoreScopedSegmentCommandCoordinator(
-            container: requireStoreContainer(),
-            writeAuthorization: writeAuthorization
+            session: requireMutationSession()
         ).delete(segmentID: segmentID, expectedBaseline: expectedBaseline)
         finishStoreScopedPomodoroMutation(
             events: outcome.events,

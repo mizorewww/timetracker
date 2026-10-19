@@ -5,7 +5,7 @@ import SwiftData
 /// Shortcuts, and Watch command processes), and runs in a fresh context that
 /// is created only after the lock is held, so it cannot carry a stale snapshot
 /// into the critical section.
-nonisolated struct StoreMutationSession {
+nonisolated struct StoreMutationSession: Sendable {
     static let lockFileSuffix = ".store-mutations.lock"
 
     let container: ModelContainer
@@ -53,18 +53,5 @@ nonisolated struct StoreMutationSession {
                 context.autosaveEnabled = false
                 return try operation(context)
             }
-    }
-}
-
-/// A store-scoped writer: every coordinator authorizes and locks through the
-/// same session built from its container.
-protocol StoreScopedCommandCoordinator {
-    var container: ModelContainer { get }
-    var writeAuthorization: StoreWriteAuthorization { get }
-}
-
-extension StoreScopedCommandCoordinator {
-    var mutationSession: StoreMutationSession {
-        StoreMutationSession(container: container, writeAuthorization: writeAuthorization)
     }
 }

@@ -63,8 +63,10 @@ struct SystemActionCommandHandler {
         deviceID: String = DeviceIdentity.current
     ) throws -> InboxMutationOutcome {
         try StoreScopedInboxCommandCoordinator(
-            container: container,
-            writeAuthorization: writeAuthorization,
+            session: StoreMutationSession(
+                container: container,
+                writeAuthorization: writeAuthorization
+            ),
             deviceID: deviceID
         ).add(command: InboxCaptureCommand(
             title: title,
@@ -78,8 +80,10 @@ struct SystemActionCommandHandler {
         container: ModelContainer
     ) throws -> StoreScopedTimerCommandOutcome {
         try StoreScopedTimerCommandCoordinator(
-            container: container,
-            writeAuthorization: writeAuthorization
+            session: StoreMutationSession(
+                container: container,
+                writeAuthorization: writeAuthorization
+            )
         ).start(
             taskID: taskID,
             source: source
@@ -92,8 +96,10 @@ struct SystemActionCommandHandler {
         container: ModelContainer
     ) throws -> StoreScopedTimerCommandOutcome {
         try StoreScopedTimerCommandCoordinator(
-            container: container,
-            writeAuthorization: writeAuthorization
+            session: StoreMutationSession(
+                container: container,
+                writeAuthorization: writeAuthorization
+            )
         ).stop(segmentID: segmentID, taskID: taskID)
     }
 

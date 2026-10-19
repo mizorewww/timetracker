@@ -67,8 +67,7 @@ struct StoreScopedCountdownCommandCoordinatorTests {
         let added = try #require(try allEvents(in: context.container).only)
         let staleBaseline = CountdownMutationBaseline(event: added)
         let sibling = StoreScopedCountdownCommandCoordinator(
-            container: context.container,
-            writeAuthorization: .isolatedTestHarness,
+            session: .testHarness(context.container),
             deviceID: "sibling",
             nowProvider: { Date(timeIntervalSinceReferenceDate: 500_000) }
         )
@@ -149,8 +148,7 @@ struct StoreScopedCountdownCommandCoordinatorTests {
         now: Date = Date(timeIntervalSinceReferenceDate: 100_000)
     ) -> StoreScopedCountdownCommandCoordinator {
         StoreScopedCountdownCommandCoordinator(
-            container: container,
-            writeAuthorization: .isolatedTestHarness,
+            session: .testHarness(container),
             deviceID: "test",
             nowProvider: { now }
         )

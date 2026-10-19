@@ -15,8 +15,7 @@ struct AITaskAtomicMutationExecutorTests {
         let context = try makeTestContext()
         let taskID = try seedTasks(count: 1, in: context)[0]
         let coordinator = try StoreScopedAITaskAtomicMutationCoordinator(
-            container: context.container,
-            writeAuthorization: .isolatedTestHarness,
+            session: .testHarness(context.container),
             deviceID: "ai-executor-test",
             didReachCheckpoint: { checkpoint in
                 guard case .operationApplied = checkpoint else { return }
@@ -46,8 +45,7 @@ struct AITaskAtomicMutationExecutorTests {
         let context = try makeTestContext()
         let taskID = try seedTasks(count: 1, in: context)[0]
         let coordinator = try StoreScopedAITaskAtomicMutationCoordinator(
-            container: context.container,
-            writeAuthorization: .isolatedTestHarness,
+            session: .testHarness(context.container),
             deviceID: "ai-stale-test"
         )
         let baseline = try await coordinator.captureBaseline()
@@ -82,8 +80,7 @@ struct AITaskAtomicMutationExecutorTests {
         let context = try makeTestContext()
         let taskIDs = try seedTasks(count: 2, in: context)
         let coordinator = try StoreScopedAITaskAtomicMutationCoordinator(
-            container: context.container,
-            writeAuthorization: .isolatedTestHarness,
+            session: .testHarness(context.container),
             deviceID: "ai-rollback-test",
             didReachCheckpoint: { checkpoint in
                 if checkpoint == .operationApplied(index: 0) {
@@ -149,8 +146,7 @@ struct AITaskAtomicMutationExecutorTests {
         try context.save()
 
         let coordinator = try StoreScopedAITaskAtomicMutationCoordinator(
-            container: context.container,
-            writeAuthorization: .isolatedTestHarness,
+            session: .testHarness(context.container),
             deviceID: "ai-archive-test"
         )
         let baseline = try await coordinator.captureBaseline()

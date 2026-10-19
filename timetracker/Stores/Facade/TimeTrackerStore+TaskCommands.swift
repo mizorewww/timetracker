@@ -43,8 +43,7 @@ extension TimeTrackerStore {
         }
         do {
             let outcome = try StoreScopedTaskLifecycleCommandCoordinator(
-                container: requireStoreContainer(),
-                writeAuthorization: writeAuthorization
+                session: requireMutationSession()
             ).save(
                 draft: draft,
                 sanitizedTitle: sanitizedTitle,
@@ -88,10 +87,9 @@ extension TimeTrackerStore {
     func unarchiveTask(taskID: UUID) -> Bool {
         performStoreCommand(
             onError: handleStoreScopedTaskLifecycleError,
-            command: { container in
+            command: { session in
                 try StoreScopedTaskLifecycleCommandCoordinator(
-                    container: container,
-                    writeAuthorization: writeAuthorization
+                    session: session
                 ).unarchive(taskID: taskID)
             },
             finish: { outcome in
@@ -107,10 +105,9 @@ extension TimeTrackerStore {
     private func performStoreScopedTaskArchive(taskID: UUID) -> Bool {
         performStoreCommand(
             onError: handleStoreScopedTaskLifecycleError,
-            command: { container in
+            command: { session in
                 try StoreScopedTaskLifecycleCommandCoordinator(
-                    container: container,
-                    writeAuthorization: writeAuthorization
+                    session: session
                 ).archive(taskID: taskID)
             },
             finish: { outcome in

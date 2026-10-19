@@ -72,20 +72,17 @@ struct InboxItemMutationBaseline: Equatable, Sendable {
 /// canonical item set and every item revision are revalidated only after the
 /// lock is held in a fresh context.
 @MainActor
-struct StoreScopedInboxCommandCoordinator: StoreScopedCommandCoordinator {
-    let container: ModelContainer
-    let writeAuthorization: StoreWriteAuthorization
+struct StoreScopedInboxCommandCoordinator {
+    let session: StoreMutationSession
     let deviceID: String
     let nowProvider: () -> Date
 
     init(
-        container: ModelContainer,
-        writeAuthorization: StoreWriteAuthorization = .applicationState,
+        session: StoreMutationSession,
         deviceID: String = DeviceIdentity.current,
         nowProvider: @escaping () -> Date = Date.init
     ) {
-        self.container = container
-        self.writeAuthorization = writeAuthorization
+        self.session = session
         self.deviceID = deviceID
         self.nowProvider = nowProvider
     }
@@ -178,7 +175,7 @@ struct StoreScopedInboxCommandCoordinator: StoreScopedCommandCoordinator {
     func withFreshLockedContext<Outcome>(
         _ operation: (ModelContext) throws -> Outcome
     ) throws -> Outcome {
-        try mutationSession.withFreshMutationContext(operation)
+        try session.withFreshMutationContext(operation)
     }
 
     private func mutateItem(

@@ -3,8 +3,7 @@ import SwiftData
 
 nonisolated struct TaskDraftProgressMutationService {
     let context: ModelContext
-    let container: ModelContainer
-    let writeAuthorization: StoreWriteAuthorization
+    let session: StoreMutationSession
     let deviceID: String
     let didReachCheckpoint:
         @Sendable (TaskDraftMutationCheckpoint) throws -> Void
@@ -47,8 +46,7 @@ nonisolated struct TaskDraftProgressMutationService {
         }
 
         let coordinator = StoreScopedTaskRecurrenceCommandCoordinator(
-            container: container,
-            writeAuthorization: writeAuthorization,
+            session: session,
             deviceID: deviceID,
             didReachCheckpoint: {
                 try didReachCheckpoint(.recurrence($0))

@@ -7,10 +7,9 @@ extension TimeTrackerStore {
         performStoreCommand(
             eventsForOutcome: { $0.events },
             onError: handleStoreScopedChecklistError
-        ) { container in
+        ) { session in
             try StoreScopedChecklistCommandCoordinator(
-                container: container,
-                writeAuthorization: writeAuthorization
+                session: session
             ).setCompletion(
                 baseline: ChecklistMutationBaseline(item: item),
                 isCompleted: !item.isCompleted
@@ -23,10 +22,9 @@ extension TimeTrackerStore {
         performStoreCommand(
             eventsForOutcome: { $0.events },
             onError: handleStoreScopedChecklistError
-        ) { container in
+        ) { session in
             try StoreScopedChecklistCommandCoordinator(
-                container: container,
-                writeAuthorization: writeAuthorization
+                session: session
             ).add(taskID: taskID, title: title)
         } != nil
     }

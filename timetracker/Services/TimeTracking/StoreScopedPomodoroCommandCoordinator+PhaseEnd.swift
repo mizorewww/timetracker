@@ -122,7 +122,7 @@ extension StoreScopedPomodoroCommandCoordinator {
             SwiftDataPomodoroRepository
         ) throws -> Result
     ) throws -> Result {
-        try mutationSession.withFreshMutationContext { context in
+        try session.withFreshMutationContext { context in
             let now = nowProvider()
             let timeRepository = SwiftDataTimeTrackingRepository(
                 context: context,

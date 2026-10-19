@@ -43,8 +43,7 @@ func makeStoreScopedSegmentCoordinator(
     now: Date
 ) -> StoreScopedSegmentCommandCoordinator {
     StoreScopedSegmentCommandCoordinator(
-        container: container,
-        writeAuthorization: .isolatedTestHarness,
+        session: .testHarness(container),
         deviceID: "coordinator",
         nowProvider: { now }
     )

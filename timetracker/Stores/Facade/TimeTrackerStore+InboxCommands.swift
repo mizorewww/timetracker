@@ -96,11 +96,10 @@ extension TimeTrackerStore {
                 }
                 self.errorMessage = error.localizedDescription
             },
-            command: { container in
+            command: { session in
                 try action(
                     StoreScopedInboxCommandCoordinator(
-                        container: container,
-                        writeAuthorization: writeAuthorization
+                        session: session
                     )
                 )
             }

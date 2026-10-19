@@ -16,8 +16,7 @@ struct StoreScopedChecklistCommandCoordinatorTests {
         let staleItem = try #require(store.checklistItems(for: task.id).first)
 
         let sibling = StoreScopedChecklistCommandCoordinator(
-            container: context.container,
-            writeAuthorization: .isolatedTestHarness,
+            session: .testHarness(context.container),
             deviceID: "sibling",
             nowProvider: { Date(timeIntervalSinceReferenceDate: 1000) }
         )
@@ -129,8 +128,7 @@ struct StoreScopedChecklistCommandCoordinatorTests {
         var draft = try store.editorDraft(for: #require(store.task(for: child.id)))
         draft.parentID = newParent.id
         _ = try StoreScopedTaskLifecycleCommandCoordinator(
-            container: context.container,
-            writeAuthorization: .isolatedTestHarness,
+            session: .testHarness(context.container),
             deviceID: "sibling"
         ).save(draft: draft, sanitizedTitle: draft.title)
 
@@ -326,8 +324,7 @@ struct StoreScopedChecklistCommandCoordinatorTests {
         deviceID: String
     ) -> StoreScopedChecklistCommandCoordinator {
         StoreScopedChecklistCommandCoordinator(
-            container: container,
-            writeAuthorization: .isolatedTestHarness,
+            session: .testHarness(container),
             deviceID: deviceID
         )
     }

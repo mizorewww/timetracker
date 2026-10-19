@@ -16,10 +16,9 @@ extension TimeTrackerStore {
     func setPreference(_ key: AppPreferenceKey, valueJSON: String) -> Bool {
         performStoreCommand(
             eventsForOutcome: { _ in [.preferenceChanged(key: key.rawValue)] }
-        ) { container in
+        ) { session in
             try StoreScopedPreferenceCommandCoordinator(
-                container: container,
-                writeAuthorization: writeAuthorization
+                session: session
             ).set(key: key, valueJSON: valueJSON)
         } != nil
     }

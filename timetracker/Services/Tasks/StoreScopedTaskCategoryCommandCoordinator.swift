@@ -29,20 +29,17 @@ struct TaskCategoryMutationOutcome: Equatable {
 /// the shared store mutation domain. Category identity is resolved only after
 /// the lock is held; scene-owned SwiftData objects never cross this boundary.
 @MainActor
-struct StoreScopedTaskCategoryCommandCoordinator: StoreScopedCommandCoordinator {
-    let container: ModelContainer
-    let writeAuthorization: StoreWriteAuthorization
+struct StoreScopedTaskCategoryCommandCoordinator {
+    let session: StoreMutationSession
     let deviceID: String
     let nowProvider: () -> Date
 
     init(
-        container: ModelContainer,
-        writeAuthorization: StoreWriteAuthorization = .applicationState,
+        session: StoreMutationSession,
         deviceID: String = DeviceIdentity.current,
         nowProvider: @escaping () -> Date = Date.init
     ) {
-        self.container = container
-        self.writeAuthorization = writeAuthorization
+        self.session = session
         self.deviceID = deviceID
         self.nowProvider = nowProvider
     }
@@ -152,7 +149,7 @@ struct StoreScopedTaskCategoryCommandCoordinator: StoreScopedCommandCoordinator 
     private func withFreshRepository<Result>(
         _ operation: (SwiftDataTaskRepository) throws -> Result
     ) throws -> Result {
-        try mutationSession.withFreshMutationContext { context in
+        try session.withFreshMutationContext { context in
             try operation(
                 SwiftDataTaskRepository(context: context, deviceID: deviceID)
             )

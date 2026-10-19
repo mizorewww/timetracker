@@ -6,10 +6,9 @@ extension TimeTrackerStore {
     func addCountdownEvent() -> Bool {
         performStoreCommand(
             eventsForOutcome: { _ in [.countdownChanged] }
-        ) { container in
+        ) { session in
             try StoreScopedCountdownCommandCoordinator(
-                container: container,
-                writeAuthorization: writeAuthorization
+                session: session
             ).add()
         } != nil
     }
@@ -19,10 +18,9 @@ extension TimeTrackerStore {
         performStoreCommand(
             eventsForOutcome: { _ in [.countdownChanged] },
             onError: handleStoreScopedCountdownError
-        ) { container in
+        ) { session in
             try StoreScopedCountdownCommandCoordinator(
-                container: container,
-                writeAuthorization: writeAuthorization
+                session: session
             ).update(
                 baseline: CountdownMutationBaseline(event: event),
                 title: title,
@@ -36,10 +34,9 @@ extension TimeTrackerStore {
         performStoreCommand(
             eventsForOutcome: { _ in [.countdownChanged] },
             onError: handleStoreScopedCountdownError
-        ) { container in
+        ) { session in
             try StoreScopedCountdownCommandCoordinator(
-                container: container,
-                writeAuthorization: writeAuthorization
+                session: session
             ).delete(baseline: CountdownMutationBaseline(event: event))
         } != nil
     }

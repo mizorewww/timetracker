@@ -203,11 +203,7 @@ extension TimeTrackerStore {
         )
         let interval = evaluation.interval
         guard interval.duration > 0 else {
-            return WeeklyGrossTimeSnapshot(
-                interval: interval,
-                daily: [],
-                requiresLiveRefresh: false
-            )
+            return WeeklyGrossTimeSnapshot(interval: interval, daily: [])
         }
         // Same minute-granular contract as `todayLive`.
         let key = TodayReadModelCache.WeeklyKey(
@@ -230,15 +226,7 @@ extension TimeTrackerStore {
             evaluatedAt: evaluation.cutoff,
             calendar: calendar
         )
-        let requiresLiveRefresh = segments.contains { segment in
-            guard segment.startedAt < interval.end else { return false }
-            return segment.endedAt.map { $0 > evaluation.cutoff } ?? true
-        }
-        let snapshot = WeeklyGrossTimeSnapshot(
-            interval: interval,
-            daily: daily,
-            requiresLiveRefresh: requiresLiveRefresh
-        )
+        let snapshot = WeeklyGrossTimeSnapshot(interval: interval, daily: daily)
         todayReadModelCache.weekly = (key, snapshot)
         return snapshot
     }

@@ -72,7 +72,6 @@ nonisolated struct TodayMetricsSnapshot: Equatable, Sendable {
 struct WeeklyGrossTimeSnapshot {
     let interval: DateInterval
     let daily: [DailyAnalyticsPoint]
-    let requiresLiveRefresh: Bool
 
     var totalGrossSeconds: Int {
         daily.reduce(0) { $0 + $1.grossSeconds }

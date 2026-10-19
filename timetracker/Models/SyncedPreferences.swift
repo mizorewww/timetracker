@@ -20,10 +20,6 @@ nonisolated enum LLMReasoningEffort:
 
 nonisolated enum AppPreferenceKey: String, CaseIterable {
     case preferredColorScheme = "PreferredColorScheme"
-    case pomodoroDefaultMode = "PomodoroDefaultMode"
-    case defaultFocusMinutes = "DefaultFocusMinutes"
-    case defaultBreakMinutes = "DefaultBreakMinutes"
-    case defaultPomodoroRounds = "DefaultPomodoroRounds"
     case pomodoroPlans = "PomodoroPlans"
     case allowParallelTimers = "AllowParallelTimers"
     case showGrossAndWallTogether = "ShowGrossAndWallTogether"
@@ -46,10 +42,6 @@ enum AppLocalPreferenceKey {
 
 struct AppPreferences: Equatable {
     var preferredColorScheme = "system"
-    var pomodoroDefaultMode = PomodoroPreset.classic.rawValue
-    var defaultFocusMinutes = 25
-    var defaultBreakMinutes = 5
-    var defaultPomodoroRounds = 1
     var pomodoroPlans = PomodoroPlan.defaultPlans
     var allowParallelTimers = true
     var showGrossAndWallTogether = true
@@ -88,16 +80,6 @@ struct AppPreferences: Equatable {
             preferredColorScheme = AppPreferenceValueSanitizer.preferredColorScheme(
                 PreferenceJSON.decode(String.self, from: preference.valueJSON, default: preferredColorScheme)
             )
-        case .pomodoroDefaultMode:
-            pomodoroDefaultMode = AppPreferenceValueSanitizer.pomodoroMode(
-                PreferenceJSON.decode(String.self, from: preference.valueJSON, default: pomodoroDefaultMode)
-            )
-        case .defaultFocusMinutes:
-            defaultFocusMinutes = PreferenceJSON.decode(Int.self, from: preference.valueJSON, default: defaultFocusMinutes).clamped(to: 1 ... 480)
-        case .defaultBreakMinutes:
-            defaultBreakMinutes = PreferenceJSON.decode(Int.self, from: preference.valueJSON, default: defaultBreakMinutes).clamped(to: 1 ... 480)
-        case .defaultPomodoroRounds:
-            defaultPomodoroRounds = PreferenceJSON.decode(Int.self, from: preference.valueJSON, default: defaultPomodoroRounds).clamped(to: 1 ... 24)
         case .pomodoroPlans:
             pomodoroPlans = AppPreferenceValueSanitizer.pomodoroPlans(
                 PreferenceJSON.decode([PomodoroPlan].self, from: preference.valueJSON, default: pomodoroPlans)
@@ -160,63 +142,10 @@ struct AppPreferences: Equatable {
         }
     }
 
-    func valueJSON(for key: AppPreferenceKey) -> String {
-        switch key {
-        case .preferredColorScheme:
-            PreferenceJSON.encode(AppPreferenceValueSanitizer.preferredColorScheme(preferredColorScheme))
-        case .pomodoroDefaultMode:
-            PreferenceJSON.encode(AppPreferenceValueSanitizer.pomodoroMode(pomodoroDefaultMode))
-        case .defaultFocusMinutes:
-            PreferenceJSON.encode(defaultFocusMinutes)
-        case .defaultBreakMinutes:
-            PreferenceJSON.encode(defaultBreakMinutes)
-        case .defaultPomodoroRounds:
-            PreferenceJSON.encode(defaultPomodoroRounds)
-        case .pomodoroPlans:
-            PreferenceJSON.encode(AppPreferenceValueSanitizer.pomodoroPlans(pomodoroPlans))
-        case .allowParallelTimers:
-            PreferenceJSON.encode(allowParallelTimers)
-        case .showGrossAndWallTogether:
-            PreferenceJSON.encode(showGrossAndWallTogether)
-        case .quickStartTaskIDs:
-            PreferenceJSON.encode(
-                AppPreferenceValueSanitizer.quickStartTaskIDs(quickStartTaskIDs).map(\.uuidString)
-            )
-        case .todayHeatmapTaskIDs:
-            PreferenceJSON.encode(
-                AppPreferenceValueSanitizer.todayHeatmapTaskIDs(todayHeatmapTaskIDs).map(\.uuidString)
-            )
-        case .todayHeatmapPeriod:
-            PreferenceJSON.encode(
-                AppPreferenceValueSanitizer.todayHeatmapPeriod(todayHeatmapPeriod.rawValue).rawValue
-            )
-        case .llmEndpoint:
-            PreferenceJSON.encode(AppPreferenceValueSanitizer.llmEndpoint(llmEndpoint))
-        case .llmSelectedModel:
-            PreferenceJSON.encode(AppPreferenceValueSanitizer.llmModelID(llmSelectedModel))
-        case .llmAvailableModelIDs:
-            PreferenceJSON.encode(AppPreferenceValueSanitizer.llmModelIDs(llmAvailableModelIDs))
-        case .llmReasoningEffort:
-            PreferenceJSON.encode(llmReasoningEffort.rawValue)
-        case .llmInboxSuggestionInstructions:
-            PreferenceJSON.encode(Self.sanitizedInstructions(llmInboxSuggestionInstructions, for: .inboxRouting))
-        case .llmChecklistVisualInstructions:
-            PreferenceJSON.encode(Self.sanitizedInstructions(llmChecklistVisualInstructions, for: .checklistVisual))
-        case .llmTaskPlanInstructions:
-            PreferenceJSON.encode(Self.sanitizedInstructions(llmTaskPlanInstructions, for: .taskPlan))
-        }
-    }
-
     /// Invalid stored instructions fall back to the prompt's defaults.
-    private static func sanitizedInstructions(_ value: String, for kind: LLMPromptKind) -> String {
-        (try? AppPreferenceValueSanitizer.llmPromptInstructions(value, for: kind)) ?? kind.defaultInstructions
-    }
-
     private static func storedInstructions(_ valueJSON: String, for kind: LLMPromptKind) -> String {
-        sanitizedInstructions(
-            PreferenceJSON.decode(String.self, from: valueJSON, default: kind.defaultInstructions),
-            for: kind
-        )
+        let value = PreferenceJSON.decode(String.self, from: valueJSON, default: kind.defaultInstructions)
+        return (try? AppPreferenceValueSanitizer.llmPromptInstructions(value, for: kind)) ?? kind.defaultInstructions
     }
 
     func llmInstructions(for kind: LLMPromptKind) -> String {

@@ -71,15 +71,6 @@ enum PreferenceJSON {
         case .preferredColorScheme:
             let value = try decodeChecked(String.self, from: valueJSON)
             return try encodeChecked(AppPreferenceValueSanitizer.preferredColorScheme(value))
-        case .pomodoroDefaultMode:
-            let value = try decodeChecked(String.self, from: valueJSON)
-            return try encodeChecked(AppPreferenceValueSanitizer.pomodoroMode(value))
-        case .defaultFocusMinutes, .defaultBreakMinutes:
-            let value = try decodeChecked(Int.self, from: valueJSON)
-            return try encodeChecked(value.clamped(to: 1 ... 480))
-        case .defaultPomodoroRounds:
-            let value = try decodeChecked(Int.self, from: valueJSON)
-            return try encodeChecked(value.clamped(to: 1 ... 24))
         case .pomodoroPlans:
             let value = try decodeChecked([PomodoroPlan].self, from: valueJSON)
             return try encodeChecked(AppPreferenceValueSanitizer.pomodoroPlans(value))

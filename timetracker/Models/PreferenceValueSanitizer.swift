@@ -33,18 +33,6 @@ enum AppPreferenceValueSanitizer {
         ["system", "light", "dark"].contains(value) ? value : "system"
     }
 
-    static func pomodoroMode(_ value: String) -> String {
-        if let preset = PomodoroPreset(rawValue: value) {
-            return preset.rawValue
-        }
-        switch value.lowercased() {
-        case "classic": return PomodoroPreset.classic.rawValue
-        case "deep": return PomodoroPreset.deep.rawValue
-        case "quick": return PomodoroPreset.quick.rawValue
-        default: return PomodoroPreset.classic.rawValue
-        }
-    }
-
     static func pomodoroPlans(_ values: [PomodoroPlan]) -> [PomodoroPlan] {
         var seen = Set<UUID>()
         var result: [PomodoroPlan] = []

@@ -10,9 +10,9 @@ struct PreferenceCommandValidationTests {
         let context = try makeTestContext()
         let handler = PreferenceCommandHandler()
         let invalidValues: [(AppPreferenceKey, String, PreferenceJSONError)] = [
-            (.defaultFocusMinutes, "{", .invalidValue),
-            (.defaultFocusMinutes, "null", .invalidValue),
-            (.defaultFocusMinutes, PreferenceJSON.encode("25"), .invalidValue),
+            (.allowParallelTimers, "{", .invalidValue),
+            (.allowParallelTimers, "null", .invalidValue),
+            (.allowParallelTimers, PreferenceJSON.encode("true"), .invalidValue),
             (.todayHeatmapPeriod, PreferenceJSON.encode(42), .invalidValue),
             (
                 .llmEndpoint,
@@ -50,8 +50,8 @@ struct PreferenceCommandValidationTests {
         let originalDate = Date(timeIntervalSinceReferenceDate: 100_000)
         let originalMutationID = UUID()
         let preference = SyncedPreference(
-            key: AppPreferenceKey.defaultFocusMinutes.rawValue,
-            valueJSON: PreferenceJSON.encode(25),
+            key: AppPreferenceKey.allowParallelTimers.rawValue,
+            valueJSON: PreferenceJSON.encode(true),
             deviceID: "original-device"
         )
         preference.createdAt = originalDate
@@ -63,8 +63,8 @@ struct PreferenceCommandValidationTests {
         #expect(throws: PreferenceJSONError.invalidValue) {
             try PreferenceCommandHandler().set(
                 values: [
-                    (.defaultFocusMinutes, PreferenceJSON.encode(55)),
-                    (.defaultBreakMinutes, PreferenceJSON.encode("wrong-type")),
+                    (.allowParallelTimers, PreferenceJSON.encode(false)),
+                    (.showGrossAndWallTogether, PreferenceJSON.encode("wrong-type")),
                 ],
                 context: context,
                 now: originalDate.addingTimeInterval(100)
@@ -75,7 +75,7 @@ struct PreferenceCommandValidationTests {
         let unchanged = try #require(stored.first)
         #expect(stored.count == 1)
         #expect(unchanged.id == preference.id)
-        #expect(unchanged.valueJSON == PreferenceJSON.encode(25))
+        #expect(unchanged.valueJSON == PreferenceJSON.encode(true))
         #expect(unchanged.updatedAt == originalDate)
         #expect(unchanged.deviceID == "original-device")
         #expect(unchanged.clientMutationID == originalMutationID)
@@ -90,7 +90,6 @@ struct PreferenceCommandValidationTests {
         try PreferenceCommandHandler().set(
             values: [
                 (.preferredColorScheme, PreferenceJSON.encode("neon")),
-                (.defaultFocusMinutes, PreferenceJSON.encode(999)),
                 (.todayHeatmapPeriod, PreferenceJSON.encode("futurePeriod")),
                 (
                     .quickStartTaskIDs,
@@ -107,7 +106,6 @@ struct PreferenceCommandValidationTests {
         let stored = try context.fetch(FetchDescriptor<SyncedPreference>())
         let valuesByKey = Dictionary(uniqueKeysWithValues: stored.map { ($0.key, $0.valueJSON) })
         #expect(valuesByKey[AppPreferenceKey.preferredColorScheme.rawValue] == PreferenceJSON.encode("system"))
-        #expect(valuesByKey[AppPreferenceKey.defaultFocusMinutes.rawValue] == PreferenceJSON.encode(480))
         #expect(
             valuesByKey[AppPreferenceKey.todayHeatmapPeriod.rawValue] ==
                 PreferenceJSON.encode(ActivityHeatmapPeriod.standard.rawValue)
@@ -122,27 +120,27 @@ struct PreferenceCommandValidationTests {
     func settingLogicalKeySupersedesActiveAndDeletedPhysicalSiblings() throws {
         let base = Date(timeIntervalSinceReferenceDate: 250_000)
         let mutationDate = base.addingTimeInterval(100)
-        let key = AppPreferenceKey.defaultFocusMinutes
+        let key = AppPreferenceKey.llmSelectedModel
 
         for reverseInsertionOrder in [false, true] {
             let context = try makeTestContext()
             let activeWinner = SyncedPreference(
                 key: key.rawValue,
-                valueJSON: PreferenceJSON.encode(20),
+                valueJSON: PreferenceJSON.encode("model-a"),
                 deviceID: "cloud-a"
             )
             activeWinner.createdAt = base
             activeWinner.updatedAt = base.addingTimeInterval(20)
             let activeSibling = SyncedPreference(
                 key: key.rawValue,
-                valueJSON: PreferenceJSON.encode(10),
+                valueJSON: PreferenceJSON.encode("model-b"),
                 deviceID: "cloud-b"
             )
             activeSibling.createdAt = base.addingTimeInterval(10)
             activeSibling.updatedAt = base.addingTimeInterval(10)
             let deletedSibling = SyncedPreference(
                 key: key.rawValue,
-                valueJSON: PreferenceJSON.encode(5),
+                valueJSON: PreferenceJSON.encode("model-c"),
                 deviceID: "cloud-c"
             )
             deletedSibling.createdAt = base.addingTimeInterval(30)
@@ -158,7 +156,7 @@ struct PreferenceCommandValidationTests {
 
             try PreferenceCommandHandler().set(
                 key: key,
-                valueJSON: PreferenceJSON.encode(55),
+                valueJSON: PreferenceJSON.encode("model-new"),
                 context: context,
                 now: mutationDate
             )
@@ -166,7 +164,7 @@ struct PreferenceCommandValidationTests {
             let stored = try context.fetch(FetchDescriptor<SyncedPreference>())
             let winner = try #require(SyncedPreferenceService.latestByKey(stored)[key.rawValue])
             #expect(winner.deletedAt == nil)
-            #expect(winner.valueJSON == PreferenceJSON.encode(55))
+            #expect(winner.valueJSON == PreferenceJSON.encode("model-new"))
             #expect(winner.updatedAt == mutationDate)
             #expect(stored.filter { $0 !== winner }.allSatisfy {
                 $0.deletedAt == mutationDate.addingTimeInterval(-1) &&
@@ -186,8 +184,8 @@ struct PreferenceCommandValidationTests {
 
         try initializeWritableStore(at: storeURL, schema: schema) { context in
             let preference = SyncedPreference(
-                key: AppPreferenceKey.defaultFocusMinutes.rawValue,
-                valueJSON: PreferenceJSON.encode(25),
+                key: AppPreferenceKey.allowParallelTimers.rawValue,
+                valueJSON: PreferenceJSON.encode(true),
                 deviceID: "original-device"
             )
             preference.id = preferenceID
@@ -201,8 +199,8 @@ struct PreferenceCommandValidationTests {
         let context = ModelContext(readOnlyContainer)
         #expect(throws: (any Error).self) {
             try PreferenceCommandHandler().set(
-                key: .defaultFocusMinutes,
-                valueJSON: PreferenceJSON.encode(55),
+                key: .allowParallelTimers,
+                valueJSON: PreferenceJSON.encode(false),
                 context: context,
                 now: originalDate.addingTimeInterval(100)
             )
@@ -211,7 +209,7 @@ struct PreferenceCommandValidationTests {
         let stored = try #require(
             context.fetch(FetchDescriptor<SyncedPreference>()).first { $0.id == preferenceID }
         )
-        #expect(stored.valueJSON == PreferenceJSON.encode(25))
+        #expect(stored.valueJSON == PreferenceJSON.encode(true))
         #expect(stored.updatedAt == originalDate)
         #expect(stored.deviceID == "original-device")
         #expect(stored.clientMutationID == originalMutationID)

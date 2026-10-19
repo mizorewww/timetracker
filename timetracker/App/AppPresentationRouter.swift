@@ -59,6 +59,11 @@ final class AppPresentationRouter {
     @ObservationIgnored var openNativeSettings: (() -> Void)?
     #endif
 
+    /// The open task detail's synchronous save of its pending edit, keyed by
+    /// the detail instance so a disappearing detail cannot clear its
+    /// replacement's registration.
+    @ObservationIgnored private var openTaskDetailSave: (id: UUID, save: () -> Bool)?
+
     init(feedbackRouter: AppSceneFeedbackRouter) {
         self.feedbackRouter = feedbackRouter
     }
@@ -97,6 +102,30 @@ final class AppPresentationRouter {
 }
 
 extension AppPresentationRouter {
+    func registerOpenTaskDetailSave(id: UUID, save: @escaping () -> Bool) {
+        openTaskDetailSave = (id, save)
+    }
+
+    func unregisterOpenTaskDetailSave(id: UUID) {
+        guard openTaskDetailSave?.id == id else { return }
+        openTaskDetailSave = nil
+    }
+
+    /// Archives a task after saving the open task detail's pending edit, so a
+    /// debounced edit is not left behind on a task that stops accepting edits.
+    /// An edit that cannot be saved stays in the detail and the archive is
+    /// not performed.
+    func archiveTask(_ taskID: UUID, using store: TimeTrackerStore) {
+        if let openTaskDetailSave, openTaskDetailSave.save() == false {
+            feedbackRouter.present(
+                title: AppStrings.localized("task.autosave.failed"),
+                message: AppStrings.localized("task.autosave.archiveBlocked")
+            )
+            return
+        }
+        feedbackRouter.perform { try store.archiveSelectedTask(taskID: taskID) }
+    }
+
     @discardableResult
     func presentNewTask(
         using store: TimeTrackerStore,

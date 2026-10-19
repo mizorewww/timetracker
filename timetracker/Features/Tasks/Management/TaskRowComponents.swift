@@ -93,9 +93,7 @@ struct TaskMenuContent: View {
 
     private var archiveButton: some View {
         Button {
-            presentationRouter.feedbackRouter.perform {
-                try store.archiveSelectedTask(taskID: task.id)
-            }
+            presentationRouter.archiveTask(task.id, using: store)
         } label: {
             Label(AppStrings.localized("task.action.archive"), systemImage: "archivebox")
         }
@@ -154,9 +152,7 @@ struct TaskRowSwipeActions: ViewModifier {
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 if eligibility.hasActiveTimerInSubtree == false {
                     Button {
-                        presentationRouter.feedbackRouter.perform {
-                            try store.archiveSelectedTask(taskID: task.id)
-                        }
+                        presentationRouter.archiveTask(task.id, using: store)
                     } label: {
                         actionLabel(
                             AppStrings.localized("task.action.archive"),

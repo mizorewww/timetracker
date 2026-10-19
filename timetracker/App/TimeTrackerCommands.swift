@@ -112,10 +112,12 @@ struct TimeTrackerCommands: Commands {
             Divider()
 
             Button(AppStrings.localized("menu.archiveSelectedTask")) {
-                guard let store, let selectedTask = store.selectedTask else {
+                guard let store, let presentationRouter,
+                      let selectedTask = store.selectedTask
+                else {
                     return
                 }
-                runCommand { try store.archiveSelectedTask(taskID: selectedTask.id) }
+                presentationRouter.archiveTask(selectedTask.id, using: store)
             }
             .timeTrackerShortcut(
                 .archiveSelectedTask,

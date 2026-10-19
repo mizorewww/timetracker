@@ -64,11 +64,6 @@ extension TimeTrackerStore {
     func archiveSelectedTask(taskID: UUID? = nil) throws {
         let targetID = taskID ?? selectedTaskID
         guard let targetID else { return }
-        // An open task detail may still hold a debounced edit; save it before
-        // the task stops accepting edits.
-        for flush in pendingTaskEditFlushes.values {
-            flush()
-        }
         let wasSelected = selectedTaskID == targetID
         try performStoreScopedTaskArchive(taskID: targetID)
         if wasSelected {

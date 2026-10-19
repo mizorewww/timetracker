@@ -54,14 +54,51 @@ struct TaskLifecycleAndCategoryCommandTests {
             .createTask(title: "Draft title", parentID: nil)
         let store = makeTestStore()
         try store.configureIfNeeded(context: context)
-        var archivedWhenFlushed: Bool?
-        store.pendingTaskEditFlushes[UUID()] = {
-            archivedWhenFlushed = (try? task(created.id, in: context.container))?.archivedAt != nil
+        let router = AppPresentationRouter(feedbackRouter: AppSceneFeedbackRouter())
+        var archivedWhenSaved: Bool?
+        router.registerOpenTaskDetailSave(id: UUID()) {
+            archivedWhenSaved = (try? task(created.id, in: context.container))?.archivedAt != nil
+            return true
         }
 
-        try store.archiveSelectedTask(taskID: created.id)
+        router.archiveTask(created.id, using: store)
 
-        #expect(archivedWhenFlushed == false)
+        #expect(archivedWhenSaved == false)
+        #expect(try task(created.id, in: context.container).archivedAt != nil)
+        #expect(router.feedbackRouter.current == nil)
+    }
+
+    @Test
+    func archiveIsNotPerformedWhenTheOpenDetailEditCannotBeSaved() throws {
+        let context = try makeTestContext()
+        let created = try SwiftDataTaskRepository(context: context, deviceID: "seed")
+            .createTask(title: "Draft title", parentID: nil)
+        let store = makeTestStore()
+        try store.configureIfNeeded(context: context)
+        let router = AppPresentationRouter(feedbackRouter: AppSceneFeedbackRouter())
+        router.registerOpenTaskDetailSave(id: UUID()) { false }
+
+        router.archiveTask(created.id, using: store)
+
+        #expect(try task(created.id, in: context.container).archivedAt == nil)
+        #expect(router.feedbackRouter.current != nil)
+    }
+
+    @Test
+    func aClosedDetailNoLongerBlocksArchiving() throws {
+        let context = try makeTestContext()
+        let created = try SwiftDataTaskRepository(context: context, deviceID: "seed")
+            .createTask(title: "Draft title", parentID: nil)
+        let store = makeTestStore()
+        try store.configureIfNeeded(context: context)
+        let router = AppPresentationRouter(feedbackRouter: AppSceneFeedbackRouter())
+        let closedDetail = UUID()
+        let openDetail = UUID()
+        router.registerOpenTaskDetailSave(id: closedDetail) { false }
+        router.registerOpenTaskDetailSave(id: openDetail) { true }
+        router.unregisterOpenTaskDetailSave(id: closedDetail)
+
+        router.archiveTask(created.id, using: store)
         #expect(try task(created.id, in: context.container).archivedAt != nil)
     }
 

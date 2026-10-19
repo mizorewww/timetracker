@@ -486,6 +486,7 @@
 "task.autosave.failed" = "Changes Not Saved";
 "task.autosave.retry" = "Retry Saving";
 "task.autosave.invalid" = "Changes aren’t saved until the highlighted problems are fixed.";
+"task.autosave.archiveBlocked" = "Save or undo the open task’s changes, then archive again.";
 "task.recurrence.error.invalidStartDay" = "Choose a valid recurrence start date.";
 "task.recurrence.error.invalidTimeZone" = "Choose a valid recurrence time zone.";
 "task.recurrence.error.templateUnavailable" = "This task cannot be used as a recurrence template.";

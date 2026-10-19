@@ -486,6 +486,7 @@
 "task.autosave.failed" = "變更尚未儲存";
 "task.autosave.retry" = "重試儲存";
 "task.autosave.invalid" = "修正標出的問題後，變更才會儲存。";
+"task.autosave.archiveBlocked" = "請先儲存或還原已開啟任務的變更，然後再封存。";
 "task.recurrence.error.invalidStartDay" = "請選擇有效的重複開始日期。";
 "task.recurrence.error.invalidTimeZone" = "請選擇有效的重複任務時區。";
 "task.recurrence.error.templateUnavailable" = "此任務不能用作重複任務範本。";

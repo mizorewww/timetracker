@@ -1,8 +1,52 @@
 import Foundation
 
-/// Shared DTO home for the widget and watch snapshot payloads. The per-surface
-/// limit constants stay in each surface's limits enum (AD-004); this file only
-/// hosts the row types so widget and watch decode/encode identical wire shapes.
+/// The single bound table for every Widget and Watch snapshot payload
+/// (AD-004). Projection truncates each field to its cap once; decoding only
+/// checks the encoded size, because every field is bounded by construction.
+nonisolated enum SystemSurfaceLimits {
+    static let maximumEncodedBytes = 256 * 1024
+    /// Projection budget for all strings of one snapshot. Keeps the encoded
+    /// payload well under `maximumEncodedBytes`.
+    static let maximumSnapshotTextBytes = 128 * 1024
+    static let maximumFutureClockSkew: TimeInterval = 5 * 60
+    static let maximumActiveTimerAge: TimeInterval = 10 * 366 * 24 * 60 * 60
+    static let maximumSummarySeconds = 10 * 366 * 24 * 60 * 60
+    static let maximumActiveTimers = 64
+    static let maximumWidgetRecentTasks = 3
+    static let maximumWatchTasks = 256
+    static let maximumQuickStartTasks = 24
+    static let maximumTitleBytes = 512
+    static let maximumPathBytes = 1024
+    static let maximumStyleValueBytes = 128
+
+    static func boundedTitle(_ value: String) -> String {
+        SystemSurfaceTextBounds.boundedUTF8Prefix(value, maximumUTF8Bytes: maximumTitleBytes)
+    }
+
+    static func boundedPath(_ value: String) -> String {
+        SystemSurfaceTextBounds.boundedUTF8Prefix(value, maximumUTF8Bytes: maximumPathBytes)
+    }
+
+    static func boundedStyleValue(_ value: String?) -> String? {
+        value.map {
+            SystemSurfaceTextBounds.boundedUTF8Prefix($0, maximumUTF8Bytes: maximumStyleValueBytes)
+        }
+    }
+
+    static func boundedSummarySeconds(_ seconds: Int) -> Int {
+        min(max(0, seconds), maximumSummarySeconds)
+    }
+
+    static func boundedTimerStart(_ startedAt: Date, generatedAt: Date) -> Date {
+        min(
+            max(startedAt, generatedAt.addingTimeInterval(-maximumActiveTimerAge)),
+            generatedAt
+        )
+    }
+}
+
+/// Shared DTO home for the widget and watch snapshot payloads, so both
+/// surfaces decode and encode identical wire shapes.
 nonisolated enum SystemSurfaceTimerElapsedPresentation: Equatable, Sendable {
     case live(startedAt: Date)
     case frozen(seconds: Int)
@@ -19,51 +63,23 @@ nonisolated struct SystemSurfaceTimerSnapshot: Codable, Equatable, Identifiable,
 
     nonisolated func elapsedPresentation(
         isCurrent: Bool,
-        generatedAt: Date,
-        maximumActiveTimerAge: TimeInterval
+        generatedAt: Date
     ) -> SystemSurfaceTimerElapsedPresentation {
         if isCurrent {
             return .live(startedAt: startedAt)
         }
         let elapsed = generatedAt.timeIntervalSince(startedAt)
-        guard elapsed.isFinite else { return .frozen(seconds: 0) }
-        let boundedElapsed = min(max(0, elapsed), maximumActiveTimerAge)
+        let boundedElapsed = min(max(0, elapsed), SystemSurfaceLimits.maximumActiveTimerAge)
         return .frozen(seconds: Int(boundedElapsed.rounded(.down)))
     }
 
-    nonisolated func isStructurallyValid(
-        relativeTo generatedAt: Date,
-        maximumTitleBytes: Int,
-        maximumPathBytes: Int,
-        maximumStyleValueBytes: Int,
-        maximumFutureClockSkew: TimeInterval,
-        maximumActiveTimerAge: TimeInterval
-    ) -> Bool {
-        guard SystemSurfaceTextBounds.isFinite(startedAt),
-              SystemSurfaceTextBounds.isFinite(generatedAt),
-              SystemSurfaceTextBounds.isBounded(
-                  title,
-                  maximumUTF8Bytes: maximumTitleBytes
-              ),
-              SystemSurfaceTextBounds.isBounded(
-                  path,
-                  maximumUTF8Bytes: maximumPathBytes
-              ),
-              SystemSurfaceTextBounds.isValidStyleValue(
-                  colorHex,
-                  maximumUTF8Bytes: maximumStyleValueBytes
-              ),
-              SystemSurfaceTextBounds.isValidStyleValue(
-                  iconName,
-                  maximumUTF8Bytes: maximumStyleValueBytes
-              )
-        else {
-            return false
-        }
-        let age = generatedAt.timeIntervalSince(startedAt)
-        return age.isFinite &&
-            age >= -maximumFutureClockSkew &&
-            age <= maximumActiveTimerAge
+    var textByteCount: Int {
+        SystemSurfaceTextBounds.textByteCount(
+            title: title,
+            path: path,
+            colorHex: colorHex,
+            iconName: iconName
+        )
     }
 }
 
@@ -80,32 +96,12 @@ nonisolated struct SystemSurfaceRecentTaskSnapshot: Codable, Equatable, Identifi
         taskID
     }
 
-    nonisolated func isStructurallyValid(
-        maximumTitleBytes: Int,
-        maximumPathBytes: Int,
-        maximumStyleValueBytes: Int
-    ) -> Bool {
-        SystemSurfaceTextBounds.isBounded(
-            title,
-            maximumUTF8Bytes: maximumTitleBytes
-        ) &&
-            SystemSurfaceTextBounds.isBounded(
-                path,
-                maximumUTF8Bytes: maximumPathBytes
-            ) &&
-            SystemSurfaceTextBounds.isValidStyleValue(
-                colorHex,
-                maximumUTF8Bytes: maximumStyleValueBytes
-            ) &&
-            SystemSurfaceTextBounds.isValidStyleValue(
-                iconName,
-                maximumUTF8Bytes: maximumStyleValueBytes
-            )
-    }
-
-    nonisolated func hasValidQuickStartRank(maximumQuickStartTasks: Int) -> Bool {
-        quickStartRank.map {
-            (0 ..< maximumQuickStartTasks).contains($0)
-        } != false
+    var textByteCount: Int {
+        SystemSurfaceTextBounds.textByteCount(
+            title: title,
+            path: path,
+            colorHex: colorHex,
+            iconName: iconName
+        )
     }
 }

@@ -163,8 +163,7 @@ struct ActiveTimerContent: View {
     private var elapsedPresentation: WidgetTimerElapsedPresentation {
         timer.elapsedPresentation(
             isCurrent: freshness == .current,
-            generatedAt: generatedAt,
-            maximumActiveTimerAge: WidgetSnapshotLimits.maximumActiveTimerAge
+            generatedAt: generatedAt
         )
     }
 }

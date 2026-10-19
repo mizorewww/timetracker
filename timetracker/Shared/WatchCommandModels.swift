@@ -36,7 +36,7 @@ nonisolated extension WatchTimerCommand {
         guard isStructurallyValid, SystemSurfaceTextBounds.isFinite(now) else { return false }
         let age = now.timeIntervalSince(issuedAt)
         return age.isFinite &&
-            age >= -WatchTransportLimits.maximumFutureClockSkew &&
+            age >= -SystemSurfaceLimits.maximumFutureClockSkew &&
             age <= WatchTransportLimits.maximumCommandAge
     }
 }
@@ -109,7 +109,7 @@ nonisolated extension WatchCommandResult {
 
     func isValid(at now: Date) -> Bool {
         guard isStructurallyValid, SystemSurfaceTextBounds.isFinite(now) else { return false }
-        return completedAt.timeIntervalSince(now) <= WatchTransportLimits.maximumFutureClockSkew
+        return completedAt.timeIntervalSince(now) <= SystemSurfaceLimits.maximumFutureClockSkew
     }
 }
 

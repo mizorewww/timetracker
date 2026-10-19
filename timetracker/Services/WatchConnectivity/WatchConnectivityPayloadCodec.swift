@@ -1,7 +1,8 @@
 import Foundation
 
 /// WatchConnectivity dictionaries carry one JSON-encoded value under a kind
-/// tag. Decoding re-validates the value, because the payload crosses devices.
+/// tag. Commands are re-validated because they cross devices; a state
+/// snapshot is bounded by its encoded size.
 enum WatchConnectivityPayloadCodec {
     private nonisolated static let kindKey = "kind"
     private nonisolated static let valueKey = "value"
@@ -32,14 +33,11 @@ enum WatchConnectivityPayloadCodec {
     }
 
     nonisolated static func decodeState(from payload: [String: Any]) -> WatchStateSnapshot? {
-        decode(WatchStateSnapshot.self, kind: stateKind, from: payload)
-            .flatMap { snapshot in
-                guard snapshot.activeTimers.count <= WatchTransportLimits.maximumActiveTimers,
-                      snapshot.recentTasks.count <= WatchTransportLimits.maximumRecentTasks,
-                      snapshot.isValid(at: Date())
-                else { return nil }
-                return snapshot
-            }
+        guard let data = payload[valueKey] as? Data,
+              data.count <= SystemSurfaceLimits.maximumEncodedBytes
+        else { return nil }
+        return decode(WatchStateSnapshot.self, kind: stateKind, from: payload)
+            .flatMap { $0.isPlausible(at: Date()) ? $0 : nil }
     }
 
     private nonisolated static func payload(kind: String, value: some Encodable) -> [String: Any] {

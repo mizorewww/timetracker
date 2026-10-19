@@ -4,30 +4,10 @@ nonisolated enum WatchTransportLimits {
     /// Watch commands are immediate controls; an older one is rejected so the
     /// user retries instead of the iPhone acting on a stale tap.
     static let maximumCommandAge: TimeInterval = 30
-    static let maximumFutureClockSkew: TimeInterval = 5 * 60
     static let maximumDeviceIDBytes = 256
     static let maximumFailureCodeBytes = 256
-    static let maximumTitleBytes = 4 * 1024
-    static let maximumPathBytes = 16 * 1024
-    static let maximumStyleValueBytes = 256
-    static let maximumProjectedTitleBytes = 512
-    static let maximumProjectedPathBytes = 1024
-    static let maximumProjectedStyleValueBytes = 128
-    static let maximumSnapshotTextBytes = 128 * 1024
-    static let maximumActiveTimers = 64
-    static let maximumRecentTasks = 256
-    static let maximumQuickStartTasks = 24
-    static let maximumSummarySeconds = 10 * 366 * 24 * 60 * 60
-    static let maximumActiveTimerAge: TimeInterval = 10 * 366 * 24 * 60 * 60
     static let maximumPendingCommands = 64
     static let maximumFailedCommands = 64
-
-    static func boundedProjectedStyleValue(_ value: String?) -> String? {
-        SystemSurfaceTextBounds.boundedProjectedStyleValue(
-            value,
-            maximumUTF8Bytes: maximumProjectedStyleValueBytes
-        )
-    }
 }
 
 typealias WatchActiveTimerSnapshot = SystemSurfaceTimerSnapshot
@@ -88,55 +68,10 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
         generatedAt >= other.generatedAt
     }
 
-    func isValid(at now: Date) -> Bool {
-        let textByteCount = activeTimers.reduce(into: 0) { total, timer in
-            total += SystemSurfaceTextBounds.textByteCount(
-                title: timer.title,
-                path: timer.path,
-                colorHex: timer.colorHex,
-                iconName: timer.iconName
-            )
-        } + recentTasks.reduce(into: 0) { total, task in
-            total += SystemSurfaceTextBounds.textByteCount(
-                title: task.title,
-                path: task.path,
-                colorHex: task.colorHex,
-                iconName: task.iconName
-            )
-        }
-        guard SystemSurfaceTextBounds.isFinite(now),
-              SystemSurfaceTextBounds.isFinite(generatedAt),
-              generatedAt.timeIntervalSince(now) <= WatchTransportLimits.maximumFutureClockSkew,
-              (0 ... WatchTransportLimits.maximumSummarySeconds).contains(todayGrossSeconds),
-              (0 ... WatchTransportLimits.maximumSummarySeconds).contains(todayWallSeconds),
-              activeTimers.count <= WatchTransportLimits.maximumActiveTimers,
-              recentTasks.count <= WatchTransportLimits.maximumRecentTasks,
-              textByteCount <= WatchTransportLimits.maximumSnapshotTextBytes,
-              activeTimers.allSatisfy({
-                  $0.isStructurallyValid(
-                      relativeTo: generatedAt,
-                      maximumTitleBytes: WatchTransportLimits.maximumTitleBytes,
-                      maximumPathBytes: WatchTransportLimits.maximumPathBytes,
-                      maximumStyleValueBytes: WatchTransportLimits.maximumStyleValueBytes,
-                      maximumFutureClockSkew: WatchTransportLimits.maximumFutureClockSkew,
-                      maximumActiveTimerAge: WatchTransportLimits.maximumActiveTimerAge
-                  )
-              }),
-              recentTasks.allSatisfy({
-                  $0.isStructurallyValid(
-                      maximumTitleBytes: WatchTransportLimits.maximumTitleBytes,
-                      maximumPathBytes: WatchTransportLimits.maximumPathBytes,
-                      maximumStyleValueBytes: WatchTransportLimits.maximumStyleValueBytes
-                  ) && $0.hasValidQuickStartRank(
-                      maximumQuickStartTasks: WatchTransportLimits.maximumQuickStartTasks
-                  )
-              }),
-              Set(activeTimers.map(\.id)).count == activeTimers.count,
-              Set(recentTasks.map(\.taskID)).count == recentTasks.count
-        else {
-            return false
-        }
-        return true
+    /// A snapshot stamped further ahead than the clock-skew allowance would
+    /// otherwise shadow every newer one.
+    func isPlausible(at now: Date) -> Bool {
+        generatedAt.timeIntervalSince(now) <= SystemSurfaceLimits.maximumFutureClockSkew
     }
 }
 

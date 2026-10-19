@@ -12,14 +12,9 @@ nonisolated struct WatchStateProjectionService {
         taskParentPathByID: [UUID: String]
     ) -> WatchStateSnapshot {
         let activeTimers = widgetSnapshot.activeTimers
-        var remainingTextBytes = WatchTransportLimits.maximumSnapshotTextBytes
+        var remainingTextBytes = SystemSurfaceLimits.maximumSnapshotTextBytes
         for timer in activeTimers {
-            remainingTextBytes -= SystemSurfaceTextBounds.textByteCount(
-                title: timer.title,
-                path: timer.path,
-                colorHex: timer.colorHex,
-                iconName: timer.iconName
-            )
+            remainingTextBytes -= timer.textByteCount
         }
 
         let usageRankByTaskID = Dictionary(
@@ -37,40 +32,28 @@ nonisolated struct WatchStateProjectionService {
 
         var selected: [UUID: WatchRecentTaskSnapshot] = [:]
         for task in candidates {
-            guard selected.count < WatchTransportLimits.maximumRecentTasks,
+            guard selected.count < SystemSurfaceLimits.maximumWatchTasks,
                   selected[task.id] == nil
             else {
                 continue
             }
             let snapshot = WatchRecentTaskSnapshot(
                 taskID: task.id,
-                title: SystemSurfaceTextBounds.boundedUTF8Prefix(
-                    task.title,
-                    maximumUTF8Bytes: WatchTransportLimits.maximumProjectedTitleBytes
-                ),
-                path: SystemSurfaceTextBounds.boundedUTF8Prefix(
-                    taskParentPathByID[task.id] ?? "",
-                    maximumUTF8Bytes: WatchTransportLimits.maximumProjectedPathBytes
-                ),
-                colorHex: WatchTransportLimits.boundedProjectedStyleValue(task.colorHex),
-                iconName: WatchTransportLimits.boundedProjectedStyleValue(task.iconName)
+                title: SystemSurfaceLimits.boundedTitle(task.title),
+                path: SystemSurfaceLimits.boundedPath(taskParentPathByID[task.id] ?? ""),
+                colorHex: SystemSurfaceLimits.boundedStyleValue(task.colorHex),
+                iconName: SystemSurfaceLimits.boundedStyleValue(task.iconName)
             )
-            let textByteCount = SystemSurfaceTextBounds.textByteCount(
-                title: snapshot.title,
-                path: snapshot.path,
-                colorHex: snapshot.colorHex,
-                iconName: snapshot.iconName
-            )
-            guard textByteCount <= remainingTextBytes else { continue }
+            guard snapshot.textByteCount <= remainingTextBytes else { continue }
             selected[task.id] = snapshot
-            remainingTextBytes -= textByteCount
+            remainingTextBytes -= snapshot.textByteCount
         }
 
         var quickStartRank = 0
         for task in quickStartTasks
             where selected[task.id] != nil && selected[task.id]?.quickStartRank == nil
         {
-            guard quickStartRank < WatchTransportLimits.maximumQuickStartTasks else { break }
+            guard quickStartRank < SystemSurfaceLimits.maximumQuickStartTasks else { break }
             selected[task.id]?.quickStartRank = quickStartRank
             quickStartRank += 1
         }

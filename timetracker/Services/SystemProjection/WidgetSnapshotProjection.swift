@@ -20,69 +20,51 @@ nonisolated enum WidgetSnapshotProjection {
         todayWallSeconds: Int,
         generatedAt: Date
     ) -> WidgetSnapshot {
-        var remainingTextBytes = WidgetSnapshotLimits.maximumSnapshotTextBytes
+        var remainingTextBytes = SystemSurfaceLimits.maximumSnapshotTextBytes
         var activeTimers: [WidgetTimerSnapshot] = []
-        for segment in activeSegments.prefix(WidgetSnapshotLimits.maximumActiveTimers) {
+        for segment in activeSegments.prefix(SystemSurfaceLimits.maximumActiveTimers) {
             let task = taskByID[segment.taskID]
             let timer = WidgetTimerSnapshot(
                 id: segment.id,
                 taskID: segment.taskID,
-                title: SystemSurfaceTextBounds.boundedUTF8Prefix(
-                    task?.title ?? AppStrings.localized("task.unavailable"),
-                    maximumUTF8Bytes: WidgetSnapshotLimits.maximumProjectedTitleBytes
+                title: SystemSurfaceLimits.boundedTitle(
+                    task?.title ?? AppStrings.localized("task.unavailable")
                 ),
-                path: SystemSurfaceTextBounds.boundedUTF8Prefix(
-                    taskParentPathByID[segment.taskID] ?? "",
-                    maximumUTF8Bytes: WidgetSnapshotLimits.maximumProjectedPathBytes
+                path: SystemSurfaceLimits.boundedPath(
+                    taskParentPathByID[segment.taskID] ?? ""
                 ),
-                startedAt: WidgetSnapshotLimits.boundedTimerStart(
+                startedAt: SystemSurfaceLimits.boundedTimerStart(
                     segment.startedAt,
                     generatedAt: generatedAt
                 ),
-                colorHex: WidgetSnapshotLimits.boundedProjectedStyleValue(task?.colorHex),
-                iconName: WidgetSnapshotLimits.boundedProjectedStyleValue(task?.iconName)
+                colorHex: SystemSurfaceLimits.boundedStyleValue(task?.colorHex),
+                iconName: SystemSurfaceLimits.boundedStyleValue(task?.iconName)
             )
-            let textByteCount = SystemSurfaceTextBounds.textByteCount(
-                title: timer.title,
-                path: timer.path,
-                colorHex: timer.colorHex,
-                iconName: timer.iconName
-            )
-            guard textByteCount <= remainingTextBytes else { break }
+            guard timer.textByteCount <= remainingTextBytes else { break }
             activeTimers.append(timer)
-            remainingTextBytes -= textByteCount
+            remainingTextBytes -= timer.textByteCount
         }
 
         var recentTaskSnapshots: [WidgetRecentTaskSnapshot] = []
-        for task in recentTasks.prefix(min(3, WidgetSnapshotLimits.maximumRecentTasks)) {
+        for task in recentTasks.prefix(SystemSurfaceLimits.maximumWidgetRecentTasks) {
             let recentTask = WidgetRecentTaskSnapshot(
                 taskID: task.id,
-                title: SystemSurfaceTextBounds.boundedUTF8Prefix(
-                    task.title,
-                    maximumUTF8Bytes: WidgetSnapshotLimits.maximumProjectedTitleBytes
+                title: SystemSurfaceLimits.boundedTitle(task.title),
+                path: SystemSurfaceLimits.boundedPath(
+                    taskParentPathByID[task.id] ?? ""
                 ),
-                path: SystemSurfaceTextBounds.boundedUTF8Prefix(
-                    taskParentPathByID[task.id] ?? "",
-                    maximumUTF8Bytes: WidgetSnapshotLimits.maximumProjectedPathBytes
-                ),
-                colorHex: WidgetSnapshotLimits.boundedProjectedStyleValue(task.colorHex),
-                iconName: WidgetSnapshotLimits.boundedProjectedStyleValue(task.iconName)
+                colorHex: SystemSurfaceLimits.boundedStyleValue(task.colorHex),
+                iconName: SystemSurfaceLimits.boundedStyleValue(task.iconName)
             )
-            let textByteCount = SystemSurfaceTextBounds.textByteCount(
-                title: recentTask.title,
-                path: recentTask.path,
-                colorHex: recentTask.colorHex,
-                iconName: recentTask.iconName
-            )
-            guard textByteCount <= remainingTextBytes else { break }
+            guard recentTask.textByteCount <= remainingTextBytes else { break }
             recentTaskSnapshots.append(recentTask)
-            remainingTextBytes -= textByteCount
+            remainingTextBytes -= recentTask.textByteCount
         }
 
         return WidgetSnapshot(
             generatedAt: generatedAt,
-            todayGrossSeconds: min(max(0, todayGrossSeconds), WidgetSnapshotLimits.maximumSummarySeconds),
-            todayWallSeconds: min(max(0, todayWallSeconds), WidgetSnapshotLimits.maximumSummarySeconds),
+            todayGrossSeconds: SystemSurfaceLimits.boundedSummarySeconds(todayGrossSeconds),
+            todayWallSeconds: SystemSurfaceLimits.boundedSummarySeconds(todayWallSeconds),
             activeTimers: activeTimers,
             recentTasks: recentTaskSnapshots
         )

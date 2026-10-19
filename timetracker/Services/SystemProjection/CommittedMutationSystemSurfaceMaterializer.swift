@@ -153,7 +153,7 @@ actor CommittedMutationSystemSurfaceMaterializer {
             rankedTasks: rankedTasks,
             activityByTaskID: activityByTaskID,
             excluding: activeTaskIDs,
-            limit: 3
+            limit: SystemSurfaceLimits.maximumWidgetRecentTasks
         )
         let totals = todayTotals(
             segments: readableSegments,
@@ -369,7 +369,7 @@ actor CommittedMutationSystemSurfaceMaterializer {
             }
             result.append(taskID)
             if result.count ==
-                WatchTransportLimits.maximumQuickStartTasks
+                SystemSurfaceLimits.maximumQuickStartTasks
             {
                 break
             }
@@ -397,7 +397,7 @@ actor CommittedMutationSystemSurfaceMaterializer {
             rankedTasks: rankedTasks,
             activityByTaskID: activityByTaskID,
             excluding: Set(pinnedTasks.map(\.id)),
-            limit: WatchTransportLimits.maximumQuickStartTasks - pinnedTasks.count
+            limit: SystemSurfaceLimits.maximumQuickStartTasks - pinnedTasks.count
         )
         return WatchStateProjectionService().snapshot(
             widgetSnapshot: widgetSnapshot,

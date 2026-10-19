@@ -73,15 +73,18 @@ struct WatchConnectivityPayloadCodecTests {
             issuedAt: now,
             deviceID: "watch"
         )
-        let recentTasks = (0 ... WatchTransportLimits.maximumRecentTasks).map { index in
+        let recentTasks = [
             WatchRecentTaskSnapshot(
                 taskID: UUID(),
-                title: "Task \(index)",
-                path: "Task \(index)",
+                title: String(
+                    repeating: "a",
+                    count: SystemSurfaceLimits.maximumEncodedBytes
+                ),
+                path: "",
                 colorHex: nil,
                 iconName: nil
-            )
-        }
+            ),
+        ]
         let oversized = WatchStateSnapshot(
             generatedAt: now,
             todayGrossSeconds: 0,

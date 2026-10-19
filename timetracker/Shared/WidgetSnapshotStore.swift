@@ -42,7 +42,7 @@ nonisolated struct WidgetSnapshotTimelinePolicy: Sendable {
         case let .snapshot(snapshot, .clockAdjusted):
             let earliestRetry = now.addingTimeInterval(Self.minimumRetryDelay)
             let clockRecoveryDate = snapshot.generatedAt.addingTimeInterval(
-                -WidgetSnapshotLimits.maximumFutureClockSkew
+                -SystemSurfaceLimits.maximumFutureClockSkew
             )
             guard SystemSurfaceTextBounds.isFinite(earliestRetry),
                   SystemSurfaceTextBounds.isFinite(clockRecoveryDate)
@@ -96,11 +96,8 @@ nonisolated struct SharedWidgetSnapshotStore {
         guard let defaults else {
             throw WidgetSnapshotStoreError.sharedContainerUnavailable
         }
-        guard snapshot.isStructurallyValid else {
-            throw WidgetSnapshotStoreError.invalidSnapshot
-        }
         let data = try JSONEncoder().encode(snapshot)
-        guard data.count <= WidgetSnapshotLimits.maximumEncodedBytes else {
+        guard data.count <= SystemSurfaceLimits.maximumEncodedBytes else {
             throw WidgetSnapshotStoreError.invalidSnapshot
         }
         defaults.set(data, forKey: Self.snapshotKey)
@@ -110,9 +107,8 @@ nonisolated struct SharedWidgetSnapshotStore {
         guard let defaults else { return .sharedContainerUnavailable }
         guard defaults.object(forKey: Self.snapshotKey) != nil else { return .missing }
         guard let data = defaults.data(forKey: Self.snapshotKey),
-              data.count <= WidgetSnapshotLimits.maximumEncodedBytes,
-              let snapshot = try? JSONDecoder().decode(WidgetSnapshot.self, from: data),
-              snapshot.isStructurallyValid
+              data.count <= SystemSurfaceLimits.maximumEncodedBytes,
+              let snapshot = try? JSONDecoder().decode(WidgetSnapshot.self, from: data)
         else {
             return .corrupted
         }

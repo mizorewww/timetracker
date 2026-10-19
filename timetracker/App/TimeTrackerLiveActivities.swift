@@ -77,7 +77,12 @@ final class LiveActivityCoordinator {
     }
 
     func retry() {
-        guard let lastProjection else { return }
+        // Nothing projected yet: there is no activity to restore, but the
+        // status must follow re-enabled Live Activities.
+        guard let lastProjection else {
+            status = authorizationInfo.areActivitiesEnabled ? .ready : .denied
+            return
+        }
         ignoresRemoval = true
         Task { @MainActor [weak self] in
             try? await self?.apply(lastProjection)

@@ -174,7 +174,7 @@ struct LedgerStore {
     private mutating func rebuildSegmentIndexes(segments: [TimeSegment]) {
         // The repository already resolves LWW and hides tombstones.
         segmentByID = segments.reduce(into: [:]) { $0[$1.id] = $1 }
-        segmentSnapshotByID = segmentByID.mapValues(LedgerSegmentSnapshot.init)
+        segmentSnapshotByID = segmentByID.mapValues { LedgerSegmentSnapshot($0) }
         segmentIDsByTaskID = Dictionary(grouping: segmentSnapshotByID.values, by: \.taskID)
             .mapValues { Set($0.map(\.id)) }
         segmentIDsBySessionID = Dictionary(grouping: segmentSnapshotByID.values, by: \.sessionID)
@@ -199,7 +199,7 @@ struct LedgerStore {
         for id in ids {
             let before = segmentSnapshotByID[id]
             let afterModel = fetchedByID[id]
-            let after = afterModel.map(LedgerSegmentSnapshot.init)
+            let after = afterModel.map { LedgerSegmentSnapshot($0) }
             // Running and future-ended records are re-reported even when
             // unchanged so the rollup re-evaluates their elapsed time.
             if before != after || after?.isTimeSensitive(at: now) == true {

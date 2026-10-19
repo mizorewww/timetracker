@@ -21,7 +21,7 @@ struct TaskLifecycleAndCategoryCommandTests {
         }
         #expect(try task(parent.id, in: context.container).archivedAt == nil)
 
-        _ = try timer.stop(segmentID: #require(started.subjectSegmentID))
+        _ = try timer.stop(segmentID: started.subjectSegmentID)
         let archived = try lifecycle.archive(taskID: parent.id)
 
         #expect(archived.didMutate)

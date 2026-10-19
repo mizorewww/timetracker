@@ -17,9 +17,8 @@ struct StoreMutationBroadcasterTests {
             object: nil,
             queue: .main
         ) { notification in
-            let events = StoreMutationBroadcaster.events(from: notification)
             MainActor.assumeIsolated {
-                if let events {
+                if let events = StoreMutationBroadcaster.events(from: notification) {
                     recorder.posts.append(events)
                 }
             }

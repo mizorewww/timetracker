@@ -62,21 +62,7 @@ extension TimeTrackerStore {
     }
 
     func visibleSegments(overlapping interval: DateInterval, now: Date) -> [TimeSegment] {
-        visibleSegments(
-            overlapping: interval,
-            evaluatedAt: now,
-            clockReference: now
-        )
-    }
-
-    /// `clockReference` is kept for API compatibility; range reads scan the
-    /// ledger snapshots, so only `cutoff` affects the result.
-    func visibleSegments(
-        overlapping interval: DateInterval,
-        evaluatedAt cutoff: Date,
-        clockReference _: Date
-    ) -> [TimeSegment] {
-        ledgerDomainStore.segments(overlapping: interval, now: cutoff)
+        ledgerDomainStore.segments(overlapping: interval, now: now)
             .filter(isReadableLedgerSegment)
     }
 

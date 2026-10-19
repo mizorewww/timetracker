@@ -206,8 +206,7 @@ extension TimeTrackerStore {
 
         let segments = visibleSegments(
             overlapping: interval,
-            evaluatedAt: interval.end,
-            clockReference: evaluation.clockReference
+            now: interval.end
         )
         .visibleDeduplicatedByID()
         let daily = analyticsDomainStore.dailyBreakdown(

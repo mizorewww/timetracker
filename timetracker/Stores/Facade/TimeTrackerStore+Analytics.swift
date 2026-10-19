@@ -49,8 +49,7 @@ extension TimeTrackerStore {
         let segments = visibleSegments(
             overlapping: decisionInterval,
             taskIDs: request.taskIDs,
-            evaluatedAt: now,
-            clockReference: now
+            now: now
         )
         let recentSegments = visibleRecentSegments(forTaskIDs: request.taskIDs)
         let sessions = visibleSessions(for: recentSegments)
@@ -133,8 +132,7 @@ extension TimeTrackerStore {
         let interval = DateInterval(start: previous?.start ?? current.start, end: current.end)
         return visibleSegments(
             overlapping: interval,
-            evaluatedAt: evaluation.cutoff,
-            clockReference: evaluation.clockReference
+            now: evaluation.cutoff
         )
     }
 }

@@ -233,21 +233,19 @@ final class TimeTrackerStore {
     var preferenceDomainStore = PreferenceStore()
     var syncObservers: [SyncNotificationObserverToken] = []
     @ObservationIgnored var storeMutationObserver: SyncNotificationObserverToken?
-    var taskByID: [UUID: TaskNode] = [:]
     var taskCategoryByID: [UUID: TaskCategory] = [:]
     var taskCategoryIDByRootTaskID: [UUID: UUID] = [:]
     var taskCategoryAssignmentByRootTaskID: [UUID: TaskCategoryAssignment] = [:]
     var forecastEligibleTaskIDCache: Set<UUID> = []
-    @ObservationIgnored var taskTreeIndexes = TaskTreeIndexes.empty
-    var childrenByParentID: [UUID?: [TaskNode]] = [:]
+    /// Single owner of the task lookups (`taskByID`, `childrenByParentID`,
+    /// paths); the facade exposes them as read-through properties.
+    var taskTreeIndexes = TaskTreeIndexes.empty
     var taskTreeReadIndex = TaskTreeReadIndex.empty
     @ObservationIgnored var taskTreeReadIndexRevision: UInt64 = 0
     var taskReadModelRevision: UInt64 = 0
     @ObservationIgnored var todayHeatmapRecurrenceProjection =
         TodayHeatmapRecurrenceProjection.empty
     @ObservationIgnored var taskTreeProjectionCache = TaskTreeProjectionCache()
-    var taskPathByID: [UUID: String] = [:]
-    var taskParentPathByID: [UUID: String] = [:]
     var visibleTaskIDs: Set<UUID> = []
     var parentEligibleTaskIDs: Set<UUID> = []
     var trackableTaskIDs: Set<UUID> = []

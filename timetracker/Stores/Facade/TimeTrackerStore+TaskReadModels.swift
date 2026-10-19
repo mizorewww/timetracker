@@ -241,15 +241,26 @@ extension TimeTrackerStore {
         )
     }
 
+    var taskByID: [UUID: TaskNode] {
+        taskTreeIndexes.taskByID
+    }
+
+    var childrenByParentID: [UUID?: [TaskNode]] {
+        taskTreeIndexes.childrenByParentID
+    }
+
+    var taskPathByID: [UUID: String] {
+        taskTreeIndexes.taskPathByID
+    }
+
+    var taskParentPathByID: [UUID: String] {
+        taskTreeIndexes.taskParentPathByID
+    }
+
     /// Rebuilds every facade task lookup, then the tree and forecast indexes
     /// that depend on both tasks and categories.
     func rebuildTaskIndexes() {
-        let indexes = TaskTreeService.indexes(tasks: tasks)
-        taskTreeIndexes = indexes
-        taskByID = indexes.taskByID
-        childrenByParentID = indexes.childrenByParentID
-        taskPathByID = indexes.taskPathByID
-        taskParentPathByID = indexes.taskParentPathByID
+        taskTreeIndexes = TaskTreeService.indexes(tasks: tasks)
         let eligibility = TaskTrackingAvailabilityService.eligibility(tasks: tasks)
         visibleTaskIDs = eligibility.visibleTaskIDs
         parentEligibleTaskIDs = eligibility.trackableTaskIDs

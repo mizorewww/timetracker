@@ -115,10 +115,7 @@ struct TimeTrackerCommands: Commands {
                 guard let store, let selectedTask = store.selectedTask else {
                     return
                 }
-                store.archiveTaskProtectingUnsavedChanges(
-                    selectedTask.id,
-                    onFailure: { presentationRouter?.feedbackRouter.present($0) }
-                )
+                runCommand { try store.archiveSelectedTask(taskID: selectedTask.id) }
             }
             .timeTrackerShortcut(
                 .archiveSelectedTask,
@@ -205,12 +202,8 @@ struct TimeTrackerCommands: Commands {
     ) -> some View {
         Button(destination.title) {
             guard let store else { return }
-            store.taskDetailNavigationGuard.requestNavigation(
-                dismissingActiveDetail: true
-            ) { [weak store] in
-                store?.closeTaskDetailNavigation()
-                store?.desktopDestination = destination
-            }
+            store.closeTaskDetailNavigation()
+            store.desktopDestination = destination
         }
         .timeTrackerShortcut(action, settings: shortcutSettings)
         .disabled(store == nil)

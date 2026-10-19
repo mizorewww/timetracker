@@ -33,9 +33,8 @@ struct TaskDetailView: View {
     }
 }
 
-/// Builds the editor session once per task, restores any persisted recovery
-/// draft into it, and only then mounts the workspace, so the workspace never
-/// renders or autosaves an unrecovered draft.
+/// Builds the editor session and autosave controller once per task, then
+/// mounts the workspace.
 private struct TaskDetailWorkspaceLoader: View {
     let store: TimeTrackerStore
     let taskID: UUID
@@ -78,24 +77,11 @@ private struct TaskDetailWorkspaceLoader: View {
                 store: store,
                 initialDraft: store.editorDraft(for: task)
             )
-            let recovery = store.taskDraftRecoveryController
-            let recoveredDraft = try? await recovery.load(
-                for: taskID,
-                currentDraft: session.sessionBaseline
-            )
-            await recovery.removeExpired()
-            guard Task.isCancelled == false else { return }
-            if let recoveredDraft {
-                session.restoreRecoveredDraft(recoveredDraft)
-            }
             prepared = TaskDetailWorkspace.Prepared(
                 session: session,
                 autosaveController: .workspaceController(
                     store: store,
-                    session: session,
-                    taskID: taskID,
-                    returnDestination: returnDestination,
-                    recoveryController: recovery
+                    session: session
                 )
             )
         }

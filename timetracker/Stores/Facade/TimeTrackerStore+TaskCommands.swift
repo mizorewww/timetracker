@@ -21,21 +21,14 @@ extension TimeTrackerStore {
         )
     }
 
+    /// Saves an editor draft. The new-task editor selects the saved task and
+    /// returns to its destination; detail autosave passes
+    /// `selectsSavedTask: false` because it may commit while the user is
+    /// already navigating elsewhere.
     func saveTaskDraftResult(
         _ draft: TaskEditorDraft,
-        returnDestination: DesktopDestination? = nil
-    ) -> TaskDraftSaveResult {
-        saveTaskDraftResult(
-            draft,
-            proposedTaskID: nil,
-            returnDestination: returnDestination
-        )
-    }
-
-    private func saveTaskDraftResult(
-        _ draft: TaskEditorDraft,
-        proposedTaskID: UUID?,
-        returnDestination: DesktopDestination?
+        returnDestination: DesktopDestination? = nil,
+        selectsSavedTask: Bool = true
     ) -> TaskDraftSaveResult {
         let sanitizedTitle = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !sanitizedTitle.isEmpty else {
@@ -47,11 +40,13 @@ extension TimeTrackerStore {
             ).save(
                 draft: draft,
                 sanitizedTitle: sanitizedTitle,
-                proposedTaskID: proposedTaskID
+                proposedTaskID: nil
             )
             finishStoreScopedMutation(events: outcome.events)
             refreshStoreScopedTimerReadModels()
-            selectedTaskID = outcome.savedTaskID
+            if selectsSavedTask {
+                selectedTaskID = outcome.savedTaskID
+            }
             if let returnDestination {
                 desktopDestination = returnDestination
             }

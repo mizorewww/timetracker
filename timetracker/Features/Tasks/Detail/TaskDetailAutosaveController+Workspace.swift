@@ -3,10 +3,7 @@ import Foundation
 extension TaskDetailAutosaveController {
     static func workspaceController(
         store: TimeTrackerStore,
-        session: TaskEditorSession,
-        taskID: UUID,
-        returnDestination: TimeTrackerStore.DesktopDestination,
-        recoveryController: TaskDraftRecoveryController
+        session: TaskEditorSession
     ) -> TaskDetailAutosaveController {
         TaskDetailAutosaveController(
             delay: .milliseconds(450)
@@ -18,19 +15,13 @@ extension TaskDetailAutosaveController {
                     )
                 )
             }
-            switch store.saveTaskDraftResult(
-                draft,
-                returnDestination: returnDestination
-            ) {
+            switch store.saveTaskDraftResult(draft, selectsSavedTask: false) {
             case let .saved(savedTaskID):
                 guard session.acceptAutosavedDraft(
                     draft,
                     for: savedTaskID
                 ) else {
                     return .conflicted
-                }
-                Task {
-                    await recoveryController.remove(for: taskID)
                 }
                 return .saved
             case .stale:

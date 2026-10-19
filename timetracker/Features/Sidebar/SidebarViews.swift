@@ -9,25 +9,14 @@ enum SidebarSelection: Hashable {
         in store: TimeTrackerStore,
         onNavigate: @escaping () -> Void = {}
     ) {
-        let dismissesActiveDetail = switch self {
-        case .destination:
-            true
-        case .task:
-            false
+        switch self {
+        case let .destination(destination):
+            store.closeTaskDetailNavigation()
+            store.desktopDestination = destination
+        case let .task(taskID):
+            store.openTaskDetail(taskID)
         }
-
-        store.taskDetailNavigationGuard.requestNavigation(
-            dismissingActiveDetail: dismissesActiveDetail
-        ) {
-            switch self {
-            case let .destination(destination):
-                store.closeTaskDetailNavigation()
-                store.desktopDestination = destination
-            case let .task(taskID):
-                store.openTaskDetail(taskID)
-            }
-            onNavigate()
-        }
+        onNavigate()
     }
 }
 

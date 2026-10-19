@@ -92,6 +92,32 @@ struct TaskLifecycleAndCategoryCommandTests {
         #expect(ordered == [second, first])
     }
 
+    /// Detail autosave can commit after the user already navigated to another
+    /// task; that late commit must persist without stealing the selection.
+    @Test
+    func detailAutosaveSavesWithoutChangingSelectionOrDestination() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "seed")
+        let edited = try repository.createTask(title: "Draft", parentID: nil)
+        let other = try repository.createTask(title: "Other", parentID: nil)
+        let store = makeTestStore()
+        try store.configureIfNeeded(context: context)
+        store.selectedTaskID = other.id
+        store.desktopDestination = .today
+
+        var draft = try store.editorDraft(for: #require(store.task(for: edited.id)))
+        draft.title = "Renamed"
+        let result = store.saveTaskDraftResult(draft, selectsSavedTask: false)
+
+        guard case .saved = result else {
+            Issue.record("Autosave failed: \(result)")
+            return
+        }
+        #expect(try task(edited.id, in: context.container).title == "Renamed")
+        #expect(store.selectedTaskID == other.id)
+        #expect(store.desktopDestination == .today)
+    }
+
     private func task(_ id: UUID, in container: ModelContainer) throws -> TaskNode {
         try #require(
             try ModelContext(container)

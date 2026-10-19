@@ -85,12 +85,6 @@ struct TasksNavigationView: View {
             store.tasksRoute = route
             return
         }
-        guard let activeRoute = store.tasksRoute else { return }
-        store.taskDetailNavigationGuard.requestNavigation(
-            dismissingActiveDetail: true
-        ) {}
-        if store.tasksRoute == activeRoute {
-            synchronizePath(with: activeRoute)
-        }
+        store.tasksRoute = nil
     }
 }

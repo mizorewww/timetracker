@@ -93,10 +93,9 @@ struct TaskMenuContent: View {
 
     private var archiveButton: some View {
         Button {
-            store.archiveTaskProtectingUnsavedChanges(
-                task.id,
-                onFailure: { presentationRouter.feedbackRouter.present($0) }
-            )
+            presentationRouter.feedbackRouter.perform {
+                try store.archiveSelectedTask(taskID: task.id)
+            }
         } label: {
             Label(AppStrings.localized("task.action.archive"), systemImage: "archivebox")
         }
@@ -155,10 +154,9 @@ struct TaskRowSwipeActions: ViewModifier {
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                 if eligibility.hasActiveTimerInSubtree == false {
                     Button {
-                        store.archiveTaskProtectingUnsavedChanges(
-                            task.id,
-                            onFailure: { presentationRouter.feedbackRouter.present($0) }
-                        )
+                        presentationRouter.feedbackRouter.perform {
+                            try store.archiveSelectedTask(taskID: task.id)
+                        }
                     } label: {
                         actionLabel(
                             AppStrings.localized("task.action.archive"),

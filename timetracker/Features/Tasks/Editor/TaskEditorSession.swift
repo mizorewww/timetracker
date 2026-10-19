@@ -11,9 +11,6 @@ final class TaskEditorSession {
     private(set) var parentCandidates: [TaskNode]
     var pendingReloadDraft: TaskEditorDraft?
     var isDiscardConfirmationPresented = false
-    /// Set while a persisted crash-recovery draft is showing its inline notice.
-    var showsRecoveredDraftNotice = false
-    private(set) var navigationConfirmationRequestID: UUID?
 
     init(store: TimeTrackerStore, initialDraft: TaskEditorDraft) {
         self.store = store
@@ -77,31 +74,10 @@ final class TaskEditorSession {
 
     func requestCancel(whenClean: () -> Void) {
         if hasUnsavedChanges {
-            navigationConfirmationRequestID = nil
             isDiscardConfirmationPresented = true
         } else {
             whenClean()
         }
-    }
-
-    func requestDiscardConfirmation(for navigationRequestID: UUID) {
-        navigationConfirmationRequestID = navigationRequestID
-        isDiscardConfirmationPresented = true
-    }
-
-    func dismissDiscardConfirmation(for navigationRequestID: UUID) {
-        guard navigationConfirmationRequestID == navigationRequestID else {
-            return
-        }
-        navigationConfirmationRequestID = nil
-        isDiscardConfirmationPresented = false
-    }
-
-    func clearNavigationConfirmationRequest(_ navigationRequestID: UUID) {
-        guard navigationConfirmationRequestID == navigationRequestID else {
-            return
-        }
-        navigationConfirmationRequestID = nil
     }
 
     /// Saves the draft; returns the failure message for the caller to present.
@@ -253,35 +229,10 @@ final class TaskEditorSession {
             newBaseline.quantityEntryRevision
     }
 
-    func restoreRecoveredDraft(_ recoveredDraft: TaskEditorDraft) {
-        guard let sourceTaskID = sessionBaseline.taskID,
-              recoveredDraft.taskID == sourceTaskID,
-              recoveredDraft.baseline != nil,
-              recoveredDraft != sessionBaseline else { return }
-        draft = recoveredDraft
-        parentCandidates = Self.parentCandidates(for: recoveredDraft, store: store)
-        pendingReloadDraft = nil
-        showsRecoveredDraftNotice = true
-    }
-
-    func dismissRecoveredDraftNotice() {
-        showsRecoveredDraftNotice = false
-    }
-
     /// Surfaces the Keep/Reload alert for a draft that autosave could not commit
     /// because the persisted task moved on.
     func presentStaleDraftReload() {
         prepareLatestDraft()
-    }
-
-    func discardChanges() {
-        if let taskID = draft.taskID,
-           let task = store.task(for: taskID)
-        {
-            replace(with: store.editorDraft(for: task))
-        } else {
-            replace(with: sessionBaseline)
-        }
     }
 
     func reloadLatestDraft() {

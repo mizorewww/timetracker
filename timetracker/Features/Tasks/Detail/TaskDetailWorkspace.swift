@@ -9,12 +9,10 @@ struct TaskDetailWorkspace: View {
     let replaceDetail: (UUID) -> Void
     let session: TaskEditorSession
     let autosaveController: TaskDetailAutosaveController
-    @State var navigationGuardRegistration = TaskDetailNavigationRegistrationToken()
     @FocusState var focusedTextField: TaskEditorTextField?
     @FocusState var focusedChecklistDraftID: UUID?
 
-    /// Session and autosave controller created once by the loader, after any
-    /// persisted recovery draft has been restored.
+    /// Session and autosave controller created once by the loader.
     struct Prepared {
         let session: TaskEditorSession
         let autosaveController: TaskDetailAutosaveController
@@ -53,15 +51,12 @@ struct TaskDetailWorkspace: View {
             taskID: taskID,
             preservingDestination: returnDestination
         )
-        .taskEditorSessionSafety(
+        .taskEditorStaleDraftAlert(
             session: session,
-            discard: discardChanges,
             reload: reloadLatestDraft
         )
         .taskDetailAutosave(
             controller: autosaveController,
-            recoveryController: store.taskDraftRecoveryController,
-            sourceTaskID: taskID,
             request: autosaveRequest,
             focusedTextField: focusedTextField,
             focusedChecklistDraftID: focusedChecklistDraftID
@@ -74,20 +69,10 @@ struct TaskDetailWorkspace: View {
                 parentCandidateIDs: sourceToken.parentCandidateIDs
             )
         }
-        .onChange(of: session.isDiscardConfirmationPresented) { _, isPresented in
-            cancelPendingNavigationIfNeeded(
-                isDiscardConfirmationPresented: isPresented
-            )
-        }
-        .onChange(
-            of: session.hasUnsavedChanges,
-            updateNavigationGuardForDraftChanges
-        )
         .onChange(of: autosaveController.status, handleAutosaveStatus)
         .onChange(of: store.isTaskDetailRouteValid(taskID)) { _, isRouteValid in
             guard isRouteValid == false else { return }
             dismissDetail()
         }
-        .onAppear(perform: registerNavigationGuard)
     }
 }

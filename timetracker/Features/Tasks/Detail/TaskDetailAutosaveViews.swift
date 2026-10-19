@@ -1,10 +1,13 @@
 import SwiftUI
 
+/// Explains why the visible edits are not persisted: a save failure (with
+/// retry) or a draft that fails validation and is held until it is fixed.
 struct TaskDetailAutosaveFailureSection: View {
     let controller: TaskDetailAutosaveController
 
     var body: some View {
-        if case let .failed(message) = controller.status {
+        switch controller.status {
+        case let .failed(message):
             Section {
                 VStack(alignment: .leading, spacing: 8) {
                     Label(
@@ -32,6 +35,19 @@ struct TaskDetailAutosaveFailureSection: View {
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("task.detail.autosave.failure")
             }
+        case .validationBlocked:
+            Section {
+                Label(
+                    AppStrings.localized("task.autosave.invalid"),
+                    systemImage: "exclamationmark.circle"
+                )
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("task.detail.autosave.invalid")
+            }
+        default:
+            EmptyView()
         }
     }
 }

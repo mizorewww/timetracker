@@ -6,8 +6,6 @@ import SwiftUI
 struct CompactShellRootView: View {
     let store: TimeTrackerStore
     let requestOpenSettings: () -> Bool
-    @State private var isTabDiscardConfirmationPresented = false
-    @State private var tabNavigationConfirmationRequestID: UUID?
 
     var body: some View {
         TabView(selection: selectedDestinationBinding) {
@@ -73,11 +71,6 @@ struct CompactShellRootView: View {
         #if os(iOS)
         .tabBarMinimizeBehavior(.onScrollDown)
         #endif
-        .compactTabNavigationSafety(
-            isPresented: $isTabDiscardConfirmationPresented,
-            requestID: $tabNavigationConfirmationRequestID,
-            navigationGuard: store.taskDetailNavigationGuard
-        )
         // Kept verbatim: this is the identifier the existing XCUITests select on.
         .accessibilityIdentifier("phone.tabView")
     }
@@ -85,26 +78,8 @@ struct CompactShellRootView: View {
     private var selectedDestinationBinding: Binding<TimeTrackerStore.DesktopDestination> {
         Binding(
             get: { store.desktopDestination },
-            set: { destination in
-                guard destination != store.desktopDestination else { return }
-                let requestID = store.taskDetailNavigationGuard.requestNavigation(
-                    presentingConfirmationInSource: false,
-                    dismissPresentedConfirmation: dismissTabNavigationConfirmation
-                ) {
-                    store.desktopDestination = destination
-                }
-                if let requestID {
-                    tabNavigationConfirmationRequestID = requestID
-                    isTabDiscardConfirmationPresented = true
-                }
-            }
+            set: { store.desktopDestination = $0 }
         )
-    }
-
-    private func dismissTabNavigationConfirmation(requestID: UUID) {
-        guard tabNavigationConfirmationRequestID == requestID else { return }
-        tabNavigationConfirmationRequestID = nil
-        isTabDiscardConfirmationPresented = false
     }
 
     private func openSettings() {

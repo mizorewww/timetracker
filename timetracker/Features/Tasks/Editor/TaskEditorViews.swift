@@ -139,14 +139,15 @@ struct TaskEditorPanel: View {
             }
             #endif
         }
-        .taskEditorSessionSafety(
-            session: session,
-            discard: onCancel,
-            reload: {
-                session.reloadLatestDraft()
-                clearInputFocus()
-            }
+        .editorDiscardConfirmation(
+            isPresented: $session.isDiscardConfirmationPresented,
+            hasUnsavedChanges: session.hasUnsavedChanges,
+            discard: onCancel
         )
+        .taskEditorStaleDraftAlert(session: session) {
+            session.reloadLatestDraft()
+            clearInputFocus()
+        }
     }
 
     private func clearInputFocus() {

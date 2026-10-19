@@ -97,10 +97,6 @@ struct ContentView: View {
             guard presentationID == nil else { return }
             drainPendingDeepLinks()
         }
-        .onChange(of: store.taskDetailNavigationGuard.hasPendingNavigation) { _, hasPendingNavigation in
-            guard hasPendingNavigation == false else { return }
-            drainPendingDeepLinks()
-        }
     }
 
     private func drainPendingDeepLinks() {

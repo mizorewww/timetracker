@@ -1,19 +1,13 @@
 import SwiftUI
 
-private struct TaskEditorSessionSafetyModifier: ViewModifier {
+/// Keep/Reload choice for a draft whose save was rejected because the
+/// persisted task changed on another device or scene.
+private struct TaskEditorStaleDraftAlertModifier: ViewModifier {
     let session: TaskEditorSession
-    let discard: () -> Void
     let reload: () -> Void
 
     func body(content: Content) -> some View {
-        @Bindable var session = session
-
         content
-            .editorDiscardConfirmation(
-                isPresented: $session.isDiscardConfirmationPresented,
-                hasUnsavedChanges: session.hasUnsavedChanges,
-                discard: discard
-            )
             .alert(
                 AppStrings.localized("task.editor.stale.title"),
                 isPresented: reloadAlertBinding
@@ -47,15 +41,13 @@ private struct TaskEditorSessionSafetyModifier: ViewModifier {
 }
 
 extension View {
-    func taskEditorSessionSafety(
+    func taskEditorStaleDraftAlert(
         session: TaskEditorSession,
-        discard: @escaping () -> Void,
         reload: @escaping () -> Void
     ) -> some View {
         modifier(
-            TaskEditorSessionSafetyModifier(
+            TaskEditorStaleDraftAlertModifier(
                 session: session,
-                discard: discard,
                 reload: reload
             )
         )

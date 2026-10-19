@@ -10,7 +10,6 @@ final class TimeTrackerStore {
     let inboxSuggestionService: LLMInboxSuggestionService
     let checklistVisualSuggestionService: LLMChecklistVisualSuggestionService
     let writeAuthorization: StoreWriteAuthorization
-    let taskDraftRecoveryController: TaskDraftRecoveryController
     @ObservationIgnored
     let committedMutationSystemProjectionScheduler:
         CommittedMutationSystemProjectionScheduler?
@@ -20,7 +19,6 @@ final class TimeTrackerStore {
         inboxSuggestionService: LLMInboxSuggestionService? = nil,
         checklistVisualSuggestionService: LLMChecklistVisualSuggestionService? = nil,
         writeAuthorization: StoreWriteAuthorization = .applicationState,
-        taskDraftRecoveryStore: TaskDraftRecoveryStore? = nil,
         committedMutationSystemProjectionScheduler:
         CommittedMutationSystemProjectionScheduler? = nil
     ) {
@@ -31,9 +29,6 @@ final class TimeTrackerStore {
             checklistVisualSuggestionService ??
             LLMChecklistVisualSuggestionService()
         self.writeAuthorization = writeAuthorization
-        taskDraftRecoveryController = TaskDraftRecoveryController(
-            store: taskDraftRecoveryStore ?? TaskDraftRecoveryStore()
-        )
         self.committedMutationSystemProjectionScheduler =
             committedMutationSystemProjectionScheduler
     }
@@ -157,7 +152,6 @@ final class TimeTrackerStore {
     var desktopDestination: DesktopDestination = .today
     var tasksRoute: TasksRoute?
     var todayTaskRoute: TasksRoute?
-    @ObservationIgnored let taskDetailNavigationGuard = TaskDetailNavigationGuard()
     var cloudAccountCheck: CloudAccountCheckOutcome?
     @ObservationIgnored var cloudAccountCheckRequestID: UUID?
     var lastSyncActivity: SyncActivityOutcome?

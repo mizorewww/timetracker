@@ -138,14 +138,20 @@ nonisolated extension SwiftDataTaskRepository {
             throw TaskRepositoryError.categoryUnavailable
         }
         let now = Date()
-        category.deletedAt = now
-        category.markMutated(at: now, deviceID: deviceID)
+        let assignments = try categoryAssignments()
+            .filter { $0.categoryID == categoryID && $0.deletedAt == nil }
+        // The winners carry the newest stamps, so dominating them keeps a
+        // device whose clock runs ahead from resurrecting the category.
+        let mutationDate = PersistentLWWMutationDate.strictlyDominating(
+            preferred: now,
+            observed: [category.updatedAt] + assignments.map(\.updatedAt)
+        )
+        category.deletedAt = mutationDate
+        category.markMutated(at: mutationDate, deviceID: deviceID)
 
-        for assignment in try categoryAssignments()
-            where assignment.categoryID == categoryID && assignment.deletedAt == nil
-        {
-            assignment.deletedAt = now
-            assignment.markMutated(at: now, deviceID: deviceID)
+        for assignment in assignments {
+            assignment.deletedAt = mutationDate
+            assignment.markMutated(at: mutationDate, deviceID: deviceID)
         }
         try context.saveAfterMutationStep()
     }

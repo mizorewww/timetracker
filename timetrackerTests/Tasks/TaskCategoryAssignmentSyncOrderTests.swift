@@ -93,4 +93,30 @@ struct TaskCategoryAssignmentSyncOrderTests {
 
         #expect(try repository.categoryID(forRootTaskID: root.id) == health.id)
     }
+
+    @Test
+    func deletingACategoryBeatsDuplicateAssignmentRowsStampedAhead() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "seed")
+        let root = try repository.createTask(title: "Work", parentID: nil)
+        let category = try repository.createCategory(title: "Career")
+        let ahead = Date().addingTimeInterval(60)
+        let assignmentID = UUID()
+        for (deviceID, offset) in [("device-ahead", 1.0), ("device-ahead-older", 0.0)] {
+            let row = TaskCategoryAssignment(
+                taskID: root.id,
+                categoryID: category.id,
+                deviceID: deviceID
+            )
+            row.id = assignmentID
+            row.updatedAt = ahead.addingTimeInterval(offset)
+            context.insert(row)
+        }
+        try context.save()
+
+        try repository.softDeleteCategory(categoryID: category.id)
+        try context.save()
+
+        #expect(try repository.categoryID(forRootTaskID: root.id) == nil)
+    }
 }

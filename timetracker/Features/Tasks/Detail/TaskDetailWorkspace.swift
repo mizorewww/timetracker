@@ -56,6 +56,7 @@ struct TaskDetailWorkspace: View {
             reload: reloadLatestDraft
         )
         .taskDetailAutosave(
+            taskID: taskID,
             controller: autosaveController,
             request: autosaveRequest,
             focusedTextField: focusedTextField,

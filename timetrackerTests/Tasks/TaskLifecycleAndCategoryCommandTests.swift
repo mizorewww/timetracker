@@ -56,7 +56,7 @@ struct TaskLifecycleAndCategoryCommandTests {
         try store.configureIfNeeded(context: context)
         let router = AppPresentationRouter(feedbackRouter: AppSceneFeedbackRouter())
         var archivedWhenSaved: Bool?
-        router.registerOpenTaskDetailSave(id: UUID()) {
+        router.registerOpenTaskDetailSave(id: UUID(), taskID: created.id) {
             archivedWhenSaved = (try? task(created.id, in: context.container))?.archivedAt != nil
             return true
         }
@@ -71,17 +71,38 @@ struct TaskLifecycleAndCategoryCommandTests {
     @Test
     func archiveIsNotPerformedWhenTheOpenDetailEditCannotBeSaved() throws {
         let context = try makeTestContext()
-        let created = try SwiftDataTaskRepository(context: context, deviceID: "seed")
-            .createTask(title: "Draft title", parentID: nil)
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "seed")
+        let parent = try repository.createTask(title: "Parent", parentID: nil)
+        let child = try repository.createTask(title: "Child", parentID: parent.id)
+        let store = makeTestStore()
+        try store.configureIfNeeded(context: context)
+
+        for archivedTaskID in [child.id, parent.id] {
+            let router = AppPresentationRouter(feedbackRouter: AppSceneFeedbackRouter())
+            router.registerOpenTaskDetailSave(id: UUID(), taskID: child.id) { false }
+
+            router.archiveTask(archivedTaskID, using: store)
+
+            #expect(try task(archivedTaskID, in: context.container).archivedAt == nil)
+            #expect(router.feedbackRouter.current != nil)
+        }
+    }
+
+    @Test
+    func anUnsavableEditOnAnotherTaskDoesNotBlockArchiving() throws {
+        let context = try makeTestContext()
+        let repository = SwiftDataTaskRepository(context: context, deviceID: "seed")
+        let edited = try repository.createTask(title: "Edited", parentID: nil)
+        let archived = try repository.createTask(title: "Archived", parentID: nil)
         let store = makeTestStore()
         try store.configureIfNeeded(context: context)
         let router = AppPresentationRouter(feedbackRouter: AppSceneFeedbackRouter())
-        router.registerOpenTaskDetailSave(id: UUID()) { false }
+        router.registerOpenTaskDetailSave(id: UUID(), taskID: edited.id) { false }
 
-        router.archiveTask(created.id, using: store)
+        router.archiveTask(archived.id, using: store)
 
-        #expect(try task(created.id, in: context.container).archivedAt == nil)
-        #expect(router.feedbackRouter.current != nil)
+        #expect(try task(archived.id, in: context.container).archivedAt != nil)
+        #expect(try task(edited.id, in: context.container).archivedAt == nil)
     }
 
     @Test
@@ -94,8 +115,8 @@ struct TaskLifecycleAndCategoryCommandTests {
         let router = AppPresentationRouter(feedbackRouter: AppSceneFeedbackRouter())
         let closedDetail = UUID()
         let openDetail = UUID()
-        router.registerOpenTaskDetailSave(id: closedDetail) { false }
-        router.registerOpenTaskDetailSave(id: openDetail) { true }
+        router.registerOpenTaskDetailSave(id: closedDetail, taskID: created.id) { false }
+        router.registerOpenTaskDetailSave(id: openDetail, taskID: created.id) { true }
         router.unregisterOpenTaskDetailSave(id: closedDetail)
 
         router.archiveTask(created.id, using: store)

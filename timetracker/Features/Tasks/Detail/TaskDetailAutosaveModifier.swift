@@ -13,6 +13,7 @@ private struct TaskDetailAutosaveModifier: ViewModifier {
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var registrationID = UUID()
 
+    let taskID: UUID
     let controller: TaskDetailAutosaveController
     let request: TaskDetailAutosaveRequest
     let focusedTextField: TaskEditorTextField?
@@ -34,7 +35,10 @@ private struct TaskDetailAutosaveModifier: ViewModifier {
                 flush()
             }
             .onAppear {
-                presentationRouter.registerOpenTaskDetailSave(id: registrationID) { [controller] in
+                presentationRouter.registerOpenTaskDetailSave(
+                    id: registrationID,
+                    taskID: taskID
+                ) { [controller] in
                     controller.flush()
                 }
             }
@@ -72,6 +76,7 @@ private struct TaskDetailAutosaveModifier: ViewModifier {
 
 extension View {
     func taskDetailAutosave(
+        taskID: UUID,
         controller: TaskDetailAutosaveController,
         request: TaskDetailAutosaveRequest,
         focusedTextField: TaskEditorTextField?,
@@ -79,6 +84,7 @@ extension View {
     ) -> some View {
         modifier(
             TaskDetailAutosaveModifier(
+                taskID: taskID,
                 controller: controller,
                 request: request,
                 focusedTextField: focusedTextField,

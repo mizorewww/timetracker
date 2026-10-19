@@ -61,7 +61,11 @@ final class AppPresentationRouter {
     /// The open task detail's synchronous save of its pending edit, keyed by
     /// the detail instance so a disappearing detail cannot clear its
     /// replacement's registration.
-    @ObservationIgnored private var openTaskDetailSave: (id: UUID, save: () -> Bool)?
+    @ObservationIgnored private var openTaskDetailSave: (
+        id: UUID,
+        taskID: UUID,
+        save: () -> Bool
+    )?
 
     init(feedbackRouter: AppSceneFeedbackRouter) {
         self.feedbackRouter = feedbackRouter
@@ -104,8 +108,12 @@ final class AppPresentationRouter {
 }
 
 extension AppPresentationRouter {
-    func registerOpenTaskDetailSave(id: UUID, save: @escaping () -> Bool) {
-        openTaskDetailSave = (id, save)
+    func registerOpenTaskDetailSave(
+        id: UUID,
+        taskID: UUID,
+        save: @escaping () -> Bool
+    ) {
+        openTaskDetailSave = (id, taskID, save)
     }
 
     func unregisterOpenTaskDetailSave(id: UUID) {
@@ -115,10 +123,15 @@ extension AppPresentationRouter {
 
     /// Archives a task after saving the open task detail's pending edit, so a
     /// debounced edit is not left behind on a task that stops accepting edits.
-    /// An edit that cannot be saved stays in the detail and the archive is
-    /// not performed.
+    /// When that edit cannot be saved and belongs to the archived task or one
+    /// of its descendants, it stays in the detail and the archive is not
+    /// performed; an unsaved edit on an unrelated task does not block it.
     func archiveTask(_ taskID: UUID, using store: TimeTrackerStore) {
-        if let openTaskDetailSave, openTaskDetailSave.save() == false {
+        if let openTaskDetailSave,
+           openTaskDetailSave.save() == false,
+           openTaskDetailSave.taskID == taskID ||
+           store.ancestorTaskIDs(for: openTaskDetailSave.taskID).contains(taskID)
+        {
             feedbackRouter.present(
                 title: AppStrings.localized("task.autosave.failed"),
                 message: AppStrings.localized("task.autosave.archiveBlocked")

@@ -57,7 +57,9 @@ extension RollupIncrementalIndex {
 
         for segmentID in timeSensitiveIDs {
             let before = segmentByID[segmentID]
-            let after = suppliedChanges[segmentID]?.after ?? before
+            // `map` keeps a supplied deletion (`after == nil`) distinct
+            // from "no supplied change".
+            let after = suppliedChanges[segmentID].map(\.after) ?? before
             if let before {
                 timeAffectedTaskIDs.insert(before.taskID)
                 adjustOwnWorkedSeconds(

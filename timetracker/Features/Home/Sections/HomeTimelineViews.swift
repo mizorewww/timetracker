@@ -50,19 +50,14 @@ struct ActiveTimersSection: View {
 struct TimelineSection: View {
     let store: TimeTrackerStore
     let segments: [TimeSegment]
+    let now: Date
     let openTask: (UUID) -> Void
-    @State private var referenceDate = Date()
-    @Environment(\.pageLiveClocksActive) private var clockIsActive
 
     var body: some View {
-        let snapshotReferenceDate = homeTimelineSnapshotReferenceDate(
-            clockDate: referenceDate,
-            liveDate: Date()
-        )
         let timeline = store.timelineSnapshot(
             segments: segments,
-            date: snapshotReferenceDate,
-            now: snapshotReferenceDate
+            date: now,
+            now: now
         )
 
         VStack(alignment: .leading, spacing: 10) {
@@ -103,12 +98,6 @@ struct TimelineSection: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("home.timeline")
-        .task(id: clockIsActive) {
-            guard clockIsActive else { return }
-            await runHomeTimelineReferenceClock(
-                referenceDate: $referenceDate
-            )
-        }
     }
 }
 
@@ -124,29 +113,4 @@ struct TodayTimelineChart: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("home.timeline.chart")
     }
-}
-
-@MainActor
-func runHomeTimelineReferenceClock(
-    referenceDate: Binding<Date>
-) async {
-    while Task.isCancelled == false {
-        do {
-            try await Task.sleep(for: .seconds(60))
-        } catch {
-            return
-        }
-        let nextReferenceDate = Date()
-        guard nextReferenceDate != referenceDate.wrappedValue else { continue }
-        referenceDate.wrappedValue = nextReferenceDate
-    }
-}
-
-func homeTimelineSnapshotReferenceDate(
-    clockDate: Date,
-    liveDate: Date
-) -> Date {
-    // Ledger mutations can invalidate the view between minute-clock ticks.
-    // Never interpret a just-written stop date as a future, still-open end.
-    max(clockDate, liveDate)
 }

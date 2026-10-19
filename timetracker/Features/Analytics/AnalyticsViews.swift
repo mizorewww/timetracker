@@ -3,8 +3,6 @@ import Foundation
 import SwiftUI
 
 struct AnalyticsView: View {
-    @Environment(\.scenePhase) private var scenePhase
-
     let store: TimeTrackerStore
     @State private var range: AnalyticsRange = .today
     @State private var referenceDate = Date()
@@ -26,12 +24,8 @@ struct AnalyticsView: View {
             revision: store.analyticsRevision,
             liveRefreshBucket: liveRefreshBucket
         )
-        let refreshPlan = scenePhase == .active
-            ? AnalyticsRefreshPlan.next(
-                liveNow: liveNow,
-                followsCurrentPeriod: followsCurrentPeriod,
-                liveRefreshBucket: liveRefreshBucket
-            )
+        let clockDeadline = followsCurrentPeriod
+            ? LiveClockDeadline.next(after: liveNow, isLive: liveRefreshBucket != nil)
             : nil
         let effectiveReferenceDateBinding = Binding(
             get: { followsCurrentPeriod ? liveNow : referenceDate },
@@ -85,7 +79,7 @@ struct AnalyticsView: View {
                 request: request
             )
         }
-        .liveAnalyticsClock($liveNow, plan: refreshPlan, scenePhase: scenePhase)
+        .liveClock($liveNow, until: clockDeadline)
         .navigationDestination(for: AnalyticsCategory.self) { category in
             AnalyticsCategoryDetailView(
                 store: store,

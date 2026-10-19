@@ -4,6 +4,7 @@ struct AnalyticsHeatmapView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     let store: TimeTrackerStore
+    @State private var now = Date()
 
     var body: some View {
         Group {
@@ -20,7 +21,8 @@ struct AnalyticsHeatmapView: View {
                 List {
                     HomeActivityHeatmapSection(
                         store: store,
-                        container: .listSection
+                        container: .listSection,
+                        now: now
                     )
                 }
                 .appSheetListStyle()
@@ -34,6 +36,10 @@ struct AnalyticsHeatmapView: View {
             }
         }
         .background(AppColors.background)
+        .liveClock(
+            $now,
+            until: LiveClockDeadline.next(after: now, isLive: store.activeSegments.isEmpty == false)
+        )
         .navigationTitle(
             AnalyticsStandalonePage.heatmaps.destinationTitle
         )

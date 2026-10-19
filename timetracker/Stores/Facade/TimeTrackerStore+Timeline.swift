@@ -66,4 +66,13 @@ extension TimeTrackerStore {
         )
         return snapshot
     }
+
+    /// When Today next needs a fresh `now`: every minute while a timer runs
+    /// (or a today segment ends in the future), otherwise at the next day.
+    func todayClockDeadline(after now: Date) -> Date? {
+        let isLive = activeSegments.isEmpty == false || timelineSegments.contains { segment in
+            segment.endedAt.map { $0 > now } ?? true
+        }
+        return LiveClockDeadline.next(after: now, isLive: isLive)
+    }
 }

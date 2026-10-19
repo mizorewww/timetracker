@@ -3,14 +3,12 @@ import Foundation
 struct HomeWeeklyGrossTimeRefreshRequest: Hashable {
     let evaluationKey: AnalyticsEvaluationCacheKey
     let analyticsRevision: UInt
-    let clockRevision: UInt
 
     @MainActor
     init(
         store: TimeTrackerStore,
         snapshot: WeeklyGrossTimeSnapshot?,
         now: Date,
-        clockRevision: UInt,
         calendar: Calendar
     ) {
         let evaluation = AnalyticsRange.week.evaluation(
@@ -29,6 +27,5 @@ struct HomeWeeklyGrossTimeRefreshRequest: Hashable {
             calendar: calendar
         )
         analyticsRevision = store.analyticsRevision
-        self.clockRevision = clockRevision
     }
 }

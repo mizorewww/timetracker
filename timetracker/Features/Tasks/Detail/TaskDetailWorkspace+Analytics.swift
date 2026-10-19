@@ -15,8 +15,6 @@ extension TaskDetailWorkspace {
 }
 
 private struct TaskDetailAnalyticsWorkspace: View {
-    @Environment(\.scenePhase) private var scenePhase
-
     let store: TimeTrackerStore
     let task: TaskNode
     let session: TaskEditorSession
@@ -38,13 +36,10 @@ private struct TaskDetailAnalyticsWorkspace: View {
         // Keep the previous result on screen for the one frame a cache miss
         // takes to resolve, like the Analytics page does.
         let snapshot = store.cachedTaskAnalyticsSnapshot(for: request) ?? loaded?.snapshot
-        let refreshPlan = scenePhase == .active
-            ? AnalyticsRefreshPlan.next(
-                liveNow: liveNow,
-                followsCurrentPeriod: true,
-                liveRefreshBucket: request.liveRefreshBucket
-            )
-            : nil
+        let clockDeadline = LiveClockDeadline.next(
+            after: liveNow,
+            isLive: request.liveRefreshBucket != nil
+        )
 
         TaskDetailList(
             store: store,
@@ -61,6 +56,6 @@ private struct TaskDetailAnalyticsWorkspace: View {
             guard Task.isCancelled == false else { return }
             loaded = (request, snapshot)
         }
-        .liveAnalyticsClock($liveNow, plan: refreshPlan, scenePhase: scenePhase)
+        .liveClock($liveNow, until: clockDeadline)
     }
 }

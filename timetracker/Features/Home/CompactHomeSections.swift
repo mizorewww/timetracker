@@ -116,19 +116,14 @@ struct CompactQuickStartSection: View {
 struct CompactTimelineSection: View {
     let store: TimeTrackerStore
     let segments: [TimeSegment]
+    let now: Date
     let openTask: (UUID) -> Void
-    @State private var referenceDate = Date()
-    @Environment(\.pageLiveClocksActive) private var clockIsActive
 
     var body: some View {
-        let snapshotReferenceDate = homeTimelineSnapshotReferenceDate(
-            clockDate: referenceDate,
-            liveDate: Date()
-        )
         let timeline = store.timelineSnapshot(
             segments: segments,
-            date: snapshotReferenceDate,
-            now: snapshotReferenceDate
+            date: now,
+            now: now
         )
         let entries = Array(timeline.entries.reversed())
         let segmentByID = segments.latestByID()
@@ -163,12 +158,6 @@ struct CompactTimelineSection: View {
         } header: {
             Text(AppStrings.todayTimeline)
                 .accessibilityIdentifier("home.timeline")
-        }
-        .task(id: clockIsActive) {
-            guard clockIsActive else { return }
-            await runHomeTimelineReferenceClock(
-                referenceDate: $referenceDate
-            )
         }
     }
 }

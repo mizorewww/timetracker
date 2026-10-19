@@ -3,49 +3,28 @@ import SwiftUI
 struct HomeWeeklyGrossTimeSection: View {
     let store: TimeTrackerStore
     let container: HomeSectionContainer
+    let now: Date
 
     @Environment(\.calendar) private var calendar
-    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.pageLiveClocksActive) private var clockIsActive
     @State private var snapshot: WeeklyGrossTimeSnapshot?
-    @State private var clockRevision: UInt = 0
 
     var body: some View {
-        Group {
-            if clockIsActive {
-                TimelineView(.periodic(from: .now, by: 60)) { context in
-                    let request = HomeWeeklyGrossTimeRefreshRequest(
-                        store: store,
-                        snapshot: snapshot,
-                        now: context.date,
-                        clockRevision: clockRevision,
-                        calendar: calendar
-                    )
-                    Group {
-                        section(
-                            snapshot: snapshot?.interval == request.evaluationKey.interval
-                                ? snapshot
-                                : nil
-                        )
-                    }
-                    .task(id: request) {
-                        snapshot = store.weeklyGrossTimeSnapshot(
-                            now: context.date,
-                            calendar: calendar
-                        )
-                    }
-                }
-            } else {
-                // Static render while the Today tab is not selected.
-                section(snapshot: snapshot)
-            }
-        }
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active else { return }
-            clockRevision &+= 1
-        }
-        .onSystemClockChange {
-            clockRevision &+= 1
+        let request = HomeWeeklyGrossTimeRefreshRequest(
+            store: store,
+            snapshot: snapshot,
+            now: now,
+            calendar: calendar
+        )
+        section(
+            snapshot: snapshot?.interval == request.evaluationKey.interval
+                ? snapshot
+                : nil
+        )
+        // Recompute only while Today is the visible page.
+        .task(id: clockIsActive ? request : nil) {
+            guard clockIsActive else { return }
+            snapshot = store.weeklyGrossTimeSnapshot(now: now, calendar: calendar)
         }
     }
 

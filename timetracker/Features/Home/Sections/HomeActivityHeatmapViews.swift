@@ -8,14 +8,12 @@ struct HomeActivityHeatmapRefreshRequest: Hashable {
     let localDay: Date
     let localWeekStart: Date
     let liveRefreshBucket: Int?
-    let clockRevision: UInt
 
     @MainActor
     init(
         store: TimeTrackerStore,
         now: Date,
-        calendar: Calendar,
-        clockRevision: UInt
+        calendar: Calendar
     ) {
         selectedTaskIDs = store.todayHeatmapRenderableTaskIDs
         period = store.preferences.todayHeatmapPeriod
@@ -29,7 +27,6 @@ struct HomeActivityHeatmapRefreshRequest: Hashable {
         liveRefreshBucket = store.activeSegments.isEmpty
             ? nil
             : Int(now.timeIntervalSinceReferenceDate / 60)
-        self.clockRevision = clockRevision
     }
 }
 
@@ -41,59 +38,44 @@ private struct LoadedHomeActivityHeatmaps {
 struct HomeActivityHeatmapSection: View {
     let store: TimeTrackerStore
     let container: HomeSectionContainer
+    let now: Date
 
     @Environment(\.calendar) private var calendar
-    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.pageLiveClocksActive) private var clockIsActive
-    @State private var clockRevision: UInt = 0
     @State private var loadedHeatmaps: LoadedHomeActivityHeatmaps?
 
     var body: some View {
+        let request = HomeActivityHeatmapRefreshRequest(
+            store: store,
+            now: now,
+            calendar: calendar
+        )
         Group {
-            if clockIsActive {
-                TimelineView(.periodic(from: .now, by: 60)) { context in
-                    let request = HomeActivityHeatmapRefreshRequest(
-                        store: store,
-                        now: context.date,
-                        calendar: calendar,
-                        clockRevision: clockRevision
-                    )
-                    Group {
-                        if request.selectedTaskIDs.isEmpty == false {
-                            // Keep showing the last resolved snapshots while a newer
-                            // request computes, so recomputation never collapses the
-                            // section into a spinner mid-scroll.
-                            section(loadedHeatmaps?.snapshots)
-                        }
-                    }
-                    .task(id: request) {
-                        guard request.selectedTaskIDs.isEmpty == false else {
-                            loadedHeatmaps = nil
-                            return
-                        }
-                        let snapshots = await store.todayTaskActivityHeatmapSnapshots(
-                            period: request.period,
-                            now: context.date,
-                            calendar: calendar
-                        )
-                        guard Task<Never, Never>.isCancelled == false else { return }
-                        loadedHeatmaps = LoadedHomeActivityHeatmaps(
-                            request: request,
-                            snapshots: snapshots
-                        )
-                    }
-                }
-            } else {
-                // Static render while the Today tab is not selected.
+            if request.selectedTaskIDs.isEmpty == false {
+                // Keep showing the last resolved snapshots while a newer
+                // request computes, so recomputation never collapses the
+                // section into a spinner mid-scroll.
                 section(loadedHeatmaps?.snapshots)
             }
         }
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active else { return }
-            refreshClock()
-        }
-        .onSystemClockChange {
-            refreshClock()
+        // Recompute only while Today is the visible page; a background tab
+        // keeps its last snapshots until it is selected again.
+        .task(id: clockIsActive ? request : nil) {
+            guard clockIsActive else { return }
+            guard request.selectedTaskIDs.isEmpty == false else {
+                loadedHeatmaps = nil
+                return
+            }
+            let snapshots = await store.todayTaskActivityHeatmapSnapshots(
+                period: request.period,
+                now: now,
+                calendar: calendar
+            )
+            guard Task<Never, Never>.isCancelled == false else { return }
+            loadedHeatmaps = LoadedHomeActivityHeatmaps(
+                request: request,
+                snapshots: snapshots
+            )
         }
     }
 
@@ -181,10 +163,6 @@ struct HomeActivityHeatmapSection: View {
             AppStrings.localized("home.heatmap.taskCount"),
             Int64(count)
         )
-    }
-
-    private func refreshClock() {
-        clockRevision &+= 1
     }
 }
 

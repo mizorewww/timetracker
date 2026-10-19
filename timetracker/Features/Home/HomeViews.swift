@@ -4,15 +4,20 @@ struct DesktopMainView: View {
     let store: TimeTrackerStore
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var viewportMeasurement = HomeViewportMeasurement(width: 720)
+    @State private var clockNow = Date()
 
     var body: some View {
         let layout = HomeLayoutPolicy(width: viewportMeasurement.layoutWidth)
         let content = store.todayHomeContent(quickStartLimit: 6)
+        // A ledger write can re-render the page between clock ticks; never
+        // read a just-written stop date as a still-open future end.
+        let now = max(clockNow, Date())
 
         ScrollView {
             DesktopTodayContent(
                 store: store,
                 content: content,
+                now: now,
                 layout: layout,
                 openTask: openTask,
                 startTimer: { presentationRouter.present(.startTaskPicker) }
@@ -28,6 +33,7 @@ struct DesktopMainView: View {
         }
         .background(AppColors.background)
         .accessibilityIdentifier("home.view")
+        .liveClock($clockNow, until: store.todayClockDeadline(after: now))
         .navigationTitle(AppStrings.today)
         .todayTaskNavigationDestination(
             store: store,
@@ -53,6 +59,7 @@ struct DesktopMainView: View {
 private struct DesktopTodayContent: View {
     let store: TimeTrackerStore
     let content: TodayHomeContent
+    let now: Date
     let layout: HomeLayoutPolicy
     let openTask: (UUID) -> Void
     let startTimer: () -> Void
@@ -62,6 +69,7 @@ private struct DesktopTodayContent: View {
             DesktopTodayCurrentStateSections(
                 store: store,
                 segments: content.activeSegments,
+                now: now,
                 layout: layout,
                 openTask: openTask,
                 startTimer: startTimer
@@ -119,6 +127,7 @@ private struct DesktopTodayContent: View {
         TimelineSection(
             store: store,
             segments: content.timelineSegments,
+            now: now,
             openTask: openTask
         )
     }
@@ -127,11 +136,13 @@ private struct DesktopTodayContent: View {
         VStack(alignment: .leading, spacing: layout.contentSpacing) {
             HomeWeeklyGrossTimeSection(
                 store: store,
-                container: .card
+                container: .card,
+                now: now
             )
             HomeActivityHeatmapSection(
                 store: store,
-                container: .card
+                container: .card,
+                now: now
             )
         }
     }
@@ -151,6 +162,7 @@ private struct DesktopTodayContent: View {
 private struct DesktopTodayCurrentStateSections: View {
     let store: TimeTrackerStore
     let segments: [TimeSegment]
+    let now: Date
     let layout: HomeLayoutPolicy
     let openTask: (UUID) -> Void
     let startTimer: () -> Void
@@ -194,6 +206,6 @@ private struct DesktopTodayCurrentStateSections: View {
     }
 
     private var overview: some View {
-        TodayOverviewSection(store: store)
+        TodayOverviewSection(store: store, now: now)
     }
 }

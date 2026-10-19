@@ -8,9 +8,13 @@ struct CompactHomeView: View {
     let openTask: (UUID) -> Void
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var clockNow = Date()
 
     var body: some View {
         let content = store.todayHomeContent()
+        // A ledger write can re-render the page between clock ticks; never
+        // read a just-written stop date as a still-open future end.
+        let now = max(clockNow, Date())
 
         List {
             CompactNowSection(
@@ -21,7 +25,7 @@ struct CompactHomeView: View {
             )
 
             Section {
-                CompactTodaySummaryRow(store: store)
+                CompactTodaySummaryRow(store: store, now: now)
                     .accessibilityIdentifier("home.overview")
             } header: {
                 HomeOverviewHeader(
@@ -33,13 +37,15 @@ struct CompactHomeView: View {
 
             HomeWeeklyGrossTimeSection(
                 store: store,
-                container: .listSection
+                container: .listSection,
+                now: now
             )
             .homeVisualizationListSection()
 
             HomeActivityHeatmapSection(
                 store: store,
-                container: .listSection
+                container: .listSection,
+                now: now
             )
             .homeVisualizationListSection()
 
@@ -54,6 +60,7 @@ struct CompactHomeView: View {
             CompactTimelineSection(
                 store: store,
                 segments: content.timelineSegments,
+                now: now,
                 openTask: openTask
             )
 
@@ -84,6 +91,7 @@ struct CompactHomeView: View {
         .navigationBarTitleDisplayMode(.large)
         #endif
         .accessibilityIdentifier("home.view")
+        .liveClock($clockNow, until: store.todayClockDeadline(after: now))
         .toolbar {
             // `.primaryAction` resolves to the navigation bar's trailing slot on
             // iOS and the window toolbar on macOS, so no branch is needed.

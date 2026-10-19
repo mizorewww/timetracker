@@ -2,17 +2,10 @@ import SwiftUI
 
 struct CompactTodaySummaryRow: View {
     let store: TimeTrackerStore
-    @Environment(\.pageLiveClocksActive) private var clockIsActive
+    let now: Date
 
     var body: some View {
-        if clockIsActive {
-            TimelineView(.periodic(from: .now, by: 30)) { context in
-                summaryContent(snapshot: store.todayMetricsSnapshot(now: context.date))
-            }
-        } else {
-            // Static render while the Today tab is not selected.
-            summaryContent(snapshot: store.todayMetricsSnapshot(now: Date()))
-        }
+        summaryContent(snapshot: store.todayMetricsSnapshot(now: now))
     }
 
     private func summaryContent(snapshot: TodayMetricsSnapshot) -> some View {

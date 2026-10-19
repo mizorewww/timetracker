@@ -30,9 +30,12 @@ struct HomeWeeklyGrossTimeSection: View {
 
     @ViewBuilder
     private func section(snapshot: WeeklyGrossTimeSnapshot?) -> some View {
+        // A compact list-section header has no room for the two totals beside
+        // the title (the title wraps and the totals truncate), so only the
+        // card shows them.
         let header = HomeWeeklyGrossTimeHeader(
             container: container,
-            total: snapshot.flatMap(Self.totalText)
+            total: container == .card ? snapshot.flatMap(Self.totalText) : nil
         )
         switch container {
         case .card:

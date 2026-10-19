@@ -16,11 +16,6 @@ enum AppColors {
     static let border = Color.primary.opacity(0.08)
     static let grossTime = Color.green
     static let wallTime = Color.blue
-    static let panelHeader = LinearGradient(
-        colors: [Color.blue.opacity(0.10), Color.green.opacity(0.06)],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
 }
 
 enum TaskColorPalette {

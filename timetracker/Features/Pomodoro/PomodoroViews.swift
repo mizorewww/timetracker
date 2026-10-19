@@ -133,5 +133,4 @@ enum PomodoroStyle {
     static let background = AppColors.background
     static let timerText = Color.primary
     static let accent = Color.accentColor
-    static let progressTrack = Color.primary.opacity(0.16)
 }

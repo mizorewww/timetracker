@@ -1,29 +1,17 @@
 #if DEBUG
 import Foundation
 
-/// The single registry of `deviceID` values that mark a row as synthetic —
-/// demo content, cloud smoke-test probes, or UI-test fixtures — rather than
-/// something the user created.
-///
-/// Every producer of synthetic rows stamps one of these, and the maintenance
-/// cleanup matches on `marks(_:)`. Keeping both sides on one list is what makes
-/// "clear demo data" able to remove *all* non-user residue.
-///
-/// Adding a new kind of synthetic data means adding its ID here, and nowhere
-/// else, for it to become removable.
+/// The single registry of `deviceID` values that mark a row as synthetic
+/// rather than something the user created. Every producer of synthetic rows
+/// stamps one of these, and the maintenance cleanup matches on `marks(_:)`,
+/// so adding a new kind of synthetic data means adding its ID here.
 enum SyntheticDataOrigin {
     /// Rows built by `SeedData.buildDemoData`.
     static let demo = "demo"
-    /// Probe rows written by `CloudSyncSmokeTestRunner`.
-    static let cloudSmokeTest = "cloud-smoke"
-    /// Rows attributed to a UI-test fixture.
-    static let uiTest = "ui-test"
-
-    static let all: Set<String> = [demo, cloudSmokeTest, uiTest]
 
     /// True when a row carrying this `deviceID` is synthetic, not user data.
     static func marks(_ deviceID: String) -> Bool {
-        all.contains(deviceID)
+        deviceID == demo
     }
 }
 #endif

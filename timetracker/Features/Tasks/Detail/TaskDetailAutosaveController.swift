@@ -105,12 +105,6 @@ final class TaskDetailAutosaveController {
         flush()
     }
 
-    func cancel() {
-        latestRequest = nil
-        cancelPendingTask()
-        status = .idle
-    }
-
     private func commitScheduledRequest(id: UUID) {
         guard id == pendingRequestID,
               let latestRequest else { return }

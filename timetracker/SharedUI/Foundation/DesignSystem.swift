@@ -9,7 +9,6 @@ enum AppLayout {
     /// Corner radius matching the native inset-grouped list card on iOS.
     static let nativeGroupedCardRadius: CGFloat = 26
     static let iconRadius: CGFloat = 7
-    static let pageSpacing: CGFloat = 20
     static let sectionSpacing: CGFloat = 12
     static let cardPadding: CGFloat = 16
     static let compactPagePadding: CGFloat = 18

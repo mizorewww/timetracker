@@ -101,10 +101,8 @@ struct TimelineRow: View {
             startedAt: display.start,
             endedAt: display.end,
             usesCurrentEndLabel: display.usesCurrentEndLabel,
-            duration: .live(
-                startedAt: startedAt,
-                endedAt: endedAt
-            )
+            durationStartedAt: startedAt,
+            durationEndedAt: endedAt
         )
 
         return Button(action: openTask) {
@@ -184,11 +182,6 @@ struct TimelineRow: View {
     }
 }
 
-enum TodayTimelineRecordDuration {
-    case live(startedAt: Date, endedAt: Date?)
-    case fixed(seconds: Int)
-}
-
 struct TodayTimelineRecordPresentation {
     let id: TimelineEntryID
     let visual: TaskVisualPresentation
@@ -198,7 +191,9 @@ struct TodayTimelineRecordPresentation {
     let startedAt: Date
     let endedAt: Date
     let usesCurrentEndLabel: Bool
-    let duration: TodayTimelineRecordDuration
+    /// The recorded bounds the duration counts from; a nil end is running.
+    let durationStartedAt: Date
+    let durationEndedAt: Date?
 
     var timeRangeText: String {
         let start = TimeDisplayFormatter.hourMinute(startedAt)
@@ -344,17 +339,10 @@ struct TodayTimelineRecordContent: View {
     }
 
     private var durationText: some View {
-        Group {
-            switch presentation.duration {
-            case let .live(startedAt, endedAt):
-                DurationLabel(
-                    startedAt: startedAt,
-                    endedAt: endedAt
-                )
-            case let .fixed(seconds):
-                Text(DurationFormatter.compact(seconds))
-            }
-        }
+        DurationLabel(
+            startedAt: presentation.durationStartedAt,
+            endedAt: presentation.durationEndedAt
+        )
         .font(.subheadline.monospacedDigit())
         .foregroundStyle(presentation.usesCurrentEndLabel ? Color.blue : Color.secondary)
         .lineLimit(1)

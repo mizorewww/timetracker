@@ -1,48 +1,6 @@
 import SwiftUI
 
 extension SettingsView {
-    var pomodoroDefaultModeBinding: Binding<String> {
-        Binding {
-            store.preferences.pomodoroDefaultMode
-        } set: { value in
-            performSettingsMutation(title: SettingsCategory.focus.title) {
-                try store.setPomodoroDefaultMode(value)
-            }
-        }
-    }
-
-    var defaultFocusMinutesBinding: Binding<Int> {
-        Binding {
-            store.preferences.defaultFocusMinutes
-        } set: { value in
-            performSettingsMutation(title: SettingsCategory.focus.title) {
-                try store.setDefaultFocusMinutes(value)
-                try store.setPomodoroDefaultMode(PomodoroPreset.custom.rawValue)
-            }
-        }
-    }
-
-    var defaultBreakMinutesBinding: Binding<Int> {
-        Binding {
-            store.preferences.defaultBreakMinutes
-        } set: { value in
-            performSettingsMutation(title: SettingsCategory.focus.title) {
-                try store.setDefaultBreakMinutes(value)
-                try store.setPomodoroDefaultMode(PomodoroPreset.custom.rawValue)
-            }
-        }
-    }
-
-    var defaultPomodoroRoundsBinding: Binding<Int> {
-        Binding {
-            store.preferences.defaultPomodoroRounds
-        } set: { value in
-            performSettingsMutation(title: SettingsCategory.focus.title) {
-                try store.setDefaultPomodoroRounds(value)
-            }
-        }
-    }
-
     var pomodoroPlansBinding: Binding<[PomodoroPlan]> {
         Binding {
             store.preferences.pomodoroPlans

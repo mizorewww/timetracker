@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-enum TimeSessionSource: String, Codable, CaseIterable {
+nonisolated enum TimeSessionSource: String, Codable, CaseIterable, Sendable {
     case manual
     case timer
     case pomodoro

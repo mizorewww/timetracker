@@ -132,10 +132,7 @@ struct AnalyticsSnapshotPresentation {
         if let cached = store.cachedAnalyticsSnapshot(for: range, evaluation: evaluation) {
             return Task.isCancelled ? nil : AnalyticsLoadedSnapshot(snapshot: cached, request: request)
         }
-        // Aggregation runs on the main actor; let the loading state render first.
-        await Task.yield()
-        guard Task.isCancelled == false,
-              let snapshot = await store.loadAnalyticsSnapshot(for: range, evaluation: evaluation),
+        guard let snapshot = await store.loadAnalyticsSnapshot(for: range, evaluation: evaluation),
               Task.isCancelled == false
         else { return nil }
         return AnalyticsLoadedSnapshot(snapshot: snapshot, request: request)

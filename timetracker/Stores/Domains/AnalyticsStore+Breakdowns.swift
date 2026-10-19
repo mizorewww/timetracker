@@ -1,6 +1,6 @@
 import Foundation
 
-extension AnalyticsStore {
+nonisolated extension AnalyticsStore {
     func overview(
         items: [AnalyticsBoundedSegment],
         completedFocusRoundCount: Int? = nil
@@ -29,7 +29,7 @@ extension AnalyticsStore {
     /// period's start belongs to that period even if the segment's duration
     /// clips to zero there.
     func completedFocusRoundSegmentIDs(
-        in segments: [TimeSegment],
+        in segments: [AnalyticsSegmentRecord],
         period: DateInterval,
         evaluatedAt cutoff: Date,
         cancelledPomodoroSessionIDs: Set<UUID> = []
@@ -57,7 +57,7 @@ extension AnalyticsStore {
     }
 
     func boundedSegments(
-        _ segments: [TimeSegment],
+        _ segments: [AnalyticsSegmentRecord],
         in interval: DateInterval,
         taskIDs: Set<UUID>? = nil,
         now: Date
@@ -83,7 +83,7 @@ extension AnalyticsStore {
     }
 
     func dailyBreakdown(
-        segments: [TimeSegment],
+        segments: [AnalyticsSegmentRecord],
         range: AnalyticsRange,
         interval: DateInterval,
         evaluatedAt cutoff: Date,
@@ -110,10 +110,10 @@ extension AnalyticsStore {
     }
 
     func segmentsForAnalytics(
-        _ segments: [TimeSegment],
+        _ segments: [AnalyticsSegmentRecord],
         interval: DateInterval,
         evaluatedAt cutoff: Date
-    ) -> [TimeSegment] {
+    ) -> [AnalyticsSegmentRecord] {
         segments.filter { overlaps($0, interval: interval, now: cutoff) }
     }
 
@@ -140,7 +140,7 @@ extension AnalyticsStore {
         }
     }
 
-    private func overlaps(_ segment: TimeSegment, interval: DateInterval, now: Date) -> Bool {
+    private func overlaps(_ segment: AnalyticsSegmentRecord, interval: DateInterval, now: Date) -> Bool {
         segment.deletedAt == nil && TrackedTimePolicy.overlaps(
             startedAt: segment.startedAt,
             endedAt: segment.endedAt,
@@ -150,8 +150,8 @@ extension AnalyticsStore {
     }
 }
 
-struct AnalyticsBoundedSegment {
-    let segment: TimeSegment
+nonisolated struct AnalyticsBoundedSegment {
+    let segment: AnalyticsSegmentRecord
     let interval: DateInterval
 
     var durationSeconds: Int {
@@ -159,9 +159,9 @@ struct AnalyticsBoundedSegment {
     }
 }
 
-enum AnalyticsFocusRoundPolicy {
+nonisolated enum AnalyticsFocusRoundPolicy {
     static func isCompleted(
-        segment: TimeSegment,
+        segment: AnalyticsSegmentRecord,
         period: DateInterval,
         evaluatedAt cutoff: Date,
         cancelledPomodoroSessionIDs: Set<UUID>

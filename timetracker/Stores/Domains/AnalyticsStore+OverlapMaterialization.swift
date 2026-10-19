@@ -1,6 +1,6 @@
 import Foundation
 
-extension AnalyticsStore {
+nonisolated extension AnalyticsStore {
     func materializeOverlapWindows(
         _ rawWindows: [RawOverlapWindow],
         expectedExcessSeconds: Int

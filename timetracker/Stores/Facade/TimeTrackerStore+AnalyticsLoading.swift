@@ -1,9 +1,9 @@
 import Foundation
 
 extension TimeTrackerStore {
-    /// Resolves a cache miss without allowing SwiftData objects to cross the
-    /// main-actor boundary. The visual read models are a pure, cancellable
-    /// value computation; cache publication remains owned by this store.
+    /// Resolves a cache miss: captures value records of the period's rows on
+    /// the main actor, aggregates them off it, and caches the result unless
+    /// the load was cancelled or the ledger changed meanwhile.
     func loadAnalyticsSnapshot(
         for range: AnalyticsRange,
         evaluation: AnalyticsPeriodEvaluation,
@@ -26,47 +26,28 @@ extension TimeTrackerStore {
             evaluation: evaluation,
             calendar: calendar
         )
-        let sessions = visibleSessions(for: segments)
-        let visualSnapshot: AnalyticsVisualSnapshot?
-        if range == .today {
-            let visualInput = AnalyticsVisualSnapshotInput(
-                range: range,
-                period: evaluation.interval,
-                evaluatedAt: evaluation.cutoff,
-                calendar: calendar,
-                segments: segments,
-                tasks: tasks,
-                sessions: sessions,
-                taskParentPathByID: taskParentPathByID
-            )
-            guard let resolvedVisualSnapshot = await AnalyticsVisualSnapshotTask.resolve(visualInput),
-                  Task.isCancelled == false
-            else {
-                return nil
-            }
-            visualSnapshot = resolvedVisualSnapshot
-        } else {
-            guard Task.isCancelled == false else { return nil }
-            visualSnapshot = nil
-        }
-
-        let snapshot = analyticsDomainStore.refreshSnapshot(
+        let input = AnalyticsSnapshotInput(
             range: range,
             period: evaluation.interval,
+            evaluatedAt: evaluation.cutoff,
+            calendar: calendar,
             tasks: tasks,
             taskCategories: taskCategories,
             taskCategoryAssignments: taskCategoryAssignments,
             segments: segments,
-            sessions: sessions,
+            sessions: visibleSessions(for: segments),
             cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs,
             taskPathByID: taskPathByID,
-            taskParentPathByID: taskParentPathByID,
-            evaluatedAt: evaluation.cutoff,
-            evaluationKey: evaluationKey,
-            visualSnapshot: visualSnapshot,
-            calendar: calendar
+            taskParentPathByID: taskParentPathByID
         )
-        guard Task.isCancelled == false else { return nil }
+        let revision = analyticsRevision
+        guard let snapshot = await AnalyticsStore.buildSnapshot(input),
+              Task.isCancelled == false,
+              analyticsRevision == revision
+        else {
+            return nil
+        }
+        analyticsDomainStore.storeSnapshot(snapshot, evaluationKey: evaluationKey)
         return snapshot
     }
 }

@@ -1,6 +1,6 @@
 import Foundation
 
-struct TaskAnalyticsPoint: Identifiable {
+nonisolated struct TaskAnalyticsPoint: Identifiable, Sendable {
     let taskID: UUID
     let title: String
     let path: String
@@ -14,8 +14,8 @@ struct TaskAnalyticsPoint: Identifiable {
     }
 }
 
-struct AnalyticsGroupBreakdownPoint: Identifiable {
-    enum GroupKind: String {
+nonisolated struct AnalyticsGroupBreakdownPoint: Identifiable, Sendable {
+    enum GroupKind: String, Sendable {
         case rootTask
         case category
     }
@@ -30,7 +30,7 @@ struct AnalyticsGroupBreakdownPoint: Identifiable {
     let wallSeconds: Int
 }
 
-struct TaskRecentRecordPoint: Identifiable {
+nonisolated struct TaskRecentRecordPoint: Identifiable {
     let id: TimelineEntryID
     let taskID: UUID
     let title: String
@@ -78,7 +78,7 @@ struct TaskRecentRecordPoint: Identifiable {
     }
 }
 
-struct TaskAnalyticsSnapshot {
+nonisolated struct TaskAnalyticsSnapshot {
     enum Source: Equatable, Sendable {
         case tracked
     }

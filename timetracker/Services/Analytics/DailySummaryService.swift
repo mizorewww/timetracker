@@ -1,6 +1,6 @@
 import Foundation
 
-struct DailySummarySnapshot: Equatable, Identifiable {
+nonisolated struct DailySummarySnapshot: Equatable, Identifiable {
     var id: String {
         "\(Int(date.timeIntervalSince1970))"
     }
@@ -10,7 +10,7 @@ struct DailySummarySnapshot: Equatable, Identifiable {
     let wallClockSeconds: Int
 }
 
-enum DailySummaryService {
+nonisolated enum DailySummaryService {
     /// Keeps the current partial day while omitting days that have not begun
     /// at the selected evaluation cutoff. Call this after cache lookup so the
     /// cache can retain stable buckets for the complete calendar period.
@@ -24,7 +24,7 @@ enum DailySummaryService {
     }
 
     static func summaries(
-        segments: [TimeSegment],
+        segments: [AnalyticsSegmentRecord],
         interval: DateInterval,
         now: Date = Date(),
         calendar: Calendar = .current
@@ -39,7 +39,7 @@ enum DailySummaryService {
     }
 
     private static func summary(
-        segments: [TimeSegment],
+        segments: [AnalyticsSegmentRecord],
         day: DateInterval,
         now: Date
     ) -> DailySummarySnapshot {
@@ -59,10 +59,10 @@ enum DailySummaryService {
     }
 
     private static func clippedInterval(
-        for segment: TimeSegment,
+        for segment: AnalyticsSegmentRecord,
         in interval: DateInterval,
         now: Date
-    ) -> (segment: TimeSegment, interval: DateInterval)? {
+    ) -> (segment: AnalyticsSegmentRecord, interval: DateInterval)? {
         guard segment.deletedAt == nil, let clipped = TrackedTimePolicy.interval(
             startedAt: segment.startedAt,
             endedAt: segment.endedAt,

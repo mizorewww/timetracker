@@ -1,8 +1,8 @@
 import Foundation
 
-extension AnalyticsStore {
+nonisolated extension AnalyticsStore {
     func comparison(
-        segments: [TimeSegment],
+        segments: [AnalyticsSegmentRecord],
         range: AnalyticsRange,
         taskIDs: Set<UUID>? = nil,
         now: Date,
@@ -23,7 +23,7 @@ extension AnalyticsStore {
     }
 
     func comparison(
-        segments: [TimeSegment],
+        segments: [AnalyticsSegmentRecord],
         range: AnalyticsRange,
         currentInterval: DateInterval,
         taskIDs: Set<UUID>? = nil,
@@ -85,43 +85,6 @@ extension AnalyticsStore {
             previousGrossSeconds: 0,
             currentWallSeconds: 0,
             previousWallSeconds: 0
-        )
-    }
-
-    func rhythm(
-        segments: [TimeSegment],
-        range: AnalyticsRange,
-        taskIDs: Set<UUID>? = nil,
-        now: Date,
-        calendar: Calendar
-    ) -> AnalyticsRhythm {
-        guard let interval = analyticsInterval(for: range, now: now, calendar: calendar) else {
-            return emptyRhythm
-        }
-        return rhythm(
-            segments: segments.deduplicatedByID(),
-            interval: interval,
-            taskIDs: taskIDs,
-            now: now,
-            calendar: calendar
-        )
-    }
-
-    func quality(
-        segments: [TimeSegment],
-        range: AnalyticsRange,
-        taskIDs: Set<UUID>? = nil,
-        now: Date,
-        calendar: Calendar
-    ) -> AnalyticsQuality {
-        guard let interval = analyticsInterval(for: range, now: now, calendar: calendar) else {
-            return emptyQuality
-        }
-        return quality(
-            segments: segments.deduplicatedByID(),
-            interval: interval,
-            taskIDs: taskIDs,
-            now: now
         )
     }
 }

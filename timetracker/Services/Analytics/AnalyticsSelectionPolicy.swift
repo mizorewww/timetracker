@@ -1,11 +1,11 @@
 import Foundation
 
-struct AnalyticsPeakHour {
+nonisolated struct AnalyticsPeakHour {
     let hour: Int
     let seconds: Int
 }
 
-enum AnalyticsSelectionPolicy {
+nonisolated enum AnalyticsSelectionPolicy {
     static func rankedTasks(_ points: [TaskAnalyticsPoint]) -> [TaskAnalyticsPoint] {
         points.sorted { lhs, rhs in
             if lhs.grossSeconds != rhs.grossSeconds {
@@ -35,11 +35,11 @@ enum AnalyticsSelectionPolicy {
     }
 
     static func latestSessionTitleByTaskID(
-        sessions: [TimeSession],
+        sessions: [AnalyticsSessionRecord],
         restrictingTo taskIDs: Set<UUID>? = nil
     ) -> [UUID: String] {
         let latestSessionByTaskID = sessions.deduplicatedByID().reduce(
-            into: [UUID: TimeSession]()
+            into: [UUID: AnalyticsSessionRecord]()
         ) { result, session in
             guard session.deletedAt == nil,
                   session.titleSnapshot?.isEmpty == false,
@@ -58,7 +58,7 @@ enum AnalyticsSelectionPolicy {
         return latestSessionByTaskID.compactMapValues(\.titleSnapshot)
     }
 
-    private static func sessionPrecedes(_ lhs: TimeSession, _ rhs: TimeSession) -> Bool {
+    private static func sessionPrecedes(_ lhs: AnalyticsSessionRecord, _ rhs: AnalyticsSessionRecord) -> Bool {
         if lhs.startedAt != rhs.startedAt {
             return lhs.startedAt < rhs.startedAt
         }

@@ -1,6 +1,6 @@
 import Foundation
 
-struct AnalyticsOverview {
+nonisolated struct AnalyticsOverview: Sendable {
     let grossSeconds: Int
     let wallSeconds: Int
     let overlapSeconds: Int
@@ -8,7 +8,7 @@ struct AnalyticsOverview {
     let averageFocusSeconds: Int
 }
 
-struct AnalyticsComparison {
+nonisolated struct AnalyticsComparison: Sendable {
     let window: AnalyticsComparisonWindow
     let currentGrossSeconds: Int
     let previousGrossSeconds: Int
@@ -24,7 +24,7 @@ struct AnalyticsComparison {
     }
 }
 
-struct AnalyticsRhythm {
+nonisolated struct AnalyticsRhythm: Sendable {
     let activeDayCount: Int
     let dailyAverageGrossSeconds: Int
     let peakHour: Int?
@@ -35,7 +35,7 @@ struct AnalyticsRhythm {
     let segmentCount: Int
 }
 
-struct AnalyticsQuality {
+nonisolated struct AnalyticsQuality: Sendable {
     let overlapRatio: Double
     let switchCount: Int
     let shortSegmentCount: Int
@@ -44,8 +44,8 @@ struct AnalyticsQuality {
     let longestContinuousSeconds: Int
 }
 
-struct AnalyticsInsight: Identifiable {
-    enum Severity: String {
+nonisolated struct AnalyticsInsight: Identifiable, Sendable {
+    enum Severity: String, Sendable {
         case positive
         case neutral
         case warning
@@ -60,7 +60,7 @@ struct AnalyticsInsight: Identifiable {
     let taskID: UUID?
 }
 
-struct DailyAnalyticsPoint: Identifiable {
+nonisolated struct DailyAnalyticsPoint: Identifiable, Sendable {
     let date: Date
     let grossSeconds: Int
     let wallSeconds: Int

@@ -1,99 +1,61 @@
 import Foundation
 
-extension AnalyticsStore {
-    func snapshot(
-        range: AnalyticsRange,
-        tasks: [TaskNode],
-        taskCategories: [TaskCategory] = [],
-        taskCategoryAssignments: [TaskCategoryAssignment] = [],
-        segments: [TimeSegment],
-        sessions: [TimeSession],
-        cancelledPomodoroSessionIDs: Set<UUID> = [],
-        taskPathByID: [UUID: String],
-        taskParentPathByID: [UUID: String],
-        now: Date = Date(),
-        calendar: Calendar = .current
-    ) -> AnalyticsSnapshot {
-        let period = analyticsInterval(for: range, now: now, calendar: calendar)
-            ?? DateInterval(start: now, duration: 0)
-        return snapshot(
-            range: range,
-            period: period,
-            tasks: tasks,
-            taskCategories: taskCategories,
-            taskCategoryAssignments: taskCategoryAssignments,
-            segments: segments,
-            sessions: sessions,
-            cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs,
-            taskPathByID: taskPathByID,
-            taskParentPathByID: taskParentPathByID,
-            evaluatedAt: now,
-            calendar: calendar
-        )
+nonisolated extension AnalyticsStore {
+    /// Aggregates `input` off the main actor; nil when the caller's task was
+    /// cancelled. The aggregation reads only value records, never the cache.
+    @concurrent
+    static func buildSnapshot(_ input: AnalyticsSnapshotInput) async -> AnalyticsSnapshot? {
+        guard Task.isCancelled == false else { return nil }
+        let snapshot = AnalyticsStore().snapshot(input)
+        return Task.isCancelled ? nil : snapshot
     }
 
-    func snapshot(
-        range: AnalyticsRange,
-        period: DateInterval,
-        tasks: [TaskNode],
-        taskCategories: [TaskCategory] = [],
-        taskCategoryAssignments: [TaskCategoryAssignment] = [],
-        segments: [TimeSegment],
-        sessions: [TimeSession],
-        cancelledPomodoroSessionIDs: Set<UUID> = [],
-        taskPathByID: [UUID: String],
-        taskParentPathByID: [UUID: String],
-        evaluatedAt cutoff: Date,
-        calendar: Calendar = .current
-    ) -> AnalyticsSnapshot {
+    func snapshot(_ input: AnalyticsSnapshotInput) -> AnalyticsSnapshot {
         PerformanceSignpost.interval("Analytics snapshot generation") {
-            let canonicalSegments = segments.deduplicatedByID()
             let rangeSegments = segmentsForAnalytics(
-                canonicalSegments,
-                interval: period,
-                evaluatedAt: cutoff
-            )
-            let daily = dailyBreakdown(
-                segments: rangeSegments,
-                range: range,
-                interval: period,
-                evaluatedAt: cutoff,
-                calendar: calendar
+                input.segments,
+                interval: input.period,
+                evaluatedAt: input.evaluatedAt
             )
             return analyticsSnapshot(
-                range: range,
-                tasks: tasks,
-                taskCategories: taskCategories,
-                taskCategoryAssignments: taskCategoryAssignments,
+                range: input.range,
+                tasks: input.tasks,
+                taskCategories: input.taskCategories,
+                categoryIDByRootTaskID: input.categoryIDByRootTaskID,
                 rangeSegments: rangeSegments,
-                allSegments: canonicalSegments,
-                sessions: sessions,
-                cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs,
-                taskPathByID: taskPathByID,
-                taskParentPathByID: taskParentPathByID,
-                daily: daily,
-                period: period,
-                evaluatedAt: cutoff,
-                calendar: calendar
+                allSegments: input.segments,
+                sessions: input.sessions,
+                cancelledPomodoroSessionIDs: input.cancelledPomodoroSessionIDs,
+                taskPathByID: input.taskPathByID,
+                taskParentPathByID: input.taskParentPathByID,
+                daily: dailyBreakdown(
+                    segments: rangeSegments,
+                    range: input.range,
+                    interval: input.period,
+                    evaluatedAt: input.evaluatedAt,
+                    calendar: input.calendar
+                ),
+                period: input.period,
+                evaluatedAt: input.evaluatedAt,
+                calendar: input.calendar
             )
         }
     }
 
     func analyticsSnapshot(
         range: AnalyticsRange,
-        tasks: [TaskNode],
-        taskCategories: [TaskCategory],
-        taskCategoryAssignments: [TaskCategoryAssignment],
-        rangeSegments: [TimeSegment],
-        allSegments: [TimeSegment],
-        sessions: [TimeSession],
+        tasks: [AnalyticsTaskRecord],
+        taskCategories: [AnalyticsCategoryRecord],
+        categoryIDByRootTaskID: [UUID: UUID],
+        rangeSegments: [AnalyticsSegmentRecord],
+        allSegments: [AnalyticsSegmentRecord],
+        sessions: [AnalyticsSessionRecord],
         cancelledPomodoroSessionIDs: Set<UUID>,
         taskPathByID: [UUID: String],
         taskParentPathByID: [UUID: String],
         daily: [DailyAnalyticsPoint],
         period: DateInterval,
         evaluatedAt cutoff: Date,
-        visualSnapshot: AnalyticsVisualSnapshot? = nil,
         calendar: Calendar
     ) -> AnalyticsSnapshot {
         let boundedRangeSegments = boundedSegments(
@@ -138,18 +100,18 @@ extension AnalyticsStore {
             segments: rangeSegments,
             tasks: tasks,
             taskCategories: taskCategories,
-            taskCategoryAssignments: taskCategoryAssignments,
+            categoryIDByRootTaskID: categoryIDByRootTaskID,
             interval: period,
             evaluatedAt: cutoff
         )
         let todayVisualSnapshot: AnalyticsVisualSnapshot? = if range == .today {
-            visualSnapshot ?? AnalyticsVisualSnapshotService().snapshot(
+            AnalyticsVisualSnapshotService().snapshot(
                 AnalyticsVisualSnapshotInput(
                     range: range,
                     period: period,
                     evaluatedAt: cutoff,
                     calendar: calendar,
-                    segments: rangeSegments,
+                    segments: allSegments,
                     tasks: tasks,
                     sessions: sessions,
                     taskParentPathByID: taskParentPathByID

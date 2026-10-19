@@ -1,10 +1,10 @@
 import Foundation
 
-extension AnalyticsStore {
+nonisolated extension AnalyticsStore {
     func overlapSegments(
         items: [AnalyticsBoundedSegment],
-        tasks: [TaskNode],
-        sessions: [TimeSession]
+        tasks: [AnalyticsTaskRecord],
+        sessions: [AnalyticsSessionRecord]
     ) -> [OverlapAnalyticsPoint] {
         let canonicalItems = canonicalOverlapItems(items)
         guard canonicalItems.count > 1 else { return [] }

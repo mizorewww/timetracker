@@ -1,6 +1,6 @@
 import Foundation
 
-struct AnalyticsStore {
+nonisolated struct AnalyticsStore {
     static let maximumTaskSnapshotCount = 24
 
     struct TaskSnapshotCacheKey: Hashable {
@@ -15,55 +15,11 @@ struct AnalyticsStore {
     /// Insertion order of `taskSnapshots`, oldest first, for eviction.
     var taskSnapshotOrder: [TaskSnapshotCacheKey] = []
 
-    @discardableResult
-    mutating func refreshSnapshot(
-        range: AnalyticsRange,
-        period: DateInterval,
-        tasks: [TaskNode],
-        taskCategories: [TaskCategory] = [],
-        taskCategoryAssignments: [TaskCategoryAssignment] = [],
-        segments: [TimeSegment],
-        sessions: [TimeSession],
-        cancelledPomodoroSessionIDs: Set<UUID> = [],
-        taskPathByID: [UUID: String],
-        taskParentPathByID: [UUID: String],
-        evaluatedAt cutoff: Date,
-        evaluationKey: AnalyticsEvaluationCacheKey,
-        visualSnapshot: AnalyticsVisualSnapshot? = nil,
-        calendar: Calendar = .current
-    ) -> AnalyticsSnapshot {
-        PerformanceSignpost.interval("Analytics snapshot generation") {
-            let rangeSegments = segmentsForAnalytics(
-                segments,
-                interval: period,
-                evaluatedAt: cutoff
-            )
-            let snapshot = analyticsSnapshot(
-                range: range,
-                tasks: tasks,
-                taskCategories: taskCategories,
-                taskCategoryAssignments: taskCategoryAssignments,
-                rangeSegments: rangeSegments,
-                allSegments: segments,
-                sessions: sessions,
-                cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs,
-                taskPathByID: taskPathByID,
-                taskParentPathByID: taskParentPathByID,
-                daily: dailyBreakdown(
-                    segments: rangeSegments,
-                    range: range,
-                    interval: period,
-                    evaluatedAt: cutoff,
-                    calendar: calendar
-                ),
-                period: period,
-                evaluatedAt: cutoff,
-                visualSnapshot: visualSnapshot,
-                calendar: calendar
-            )
-            snapshots[range] = snapshot
-            snapshotEvaluationKeys[range] = evaluationKey
-            return snapshot
-        }
+    mutating func storeSnapshot(
+        _ snapshot: AnalyticsSnapshot,
+        evaluationKey: AnalyticsEvaluationCacheKey
+    ) {
+        snapshots[snapshot.range] = snapshot
+        snapshotEvaluationKeys[snapshot.range] = evaluationKey
     }
 }

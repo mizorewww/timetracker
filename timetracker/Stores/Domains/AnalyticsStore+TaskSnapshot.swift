@@ -1,14 +1,14 @@
 import Foundation
 
-extension AnalyticsStore {
+nonisolated extension AnalyticsStore {
     func taskSnapshot(
         range: AnalyticsRange,
-        task: TaskNode,
+        task: AnalyticsTaskRecord,
         taskIDs: Set<UUID>,
-        tasks: [TaskNode],
-        segments: [TimeSegment],
-        recentSegments: [TimeSegment]? = nil,
-        sessions: [TimeSession],
+        tasks: [AnalyticsTaskRecord],
+        segments: [AnalyticsSegmentRecord],
+        recentSegments: [AnalyticsSegmentRecord]? = nil,
+        sessions: [AnalyticsSessionRecord],
         taskPathByID: [UUID: String],
         now: Date,
         calendar: Calendar = .current
@@ -103,7 +103,7 @@ extension AnalyticsStore {
 
     func taskAndDescendantIDs(
         for rootTaskID: UUID,
-        childrenByParentID: [UUID?: [TaskNode]]
+        childrenByParentID: [UUID?: [AnalyticsTaskRecord]]
     ) -> Set<UUID> {
         var result = Set<UUID>()
         var pending = [rootTaskID]
@@ -117,10 +117,10 @@ extension AnalyticsStore {
     }
 
     func taskChildBreakdown(
-        task: TaskNode,
+        task: AnalyticsTaskRecord,
         taskIDs: Set<UUID>,
-        tasks: [TaskNode],
-        segments: [TimeSegment],
+        tasks: [AnalyticsTaskRecord],
+        segments: [AnalyticsSegmentRecord],
         interval: DateInterval,
         now: Date
     ) -> [AnalyticsGroupBreakdownPoint] {

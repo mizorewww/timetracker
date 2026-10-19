@@ -1,6 +1,6 @@
 import Foundation
 
-extension AnalyticsStore {
+nonisolated extension AnalyticsStore {
     func cachedSnapshot(
         for range: AnalyticsRange,
         evaluationKey: AnalyticsEvaluationCacheKey

@@ -55,12 +55,12 @@ extension TimeTrackerStore {
         let sessions = visibleSessions(for: recentSegments)
         let snapshot = analyticsDomainStore.taskSnapshot(
             range: request.range,
-            task: task,
+            task: AnalyticsTaskRecord(task),
             taskIDs: request.taskIDs,
-            tasks: tasks,
-            segments: segments,
-            recentSegments: recentSegments,
-            sessions: sessions,
+            tasks: AnalyticsTaskRecord.records(tasks),
+            segments: AnalyticsSegmentRecord.records(segments),
+            recentSegments: AnalyticsSegmentRecord.records(recentSegments),
+            sessions: AnalyticsSessionRecord.records(sessions),
             taskPathByID: taskPathByID,
             now: now,
             calendar: calendar

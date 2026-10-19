@@ -1,6 +1,6 @@
 import Foundation
 
-struct AnalyticsSnapshot {
+nonisolated struct AnalyticsSnapshot: Sendable {
     let range: AnalyticsRange
     let overview: AnalyticsOverview
     let comparison: AnalyticsComparison

@@ -1,8 +1,7 @@
 import Foundation
 
-/// The sendable part of the Analytics Today read model. SwiftData projection
-/// happens before this value is created, so its worker never retains a
-/// persistent model or `ModelContext`.
+/// The Analytics Today read model input. It is built from value records, so
+/// it never retains a persistent model or `ModelContext`.
 nonisolated struct AnalyticsVisualSnapshotInput: Sendable {
     let range: AnalyticsRange
     let period: DateInterval
@@ -15,15 +14,14 @@ nonisolated struct AnalyticsVisualSnapshotInput: Sendable {
     let unavailableTaskTitle: String
     let unavailableTaskPath: String
 
-    @MainActor
     init(
         range: AnalyticsRange,
         period: DateInterval,
         evaluatedAt: Date,
         calendar: Calendar,
-        segments: [TimeSegment],
-        tasks: [TaskNode],
-        sessions: [TimeSession],
+        segments: [AnalyticsSegmentRecord],
+        tasks: [AnalyticsTaskRecord],
+        sessions: [AnalyticsSessionRecord],
         taskParentPathByID: [UUID: String]
     ) {
         self.range = range
@@ -58,8 +56,7 @@ nonisolated struct AnalyticsVisualSegment: Sendable {
     let endedAt: Date?
     let deletedAt: Date?
 
-    @MainActor
-    init(_ segment: TimeSegment) {
+    init(_ segment: AnalyticsSegmentRecord) {
         id = segment.id
         taskID = segment.taskID
         startedAt = segment.startedAt
@@ -85,20 +82,6 @@ nonisolated struct AnalyticsVisualSnapshot: Equatable, Sendable {
         timeline: .empty,
         overlaps: []
     )
-}
-
-nonisolated enum AnalyticsVisualSnapshotTask {
-    static func resolve(_ input: AnalyticsVisualSnapshotInput) async -> AnalyticsVisualSnapshot? {
-        let task: Task<AnalyticsVisualSnapshot?, Never> = Task.detached(priority: .userInitiated) {
-            guard Task.isCancelled == false else { return nil }
-            return AnalyticsVisualSnapshotService().snapshot(input)
-        }
-        return await withTaskCancellationHandler {
-            await task.value
-        } onCancel: {
-            task.cancel()
-        }
-    }
 }
 
 nonisolated struct AnalyticsVisualBoundedSegment {

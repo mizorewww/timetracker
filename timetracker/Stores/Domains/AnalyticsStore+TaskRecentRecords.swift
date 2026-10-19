@@ -1,10 +1,10 @@
 import Foundation
 
-extension AnalyticsStore {
+nonisolated extension AnalyticsStore {
     func recentRecords(
-        segments: [TimeSegment],
-        sessions: [TimeSession],
-        tasks: [TaskNode],
+        segments: [AnalyticsSegmentRecord],
+        sessions: [AnalyticsSessionRecord],
+        tasks: [AnalyticsTaskRecord],
         taskIDs: Set<UUID>,
         taskPathByID: [UUID: String],
         now: Date

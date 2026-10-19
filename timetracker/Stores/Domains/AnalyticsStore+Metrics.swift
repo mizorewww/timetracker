@@ -1,6 +1,6 @@
 import Foundation
 
-extension AnalyticsStore {
+nonisolated extension AnalyticsStore {
     var emptyRhythm: AnalyticsRhythm {
         AnalyticsRhythm(
             activeDayCount: 0,
@@ -26,7 +26,7 @@ extension AnalyticsStore {
     }
 
     func rhythm(
-        segments: [TimeSegment],
+        segments: [AnalyticsSegmentRecord],
         interval: DateInterval,
         taskIDs: Set<UUID>?,
         now: Date,
@@ -65,7 +65,7 @@ extension AnalyticsStore {
     }
 
     func quality(
-        segments: [TimeSegment],
+        segments: [AnalyticsSegmentRecord],
         interval: DateInterval,
         taskIDs: Set<UUID>?,
         now: Date
@@ -104,7 +104,7 @@ extension AnalyticsStore {
 
     func seconds(
         in interval: DateInterval,
-        segments: [TimeSegment],
+        segments: [AnalyticsSegmentRecord],
         taskIDs: Set<UUID>?,
         mode: AggregationMode,
         now: Date
@@ -120,7 +120,7 @@ extension AnalyticsStore {
         }
     }
 
-    func segmentOverlaps(_ segment: TimeSegment, interval: DateInterval, now: Date) -> Bool {
+    func segmentOverlaps(_ segment: AnalyticsSegmentRecord, interval: DateInterval, now: Date) -> Bool {
         segment.deletedAt == nil && TrackedTimePolicy.overlaps(
             startedAt: segment.startedAt,
             endedAt: segment.endedAt,

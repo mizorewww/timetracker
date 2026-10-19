@@ -1,10 +1,10 @@
 import Foundation
 
-extension AnalyticsStore {
+nonisolated extension AnalyticsStore {
     func taskBreakdown(
         items: [AnalyticsBoundedSegment],
-        tasks: [TaskNode],
-        sessions: [TimeSession],
+        tasks: [AnalyticsTaskRecord],
+        sessions: [AnalyticsSessionRecord],
         taskPathByID: [UUID: String]
     ) -> [TaskAnalyticsPoint] {
         let taskByID = tasks.latestByID()

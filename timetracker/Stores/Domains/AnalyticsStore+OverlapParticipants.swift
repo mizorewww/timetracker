@@ -1,11 +1,11 @@
 import Foundation
 import HeapModule
 
-extension AnalyticsStore {
+nonisolated extension AnalyticsStore {
     func overlapParticipants(
         taskIDs: Set<UUID>,
-        tasks: [TaskNode],
-        sessions: [TimeSession]
+        tasks: [AnalyticsTaskRecord],
+        sessions: [AnalyticsSessionRecord]
     ) -> [UUID: OverlapAnalyticsParticipant] {
         let taskByID = tasks.latestByID()
         let fallbackTitleByTaskID = AnalyticsSelectionPolicy.latestSessionTitleByTaskID(

@@ -1,7 +1,7 @@
 import Foundation
 import HeapModule
 
-extension AnalyticsStore {
+nonisolated extension AnalyticsStore {
     func sweepOverlapWindows(
         _ items: [AnalyticsBoundedSegment],
         participantsByTaskID: [UUID: OverlapAnalyticsParticipant]
@@ -123,19 +123,19 @@ extension AnalyticsStore {
     }
 }
 
-private enum OverlapSweepEventKind: Int {
+private nonisolated enum OverlapSweepEventKind: Int {
     case end
     case start
 }
 
-private struct OverlapSweepEvent {
+private nonisolated struct OverlapSweepEvent {
     let date: Date
     let kind: OverlapSweepEventKind
     let segmentID: UUID
     let taskID: UUID
 }
 
-struct RawOverlapWindow {
+nonisolated struct RawOverlapWindow {
     let start: Date
     var end: Date
     let concurrentSegmentCount: Int

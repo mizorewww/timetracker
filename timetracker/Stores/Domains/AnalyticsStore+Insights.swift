@@ -1,6 +1,6 @@
 import Foundation
 
-extension AnalyticsStore {
+nonisolated extension AnalyticsStore {
     func insights(
         overview: AnalyticsOverview,
         comparison: AnalyticsComparison,

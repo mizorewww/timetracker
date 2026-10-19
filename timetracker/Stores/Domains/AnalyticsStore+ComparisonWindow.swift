@@ -1,6 +1,6 @@
 import Foundation
 
-extension AnalyticsStore {
+nonisolated extension AnalyticsStore {
     func previousDecisionInterval(
         for range: AnalyticsRange,
         currentInterval: DateInterval,

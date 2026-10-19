@@ -1,6 +1,6 @@
 import Foundation
 
-enum AnalyticsRange: String, CaseIterable, Identifiable, Sendable {
+nonisolated enum AnalyticsRange: String, CaseIterable, Identifiable, Sendable {
     case today = "Today"
     case week = "Week"
     case month = "Month"

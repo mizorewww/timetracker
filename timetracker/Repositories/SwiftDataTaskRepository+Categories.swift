@@ -16,9 +16,12 @@ nonisolated extension SwiftDataTaskRepository {
             }
     }
 
+    /// Every assignment row, tombstones included: several rows can name the
+    /// same task, and the newest row decides its category even when it is a
+    /// deletion (`logicalWinnersByTaskID()` before filtering `deletedAt`).
     func categoryAssignments() throws -> [TaskCategoryAssignment] {
         try context.fetch(FetchDescriptor<TaskCategoryAssignment>())
-            .visibleDeduplicatedByID()
+            .deduplicatedByID()
             .sorted { lhs, rhs in
                 if lhs.createdAt != rhs.createdAt {
                     return lhs.createdAt < rhs.createdAt
@@ -34,7 +37,9 @@ nonisolated extension SwiftDataTaskRepository {
     }
 
     func categoryID(forRootTaskID taskID: UUID) throws -> UUID? {
-        try activeCategoryAssignments(forRootTaskID: taskID).first?.categoryID
+        let winner = try categoryAssignmentRows(forRootTaskID: taskID)
+            .logicalWinnersByTaskID()[taskID]
+        return winner?.deletedAt == nil ? winner?.categoryID : nil
     }
 
     @discardableResult
@@ -136,7 +141,9 @@ nonisolated extension SwiftDataTaskRepository {
         category.deletedAt = now
         category.markMutated(at: now, deviceID: deviceID)
 
-        for assignment in try categoryAssignments() where assignment.categoryID == categoryID {
+        for assignment in try categoryAssignments()
+            where assignment.categoryID == categoryID && assignment.deletedAt == nil
+        {
             assignment.deletedAt = now
             assignment.markMutated(at: now, deviceID: deviceID)
         }
@@ -165,13 +172,19 @@ nonisolated extension SwiftDataTaskRepository {
         }
     }
 
-    private func activeCategoryAssignments(forRootTaskID taskID: UUID) throws -> [TaskCategoryAssignment] {
+    private func categoryAssignmentRows(forRootTaskID taskID: UUID) throws -> [TaskCategoryAssignment] {
         let rootTaskID = taskID
         let descriptor = FetchDescriptor<TaskCategoryAssignment>(
             predicate: #Predicate { $0.taskID == rootTaskID }
         )
-        return try context.fetch(descriptor)
-            .visibleDeduplicatedByID()
+        return try context.fetch(descriptor).deduplicatedByID()
+    }
+
+    /// Rows still live for the task, newest first. Setting a category reuses
+    /// the first and tombstones the rest so one row remains authoritative.
+    private func activeCategoryAssignments(forRootTaskID taskID: UUID) throws -> [TaskCategoryAssignment] {
+        try categoryAssignmentRows(forRootTaskID: taskID)
+            .filter { $0.deletedAt == nil }
             .sorted { $0.isPreferredLogicalWinner(over: $1) }
     }
 

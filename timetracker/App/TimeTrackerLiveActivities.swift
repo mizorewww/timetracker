@@ -38,6 +38,7 @@ final class LiveActivityCoordinator {
     /// it while the segment still runs, it is not re-requested until `retry()`
     /// or a different timer; an activity the system ended is re-requested.
     @ObservationIgnored private var requestedSegmentID: String?
+    /// Set by `retry()` for the next reconcile only.
     @ObservationIgnored private var ignoresRemoval = false
 
     private init() {
@@ -76,8 +77,8 @@ final class LiveActivityCoordinator {
     }
 
     func retry() {
-        ignoresRemoval = true
         guard let lastProjection else { return }
+        ignoresRemoval = true
         Task { @MainActor [weak self] in
             try? await self?.apply(lastProjection)
         }
@@ -93,6 +94,8 @@ final class LiveActivityCoordinator {
     }
 
     private func reconcile(_ projection: CommittedMutationLiveActivityProjection) async {
+        let ignoresRemoval = ignoresRemoval
+        self.ignoresRemoval = false
         let activities = Activity<TimeTrackingActivityAttributes>.activities
         guard case let .active(timer) = projection else {
             for activity in activities {
@@ -110,8 +113,7 @@ final class LiveActivityCoordinator {
                 taskPathAbbreviated: timer.taskPathAbbreviated,
                 iconName: timer.iconName,
                 colorHex: timer.colorHex,
-                startedAt: timer.startedAt,
-                additionalTimerCount: 0
+                startedAt: timer.startedAt
             ),
             staleDate: nil
         )
@@ -137,7 +139,6 @@ final class LiveActivityCoordinator {
             status = .removed
             return
         }
-        ignoresRemoval = false
         guard authorizationInfo.areActivitiesEnabled else {
             status = .denied
             return

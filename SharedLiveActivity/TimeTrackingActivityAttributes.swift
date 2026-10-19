@@ -28,7 +28,6 @@ nonisolated struct TimeTrackingActivityAttributes: ActivityAttributes, Sendable 
         var iconName: String
         var colorHex: String
         var startedAt: Date
-        var additionalTimerCount: Int
     }
 
     var segmentID: String

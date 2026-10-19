@@ -23,7 +23,7 @@ struct TaskDetailAutosaveFailureSection: View {
                         .fixedSize(horizontal: false, vertical: true)
 
                     Button {
-                        controller.retry()
+                        controller.flush()
                     } label: {
                         Label(
                             AppStrings.localized("task.autosave.retry"),

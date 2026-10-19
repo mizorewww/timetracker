@@ -83,9 +83,7 @@ struct ContentView: View {
             hasFinishedInitialConfiguration = true
             drainPendingDeepLinks()
             registerForWatchCommandsIfNeeded()
-            Task { @MainActor in
-                store.materializeCurrentDailyTaskRecurrences()
-            }
+            store.materializeCurrentDailyTaskRecurrences()
         }
         .taskRecurrenceLifecycle(store: store, isConfigured: hasFinishedInitialConfiguration)
         .onOpenURL { url in

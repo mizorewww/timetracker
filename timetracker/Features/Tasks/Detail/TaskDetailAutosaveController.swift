@@ -100,11 +100,6 @@ final class TaskDetailAutosaveController {
         return commitImmediately(latestRequest)
     }
 
-    @discardableResult
-    func retry() -> Bool {
-        flush()
-    }
-
     private func commitScheduledRequest(id: UUID) {
         guard id == pendingRequestID,
               let latestRequest else { return }

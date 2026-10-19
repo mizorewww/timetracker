@@ -6,8 +6,6 @@ func localized(_ key: String) -> String {
 }
 
 enum WidgetDeepLinks {
-    nonisolated static let today = URL(string: "timetracker://open/today")!
-
     nonisolated static func startTimer(taskID: UUID) -> URL {
         URL(
             string: "timetracker://timer/start?taskID=\(taskID.uuidString)&source=widget"
@@ -37,7 +35,7 @@ struct WidgetStartTimerIntent: AppIntent {
 
     func perform() async throws -> some IntentResult {
         guard let taskID = UUID(uuidString: taskID) else {
-            return .result(opensIntent: OpenURLIntent(WidgetDeepLinks.today))
+            return .result(opensIntent: OpenURLIntent(SystemSurfaceDeepLinks.today))
         }
         return .result(opensIntent: OpenURLIntent(WidgetDeepLinks.startTimer(taskID: taskID)))
     }

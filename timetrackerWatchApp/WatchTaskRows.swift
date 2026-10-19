@@ -1,5 +1,38 @@
 import SwiftUI
 
+/// Icon, title, path, and state of a watch row: one line beside the icon at
+/// normal sizes, stacked under it (without the path) at large text sizes.
+struct WatchRowIdentity<Icon: View, Title: View, Path: View, State: View>: View {
+    let isStacked: Bool
+    let icon: Icon
+    let title: Title
+    let path: Path
+    let state: State
+
+    var body: some View {
+        if isStacked {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    icon
+                    Spacer(minLength: 4)
+                    state
+                }
+                title
+            }
+        } else {
+            HStack(spacing: 8) {
+                icon
+                VStack(alignment: .leading, spacing: 3) {
+                    title
+                    path
+                }
+                Spacer(minLength: 2)
+                state
+            }
+        }
+    }
+}
+
 struct WatchTaskShortcutRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
@@ -14,28 +47,13 @@ struct WatchTaskShortcutRow: View {
 
     var body: some View {
         Button(action: action) {
-            Group {
-                if usesStackedIdentity {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            taskIcon
-                            Spacer(minLength: 4)
-                            taskStateIcon
-                        }
-                        taskTitle
-                    }
-                } else {
-                    HStack(spacing: 8) {
-                        taskIcon
-                        VStack(alignment: .leading, spacing: 3) {
-                            taskTitle
-                            taskPath
-                        }
-                        Spacer(minLength: 2)
-                        taskStateIcon
-                    }
-                }
-            }
+            WatchRowIdentity(
+                isStacked: usesStackedIdentity,
+                icon: taskIcon,
+                title: taskTitle,
+                path: taskPath,
+                state: taskStateIcon
+            )
             .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             .padding(.vertical, 6)
             .contentShape(Rectangle())

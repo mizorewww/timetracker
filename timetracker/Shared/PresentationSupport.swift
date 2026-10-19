@@ -35,6 +35,11 @@ nonisolated enum SystemSurfaceTextBounds {
     }
 }
 
+/// Links the widget and Live Activity open in the app.
+nonisolated enum SystemSurfaceDeepLinks {
+    static let today = URL(string: "timetracker://open/today")!
+}
+
 nonisolated enum ElapsedClockFormatter {
     static func padded(_ seconds: Int) -> String {
         let safeSeconds = max(0, seconds)

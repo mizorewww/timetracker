@@ -52,7 +52,7 @@ struct MediumWidgetContent: View {
                     .foregroundStyle(.secondary)
 
                 if snapshot.recentTasks.isEmpty {
-                    Link(destination: WidgetDeepLinks.today) {
+                    Link(destination: SystemSurfaceDeepLinks.today) {
                         Label(localized("widget.action.open"), systemImage: "arrow.up.forward.app")
                             .font(.caption.weight(.semibold))
                             .lineLimit(1)

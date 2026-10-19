@@ -27,6 +27,7 @@
 		E70300000000000000000002 /* timetracker/Shared/PresentationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70300000000000000000003 /* timetracker/Shared/PresentationSupport.swift */; };
 		E70400000000000000000001 /* timetracker/Shared/HexColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70400000000000000000003 /* timetracker/Shared/HexColor.swift */; };
 		E70400000000000000000002 /* timetracker/Shared/HexColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70400000000000000000003 /* timetracker/Shared/HexColor.swift */; };
+		E70400000000000000000004 /* timetracker/Shared/HexColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70400000000000000000003 /* timetracker/Shared/HexColor.swift */; };
 		E90000000000000000000002 /* timetracker/Shared/SystemSurfaceSnapshotModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E90000000000000000000001 /* timetracker/Shared/SystemSurfaceSnapshotModels.swift */; };
 		E90000000000000000000003 /* timetracker/Shared/SystemSurfaceSnapshotModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E90000000000000000000001 /* timetracker/Shared/SystemSurfaceSnapshotModels.swift */; };
 		E90000000000000000000004 /* timetracker/Shared/PresentationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70300000000000000000003 /* timetracker/Shared/PresentationSupport.swift */; };
@@ -582,6 +583,7 @@
 			files = (
 				E40100000000000000000002 /* SharedLiveActivity/TimeTrackingActivityAttributes.swift in Sources */,
 				E90000000000000000000004 /* timetracker/Shared/PresentationSupport.swift in Sources */,
+				E70400000000000000000004 /* timetracker/Shared/HexColor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

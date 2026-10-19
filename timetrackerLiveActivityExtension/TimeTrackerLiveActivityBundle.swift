@@ -16,14 +16,14 @@ struct TimeTrackerLiveActivityWidget: Widget {
             LockScreenTimerView(context: context)
                 .activityBackgroundTint(.black)
                 .activitySystemActionForegroundColor(.white)
-                .widgetURL(LiveActivityDeepLinks.today)
+                .widgetURL(SystemSurfaceDeepLinks.today)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.bottom) {
                     ExpandedActivityDetails(context: context)
                 }
             } compactLeading: {
-                Link(destination: LiveActivityDeepLinks.today) {
+                Link(destination: SystemSurfaceDeepLinks.today) {
                     HStack(spacing: 3) {
                         ActivityIconView(state: context.state, size: 18)
                         Text(context.state.taskTitle)
@@ -51,8 +51,8 @@ struct TimeTrackerLiveActivityWidget: Widget {
                     accessibilityIdentifier: "liveActivity.minimal.timer"
                 )
             }
-            .keylineTint(activityColor(context.state.colorHex))
-            .widgetURL(LiveActivityDeepLinks.today)
+            .keylineTint(Color(hex: context.state.colorHex) ?? .blue)
+            .widgetURL(SystemSurfaceDeepLinks.today)
         }
     }
 }
@@ -67,7 +67,7 @@ struct CompactTimerSurface: View {
 
     var body: some View {
         let timer = liveActivityStopwatchText(startedAt: context.state.startedAt)
-        Link(destination: LiveActivityDeepLinks.today) {
+        Link(destination: SystemSurfaceDeepLinks.today) {
             timer
                 .font(.caption2.monospacedDigit().weight(.semibold))
                 .foregroundStyle(.white)

@@ -124,7 +124,7 @@ struct ActivityIconView: View {
         )
         ZStack {
             shape
-                .fill(activityColor(state.colorHex).gradient)
+                .fill((Color(hex: state.colorHex) ?? .blue).gradient)
             shape
                 .stroke(activityForegroundColor(state.colorHex).opacity(0.24), lineWidth: 1)
             Image(systemName: state.iconName)

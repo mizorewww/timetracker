@@ -10,7 +10,7 @@ struct ActiveTimerWidgetView: View {
     var body: some View {
         content
             .containerBackground(.fill.tertiary, for: .widget)
-            .widgetURL(WidgetDeepLinks.today)
+            .widgetURL(SystemSurfaceDeepLinks.today)
     }
 
     @ViewBuilder

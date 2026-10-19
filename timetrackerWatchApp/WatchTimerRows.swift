@@ -23,28 +23,13 @@ struct WatchActiveTimerRow: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 7) {
-                Group {
-                    if usesStackedIdentity {
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                timerIcon
-                                Spacer(minLength: 4)
-                                timerStateIcon
-                            }
-                            timerTitle
-                        }
-                    } else {
-                        HStack(spacing: 8) {
-                            timerIcon
-                            VStack(alignment: .leading, spacing: 3) {
-                                timerTitle
-                                timerPath
-                            }
-                            Spacer(minLength: 0)
-                            timerStateIcon
-                        }
-                    }
-                }
+                WatchRowIdentity(
+                    isStacked: usesStackedIdentity,
+                    icon: timerIcon,
+                    title: timerTitle,
+                    path: timerPath,
+                    state: timerStateIcon
+                )
 
                 ViewThatFits(in: .horizontal) {
                     elapsedText

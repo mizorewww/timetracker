@@ -36,29 +36,21 @@ extension TimeTrackerStore {
     }
 
     var timerPickerMode: TimerPickerMode {
-        TimerPickerCommandPolicy().mode(
-            hasActiveTimers: activeSegments.isEmpty == false,
-            allowParallelTimers: preferences.allowParallelTimers
-        )
+        guard activeSegments.isEmpty == false else { return .start }
+        return preferences.allowParallelTimers ? .startAnother : .switchTimer
     }
 
     func timerPickerSelectionCommand(for task: TaskNode) -> TimerPickerSelectionCommand {
-        TimerPickerCommandPolicy().selectionCommand(
-            isTaskRunning: activeSegment(for: task.id) != nil,
-            mode: timerPickerMode
-        )
+        guard activeSegment(for: task.id) == nil else { return .alreadyRunning }
+        return timerPickerMode == .switchTimer ? .switchTimer : .start
     }
 
     @discardableResult
     func performTimerPickerSelection(_ task: TaskNode) -> TimerPickerSelectionOutcome {
-        switch timerPickerSelectionCommand(for: task) {
-        case .alreadyRunning:
-            .alreadyRunning
-        case .start:
-            startTask(task) ? .started : .failed
-        case .switchTimer:
-            startTask(task) ? .switched : .failed
-        }
+        let command = timerPickerSelectionCommand(for: task)
+        guard command != .alreadyRunning else { return .alreadyRunning }
+        guard startTask(task) else { return .failed }
+        return command == .switchTimer ? .switched : .started
     }
 
     @discardableResult

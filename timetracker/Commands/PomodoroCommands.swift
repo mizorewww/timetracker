@@ -48,16 +48,14 @@ struct PomodoroCommandHandler {
     ) throws -> PomodoroRun {
         let mutation = { () throws -> PomodoroRun in
             if allowParallelTimers == false {
-                try TimerCommandHandler(
-                    deviceID: deviceID,
-                    nowProvider: nowProvider
-                ).stopOtherActiveSegments(
-                    excluding: taskID,
-                    activeSegments: activeSegments,
-                    pomodoroRuns: pomodoroRuns,
-                    timeRepository: timeRepository,
-                    context: context
-                )
+                for segment in activeSegments where segment.taskID != taskID {
+                    try stopTimerSegment(
+                        segment,
+                        pomodoroRuns: pomodoroRuns,
+                        timeRepository: timeRepository,
+                        context: context
+                    )
+                }
             }
             return try pomodoroRepository.startPomodoro(
                 taskID: taskID,
@@ -150,13 +148,9 @@ struct PomodoroCommandHandler {
                 throw PomodoroCommandInvariantError.resumedLedgerSegmentMissing
             }
 
-            let timerHandler = TimerCommandHandler(
-                deviceID: deviceID,
-                nowProvider: nowProvider
-            )
             for segment in segmentsToStop {
-                try timerHandler.stop(
-                    segment: segment,
+                try stopTimerSegment(
+                    segment,
                     pomodoroRuns: pomodoroRuns,
                     timeRepository: timeRepository,
                     context: context
@@ -176,6 +170,26 @@ struct PomodoroCommandHandler {
             )
         }
         return try context.performAtomicMutation(mutation)
+    }
+
+    /// Stops one ledger segment after reconciling or cancelling the Pomodoro
+    /// run that owns its session. An expired Pomodoro clips its session to
+    /// the persisted phase deadline first; the idempotent segment stop then
+    /// has nothing left to extend to the current wall clock.
+    func stopTimerSegment(
+        _ segment: TimeSegment,
+        pomodoroRuns: [PomodoroRun],
+        timeRepository: SwiftDataTimeTrackingRepository,
+        context: ModelContext
+    ) throws {
+        try context.performAtomicMutation {
+            try cancelIfNeeded(
+                sessionID: segment.sessionID,
+                runs: pomodoroRuns,
+                context: context
+            )
+            try timeRepository.stopSegment(segmentID: segment.id)
+        }
     }
 
     func cancelIfNeeded(

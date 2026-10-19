@@ -85,13 +85,13 @@ struct StoreScopedSegmentCommandCoordinator: StoreScopedCommandCoordinator {
             for segment in sessionSiblingStops {
                 try timeRepository.stopSegment(segmentID: segment.id)
             }
-            let timerHandler = TimerCommandHandler(
+            let pomodoroHandler = PomodoroCommandHandler(
                 deviceID: resolvedDeviceID,
                 nowProvider: { now }
             )
             for segment in admissionStops {
-                try timerHandler.stop(
-                    segment: segment,
+                try pomodoroHandler.stopTimerSegment(
+                    segment,
                     pomodoroRuns: runBySessionID[segment.sessionID].map { [$0] } ?? [],
                     timeRepository: timeRepository,
                     context: context

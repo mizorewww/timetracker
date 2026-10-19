@@ -309,11 +309,11 @@ struct StoreScopedTimerCommandCoordinator: StoreScopedCommandCoordinator {
                 deviceID: deviceID,
                 nowProvider: { mutationDate }
             )
-            try TimerCommandHandler(
+            try PomodoroCommandHandler(
                 deviceID: deviceID,
                 nowProvider: { mutationDate }
-            ).stop(
-                segment: segment,
+            ).stopTimerSegment(
+                segment,
                 pomodoroRuns: pomodoroRepository.openRuns(
                     sessionIDs: [segment.sessionID]
                 ),
@@ -337,7 +337,7 @@ struct StoreScopedTimerCommandCoordinator: StoreScopedCommandCoordinator {
         context: ModelContext,
         mutationDate: Date
     ) throws -> [TimerMutationSegmentSnapshot] {
-        let handler = TimerCommandHandler(
+        let handler = PomodoroCommandHandler(
             deviceID: deviceID,
             nowProvider: { mutationDate }
         )
@@ -347,8 +347,8 @@ struct StoreScopedTimerCommandCoordinator: StoreScopedCommandCoordinator {
                 throw StoreScopedTimerCommandCoordinatorError
                     .inconsistentAdmissionPlan
             }
-            try handler.stop(
-                segment: segment,
+            try handler.stopTimerSegment(
+                segment,
                 pomodoroRuns: pomodoroRuns,
                 timeRepository: timeRepository,
                 context: context

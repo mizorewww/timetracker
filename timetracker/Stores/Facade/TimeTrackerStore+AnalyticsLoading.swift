@@ -9,10 +9,9 @@ extension TimeTrackerStore {
         evaluation: AnalyticsPeriodEvaluation,
         calendar: Calendar = .current
     ) async -> AnalyticsSnapshot? {
-        let liveRefreshBucket = analyticsLiveRefreshBucket(for: evaluation)
         let evaluationKey = AnalyticsEvaluationCacheKey(
             evaluation: evaluation,
-            liveRefreshBucket: liveRefreshBucket,
+            liveRefreshBucket: analyticsLiveRefreshBucket(for: evaluation),
             calendar: calendar
         )
         if let snapshot = analyticsDomainStore.cachedSnapshot(
@@ -51,8 +50,7 @@ extension TimeTrackerStore {
             visualSnapshot = nil
         }
 
-        var store = analyticsDomainStore
-        let snapshot = store.refreshSnapshot(
+        let snapshot = analyticsDomainStore.refreshSnapshot(
             range: range,
             period: evaluation.interval,
             tasks: tasks,
@@ -64,13 +62,11 @@ extension TimeTrackerStore {
             taskPathByID: taskPathByID,
             taskParentPathByID: taskParentPathByID,
             evaluatedAt: evaluation.cutoff,
-            liveRefreshBucket: liveRefreshBucket,
             evaluationKey: evaluationKey,
             visualSnapshot: visualSnapshot,
             calendar: calendar
         )
         guard Task.isCancelled == false else { return nil }
-        analyticsDomainStore = store
         return snapshot
     }
 }

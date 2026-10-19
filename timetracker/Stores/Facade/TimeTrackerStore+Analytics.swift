@@ -54,8 +54,7 @@ extension TimeTrackerStore {
         )
         let recentSegments = visibleRecentSegments(forTaskIDs: request.taskIDs)
         let sessions = visibleSessions(for: recentSegments)
-        var store = analyticsDomainStore
-        let snapshot = store.taskSnapshot(
+        let snapshot = analyticsDomainStore.taskSnapshot(
             range: request.range,
             task: task,
             taskIDs: request.taskIDs,
@@ -67,27 +66,11 @@ extension TimeTrackerStore {
             now: now,
             calendar: calendar
         )
-        store.cacheTaskSnapshot(
+        analyticsDomainStore.cacheTaskSnapshot(
             snapshot,
             evaluationKey: request.evaluationKey
         )
-        analyticsDomainStore = store
         return snapshot
-    }
-
-    func taskAnalyticsSnapshotRequest(
-        for task: TaskNode,
-        range: AnalyticsRange,
-        now: Date = Date(),
-        calendar: Calendar = .current
-    ) -> TaskAnalyticsSnapshotRequest {
-        taskAnalyticsSnapshotRequest(
-            for: task,
-            range: range,
-            referenceDate: now,
-            liveNow: now,
-            calendar: calendar
-        )
     }
 
     func taskAnalyticsSnapshotRequest(
@@ -114,22 +97,6 @@ extension TimeTrackerStore {
                 taskIDs: taskIDs
             ),
             calendar: calendar
-        )
-    }
-
-    func analyticsLiveRefreshBucket(
-        for range: AnalyticsRange,
-        now: Date,
-        taskIDs: Set<UUID>? = nil,
-        calendar: Calendar = .current
-    ) -> Int? {
-        analyticsLiveRefreshBucket(
-            for: range.evaluation(
-                referenceDate: now,
-                liveNow: now,
-                calendar: calendar
-            ),
-            taskIDs: taskIDs
         )
     }
 

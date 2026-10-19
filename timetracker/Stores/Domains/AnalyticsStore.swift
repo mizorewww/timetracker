@@ -18,48 +18,6 @@ struct AnalyticsStore {
     @discardableResult
     mutating func refreshSnapshot(
         range: AnalyticsRange,
-        tasks: [TaskNode],
-        taskCategories: [TaskCategory] = [],
-        taskCategoryAssignments: [TaskCategoryAssignment] = [],
-        segments: [TimeSegment],
-        sessions: [TimeSession],
-        cancelledPomodoroSessionIDs: Set<UUID> = [],
-        taskPathByID: [UUID: String],
-        taskParentPathByID: [UUID: String],
-        now: Date = Date(),
-        liveRefreshBucket: Int? = nil,
-        calendar: Calendar = .current
-    ) -> AnalyticsSnapshot {
-        let evaluation = range.evaluation(
-            referenceDate: now,
-            liveNow: now,
-            calendar: calendar
-        )
-        return refreshSnapshot(
-            range: range,
-            period: evaluation.interval,
-            tasks: tasks,
-            taskCategories: taskCategories,
-            taskCategoryAssignments: taskCategoryAssignments,
-            segments: segments,
-            sessions: sessions,
-            cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs,
-            taskPathByID: taskPathByID,
-            taskParentPathByID: taskParentPathByID,
-            evaluatedAt: evaluation.cutoff,
-            liveRefreshBucket: liveRefreshBucket,
-            evaluationKey: AnalyticsEvaluationCacheKey(
-                evaluation: evaluation,
-                liveRefreshBucket: liveRefreshBucket,
-                calendar: calendar
-            ),
-            calendar: calendar
-        )
-    }
-
-    @discardableResult
-    mutating func refreshSnapshot(
-        range: AnalyticsRange,
         period: DateInterval,
         tasks: [TaskNode],
         taskCategories: [TaskCategory] = [],
@@ -70,7 +28,6 @@ struct AnalyticsStore {
         taskPathByID: [UUID: String],
         taskParentPathByID: [UUID: String],
         evaluatedAt cutoff: Date,
-        liveRefreshBucket _: Int? = nil,
         evaluationKey: AnalyticsEvaluationCacheKey,
         visualSnapshot: AnalyticsVisualSnapshot? = nil,
         calendar: Calendar = .current

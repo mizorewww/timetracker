@@ -30,7 +30,6 @@ enum AppPreferenceValueSanitizer {
     static let maximumLLMEndpointLength = 2048
     static let maximumLLMPromptInstructionsByteCount =
         PreferenceJSON.maximumPayloadByteCount
-    static let maximumLLMTaskPlanInstructionsByteCount = maximumLLMPromptInstructionsByteCount
 
     static func preferredColorScheme(_ value: String) -> String {
         ["system", "light", "dark"].contains(value) ? value : "system"

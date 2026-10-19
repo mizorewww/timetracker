@@ -134,35 +134,6 @@ nonisolated struct TaskEditorDraft: Codable, Identifiable, Equatable, Sendable {
             TaskDailyRecurrenceDraft.init
         )
     }
-
-    func copyAsNew(
-        parentID: UUID?,
-        categoryID: UUID?
-    ) -> TaskEditorDraft {
-        var copy = TaskEditorDraft(
-            parentID: parentID,
-            categoryID: categoryID
-        )
-        copy.title = title
-        copy.colorHex = colorHex
-        copy.iconName = iconName
-        copy.notes = notes
-        copy.estimatedMinutes = estimatedMinutes
-        copy.hasDueDate = hasDueDate
-        copy.dueAt = dueAt
-        copy.quantityGoal = quantityGoal
-        copy.confirmsQuantityProgressReset = false
-        copy.dailyRecurrence = dailyRecurrence
-        copy.checklistItems = checklistItems.map {
-            ChecklistEditorDraft(
-                title: $0.title,
-                isCompleted: $0.isCompleted,
-                iconName: $0.iconName,
-                colorHex: $0.colorHex
-            )
-        }
-        return copy
-    }
 }
 
 struct InboxSuggestionEditorDraft: Identifiable, Equatable {

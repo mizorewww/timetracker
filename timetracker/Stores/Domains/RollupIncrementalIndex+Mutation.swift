@@ -137,21 +137,4 @@ extension RollupIncrementalIndex {
             return lhs.uuidString < rhs.uuidString
         }
     }
-
-    func replacementChanges(
-        taskIDs: Set<UUID>,
-        segments: [TimeSegment]
-    ) -> [LedgerSegmentChange] {
-        var refreshed: [LedgerSegmentSnapshot] = []
-        for segment in segments.visibleDeduplicatedByID() where taskIDs.contains(segment.taskID) {
-            refreshed.append(LedgerSegmentSnapshot(segment))
-        }
-        let refreshedByID = Dictionary(uniqueKeysWithValues: refreshed.map { ($0.id, $0) })
-        let existingIDs = taskIDs.reduce(into: Set<UUID>()) { result, taskID in
-            result.formUnion(segmentIDsByTaskID[taskID] ?? [])
-        }
-        return existingIDs.union(refreshedByID.keys).map { id in
-            LedgerSegmentChange(id: id, before: segmentByID[id], after: refreshedByID[id])
-        }
-    }
 }

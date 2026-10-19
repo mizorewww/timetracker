@@ -37,23 +37,6 @@ struct ChecklistCommandHandler {
         return item
     }
 
-    func toggle(
-        _ item: ChecklistItem,
-        existingItems: [ChecklistItem],
-        context: ModelContext,
-        now: Date = Date(),
-        deviceID: String = DeviceIdentity.current
-    ) throws {
-        try setCompletion(
-            item,
-            isCompleted: !item.isCompleted,
-            existingItems: existingItems,
-            context: context,
-            now: now,
-            deviceID: deviceID
-        )
-    }
-
     func setCompletion(
         _ item: ChecklistItem,
         isCompleted: Bool,

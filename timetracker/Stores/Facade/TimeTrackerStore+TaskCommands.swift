@@ -21,27 +21,6 @@ extension TimeTrackerStore {
         )
     }
 
-    @discardableResult
-    func saveTaskDraft(
-        _ draft: TaskEditorDraft,
-        returnDestination: DesktopDestination? = nil
-    ) -> Bool {
-        let result = saveTaskDraftResult(
-            draft,
-            returnDestination: returnDestination
-        )
-        switch result {
-        case .saved:
-            return true
-        case .stale:
-            errorMessage = TaskLifecycleMutationError.staleDraft.localizedDescription
-            return false
-        case let .failed(message):
-            errorMessage = message
-            return false
-        }
-    }
-
     func saveTaskDraftResult(
         _ draft: TaskEditorDraft,
         returnDestination: DesktopDestination? = nil

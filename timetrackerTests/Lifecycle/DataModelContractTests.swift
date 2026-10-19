@@ -52,57 +52,6 @@ struct DataModelContractTests {
     }
 
     @Test @MainActor
-    func duplicateCleanupKeepsTheCanonicalActiveRowNewerThanItsTombstone() {
-        let id = UUID()
-        let base = Date(timeIntervalSinceReferenceDate: 100_000)
-        let older = TaskNode(title: "Older", parentID: nil, deviceID: "old")
-        older.id = id
-        older.createdAt = base
-        older.updatedAt = base
-        let newer = TaskNode(title: "Newer", parentID: nil, deviceID: "new")
-        newer.id = id
-        newer.createdAt = base.addingTimeInterval(10)
-        newer.updatedAt = base.addingTimeInterval(10)
-        let cleanupDate = base.addingTimeInterval(20)
-
-        let latest = [older, newer].latestByIDMarkingDuplicatesDeleted(
-            now: cleanupDate,
-            deviceID: "cleanup"
-        )
-
-        #expect(latest[id] === newer)
-        #expect(older.deletedAt != nil)
-        #expect(newer.deletedAt == nil)
-        #expect(newer.updatedAt == cleanupDate)
-        #expect([older, newer].deduplicatedByID().first === newer)
-    }
-
-    @Test @MainActor
-    func duplicateCleanupDoesNotRefreshAnOlderTombstonePastANewerRestore() {
-        let id = UUID()
-        let base = Date(timeIntervalSinceReferenceDate: 100_000)
-        let tombstone = TaskNode(title: "Deleted", parentID: nil, deviceID: "old")
-        tombstone.id = id
-        tombstone.createdAt = base
-        tombstone.updatedAt = base.addingTimeInterval(10)
-        tombstone.deletedAt = tombstone.updatedAt
-        let originalTombstoneUpdate = tombstone.updatedAt
-        let restored = TaskNode(title: "Restored", parentID: nil, deviceID: "new")
-        restored.id = id
-        restored.createdAt = base
-        restored.updatedAt = base.addingTimeInterval(20)
-
-        let latest = [tombstone, restored].latestByIDMarkingDuplicatesDeleted(
-            now: base.addingTimeInterval(30),
-            deviceID: "cleanup"
-        )
-
-        #expect(latest[id] === restored)
-        #expect(tombstone.updatedAt == originalTombstoneUpdate)
-        #expect([tombstone, restored].deduplicatedByID().first === restored)
-    }
-
-    @Test @MainActor
     func modelDefaultsSupportCloudKitCompatibleConstruction() throws {
         let context = try makeTestContext()
         let task = TaskNode(title: "Defaults", parentID: nil, deviceID: "test")

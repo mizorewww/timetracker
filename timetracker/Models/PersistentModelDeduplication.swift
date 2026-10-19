@@ -77,44 +77,6 @@ nonisolated extension Sequence where Element: PersistentUUIDModel {
     }
 }
 
-nonisolated extension Sequence
-    where Element: SoftDeletablePersistentUUIDModel
-{
-    func latestByIDMarkingDuplicatesDeleted(now: Date, deviceID: String) -> [UUID: Element] {
-        var indexesByID: [UUID: Int] = [:]
-        var result: [Element] = []
-        var duplicatedIDs = Set<UUID>()
-        // Keep cleanup tombstones older than the canonical row under last-write-wins.
-        let duplicateTombstoneDate = now.addingTimeInterval(-1)
-
-        for element in self {
-            if let existingIndex = indexesByID[element.id] {
-                duplicatedIDs.insert(element.id)
-                let existing = result[existingIndex]
-                if element.isPreferred(over: existing) {
-                    existing.markDuplicateDeleted(now: duplicateTombstoneDate, deviceID: deviceID)
-                    result[existingIndex] = element
-                } else {
-                    element.markDuplicateDeleted(now: duplicateTombstoneDate, deviceID: deviceID)
-                }
-            } else {
-                indexesByID[element.id] = result.count
-                result.append(element)
-            }
-        }
-
-        for winner in result where duplicatedIDs.contains(winner.id) {
-            winner.updatedAt = Swift.max(winner.updatedAt, now)
-            winner.deviceID = deviceID
-            (winner as? ClientMutationTrackedModel)?.clientMutationID = UUID()
-        }
-
-        return result.reduce(into: [:]) { output, element in
-            output[element.id] = element
-        }
-    }
-}
-
 nonisolated extension PersistentUUIDModel {
     /// Deterministic LWW order (AD-014): newer `updatedAt`, tombstone on a
     /// tie, newer `createdAt`, then device and mutation identity.
@@ -180,16 +142,6 @@ private nonisolated extension TimeSegment {
             sourceRaw,
             deletedAt.map { String($0.timeIntervalSinceReferenceDate) } ?? "visible",
         ].joined(separator: "|")
-    }
-}
-
-private nonisolated extension SoftDeletablePersistentUUIDModel {
-    func markDuplicateDeleted(now: Date, deviceID: String) {
-        guard deletedAt == nil else { return }
-        deletedAt = now
-        updatedAt = now
-        self.deviceID = deviceID
-        (self as? ClientMutationTrackedModel)?.clientMutationID = UUID()
     }
 }
 

@@ -23,7 +23,6 @@ extension timetrackerApp {
             }
         }
 
-        AppleHealthLegacyCleanup.runIfNeeded()
         let storeURL = AppCloudSync.persistentStoreURL
 
         if AppDemoDataConfiguration.usesLocalDemoStore {

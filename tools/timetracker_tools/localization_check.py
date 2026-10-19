@@ -10,6 +10,8 @@
 from __future__ import annotations
 
 import argparse
+import json
+import subprocess
 from pathlib import Path
 
 # target -> 该 target 下需校验的资源族(.strings 文件名前缀)。
@@ -23,90 +25,14 @@ TARGETS: dict[str, tuple[str, ...]] = {
 LOCALES: tuple[str, ...] = ("en", "zh-Hans", "zh-Hant")
 
 
-def _read_quoted(text: str, i: int) -> tuple[str, int]:
-    """从 text[i] == '"' 起读取带转义的引号串,返回(原始内容, 结束下标)。"""
-    i += 1  # 跳过开头引号
-    start = i
-    while i < len(text):
-        c = text[i]
-        if c == "\\":
-            i += 2
-            continue
-        if c == '"':
-            return text[start:i], i + 1
-        i += 1
-    return text[start:i], i  # 未闭合,容错返回
-
-
-def parse_strings_keys(text: str) -> set[str]:
-    """解析 .strings 文本,返回 key 集合。
-
-    兼容带引号/不带引号 key、带引号 value(``\\"`` 转义)、多行 value(累积到 ``;``);
-    跳过 ``//`` 行注释与 ``/* */`` 块注释。
-    """
-    # 先剥离注释。.strings 的 value 为本地化文案,实务上不会包含 /* 或 //,可安全剥离。
-    text = _strip_block_comments(text)
-    text = _strip_line_comments(text)
-
-    keys: set[str] = set()
-    i, n = 0, len(text)
-    while i < n:
-        while i < n and text[i].isspace():
-            i += 1
-        if i >= n:
-            break
-        # 读取 key
-        if text[i] == '"':
-            key, i = _read_quoted(text, i)
-        else:
-            j = i
-            while j < n and not text[j].isspace() and text[j] != "=":
-                j += 1
-            key, i = text[i:j], j
-        # 跳过空白与 '='
-        while i < n and text[i].isspace():
-            i += 1
-        if i < n and text[i] == "=":
-            i += 1
-        while i < n and text[i].isspace():
-            i += 1
-        # 跳过 value 直到 ';'（尊重引号)
-        if i < n and text[i] == '"':
-            _, i = _read_quoted(text, i)
-            while i < n and text[i].isspace():
-                i += 1
-        else:
-            while i < n and text[i] != ";":
-                i += 1
-        if i < n and text[i] == ";":
-            i += 1
-        if key:
-            keys.add(key)
-    return keys
-
-
-def _strip_block_comments(text: str) -> str:
-    out: list[str] = []
-    i, n = 0, len(text)
-    while i < n:
-        if text[i : i + 2] == "/*":
-            end = text.find("*/", i + 2)
-            i = n if end == -1 else end + 2
-        else:
-            out.append(text[i])
-            i += 1
-    return "".join(out)
-
-
-def _strip_line_comments(text: str) -> str:
-    out: list[str] = []
-    for line in text.splitlines(keepends=True):
-        # 在引号外的 // 才是注释;实务 .strings 注释都在行首,简化处理即可。
-        stripped = line.lstrip()
-        if stripped.startswith("//"):
-            continue
-        out.append(line)
-    return "".join(out)
+def parse_strings_keys(path: Path) -> set[str]:
+    """用系统 plutil 解析 .strings,返回 key 集合(格式错误直接报错)。"""
+    result = subprocess.run(
+        ["plutil", "-convert", "json", "-o", "-", str(path)],
+        check=True,
+        capture_output=True,
+    )
+    return set(json.loads(result.stdout))
 
 
 def _collect(
@@ -118,7 +44,7 @@ def _collect(
     for locale in LOCALES:
         path = repo / target / f"{locale}.lproj" / f"{resource}.strings"
         if path.is_file():
-            keys[locale] = parse_strings_keys(path.read_text(encoding="utf-8"))
+            keys[locale] = parse_strings_keys(path)
             paths[locale] = path
         else:
             keys[locale] = set()

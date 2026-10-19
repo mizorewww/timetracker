@@ -55,10 +55,6 @@ def git_text(repo: str | Path, *args: str, default: str | None = None) -> str:
     return result.stdout.strip()
 
 
-def read_pbxproj(path: str | Path) -> bytes:
-    return Path(path).read_bytes()
-
-
 def set_project_version_bytes(project_bytes: bytes, marketing_version: str, build_version: str) -> bytes:
     """在 pbxproj 字节中全局替换版本字段,返回新字节。"""
     new = MARKETING_FIELD_RE.sub(f"MARKETING_VERSION = {marketing_version};".encode(), project_bytes)
@@ -66,18 +62,9 @@ def set_project_version_bytes(project_bytes: bytes, marketing_version: str, buil
     return new
 
 
-def split_marketing(version: str) -> tuple[str, str, str]:
-    """拆分 MARKETING_VERSION 为 (major, minor, patch),patch 缺省为 0。"""
-    parts = version.split(".")
-    major = parts[0]
-    minor = parts[1] if len(parts) > 1 else "0"
-    patch = parts[2] if len(parts) > 2 else "0"
-    return major, minor, patch
-
-
 def next_version(marketing: str, build: str) -> tuple[str, str]:
-    """计算下一版本:marketing patch +1,build +1(发布前手动 bump 用)。"""
-    major, minor, patch = split_marketing(marketing)
+    """计算下一版本:marketing patch +1(缺省为 0),build +1(发布前手动 bump 用)。"""
+    major, minor, patch = (marketing.split(".") + ["0", "0"])[:3]
     next_marketing = f"{major}.{minor}.{int(patch) + 1}"
     next_build = str(int(build) + 1)
     return next_marketing, next_build

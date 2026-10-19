@@ -20,11 +20,11 @@
 - Xcode 需匹配声明的 SDK:iOS/iPadOS 26.2、macOS 15.7、watchOS 26.2。
 - 自动签名,team `LT98S43NKA`;**不要**用 `CODE_SIGNING_ALLOWED=NO`、空 team 或 ad-hoc 签名让构建"通过"。
 - 格式化工具:`brew install swiftformat`。
-- clone 后执行一次 `make install-hooks`,安装只校验三语种 `.strings` key parity 的 pre-commit 钩子。
+- clone 后执行一次 `make install-hooks`,安装校验三语种 `.strings` key parity 与 SwiftFormat 的 pre-commit 钩子。
 
 ## 常用命令
 
-所有开发命令经 **Makefile** 唯一入口(Xcode `Write Build Info` 构建阶段与 pre-commit 钩子也调用 `make`);Makefile 经 `uv run` 调用 `tools/timetracker_tools/` 的纯标准库 Python 模块(无第三方运行依赖)。`uv` 会在首次运行时自动建好 `.venv`。
+所有开发命令经 **Makefile** 唯一入口(Xcode `Write Build Info` 构建阶段与 pre-commit 钩子也调用 `make`);Makefile 经 `uv run --no-project --python 3.12` 调用 `tools/timetracker_tools/` 的纯标准库 Python 模块(系统 Python 只有 3.9)。
 
 ```sh
 make help                # 列出全部目标

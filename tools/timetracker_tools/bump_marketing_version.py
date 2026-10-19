@@ -15,7 +15,6 @@ from timetracker_tools.cli_utils import (
     MARKETING_VALUE_RE,
     env,
     next_version,
-    read_pbxproj,
     set_project_version_bytes,
 )
 
@@ -35,7 +34,7 @@ def main() -> int:
     if not Path(project_file).is_file():
         raise SystemExit(f"Project file not found: {project_file}")
 
-    data = read_pbxproj(project_file)
+    data = Path(project_file).read_bytes()
 
     marketing_match = MARKETING_VALUE_RE.search(data)
     build_match = BUILD_VALUE_RE.search(data)

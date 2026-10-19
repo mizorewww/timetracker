@@ -8,8 +8,8 @@ DerivedData/
 *.xcuserstate
 **/__pycache__/
 *.py[cod]
-.venv/
 .env
 .device-install-exclusions
 Docs/userfeedback.md
 .pi/git/
+.claude/

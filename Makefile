@@ -23,7 +23,7 @@ UI_TEST_RESULT_ROOT ?= build/UITestResults
 
 # Xcode 构建阶段与 GUI git 客户端的 PATH 不含 Homebrew / uv 安装目录。
 export PATH := /opt/homebrew/bin:/usr/local/bin:$(HOME)/.local/bin:$(HOME)/.cargo/bin:$(PATH)
-TOOL := uv run --quiet --project $(CURDIR) python -m timetracker_tools
+TOOL := PYTHONPATH=$(CURDIR)/tools uv run --quiet --no-project --python 3.12 python -m timetracker_tools
 
 .PHONY: help
 help: ## 列出所有目标
@@ -34,10 +34,6 @@ help: ## 列出所有目标
 	         /^[a-zA-Z][a-zA-Z0-9_-]*:.*##/ { printf "  %-20s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
 # ── 概览 ──────────────────────────────────────────────────────
-.PHONY: venv
-venv: ## 用 uv 创建/同步 .venv(工具目标首次运行时也会自举)
-	uv sync
-
 # ── Hooks & 版本 ──────────────────────────────────────────────
 .PHONY: install-hooks
 install-hooks: ## 安装 pre-commit localization 闸门钩子(clone 后执行一次)

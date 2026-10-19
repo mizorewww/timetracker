@@ -26,7 +26,7 @@ nonisolated struct AnalyticsVisualSnapshotService {
             if lhs.interval.start != rhs.interval.start {
                 return lhs.interval.start < rhs.interval.start
             }
-            return lhs.id.uuidString < rhs.id.uuidString
+            return lhs.id < rhs.id
         }
         guard Task.isCancelled == false else { return .empty }
         guard visible.isEmpty == false else {

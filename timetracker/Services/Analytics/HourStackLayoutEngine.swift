@@ -47,7 +47,7 @@ enum HourStackLayoutEngine {
             .filter { $0.seconds > 0 }
             .sorted { lhs, rhs in
                 if lhs.seconds == rhs.seconds {
-                    return lhs.id.uuidString < rhs.id.uuidString
+                    return lhs.id < rhs.id
                 }
                 return lhs.seconds > rhs.seconds
             }

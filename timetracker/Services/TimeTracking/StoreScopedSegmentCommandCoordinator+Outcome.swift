@@ -48,10 +48,10 @@ extension StoreScopedSegmentCommandCoordinator {
         return StoreScopedSegmentMutationOutcome(
             subjectSegmentID: subjectSegmentID,
             segmentChanges: segmentChanges.sorted {
-                $0.before.segmentID.uuidString < $1.before.segmentID.uuidString
+                $0.before.segmentID < $1.before.segmentID
             },
             pomodoroChanges: pomodoroChanges.sorted {
-                $0.before.runID.uuidString < $1.before.runID.uuidString
+                $0.before.runID < $1.before.runID
             },
             referenceDate: referenceDate
         )

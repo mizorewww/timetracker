@@ -28,7 +28,7 @@ nonisolated enum TaskUsageRankingService {
                 if lhsLastStartedAt != rhsLastStartedAt {
                     return lhsLastStartedAt > rhsLastStartedAt
                 }
-                return lhs.id.uuidString < rhs.id.uuidString
+                return lhs.id < rhs.id
             }
     }
 
@@ -53,7 +53,7 @@ nonisolated enum TaskUsageRankingService {
                 if $0.updatedAt != $1.updatedAt {
                     return $0.updatedAt > $1.updatedAt
                 }
-                return $0.id.uuidString < $1.id.uuidString
+                return $0.id < $1.id
             }
             .prefix(4)
         let fallbackTasks = recentTasks.filter {

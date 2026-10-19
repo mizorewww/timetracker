@@ -69,6 +69,6 @@ nonisolated struct ChecklistItemVisualRecord:
         if createdAt != other.createdAt {
             return createdAt > other.createdAt
         }
-        return id.uuidString > other.id.uuidString
+        return id > other.id
     }
 }

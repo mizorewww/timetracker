@@ -29,7 +29,7 @@ nonisolated extension AnalyticsVisualOverlapService {
             if lhs.kind != rhs.kind {
                 return lhs.kind.rawValue < rhs.kind.rawValue
             }
-            return lhs.segmentID.uuidString < rhs.segmentID.uuidString
+            return lhs.segmentID < rhs.segmentID
         }
 
         var activeSegmentIDs = Set<UUID>()

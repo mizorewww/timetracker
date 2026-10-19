@@ -90,7 +90,7 @@ enum TaskQuantityProgressService {
                 if $0.recordedAt != $1.recordedAt {
                     return $0.recordedAt > $1.recordedAt
                 }
-                return $0.id.uuidString < $1.id.uuidString
+                return $0.id < $1.id
             }
         return ValidatedSnapshot(
             progress: progress,

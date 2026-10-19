@@ -18,7 +18,7 @@ enum AnalyticsSelectionPolicy {
             if titleOrder != .orderedSame {
                 return titleOrder == .orderedAscending
             }
-            return lhs.taskID.uuidString < rhs.taskID.uuidString
+            return lhs.taskID < rhs.taskID
         }
     }
 
@@ -65,6 +65,6 @@ enum AnalyticsSelectionPolicy {
         if lhs.updatedAt != rhs.updatedAt {
             return lhs.updatedAt < rhs.updatedAt
         }
-        return lhs.id.uuidString < rhs.id.uuidString
+        return lhs.id < rhs.id
     }
 }

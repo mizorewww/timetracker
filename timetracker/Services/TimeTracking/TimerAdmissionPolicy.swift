@@ -62,15 +62,11 @@ nonisolated enum TimerAdmissionPolicy {
             return lhs.startedAt < rhs.startedAt
         }
         if lhs.segmentID != rhs.segmentID {
-            return uuidOrder(lhs.segmentID, rhs.segmentID)
+            return lhs.segmentID < rhs.segmentID
         }
         if lhs.taskID != rhs.taskID {
-            return uuidOrder(lhs.taskID, rhs.taskID)
+            return lhs.taskID < rhs.taskID
         }
-        return uuidOrder(lhs.sessionID, rhs.sessionID)
-    }
-
-    private static func uuidOrder(_ lhs: UUID, _ rhs: UUID) -> Bool {
-        lhs.uuidString < rhs.uuidString
+        return lhs.sessionID < rhs.sessionID
     }
 }

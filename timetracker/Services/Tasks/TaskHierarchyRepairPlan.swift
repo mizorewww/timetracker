@@ -22,7 +22,7 @@ nonisolated struct TaskHierarchyRepairPlan: Equatable {
         var cycleBreakers = Set<UUID>()
         var processed = Set<UUID>()
 
-        for startID in taskByID.keys.sorted(by: { $0.uuidString < $1.uuidString }) where !processed.contains(startID) {
+        for startID in taskByID.keys.sorted(by: { $0 < $1 }) where !processed.contains(startID) {
             var path: [UUID] = []
             var indexByID: [UUID: Int] = [:]
             var cursor: UUID? = startID
@@ -33,7 +33,7 @@ nonisolated struct TaskHierarchyRepairPlan: Equatable {
             {
                 if let cycleStart = indexByID[currentID] {
                     let cycle = path[cycleStart...]
-                    if let breaker = cycle.min(by: { $0.uuidString < $1.uuidString }) {
+                    if let breaker = cycle.min(by: { $0 < $1 }) {
                         cycleBreakers.insert(breaker)
                     }
                     break

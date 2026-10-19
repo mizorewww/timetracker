@@ -198,7 +198,7 @@ nonisolated enum LLMSuggestionInputPolicy {
         if lhs.candidate.colorHex != rhs.candidate.colorHex {
             return lhs.candidate.colorHex < rhs.candidate.colorHex
         }
-        return lhs.candidate.id.uuidString < rhs.candidate.id.uuidString
+        return lhs.candidate.id < rhs.candidate.id
     }
 
     private static func normalizedCategoryCandidate(
@@ -237,7 +237,7 @@ nonisolated enum LLMSuggestionInputPolicy {
         if lhs.candidate.colorHex != rhs.candidate.colorHex {
             return lhs.candidate.colorHex < rhs.candidate.colorHex
         }
-        return lhs.candidate.id.uuidString < rhs.candidate.id.uuidString
+        return lhs.candidate.id < rhs.candidate.id
     }
 
     private static func normalizedText(_ value: String) -> String {

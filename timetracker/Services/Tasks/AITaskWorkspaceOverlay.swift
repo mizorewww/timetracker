@@ -183,7 +183,7 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
         let affectedTaskIDs = snapshot.tasks
             .filter { $0.parentID == nil && $0.categoryID == id }
             .map(\.id)
-            .sorted(by: Self.uuidOrder)
+            .sorted()
         let updatedTasks = snapshot.tasks.map { task -> AITaskWorkspaceTask in
             guard task.categoryID == id else { return task }
             var updated = task
@@ -331,7 +331,7 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
         var proposed = before
         proposed.isArchived = true
         let affectedDescendantIDs = descendantIDs(of: id)
-            .sorted(by: Self.uuidOrder)
+            .sorted()
         replaceSnapshot(
             tasks: replacing(snapshot.tasks, id: id, with: proposed)
         )
@@ -494,14 +494,14 @@ private nonisolated extension AITaskWorkspaceOverlay {
         let key = Self.normalizedCategoryName(title)
         return snapshot.categories
             .filter { Self.normalizedCategoryName($0.title) == key }
-            .sorted { $0.id.uuidString < $1.id.uuidString }
+            .sorted { $0.id < $1.id }
     }
 
     func ambiguousCategoryError(
         _ categories: [AITaskWorkspaceCategory]
     ) -> AITaskWorkspaceOverlayError {
         .ambiguousCategoryName(
-            categoryIDs: categories.map(\.id).sorted(by: Self.uuidOrder)
+            categoryIDs: categories.map(\.id).sorted()
         )
     }
 
@@ -729,9 +729,5 @@ private nonisolated extension AITaskWorkspaceOverlay {
                 ],
                 locale: categoryNameLocale
             )
-    }
-
-    static func uuidOrder(_ lhs: UUID, _ rhs: UUID) -> Bool {
-        lhs.uuidString < rhs.uuidString
     }
 }

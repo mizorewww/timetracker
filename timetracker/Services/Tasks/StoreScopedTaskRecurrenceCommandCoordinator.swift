@@ -23,7 +23,7 @@ nonisolated struct StoreScopedTaskRecurrenceCommandCoordinator {
         try withFreshState { context, state in
             var outcome = TaskRecurrenceMutationOutcome.noChanges
             let rules = state.rulesByID.values.sorted {
-                $0.id.uuidString < $1.id.uuidString
+                $0.id < $1.id
             }
             for rule in rules {
                 guard rule.deletedAt == nil,

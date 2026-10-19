@@ -76,7 +76,7 @@ extension StoreScopedInboxCommandCoordinator {
             if lhs.createdAt != rhs.createdAt {
                 return lhs.createdAt < rhs.createdAt
             }
-            return lhs.id.uuidString < rhs.id.uuidString
+            return lhs.id < rhs.id
         }
     }
 

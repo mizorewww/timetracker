@@ -314,7 +314,7 @@ private nonisolated extension AITaskWorkspaceSnapshot {
             if lhs.sortOrder != rhs.sortOrder {
                 return lhs.sortOrder < rhs.sortOrder
             }
-            return lhs.id.uuidString < rhs.id.uuidString
+            return lhs.id < rhs.id
         }
     }
 
@@ -374,7 +374,7 @@ private nonisolated extension AITaskWorkspaceSnapshot {
         if lhs != rhs {
             return lhs < rhs
         }
-        return lhsID.uuidString < rhsID.uuidString
+        return lhsID < rhsID
     }
 
     static func normalizedComparisonKey(_ value: String) -> String {

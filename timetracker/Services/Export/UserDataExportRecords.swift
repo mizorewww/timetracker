@@ -6,7 +6,7 @@ nonisolated protocol UserDataRecord: Sendable {
 
 nonisolated extension Array where Element: UserDataRecord {
     func sortedByID() -> [Element] {
-        sorted { $0.id.uuidString < $1.id.uuidString }
+        sorted { $0.id < $1.id }
     }
 }
 

@@ -204,9 +204,9 @@ nonisolated enum InboxSuggestionIdentityService {
             return candidate.deviceID > existing.deviceID
         }
         if candidate.clientMutationID != existing.clientMutationID {
-            return candidate.clientMutationID.uuidString > existing.clientMutationID.uuidString
+            return candidate.clientMutationID > existing.clientMutationID
         }
-        return candidate.id.uuidString > existing.id.uuidString
+        return candidate.id > existing.id
     }
 
     private static func keepNewest<Key: Hashable>(
@@ -219,7 +219,7 @@ nonisolated enum InboxSuggestionIdentityService {
             return
         }
         if suggestion.updatedAt > existing.updatedAt ||
-            (suggestion.updatedAt == existing.updatedAt && suggestion.id.uuidString > existing.id.uuidString)
+            (suggestion.updatedAt == existing.updatedAt && suggestion.id > existing.id)
         {
             index[key] = suggestion
         }

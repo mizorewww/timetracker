@@ -34,10 +34,10 @@ extension StoreScopedChecklistCommandCoordinator {
                 .trackableTaskIDs(tasks: tasks)
                 .contains(baseline.taskID),
                 let item = try visibleItems(taskID: baseline.taskID, context: context)
-                .first(where: { $0.id == baseline.itemID }),
-                item.clientMutationID == baseline.itemMutationID,
-                ChecklistVisualSuggestionPolicy().normalizedTitle(item.title) == baseline.normalizedTitle,
-                item.isCompleted == false
+                    .first(where: { $0.id == baseline.itemID }),
+                  item.clientMutationID == baseline.itemMutationID,
+                  ChecklistVisualSuggestionPolicy().normalizedTitle(item.title) == baseline.normalizedTitle,
+                  item.isCompleted == false
             else {
                 return (nil, false)
             }

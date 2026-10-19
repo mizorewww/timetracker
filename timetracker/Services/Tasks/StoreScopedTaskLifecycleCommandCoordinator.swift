@@ -340,15 +340,15 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
         let parentIsChanging = existingTask?.parentID != draft.parentID
         if let existingTask, parentIsChanging,
            let blocker = TaskTrackingAvailabilityService()
-           .parentChangeBlocker(for: existingTask)
+               .parentChangeBlocker(for: existingTask)
         {
             throw TaskLifecycleMutationError.parentChangeBlocked(blocker)
         }
         if let parentID = draft.parentID,
            parentIsChanging,
            TaskTrackingAvailabilityService()
-           .trackableTaskIDs(tasks: tasks)
-           .contains(parentID) == false
+               .trackableTaskIDs(tasks: tasks)
+               .contains(parentID) == false
         {
             throw TaskLifecycleMutationError.parentUnavailable
         }

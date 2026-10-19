@@ -93,12 +93,7 @@ struct LedgerStore {
             guard range.end > range.start else { return nil }
             return DateInterval(start: range.start, end: range.end)
         }
-        guard intervals.isEmpty == false else {
-            try refreshHistory(repository: repository, now: now)
-            return
-        }
-
-        guard hasLoadedHistory else {
+        guard intervals.isEmpty == false, hasLoadedHistory else {
             try refreshHistory(repository: repository, now: now)
             return
         }

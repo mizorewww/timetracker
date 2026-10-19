@@ -84,11 +84,7 @@ extension TimeTrackerStore {
                 ? .incomplete
                 : .none
         }
-        guard taskIDsWithIncompleteRecurrence.contains(taskID) == false
-        else {
-            return .incomplete
-        }
-        guard let role = taskQuantityRecurrenceRole(taskID: taskID) else {
+        guard taskIDsWithIncompleteRecurrence.contains(taskID) == false, let role = taskQuantityRecurrenceRole(taskID: taskID) else {
             return .incomplete
         }
         return .available(

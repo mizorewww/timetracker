@@ -79,14 +79,11 @@ extension StoreScopedInboxCommandCoordinator {
                       requestedTitle: requestedTitle,
                       requestedIdentity: requestedIdentity,
                       currentSuggestion: suggestion
+                  ), try isRouteDestinationAvailable(
+                      result.destination,
+                      context: context
                   )
             else {
-                return InboxMutationOutcome(affectedItemIDs: [item.id], didMutate: false)
-            }
-            guard try isRouteDestinationAvailable(
-                result.destination,
-                context: context
-            ) else {
                 return InboxMutationOutcome(affectedItemIDs: [item.id], didMutate: false)
             }
 

@@ -1,8 +1,8 @@
 import Foundation
 import SwiftData
 
+@MainActor
 extension SyncedPreferenceService {
-    @MainActor
     static func migrateSensitivePreferences(
         context: ModelContext,
         credentialStore: any LLMCredentialStoring,

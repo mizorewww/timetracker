@@ -31,8 +31,7 @@ extension LedgerStore {
             clockReference: clockReference
         )
         return candidateIDs.compactMap { id in
-            guard let segment = segmentByID[id], segment.deletedAt == nil else { return nil }
-            guard TrackedTimePolicy.overlaps(
+            guard let segment = segmentByID[id], segment.deletedAt == nil, TrackedTimePolicy.overlaps(
                 startedAt: segment.startedAt,
                 endedAt: segment.endedAt,
                 interval: interval,
@@ -57,8 +56,7 @@ extension LedgerStore {
             evaluatedAt: cutoff,
             clockReference: clockReference
         ).compactMap { id in
-            guard let segment = segmentByID[id], segment.deletedAt == nil else { return nil }
-            guard TrackedTimePolicy.overlaps(
+            guard let segment = segmentByID[id], segment.deletedAt == nil, TrackedTimePolicy.overlaps(
                 startedAt: segment.startedAt,
                 endedAt: segment.endedAt,
                 interval: interval,

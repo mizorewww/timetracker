@@ -10,8 +10,7 @@ nonisolated extension SwiftDataTaskRepository {
             return false
         }
         guard let newParentID else { return true }
-        guard nodeID != newParentID else { return false }
-        guard nodes.contains(where: { $0.id == newParentID }) else { return false }
+        guard nodeID != newParentID, nodes.contains(where: { $0.id == newParentID }) else { return false }
         if availabilityService.trackableTaskIDs(tasks: nodes).contains(newParentID) == false {
             return false
         }
@@ -40,10 +39,7 @@ nonisolated extension SwiftDataTaskRepository {
         nodes: [TaskNode]
     ) throws {
         if let parentID {
-            guard let parent = nodes.first(where: { $0.id == parentID }) else {
-                throw TaskRepositoryError.invalidMove
-            }
-            guard TaskTrackingAvailabilityService()
+            guard let parent = nodes.first(where: { $0.id == parentID }), TaskTrackingAvailabilityService()
                 .trackableTaskIDs(tasks: nodes)
                 .contains(parentID)
             else {

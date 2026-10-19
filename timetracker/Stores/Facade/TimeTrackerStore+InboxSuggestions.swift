@@ -4,8 +4,7 @@ extension TimeTrackerStore {
     func autoSuggestInboxItemsIfNeeded() {
         guard canAutoSuggestLLMSuggestions else { return }
         let candidates = llmInboxSuggestionCandidates()
-        guard !candidates.isEmpty else { return }
-        guard inboxSuggestionLifecycle.availableSlots > 0 else { return }
+        guard !candidates.isEmpty, inboxSuggestionLifecycle.availableSlots > 0 else { return }
 
         for item in openInboxItems
             where shouldAutoSuggestInboxItem(item) &&

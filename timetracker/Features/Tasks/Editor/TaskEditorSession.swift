@@ -36,8 +36,7 @@ final class TaskEditorSession {
     }
 
     var isPersistenceValid: Bool {
-        guard validation.isValid else { return false }
-        guard (try? TaskProgressDraftPersistencePolicy.prepare(
+        guard validation.isValid, (try? TaskProgressDraftPersistencePolicy.prepare(
             quantityGoal: draft.quantityGoal,
             dailyRecurrence: draft.dailyRecurrence,
             confirmsQuantityProgressReset:

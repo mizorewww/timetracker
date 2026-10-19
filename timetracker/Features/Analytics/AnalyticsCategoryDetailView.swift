@@ -67,14 +67,10 @@ struct AnalyticsCategoryDetailView: View {
                 return
             }
             await Task.yield()
-            guard Task.isCancelled == false else { return }
-            guard let resolvedSnapshot = await store.loadAnalyticsSnapshot(
+            guard Task.isCancelled == false, let resolvedSnapshot = await store.loadAnalyticsSnapshot(
                 for: range,
                 evaluation: evaluation
-            ) else {
-                return
-            }
-            guard Task.isCancelled == false else { return }
+            ), Task.isCancelled == false else { return }
             loadedPresentation = AnalyticsLoadedSnapshot(
                 snapshot: resolvedSnapshot,
                 request: request

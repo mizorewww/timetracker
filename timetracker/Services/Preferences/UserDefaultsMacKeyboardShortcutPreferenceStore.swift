@@ -17,11 +17,7 @@ final class UserDefaultsMacKeyboardShortcutPreferenceStore {
     func shortcut(
         for action: MacKeyboardShortcutAction
     ) -> KeyboardShortcuts.Shortcut? {
-        guard let overrides = loadOverrides() else {
-            return action.defaultShortcut
-        }
-
-        guard let storedOverride = overrides[action] else {
+        guard let overrides = loadOverrides(), let storedOverride = overrides[action] else {
             return action.defaultShortcut
         }
         switch storedOverride {

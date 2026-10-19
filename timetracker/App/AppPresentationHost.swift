@@ -134,10 +134,8 @@ private struct AppPresentationSheet: View {
                 },
                 onApply: { draft in
                     let result = await store.applyAITaskWorkspaceReview(draft)
-                    if case let .applied(firstRootTaskID) = result {
-                        if let firstRootTaskID {
-                            store.openTaskDetail(firstRootTaskID)
-                        }
+                    if case let .applied(firstRootTaskID) = result, let firstRootTaskID {
+                        store.openTaskDetail(firstRootTaskID)
                     }
                     return result
                 }

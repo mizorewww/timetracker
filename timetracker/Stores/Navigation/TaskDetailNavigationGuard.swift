@@ -150,11 +150,7 @@ final class TaskDetailNavigationGuard {
         guard let registration,
               let pendingNavigation,
               pendingNavigation.id == requestID else { return false }
-        guard pendingNavigation.beforeDiscardingChanges() else {
-            cancelPendingNavigationState()
-            return false
-        }
-        guard registration.discardChanges() else {
+        guard pendingNavigation.beforeDiscardingChanges(), registration.discardChanges() else {
             cancelPendingNavigationState()
             return false
         }

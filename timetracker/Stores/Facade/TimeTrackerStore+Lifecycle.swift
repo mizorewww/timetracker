@@ -250,8 +250,7 @@ extension TimeTrackerStore {
         if let committedMutationSystemProjectionScheduler {
             scheduler = committedMutationSystemProjectionScheduler
         } else {
-            guard writeAuthorization.usesApplicationState else { return }
-            guard let modelContext else { return }
+            guard writeAuthorization.usesApplicationState, let modelContext else { return }
             do {
                 scheduler = try
                     CommittedMutationSystemProjectionSchedulerRegistry.shared

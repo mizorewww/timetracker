@@ -43,10 +43,7 @@ struct ChecklistOrderingService {
         }
 
         let groupIndices = elements.indices.filter { elements[$0].isCompleted == sourceState }
-        guard let groupStart = groupIndices.first, let groupEnd = groupIndices.last else {
-            return nil
-        }
-        guard destination >= groupStart, destination <= groupEnd + 1 else {
+        guard let groupStart = groupIndices.first, let groupEnd = groupIndices.last, destination >= groupStart, destination <= groupEnd + 1 else {
             return nil
         }
 

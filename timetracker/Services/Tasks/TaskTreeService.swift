@@ -114,8 +114,7 @@ nonisolated struct TaskTreeService {
             return false
         }
         guard let newParentID else { return true }
-        guard taskID != newParentID else { return false }
-        guard eligibility.visibleTaskIDs.contains(newParentID),
+        guard taskID != newParentID, eligibility.visibleTaskIDs.contains(newParentID),
               eligibility.trackableTaskIDs.contains(newParentID)
         else {
             return false

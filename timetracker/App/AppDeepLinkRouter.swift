@@ -33,9 +33,7 @@ struct AppDeepLinkRouter {
 
         switch host {
         case "open":
-            guard path.count == 1, let rawDestination = path.first else { return nil }
-            guard hasNoQueryItems(url) else { return nil }
-            guard let destination = destination(for: rawDestination) else { return nil }
+            guard path.count == 1, let rawDestination = path.first, hasNoQueryItems(url), let destination = destination(for: rawDestination) else { return nil }
             return .open(destination)
         case "timer":
             guard path.count == 1, let operation = path.first else { return nil }
@@ -64,8 +62,7 @@ struct AppDeepLinkRouter {
                 return nil
             }
         case "task":
-            guard path.count == 1, let taskRoute = path.first else { return nil }
-            guard hasNoQueryItems(url) else { return nil }
+            guard path.count == 1, let taskRoute = path.first, hasNoQueryItems(url) else { return nil }
             if taskRoute == "new" {
                 return .newTask
             }

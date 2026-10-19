@@ -65,9 +65,7 @@ struct DailySummaryService {
         in interval: DateInterval,
         now: Date
     ) -> (segment: TimeSegment, interval: DateInterval)? {
-        guard segment.deletedAt == nil else { return nil }
-
-        guard let clipped = TrackedTimePolicy.interval(
+        guard segment.deletedAt == nil, let clipped = TrackedTimePolicy.interval(
             startedAt: segment.startedAt,
             endedAt: segment.endedAt,
             now: now,

@@ -186,10 +186,7 @@ struct StoreScopedInboxCommandCoordinator: StoreScopedCommandCoordinator {
         operation: (InboxItem, ModelContext) throws -> Void
     ) throws -> InboxMutationOutcome {
         try withFreshLockedContext { context in
-            guard let item = try visibleItem(id: baseline.itemID, context: context) else {
-                throw StoreScopedInboxMutationError.inboxChanged
-            }
-            guard item.clientMutationID == baseline.clientMutationID else {
+            guard let item = try visibleItem(id: baseline.itemID, context: context), item.clientMutationID == baseline.clientMutationID else {
                 throw StoreScopedInboxMutationError.inboxChanged
             }
             let mutationIDBeforeOperation = item.clientMutationID

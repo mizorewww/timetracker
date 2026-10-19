@@ -7,18 +7,13 @@ import SwiftData
 nonisolated struct StoreScopedTaskRecurrenceCommandCoordinator {
     let session: StoreMutationSession
     let deviceID: String
-    let didReachCheckpoint:
-        @Sendable (TaskRecurrenceMutationCheckpoint) throws -> Void
 
     init(
         session: StoreMutationSession,
-        deviceID: String = DeviceIdentity.current,
-        didReachCheckpoint: @escaping
-        @Sendable (TaskRecurrenceMutationCheckpoint) throws -> Void = { _ in }
+        deviceID: String = DeviceIdentity.current
     ) {
         self.session = session
         self.deviceID = deviceID
-        self.didReachCheckpoint = didReachCheckpoint
     }
 
     @MainActor
@@ -242,7 +237,6 @@ nonisolated extension StoreScopedTaskRecurrenceCommandCoordinator {
             affectedAncestorTaskIDs:
             state.ancestors(of: rule.templateTaskID)
         )
-        try didReachCheckpoint(.ruleUpdated(rule.id))
 
         if isEnabled {
             let materialized = try materializeEnabledRuleIfNeeded(
@@ -297,7 +291,6 @@ nonisolated extension StoreScopedTaskRecurrenceCommandCoordinator {
             templateTaskID: templateTaskID,
             affectedAncestorTaskIDs: state.ancestors(of: templateTaskID)
         )
-        try didReachCheckpoint(.ruleCreated(rule.id))
         return rule
     }
 
@@ -425,7 +418,6 @@ nonisolated extension StoreScopedTaskRecurrenceCommandCoordinator {
             occurrenceDayKey: dayKey,
             now: now
         )
-        try didReachCheckpoint(.generatedTaskCreated(generatedTaskID))
 
         var copiedGoalID: UUID?
         if let templateGoal = blueprintGoal.goal {
@@ -440,7 +432,6 @@ nonisolated extension StoreScopedTaskRecurrenceCommandCoordinator {
             goal.clientMutationID = goal.id
             context.insert(goal)
             copiedGoalID = goal.id
-            try didReachCheckpoint(.quantityGoalCreated(goal.id))
         }
 
         let occurrence = TaskRecurrenceOccurrence(
@@ -454,7 +445,6 @@ nonisolated extension StoreScopedTaskRecurrenceCommandCoordinator {
         occurrence.updatedAt = now
         occurrence.clientMutationID = occurrence.id
         context.insert(occurrence)
-        try didReachCheckpoint(.occurrenceCreated(occurrence.id))
 
         outcome.materializations.append(
             TaskRecurrenceMaterializationMutation(

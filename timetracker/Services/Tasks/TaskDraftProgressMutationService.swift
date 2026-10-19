@@ -5,8 +5,6 @@ nonisolated struct TaskDraftProgressMutationService {
     let context: ModelContext
     let session: StoreMutationSession
     let deviceID: String
-    let didReachCheckpoint:
-        @Sendable (TaskDraftMutationCheckpoint) throws -> Void
 
     func apply(
         _ draft: PreparedTaskProgressDraft,
@@ -47,10 +45,7 @@ nonisolated struct TaskDraftProgressMutationService {
 
         let coordinator = StoreScopedTaskRecurrenceCommandCoordinator(
             session: session,
-            deviceID: deviceID,
-            didReachCheckpoint: {
-                try didReachCheckpoint(.recurrence($0))
-            }
+            deviceID: deviceID
         )
         if let existing, existing.deletedAt == nil {
             guard existing.startDayKey == draft.startDayKey,

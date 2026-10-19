@@ -56,12 +56,6 @@ struct TaskDraftMutationOutcome: Equatable {
     }
 }
 
-nonisolated enum TaskDraftMutationCheckpoint: Equatable {
-    case taskAndChecklistSaved(UUID)
-    case quantityGoalChanged(UUID)
-    case recurrence(TaskRecurrenceMutationCheckpoint)
-}
-
 struct TaskArchiveMutationOutcome: Equatable {
     let taskID: UUID
     let didMutate: Bool

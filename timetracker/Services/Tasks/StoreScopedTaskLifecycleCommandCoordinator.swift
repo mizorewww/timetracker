@@ -8,18 +8,13 @@ import SwiftData
 struct StoreScopedTaskLifecycleCommandCoordinator {
     let session: StoreMutationSession
     let deviceID: String?
-    let didReachDraftCheckpoint:
-        @Sendable (TaskDraftMutationCheckpoint) throws -> Void
 
     init(
         session: StoreMutationSession,
-        deviceID: String? = nil,
-        didReachDraftCheckpoint: @escaping
-        @Sendable (TaskDraftMutationCheckpoint) throws -> Void = { _ in }
+        deviceID: String? = nil
     ) {
         self.session = session
         self.deviceID = deviceID
-        self.didReachDraftCheckpoint = didReachDraftCheckpoint
     }
 
     func archive(taskID: UUID) throws -> TaskArchiveMutationOutcome {
@@ -227,15 +222,10 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
                 context: context,
                 deviceID: resolvedDeviceID
             )
-            try didReachDraftCheckpoint(
-                .taskAndChecklistSaved(savedTaskID)
-            )
-
             let recurrenceOutcome = try TaskDraftProgressMutationService(
                 context: context,
                 session: session,
-                deviceID: resolvedDeviceID,
-                didReachCheckpoint: didReachDraftCheckpoint
+                deviceID: resolvedDeviceID
             ).apply(
                 preparedProgress,
                 to: savedTaskID,

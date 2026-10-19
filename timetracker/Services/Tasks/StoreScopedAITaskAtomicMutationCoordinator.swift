@@ -315,8 +315,7 @@ private extension StoreScopedAITaskAtomicMutationCoordinator {
         _ = try TaskDraftProgressMutationService(
             context: context,
             session: session,
-            deviceID: deviceID,
-            didReachCheckpoint: { _ in }
+            deviceID: deviceID
         ).apply(
             prepared,
             to: taskID,

@@ -10,20 +10,15 @@ struct StoreScopedTaskQuantityEntryCommandCoordinator {
     let session: StoreMutationSession
     let deviceID: String
     let nowProvider: () -> Date
-    let didReachCheckpoint:
-        (TaskQuantityEntryMutationCheckpoint) throws -> Void
 
     init(
         session: StoreMutationSession,
         deviceID: String = DeviceIdentity.current,
-        nowProvider: @escaping () -> Date = Date.init,
-        didReachCheckpoint: @escaping
-        (TaskQuantityEntryMutationCheckpoint) throws -> Void = { _ in }
+        nowProvider: @escaping () -> Date = Date.init
     ) {
         self.session = session
         self.deviceID = deviceID
         self.nowProvider = nowProvider
-        self.didReachCheckpoint = didReachCheckpoint
     }
 
     func record(

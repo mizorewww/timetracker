@@ -44,7 +44,6 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
         entry.updatedAt = mutationDate
         entry.clientMutationID = command.proposedEntryID
         context.insert(entry)
-        try didReachCheckpoint(.entryInserted(entry.id))
 
         return outcome(
             entryID: entry.id,
@@ -113,7 +112,6 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
         entry.updatedAt = date
         entry.deviceID = deviceID
         entry.clientMutationID = command.operationID
-        try didReachCheckpoint(.entryUpdated(entry.id))
         return outcome(
             entryID: entry.id,
             taskID: entry.taskID,
@@ -163,7 +161,6 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
         entry.updatedAt = date
         entry.deviceID = deviceID
         entry.clientMutationID = command.operationID
-        try didReachCheckpoint(.entryDeleted(entry.id))
         return outcome(
             entryID: entry.id,
             taskID: entry.taskID,

@@ -98,11 +98,3 @@ nonisolated struct TaskRecurrenceMutationOutcome: Equatable {
             affectedAncestorTaskIDs
     }
 }
-
-nonisolated enum TaskRecurrenceMutationCheckpoint: Equatable {
-    case ruleCreated(UUID)
-    case ruleUpdated(UUID)
-    case generatedTaskCreated(UUID)
-    case quantityGoalCreated(UUID)
-    case occurrenceCreated(UUID)
-}

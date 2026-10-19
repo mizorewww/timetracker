@@ -44,7 +44,6 @@ nonisolated extension TaskDraftProgressMutationService {
             )
             tombstone(existing, at: mutationDate)
             activeEntries.forEach { tombstone($0, at: mutationDate) }
-            try didReachCheckpoint(.quantityGoalChanged(existing.id))
             return
         }
 
@@ -110,7 +109,6 @@ nonisolated extension TaskDraftProgressMutationService {
         goal.unitLabel = draft.unitLabel
         goal.deletedAt = nil
         goal.markMutated(at: date, deviceID: deviceID)
-        try didReachCheckpoint(.quantityGoalChanged(goal.id))
     }
 
     private func insert(
@@ -128,7 +126,6 @@ nonisolated extension TaskDraftProgressMutationService {
         goal.updatedAt = now
         goal.clientMutationID = UUID()
         context.insert(goal)
-        try didReachCheckpoint(.quantityGoalChanged(goal.id))
     }
 
     private func unitChangeWouldReinterpretProgress(

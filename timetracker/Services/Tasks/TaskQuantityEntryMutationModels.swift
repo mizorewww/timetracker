@@ -87,9 +87,3 @@ struct TaskQuantityEntryMutationOutcome: Equatable {
         didMutate ? convergenceEvents : []
     }
 }
-
-enum TaskQuantityEntryMutationCheckpoint: Equatable {
-    case entryInserted(UUID)
-    case entryUpdated(UUID)
-    case entryDeleted(UUID)
-}

@@ -3,40 +3,32 @@ import SwiftData
 
 @MainActor
 enum SeedData {
-    /// Resets every user row (a user-confirmed Settings action).
-    static func clearAll(context: ModelContext) throws {
-        try context.performAtomicMutation {
-            try clearAllChanges(context: context, includesPreferences: true)
-        }
-        #if DEBUG
-        setAutomaticDemoSeedingDisabled(true)
-        #endif
-    }
-
-    static func clearAllChanges(
+    /// Tombstones every live user row; the caller's atomic mutation commits.
+    /// CloudKit user-fact models retain a tombstone so offline devices receive
+    /// the reset instead of resurrecting old rows. Rows already tombstoned stay
+    /// as they are so the reset does not re-export the deletion history.
+    static func clearAll(
         context: ModelContext,
         includesPreferences: Bool
     ) throws {
         let now = Date()
         let deviceID = DeviceIdentity.current
-        // CloudKit user-fact models retain a tombstone so offline devices receive
-        // the reset instead of resurrecting old rows.
         for model in TimeTrackerModelRegistry.currentModels
             where includesPreferences || model != SyncedPreference.self
         {
-            try tombstoneAll(model, context: context, now: now, deviceID: deviceID)
+            try tombstoneLiveRows(of: model, context: context, now: now, deviceID: deviceID)
         }
-        try context.saveAfterMutationStep()
     }
 
-    private static func tombstoneAll<Model: PersistentModel>(
-        _: Model.Type,
+    private static func tombstoneLiveRows<Model: PersistentModel>(
+        of _: Model.Type,
         context: ModelContext,
         now: Date,
         deviceID: String
     ) throws {
         let rows = try context.fetch(FetchDescriptor<Model>())
             .compactMap { $0 as? any SoftDeletablePersistentUUIDModel }
+            .filter { $0.deletedAt == nil }
         tombstone(rows, now: now, deviceID: deviceID)
     }
 
@@ -110,10 +102,7 @@ extension SeedData {
         }
 
         try context.performAtomicMutation {
-            try clearAllChanges(
-                context: context,
-                includesPreferences: false
-            )
+            try clearAll(context: context, includesPreferences: false)
             try buildDemoData(context: context)
         }
         setAutomaticDemoSeedingDisabled(false)

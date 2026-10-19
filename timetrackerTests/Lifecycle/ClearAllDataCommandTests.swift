@@ -41,6 +41,36 @@ struct ClearAllDataCommandTests {
     }
 
     @Test
+    func clearAllDataLeavesExistingTombstonesUntouched() throws {
+        let savedDefaults = Self.saveLocalDefaults()
+        defer { Self.restoreLocalDefaults(savedDefaults) }
+        let context = try makeTestContext()
+        let deletedAt = Date(timeIntervalSinceReferenceDate: 100_000)
+        let deletedTask = TaskNode(title: "Old", parentID: nil, deviceID: "original-device")
+        deletedTask.updatedAt = deletedAt
+        deletedTask.deletedAt = deletedAt
+        let mutationID = deletedTask.clientMutationID
+        context.insert(deletedTask)
+        context.insert(TaskNode(title: "Live", parentID: nil, deviceID: "seed"))
+        try context.save()
+        let store = TimeTrackerStore(
+            llmCredentialStore: InMemoryCredentialStore(apiKey: nil),
+            writeAuthorization: .isolatedTestHarness
+        )
+        store.configureRepositoriesIfNeeded(context: context)
+
+        try store.clearAllData()
+
+        let tasks = try ModelContext(context.container).fetch(FetchDescriptor<TaskNode>())
+        #expect(tasks.allSatisfy { $0.deletedAt != nil })
+        let untouched = try #require(tasks.first { $0.id == deletedTask.id })
+        #expect(untouched.updatedAt == deletedAt)
+        #expect(untouched.deletedAt == deletedAt)
+        #expect(untouched.deviceID == "original-device")
+        #expect(untouched.clientMutationID == mutationID)
+    }
+
+    @Test
     func failedClearRestoresTheAPIKeyAndAutomaticSuggestionSetting() throws {
         let savedDefaults = Self.saveLocalDefaults()
         defer { Self.restoreLocalDefaults(savedDefaults) }

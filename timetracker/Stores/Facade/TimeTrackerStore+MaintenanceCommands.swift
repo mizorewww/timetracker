@@ -15,7 +15,7 @@ extension TimeTrackerStore {
                 try llmCredentialStore.writeAPIKey("")
                 defaults.removeObject(forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
                 localSettingsWereCleared = true
-                try SeedData.clearAll(context: context)
+                try SeedData.clearAll(context: context, includesPreferences: true)
             }
         } catch {
             if localSettingsWereCleared {
@@ -33,6 +33,9 @@ extension TimeTrackerStore {
             }
             throw error
         }
+        #if DEBUG
+        SeedData.setAutomaticDemoSeedingDisabled(true)
+        #endif
         finishStoreScopedMutation(events: [.fullSync])
         selectedTaskID = nil
         tasksRoute = nil

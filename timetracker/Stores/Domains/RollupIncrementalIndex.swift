@@ -62,7 +62,7 @@ struct RollupIncrementalIndex {
 
         var canonicalSegments: [LedgerSegmentSnapshot] = []
         canonicalSegments.reserveCapacity(segments.count)
-        for segment in segments.visibleDeduplicatedByID() {
+        for segment in segments {
             canonicalSegments.append(LedgerSegmentSnapshot(segment))
         }
         segmentByID = Dictionary(uniqueKeysWithValues: canonicalSegments.map { ($0.id, $0) })

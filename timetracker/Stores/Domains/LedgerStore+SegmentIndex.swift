@@ -6,10 +6,8 @@ extension LedgerStore {
         now: Date,
         calendar: Calendar
     ) {
+        // The repository already resolves LWW, hides tombstones, and sorts.
         allSegments = segments
-            .deduplicatedByID()
-            .filter { $0.deletedAt == nil }
-            .sorted(by: TimeSegment.startOrder)
         segmentByID = Dictionary(uniqueKeysWithValues: allSegments.map { ($0.id, $0) })
         segmentSnapshotByID = Dictionary(uniqueKeysWithValues: allSegments.map {
             ($0.id, LedgerSegmentSnapshot($0))
@@ -49,10 +47,9 @@ extension LedgerStore {
         refreshUnchangedTimeSensitiveSegments: Bool
     ) {
         let isClockRewind = now < segmentIndexEvaluationDate
-        let fetchedByID = fetchedSegments
-            .deduplicatedByID()
-            .filter { $0.deletedAt == nil }
-            .reduce(into: [UUID: TimeSegment]()) { $0[$1.id] = $1 }
+        let fetchedByID = fetchedSegments.reduce(into: [UUID: TimeSegment]()) {
+            $0[$1.id] = $1
+        }
 
         for id in ids {
             let before = segmentSnapshotByID[id]

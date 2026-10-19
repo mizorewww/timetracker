@@ -33,9 +33,8 @@ struct AnalyticsStore {
         calendar: Calendar = .current
     ) -> AnalyticsSnapshot {
         PerformanceSignpost.interval("Analytics snapshot generation") {
-            let canonicalSegments = segments.deduplicatedByID()
             let rangeSegments = segmentsForAnalytics(
-                canonicalSegments,
+                segments,
                 interval: period,
                 evaluatedAt: cutoff
             )
@@ -45,7 +44,7 @@ struct AnalyticsStore {
                 taskCategories: taskCategories,
                 taskCategoryAssignments: taskCategoryAssignments,
                 rangeSegments: rangeSegments,
-                allSegments: canonicalSegments,
+                allSegments: segments,
                 sessions: sessions,
                 cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs,
                 taskPathByID: taskPathByID,

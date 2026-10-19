@@ -11,8 +11,8 @@ struct ChecklistStore {
     var visualByChecklistItemID: [UUID: ChecklistItemVisual] = [:]
 
     mutating func refresh(items: [ChecklistItem], visuals: [ChecklistItemVisual]) {
-        self.items = sortedItems(items.deduplicatedByID())
-        self.visuals = sortedVisuals(visuals.deduplicatedByID())
+        self.items = sortedItems(items)
+        self.visuals = sortedVisuals(visuals)
         itemsByTaskID = Dictionary(grouping: self.items, by: \.taskID)
         itemArrayIndexByID = Dictionary(uniqueKeysWithValues: self.items.indices.map {
             (self.items[$0].id, $0)
@@ -38,7 +38,7 @@ struct ChecklistStore {
         guard taskIDs.isEmpty == false else { return }
 
         let canonicalFetchedItems = sortedItems(
-            fetchedItems.deduplicatedByID().filter { taskIDs.contains($0.taskID) }
+            fetchedItems.filter { taskIDs.contains($0.taskID) }
         )
         let existingItemIDs = Set(taskIDs.flatMap { itemsByTaskID[$0] ?? [] }.map(\.id))
         let fetchedItemIDs = Set(canonicalFetchedItems.map(\.id))
@@ -58,7 +58,7 @@ struct ChecklistStore {
         }
 
         let canonicalFetchedVisuals = sortedVisuals(
-            fetchedVisuals.deduplicatedByID().filter {
+            fetchedVisuals.filter {
                 replacedItemIDs.contains($0.checklistItemID)
             }
         )

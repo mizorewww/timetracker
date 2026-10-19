@@ -27,16 +27,16 @@ struct LedgerStore {
     private var sessionIndex = LedgerSessionIndex()
 
     mutating func refresh(repository: SwiftDataTimeTrackingRepository, now: Date = Date(), calendar: Calendar = .current) throws {
-        activeSegments = try repository.activeSegments().deduplicatedByID()
+        activeSegments = try repository.activeSegments()
         let today = calendar.dateInterval(of: .day, for: now) ?? DateInterval(start: now, duration: 24 * 60 * 60)
-        todaySegments = try repository.segments(from: today.start, to: today.end, now: now).deduplicatedByID()
+        todaySegments = try repository.segments(from: today.start, to: today.end, now: now)
         try refreshHistory(repository: repository, now: now, calendar: calendar)
     }
 
     mutating func refreshVisible(repository: SwiftDataTimeTrackingRepository, now: Date = Date(), calendar: Calendar = .current) throws {
-        let refreshedActive = try repository.activeSegments().deduplicatedByID()
+        let refreshedActive = try repository.activeSegments()
         let today = calendar.dateInterval(of: .day, for: now) ?? DateInterval(start: now, duration: 24 * 60 * 60)
-        let refreshedToday = try repository.segments(from: today.start, to: today.end, now: now).deduplicatedByID()
+        let refreshedToday = try repository.segments(from: today.start, to: today.end, now: now)
         if segmentIndexEvaluationDate != .distantPast, segmentIndexCalendar != calendar {
             rebuildSegmentDayIndex(now: now, calendar: calendar)
         }
@@ -110,7 +110,7 @@ struct LedgerStore {
         for interval in intervals {
             fetchedSegments += try repository.segments(from: interval.start, to: interval.end, now: now)
         }
-        fetchedSegments = uniqueSegments(fetchedSegments).deduplicatedByID()
+        fetchedSegments = uniqueSegments(fetchedSegments)
 
         let impactedSessionIDs = Set(existingImpactedSnapshots.map(\.sessionID))
             .union(fetchedSegments.map(\.sessionID))
@@ -123,7 +123,7 @@ struct LedgerStore {
         )
 
         if impactedSessionIDs.isEmpty == false {
-            let refreshedSessions = try repository.sessions(ids: impactedSessionIDs).deduplicatedByID()
+            let refreshedSessions = try repository.sessions(ids: impactedSessionIDs)
             sessionIndex.replace(ids: impactedSessionIDs, with: refreshedSessions)
         }
     }

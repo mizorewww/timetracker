@@ -38,11 +38,7 @@ struct SystemActionPostCommitEffects {
         StoreMutationBroadcaster.publish(events: events)
         do {
             let scheduler = try schedulerProvider(container)
-            scheduler.enqueue(
-                CommittedMutationSystemProjectionRequest(
-                    events: events
-                )
-            )
+            scheduler.enqueue(events: events)
         } catch {
             Self.logger.error(
                 "Could not schedule committed system-action projections: \(error.localizedDescription, privacy: .public)"

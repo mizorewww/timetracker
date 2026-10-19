@@ -35,19 +35,11 @@ struct CommittedMutationSystemSurfaceMaterializerTests {
         context.insert(segment)
         try context.save()
 
-        let checkpoints = CheckpointRecorder()
         let materialization = try await CommittedMutationSystemSurfaceMaterializer(
             modelContainer: context.container
         )
-        .materialize(now: now, calendar: calendar) { checkpoint in
-            checkpoints.record(checkpoint)
-        }
+        .materialize(now: now, calendar: calendar)
 
-        #expect(checkpoints.values == [
-            .beforeCommittedFactRead,
-            .afterCommittedFactRead,
-            .afterMaterialization,
-        ])
         #expect(materialization.generatedAt == now)
         #expect(materialization.widgetSnapshot.generatedAt == now)
         #expect(materialization.widgetSnapshot.activeTimers.map(\.taskID) == [task.id])
@@ -155,16 +147,5 @@ struct CommittedMutationSystemSurfaceMaterializerTests {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
         return calendar
-    }
-
-    private final class CheckpointRecorder: @unchecked Sendable {
-        private(set) var values:
-            [CommittedMutationSystemSurfaceMaterializationCheckpoint] = []
-
-        func record(
-            _ checkpoint: CommittedMutationSystemSurfaceMaterializationCheckpoint
-        ) {
-            values.append(checkpoint)
-        }
     }
 }

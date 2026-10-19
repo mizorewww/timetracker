@@ -263,10 +263,8 @@ extension TimeTrackerStore {
             }
         }
         scheduler.enqueue(
-            CommittedMutationSystemProjectionRequest(
-                events: events,
-                forcedSystemSinks: forcedSystemSinks
-            )
+            events: events,
+            forcedSinks: forcedSystemSinks
         )
     }
 }

@@ -1,104 +1,142 @@
+import Foundation
 import Testing
 @testable import timetracker
 
+@MainActor
 struct SystemProjectionSchedulerTests {
     @Test
-    @MainActor
     func eventsTargetOnlyTheSurfacesThatShowThem() {
         let allSinks = Set(CommittedMutationSystemProjectionSink.allCases)
 
-        #expect(CommittedMutationSystemProjectionScheduler.targetedSinks(
-            for: .init(
-                events: [.taskChanged(taskID: nil, affectedAncestorIDs: [])]
-            )
+        #expect(CommittedMutationSystemProjectionSink.sinks(
+            showing: [.taskChanged(taskID: nil, affectedAncestorIDs: [])]
         ) == allSinks)
-        #expect(CommittedMutationSystemProjectionScheduler.targetedSinks(
-            for: .init(
-                events: [.remoteImportCompleted]
-            )
+        #expect(CommittedMutationSystemProjectionSink.sinks(
+            showing: [.remoteImportCompleted]
         ) == allSinks)
-        #expect(CommittedMutationSystemProjectionScheduler.targetedSinks(
-            for: .init(
-                events: [.fullSync]
-            )
+        #expect(CommittedMutationSystemProjectionSink.sinks(
+            showing: [.fullSync]
         ) == allSinks)
-        #expect(CommittedMutationSystemProjectionScheduler.targetedSinks(
-            for: .init(
-                events: [.preferenceChanged(key: nil)]
-            )
+        #expect(CommittedMutationSystemProjectionSink.sinks(
+            showing: [.preferenceChanged(key: nil)]
         ) == [.watch])
-        #expect(CommittedMutationSystemProjectionScheduler.targetedSinks(
-            for: .init(
-                events: [.checklistChanged(taskID: nil, affectedAncestorIDs: [])]
-            )
+        #expect(CommittedMutationSystemProjectionSink.sinks(
+            showing: [.checklistChanged(taskID: nil, affectedAncestorIDs: [])]
         ).isEmpty)
-        #expect(CommittedMutationSystemProjectionScheduler.targetedSinks(
-            for: .init(
-                events: [],
-                forcedSystemSinks: [.watch]
-            )
-        ) == [.watch])
     }
 
     @Test
-    @MainActor
-    func oneGenerationSharesOneSystemSurfaceMaterialization() async throws {
+    func burstOfRequestsSharesOneMaterializationAcrossSinks() async {
         var materializationCount = 0
-        let worker = CommittedMutationSystemProjectionWorker(
-            materializer: { _ in
+        var published: [CommittedMutationSystemProjectionSink] = []
+        let scheduler = CommittedMutationSystemProjectionScheduler(
+            materialize: { _ in
                 materializationCount += 1
-                return nil
+                return Self.materialization()
             },
-            publisher: { _, _ in
-                Issue.record("A nil materialization must not publish")
+            publish: { sink, _ in
+                published.append(sink)
             }
         )
-        let targetSinks = Set(
-            CommittedMutationSystemProjectionSink.systemSurfaceCases
-        )
-        let work = CommittedMutationSystemProjectionWork(
-            generation: 1,
-            targetSinks: targetSinks,
-            events: [.fullSync]
-        )
 
-        for sink in CommittedMutationSystemProjectionSink.systemSurfaceCases {
-            try await worker.perform(sink: sink, work: work)
-        }
+        scheduler.enqueue(events: [.preferenceChanged(key: nil)])
+        scheduler.enqueue(events: [.ledgerChanged(taskID: nil, dateInterval: nil, isVisible: true)])
+        scheduler.enqueue(events: [], forcedSinks: [.watch])
 
+        #expect(await eventually { published.count == 3 })
         #expect(materializationCount == 1)
+        #expect(Set(published) == Set(CommittedMutationSystemProjectionSink.allCases))
     }
 
     @Test
-    @MainActor
-    func failedSinkRetriesOnTheNextRelevantGeneration() async {
-        var attempts: [CommittedMutationSystemProjectionSink: Int] = [:]
-        let scheduler = CommittedMutationSystemProjectionScheduler { sink, _ in
-            attempts[sink, default: 0] += 1
-            if sink == .widget, attempts[sink] == 1 {
-                throw ExpectedFailure.once
-            }
-        }
-        let request = CommittedMutationSystemProjectionRequest(
-            events: [.taskChanged(taskID: nil, affectedAncestorIDs: [])]
+    func forcedSinkProjectsWithoutEvents() async {
+        var published: [CommittedMutationSystemProjectionSink] = []
+        let scheduler = CommittedMutationSystemProjectionScheduler(
+            materialize: { _ in Self.materialization() },
+            publish: { sink, _ in published.append(sink) }
         )
 
-        scheduler.enqueue(request)
-        #expect(await eventually {
-            attempts[.widget] == 1 &&
-                attempts[.watch] == 1 &&
-                attempts[.liveActivity] == 1
-        })
+        scheduler.enqueue(events: [.inboxChanged(itemIDs: [])])
+        scheduler.enqueue(events: [], forcedSinks: [.watch])
 
-        scheduler.enqueue(request)
+        #expect(await eventually { published == [.watch] })
+    }
+
+    @Test
+    func failedSinkRetriesWithTheNextRequest() async {
+        var attempts: [CommittedMutationSystemProjectionSink: Int] = [:]
+        let scheduler = CommittedMutationSystemProjectionScheduler(
+            materialize: { _ in Self.materialization() },
+            publish: { sink, _ in
+                attempts[sink, default: 0] += 1
+                if sink == .widget, attempts[sink] == 1 {
+                    throw ExpectedFailure.once
+                }
+            }
+        )
+
+        scheduler.enqueue(events: [.taskChanged(taskID: nil, affectedAncestorIDs: [])])
         #expect(await eventually {
             CommittedMutationSystemProjectionSink.allCases.allSatisfy {
-                attempts[$0] == 2
+                attempts[$0] == 1
             }
+        })
+
+        scheduler.enqueue(events: [.preferenceChanged(key: nil)])
+        #expect(await eventually {
+            attempts[.widget] == 2 && attempts[.watch] == 2
+        })
+        #expect(attempts[.liveActivity] == 1)
+    }
+
+    @Test
+    func failedReadRetriesEverySinkWithTheNextRequest() async {
+        var materializationCount = 0
+        var published: Set<CommittedMutationSystemProjectionSink> = []
+        let scheduler = CommittedMutationSystemProjectionScheduler(
+            materialize: { _ in
+                materializationCount += 1
+                if materializationCount == 1 {
+                    throw ExpectedFailure.once
+                }
+                return Self.materialization()
+            },
+            publish: { sink, _ in published.insert(sink) }
+        )
+
+        scheduler.enqueue(events: [.fullSync])
+        #expect(await eventually { materializationCount == 1 })
+        #expect(published.isEmpty)
+
+        scheduler.enqueue(events: [.preferenceChanged(key: nil)])
+        #expect(await eventually {
+            published == Set(CommittedMutationSystemProjectionSink.allCases)
         })
     }
 
-    @MainActor
+    private static func materialization()
+        -> CommittedMutationSystemProjectionMaterialization
+    {
+        let now = Date(timeIntervalSinceReferenceDate: 0)
+        return CommittedMutationSystemProjectionMaterialization(
+            widgetSnapshot: WidgetSnapshot(
+                generatedAt: now,
+                todayGrossSeconds: 0,
+                todayWallSeconds: 0,
+                activeTimers: []
+            ),
+            watchSnapshot: WatchStateSnapshot(
+                generatedAt: now,
+                todayGrossSeconds: 0,
+                todayWallSeconds: 0,
+                activeTimers: [],
+                recentTasks: []
+            ),
+            liveActivity: .inactive,
+            generatedAt: now
+        )
+    }
+
     private func eventually(_ condition: @MainActor () -> Bool) async -> Bool {
         for _ in 0 ..< 100 where condition() == false {
             await Task.yield()

@@ -1,13 +1,78 @@
 import Foundation
 import SwiftData
 
-nonisolated enum CommittedMutationSystemSurfaceMaterializationCheckpoint:
+nonisolated struct CommittedMutationLiveActivityState:
     Equatable,
     Sendable
 {
-    case beforeCommittedFactRead
-    case afterCommittedFactRead
-    case afterMaterialization
+    let segmentID: String
+    let taskID: String
+    let taskTitle: String
+    let taskPath: String
+    let taskPathAbbreviated: String
+    let iconName: String
+    let colorHex: String
+    let startedAt: Date
+}
+
+nonisolated enum CommittedMutationLiveActivityProjection:
+    Equatable,
+    Sendable
+{
+    case inactive
+    case active(CommittedMutationLiveActivityState)
+
+    static func materialize(
+        activeSegments: [TimeSegment],
+        tasks: [TaskNode],
+        now: Date
+    ) -> Self {
+        materialize(
+            activeSegments: activeSegments,
+            indexes: TaskTreeService().indexes(tasks: tasks),
+            now: now
+        )
+    }
+
+    static func materialize(
+        activeSegments: [TimeSegment],
+        indexes: TaskTreeIndexes,
+        now: Date
+    ) -> Self {
+        let projectionService = LiveActivityProjectionService()
+        guard let primary = projectionService.primarySegment(
+            from: activeSegments,
+            now: now
+        ) else {
+            return .inactive
+        }
+        let task = projectionService.taskProjection(
+            taskID: primary.taskID,
+            indexes: indexes,
+            fallbackTitle: AppStrings.activeTimers
+        )
+        return .active(CommittedMutationLiveActivityState(
+            segmentID: primary.id.uuidString,
+            taskID: primary.taskID.uuidString,
+            taskTitle: task.title,
+            taskPath: task.path,
+            taskPathAbbreviated: task.abbreviatedPath,
+            iconName: task.iconName,
+            colorHex: task.colorHex,
+            startedAt: primary.startedAt
+        ))
+    }
+}
+
+/// One value snapshot of the committed store for every external system
+/// surface. Retaining a failed generation never retains its ModelContext.
+nonisolated struct CommittedMutationSystemProjectionMaterialization:
+    Sendable
+{
+    let widgetSnapshot: WidgetSnapshot
+    let watchSnapshot: WatchStateSnapshot
+    let liveActivity: CommittedMutationLiveActivityProjection
+    let generatedAt: Date
 }
 
 /// Reads one fresh generation of committed SwiftData facts on its dedicated
@@ -19,17 +84,10 @@ nonisolated enum CommittedMutationSystemSurfaceMaterializationCheckpoint:
 /// allowing a cached generation to cross container boundaries.
 @ModelActor
 actor CommittedMutationSystemSurfaceMaterializer {
-    typealias Checkpoint = @Sendable (
-        CommittedMutationSystemSurfaceMaterializationCheckpoint
-    ) -> Void
-
     func materialize(
         now: Date = Date(),
-        calendar: Calendar = .current,
-        didReachCheckpoint: Checkpoint = { _ in }
+        calendar: Calendar = .current
     ) throws -> CommittedMutationSystemProjectionMaterialization {
-        didReachCheckpoint(.beforeCommittedFactRead)
-
         let canonicalTaskRows = try modelContext
             .fetch(FetchDescriptor<TaskNode>())
             .deduplicatedByID()
@@ -62,7 +120,6 @@ actor CommittedMutationSystemSurfaceMaterializer {
             sessions: sessions,
             segments: segments
         )
-        didReachCheckpoint(.afterCommittedFactRead)
 
         let tree = TaskTreeService().indexes(tasks: tasks)
         let trackableTaskIDs = TaskTrackingAvailabilityService()
@@ -124,15 +181,12 @@ actor CommittedMutationSystemSurfaceMaterializer {
             indexes: tree,
             now: now
         )
-        let materialization =
-            CommittedMutationSystemProjectionMaterialization(
-                widgetSnapshot: widgetSnapshot,
-                watchSnapshot: watchSnapshot,
-                liveActivity: liveActivity,
-                generatedAt: now
-            )
-        didReachCheckpoint(.afterMaterialization)
-        return materialization
+        return CommittedMutationSystemProjectionMaterialization(
+            widgetSnapshot: widgetSnapshot,
+            watchSnapshot: watchSnapshot,
+            liveActivity: liveActivity,
+            generatedAt: now
+        )
     }
 
     private func completeRecurrenceFacts(

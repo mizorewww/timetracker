@@ -43,7 +43,6 @@ extension TimeTrackerStore {
                 proposedTaskID: nil
             )
             finishStoreScopedMutation(events: outcome.events)
-            refreshStoreScopedTimerReadModels()
             if selectsSavedTask {
                 selectedTaskID = outcome.savedTaskID
             }

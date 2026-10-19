@@ -232,18 +232,20 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
                 now: now
             )
 
-            let tasksAfterSave = try taskRepository.allNodes()
-            guard let savedTask = tasksAfterSave.first(where: { $0.id == savedTaskID }) else {
-                throw TaskLifecycleMutationError.taskNotFound
-            }
+            // Saving moves at most the edited task under `draft.parentID`
+            // (validation rejects cycles), so its descendants are already in
+            // `relatedBeforeSave` and its new ancestors are the parent chain
+            // in the pre-save tree; no second whole-tree read is needed.
+            let ancestorsAfterSave = Self.ancestorTaskIDs(
+                startingAt: draft.parentID,
+                tasks: tasksBeforeSave
+            )
             return TaskDraftMutationOutcome(
                 savedTaskID: savedTaskID,
-                relatedTaskIDs: relatedBeforeSave.union(
-                    Self.relatedTaskIDs(for: savedTask, tasks: tasksAfterSave)
-                ),
-                checklistAncestorIDs: ancestorsBeforeSave.union(
-                    Self.ancestorTaskIDs(for: savedTask, tasks: tasksAfterSave)
-                ),
+                relatedTaskIDs: relatedBeforeSave
+                    .union(ancestorsAfterSave)
+                    .union([savedTaskID]),
+                checklistAncestorIDs: ancestorsBeforeSave.union(ancestorsAfterSave),
                 recurrenceOutcome: recurrenceOutcome
             )
         }
@@ -253,10 +255,17 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
         for task: TaskNode,
         tasks: [TaskNode]
     ) -> Set<UUID> {
+        ancestorTaskIDs(startingAt: task.parentID, tasks: tasks)
+    }
+
+    private static func ancestorTaskIDs(
+        startingAt firstParentID: UUID?,
+        tasks: [TaskNode]
+    ) -> Set<UUID> {
         let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
         var ancestors = Set<UUID>()
         var visited = Set<UUID>()
-        var parentID = task.parentID
+        var parentID = firstParentID
         while let currentID = parentID,
               visited.insert(currentID).inserted,
               let parent = taskByID[currentID]

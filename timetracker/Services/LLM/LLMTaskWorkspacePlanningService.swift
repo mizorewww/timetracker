@@ -64,7 +64,8 @@ nonisolated enum LLMTaskWorkspacePlanningError:
 /// Runs an OpenAI-compatible function-calling conversation against a complete,
 /// immutable workspace projection. Tool calls mutate only an in-memory overlay;
 /// this service has no SwiftData dependency and cannot persist model output.
-/// The loop runs off the main actor; only progress reports hop back to it.
+/// Inputs are validated on the main actor; the loop then runs off it and
+/// only progress reports hop back.
 nonisolated struct LLMTaskWorkspacePlanningService: Sendable {
     /// Upper bound on model round trips before `finalize_plan`; every round
     /// resends the whole conversation, so an unbounded loop is unbounded cost.
@@ -72,13 +73,13 @@ nonisolated struct LLMTaskWorkspacePlanningService: Sendable {
 
     var send: LLMChatSender = LLMClient.chat
 
-    @concurrent
+    @MainActor
     func generate(
         request: String,
         instructions: String,
         workspace: AITaskWorkspaceSnapshot,
         configuration: LLMRequestConfiguration,
-        makeID: @Sendable () -> UUID = UUID.init,
+        makeID: @escaping @Sendable () -> UUID = UUID.init,
         onProgress: @escaping @MainActor @Sendable (LLMGenerationProgress) -> Void = {
             _ in
         }
@@ -88,6 +89,23 @@ nonisolated struct LLMTaskWorkspacePlanningService: Sendable {
             instructions: instructions,
             configuration: configuration
         )
+        return try await runToolLoop(
+            prepared: prepared,
+            workspace: workspace,
+            configuration: configuration,
+            makeID: makeID,
+            onProgress: onProgress
+        )
+    }
+
+    @concurrent
+    private func runToolLoop(
+        prepared: PreparedInputs,
+        workspace: AITaskWorkspaceSnapshot,
+        configuration: LLMRequestConfiguration,
+        makeID: @escaping @Sendable () -> UUID,
+        onProgress: @escaping @MainActor @Sendable (LLMGenerationProgress) -> Void
+    ) async throws -> LLMTaskWorkspacePlan {
         let userPrompt = try Self.userPrompt(
             request: prepared.request,
             instructions: prepared.instructions,
@@ -267,7 +285,7 @@ nonisolated extension LLMTaskWorkspacePlanningService {
 }
 
 private nonisolated extension LLMTaskWorkspacePlanningService {
-    struct PreparedInputs {
+    struct PreparedInputs: Sendable {
         let request: String
         let instructions: String
         let modelID: String
@@ -282,6 +300,7 @@ private nonisolated extension LLMTaskWorkspacePlanningService {
         let allowedColors: [String]
     }
 
+    @MainActor
     static func prepareInputs(
         request: String,
         instructions: String,

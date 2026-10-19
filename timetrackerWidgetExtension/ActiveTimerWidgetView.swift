@@ -69,7 +69,7 @@ struct SmallWidgetContent: View {
                 }
 
                 if let task = snapshot.recentTasks.first {
-                    Link(destination: WidgetDeepLinks.startTimer(taskID: task.taskID)) {
+                    Button(intent: WidgetStartTimerIntent(taskID: task.taskID)) {
                         Label(task.title, systemImage: "play.fill")
                             .font(.caption.weight(.semibold))
                             .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
@@ -77,6 +77,7 @@ struct SmallWidgetContent: View {
                             .contentShape(Rectangle())
                             .privacySensitive()
                     }
+                    .buttonStyle(.plain)
                     .accessibilityLabel(
                         Text(String.localizedStringWithFormat(
                             localized("widget.action.startTaskFormat"),

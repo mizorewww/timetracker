@@ -6,9 +6,9 @@ func localized(_ key: String) -> String {
 }
 
 enum WidgetDeepLinks {
-    static let today = URL(string: "timetracker://open/today")!
+    nonisolated static let today = URL(string: "timetracker://open/today")!
 
-    static func startTimer(taskID: UUID) -> URL {
+    nonisolated static func startTimer(taskID: UUID) -> URL {
         URL(
             string: "timetracker://timer/start?taskID=\(taskID.uuidString)&source=widget"
         )!
@@ -16,6 +16,30 @@ enum WidgetDeepLinks {
 
     nonisolated static func stopTimer(segmentID: String) -> URL {
         URL(string: "timetracker://timer/stop?segmentID=\(segmentID)")!
+    }
+}
+
+/// Small widgets ignore `Link` (the whole widget opens `widgetURL`), so the
+/// start row is a button whose intent opens the start link.
+struct WidgetStartTimerIntent: AppIntent {
+    static var title: LocalizedStringResource = "widget.action.start"
+    static var description = IntentDescription("widget.intent.start.description")
+    static var openAppWhenRun = false
+
+    @Parameter(title: "widget.intent.parameter.task")
+    var taskID: String
+
+    init() {}
+
+    init(taskID: UUID) {
+        self.taskID = taskID.uuidString
+    }
+
+    func perform() async throws -> some IntentResult {
+        guard let taskID = UUID(uuidString: taskID) else {
+            return .result(opensIntent: OpenURLIntent(WidgetDeepLinks.today))
+        }
+        return .result(opensIntent: OpenURLIntent(WidgetDeepLinks.startTimer(taskID: taskID)))
     }
 }
 

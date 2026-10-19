@@ -7,6 +7,8 @@
 "widget.action.startTaskFormat" = "Start %@";
 "widget.action.openToStop" = "Open Time Tracker to Stop";
 "widget.action.open" = "Open Time Tracker";
+"widget.intent.start.description" = "Open Time Tracker and start a timer for this task.";
+"widget.intent.parameter.task" = "Task";
 "widget.quickStart.title" = "Quick Start";
 "widget.preview.task" = "Build weekly report";
 "widget.preview.path" = "Work";

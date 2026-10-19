@@ -7,6 +7,8 @@
 "widget.action.startTaskFormat" = "開始「%@」計時";
 "widget.action.openToStop" = "打開 Time Tracker 後停止";
 "widget.action.open" = "打開 Time Tracker";
+"widget.intent.start.description" = "打開 Time Tracker 並為此任務開始計時。";
+"widget.intent.parameter.task" = "任務";
 "widget.quickStart.title" = "快速開始";
 "widget.preview.task" = "製作週報";
 "widget.preview.path" = "工作";

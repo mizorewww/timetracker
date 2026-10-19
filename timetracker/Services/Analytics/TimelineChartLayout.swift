@@ -1,6 +1,12 @@
 import CoreGraphics
 import Foundation
 
+/// Direction time runs on a timeline chart.
+nonisolated enum TimelineChartAxis: Hashable, Sendable {
+    case horizontal
+    case vertical
+}
+
 nonisolated enum TimelineChartAxisTickRole: Equatable, Sendable {
     case start
     case interior
@@ -20,9 +26,6 @@ nonisolated struct TimelineChartLaneLayout: Equatable, Sendable {
     let laneExtent: CGFloat
     let laneSpacing: CGFloat
     let groupExtent: CGFloat
-    var midpoint: CGFloat {
-        origin + groupExtent / 2
-    }
 
     func offset(for lane: Int) -> CGFloat {
         origin + CGFloat(max(0, lane)) * (laneExtent + laneSpacing)
@@ -34,15 +37,11 @@ nonisolated struct TimelineChartBarPlacement: Identifiable, Equatable, Sendable 
     let lane: Int
     let axisOrigin: CGFloat
     let axisExtent: CGFloat
-
-    var axisEnd: CGFloat {
-        axisOrigin + axisExtent
-    }
 }
 
 nonisolated struct TimelineChartBarLayout: Equatable, Sendable {
     let axisLength: CGFloat
-    let placements: [TimelineChartBarPlacement]
+    let placementByID: [TimelineEntryID: TimelineChartBarPlacement]
     let laneCount: Int
 }
 
@@ -65,203 +64,173 @@ nonisolated struct TimelineChartVerticalGapLabelPlacement: Identifiable, Equatab
     let axisExtent: CGFloat
 }
 
-nonisolated struct TimelineChartVerticalGapLabelLayout: Equatable, Sendable {
-    let placements: [TimelineChartVerticalGapLabelPlacement]
-    let hiddenCount: Int
-}
-
 nonisolated enum TimelineChartLayout {
     static let barIconExtent: CGFloat = 12
     static let barIconPadding: CGFloat = 4
+    /// Shortest mark along the time axis and narrowest lane across it: room
+    /// for the bar's icon plus padding.
     static let minimumBarFootprint = barIconExtent + 2 * barIconPadding
-    static let horizontalMinimumBarExtent = minimumBarFootprint
-    static let horizontalMinimumBarSpacing: CGFloat = 6
+    static let minimumBarSpacing: CGFloat = 6
     static let horizontalPreferredLaneExtent: CGFloat = 24
     static let horizontalPreferredLaneSpacing: CGFloat = 10
     static let horizontalAxisLabelHeight: CGFloat = 24
-    static let horizontalGapLabelHeight: CGFloat = 32
     static let horizontalAnnotationSpacing: CGFloat = 4
     static let horizontalGapLabelMinimumSpacing: CGFloat = 4
     static let horizontalGapLabelRowSpacing: CGFloat = 4
     static let verticalAxisLabelWidth: CGFloat = 96
     static let verticalGapLabelHorizontalInset: CGFloat = 6
     static let verticalTrailingInset: CGFloat = 12
-    static let verticalMinimumBarExtent = minimumBarFootprint
-    static let verticalMinimumBarSpacing: CGFloat = 6
-    static let verticalMinimumLaneExtent = minimumBarFootprint
+    static let verticalPreferredLaneExtent: CGFloat = 38
     static let verticalPreferredLaneSpacing: CGFloat = 8
     static let verticalGapLabelHeight: CGFloat = 32
     static let verticalGapLabelMinimumSpacing: CGFloat = 4
     static let verticalGapLabelBoundaryInset: CGFloat = 18
 
-    static func horizontalPlotLanes(
-        height: CGFloat,
-        laneCount: Int
-    ) -> TimelineChartLaneLayout {
-        centeredLanes(
-            plotOrigin: 0,
-            plotExtent: max(1, height),
-            laneCount: laneCount,
-            preferredLaneExtent: horizontalPreferredLaneExtent,
-            preferredSpacing: horizontalPreferredLaneSpacing
-        )
+    /// Time-axis length inside `totalExtent`. One minimum mark extent stays
+    /// reserved after the axis so a terminal short event keeps its projected
+    /// start and grows forward without clipping.
+    static func axisLength(totalExtent: CGFloat) -> CGFloat {
+        max(0, totalExtent - minimumBarFootprint)
     }
 
-    static func verticalLanes(
-        width: CGFloat,
-        laneCount: Int,
-        axisLabelWidth: CGFloat = verticalAxisLabelWidth,
-        trailingInset: CGFloat = verticalTrailingInset
+    /// Lanes across the plot for `laneCount` overlapping marks, centered in
+    /// `crossExtent` (plot height for a horizontal axis, width for vertical).
+    static func lanes(
+        axis: TimelineChartAxis,
+        crossExtent: CGFloat,
+        laneCount: Int
     ) -> TimelineChartLaneLayout {
-        let safeWidth = max(1, width)
-        let plotOrigin = min(axisLabelWidth, max(0, safeWidth - trailingInset))
-        return centeredLanes(
-            plotOrigin: plotOrigin,
-            plotExtent: max(1, safeWidth - plotOrigin - trailingInset),
-            laneCount: laneCount,
-            preferredLaneExtent: 38,
-            preferredSpacing: verticalPreferredLaneSpacing
-        )
+        switch axis {
+        case .horizontal:
+            centeredLanes(
+                plotExtent: crossExtent,
+                laneCount: laneCount,
+                preferredLaneExtent: horizontalPreferredLaneExtent,
+                preferredSpacing: horizontalPreferredLaneSpacing
+            )
+        case .vertical:
+            centeredLanes(
+                plotExtent: crossExtent - verticalTrailingInset,
+                laneCount: laneCount,
+                preferredLaneExtent: verticalPreferredLaneExtent,
+                preferredSpacing: verticalPreferredLaneSpacing
+            )
+        }
     }
 
     static func verticalMinimumContentWidth(
         laneCount: Int,
-        axisLabelWidth: CGFloat = verticalAxisLabelWidth,
-        trailingInset: CGFloat = verticalTrailingInset
+        axisLabelWidth: CGFloat
     ) -> CGFloat {
         let count = max(1, laneCount)
-        let gapCount = max(0, count - 1)
-        return finiteNonnegative(axisLabelWidth) +
-            finiteNonnegative(trailingInset) +
-            CGFloat(count) * verticalMinimumLaneExtent +
-            CGFloat(gapCount) * verticalPreferredLaneSpacing
+        return axisLabelWidth + verticalTrailingInset +
+            CGFloat(count) * minimumBarFootprint +
+            CGFloat(count - 1) * verticalPreferredLaneSpacing
     }
 
-    static func horizontalMinimumContentWidth(
-        availableWidth: CGFloat,
-        gapLabelWidths: [CGFloat],
-        terminalMarkAllowance: CGFloat = horizontalMinimumBarExtent
-    ) -> CGFloat {
-        let longestLabelWidth = gapLabelWidths
-            .map(finiteNonnegative)
-            .max() ?? 0
-        return max(
-            finiteNonnegative(availableWidth),
-            longestLabelWidth + finiteNonnegative(terminalMarkAllowance)
-        )
-    }
-
-    static func verticalAxisLabelWidth(
-        for gapLabelWidths: [CGFloat],
-        horizontalInset: CGFloat = verticalGapLabelHorizontalInset
-    ) -> CGFloat {
-        let labelWidth = gapLabelWidths
-            .map(finiteNonnegative)
-            .max() ?? 0
-        return max(
+    static func verticalAxisLabelWidth(for gapLabelWidths: [CGFloat]) -> CGFloat {
+        max(
             verticalAxisLabelWidth,
-            labelWidth + 2 * finiteNonnegative(horizontalInset)
+            (gapLabelWidths.max() ?? 0) + 2 * verticalGapLabelHorizontalInset
         )
     }
 
     static func horizontalGapAnnotationHeight(
         rowCount: Int,
-        labelHeight: CGFloat = horizontalGapLabelHeight
+        labelHeight: CGFloat
     ) -> CGFloat {
-        let count = max(0, rowCount)
-        guard count > 0 else { return 0 }
+        guard rowCount > 0 else { return 0 }
         return horizontalAnnotationSpacing +
-            CGFloat(count) * finiteNonnegative(labelHeight) +
-            CGFloat(count - 1) * horizontalGapLabelRowSpacing
-    }
-
-    static func horizontalAnnotationHeight(
-        gapLabelRowCount: Int,
-        gapLabelHeight: CGFloat = horizontalGapLabelHeight
-    ) -> CGFloat {
-        horizontalGapAnnotationHeight(
-            rowCount: gapLabelRowCount,
-            labelHeight: gapLabelHeight
-        ) +
-            horizontalAxisLabelHeight
+            CGFloat(rowCount) * labelHeight +
+            CGFloat(rowCount - 1) * horizontalGapLabelRowSpacing
     }
 
     static func horizontalPlotHeight(laneCount: Int) -> CGFloat {
         let count = max(1, laneCount)
         let groupExtent =
             CGFloat(count) * horizontalPreferredLaneExtent +
-            CGFloat(max(0, count - 1)) * horizontalPreferredLaneSpacing
-        return max(
-            120 - horizontalAxisLabelHeight,
-            groupExtent + 20
-        )
-    }
-
-    static func horizontalPlotHeight(
-        height: CGFloat,
-        gapLabelRowCount: Int,
-        gapLabelHeight: CGFloat = horizontalGapLabelHeight
-    ) -> CGFloat {
-        max(
-            0,
-            finiteNonnegative(height) - horizontalAnnotationHeight(
-                gapLabelRowCount: gapLabelRowCount,
-                gapLabelHeight: gapLabelHeight
-            )
-        )
+            CGFloat(count - 1) * horizontalPreferredLaneSpacing
+        return max(120 - horizontalAxisLabelHeight, groupExtent + 20)
     }
 
     static func verticalTimelineHeight(
         minimumHeight: CGFloat,
         gapLabelCount: Int
     ) -> CGFloat {
-        let count = max(0, gapLabelCount)
-        guard count > 0 else { return finiteNonnegative(minimumHeight) }
+        guard gapLabelCount > 0 else { return minimumHeight }
         let labelFootprint =
             2 * verticalGapLabelBoundaryInset +
-            CGFloat(count) * verticalGapLabelHeight +
-            CGFloat(count - 1) * verticalGapLabelMinimumSpacing
-        return max(
-            finiteNonnegative(minimumHeight),
-            verticalMinimumBarExtent + labelFootprint
-        )
+            CGFloat(gapLabelCount) * verticalGapLabelHeight +
+            CGFloat(gapLabelCount - 1) * verticalGapLabelMinimumSpacing
+        return max(minimumHeight, minimumBarFootprint + labelFootprint)
     }
 
-    /// Projects horizontal marks before assigning visual lanes. Reserving one
-    /// minimum mark extent after the time axis lets a terminal short event stay
-    /// anchored to its projected start and grow rightward without clipping.
-    static func horizontalBars(
+    /// Projects marks onto a time axis of `totalExtent` points (either
+    /// direction) before assigning visual lanes.
+    static func bars(
         entries: [AnalyticsTimelineEntry],
         compression: TimelineAxisCompression,
-        width: CGFloat,
-        minimumBarExtent: CGFloat = horizontalMinimumBarExtent,
-        minimumSpacing: CGFloat = horizontalMinimumBarSpacing
+        totalExtent: CGFloat
     ) -> TimelineChartBarLayout {
-        projectedBars(
-            entries: entries,
-            compression: compression,
-            totalAxisExtent: width,
-            minimumBarExtent: minimumBarExtent,
-            minimumSpacing: minimumSpacing
-        )
-    }
+        let totalExtent = max(0, totalExtent)
+        let markExtent = min(totalExtent, minimumBarFootprint)
+        let axisLength = axisLength(totalExtent: totalExtent)
+        guard totalExtent > 0, entries.isEmpty == false else {
+            return TimelineChartBarLayout(
+                axisLength: axisLength,
+                placementByID: [:],
+                laneCount: 0
+            )
+        }
 
-    /// Projects compact vertical marks before assigning visual lanes.
-    /// Reserving one minimum mark extent below the time axis lets a terminal
-    /// short event stay anchored to its projected start and grow downward.
-    static func verticalBars(
-        entries: [AnalyticsTimelineEntry],
-        compression: TimelineAxisCompression,
-        height: CGFloat,
-        minimumBarExtent: CGFloat = verticalMinimumBarExtent,
-        minimumSpacing: CGFloat = verticalMinimumBarSpacing
-    ) -> TimelineChartBarLayout {
-        projectedBars(
-            entries: entries,
-            compression: compression,
-            totalAxisExtent: height,
-            minimumBarExtent: minimumBarExtent,
-            minimumSpacing: minimumSpacing
+        var projectedByID: [TimelineEntryID: (origin: CGFloat, extent: CGFloat)] = [:]
+        var intervals: [TimelineLaneInterval] = []
+        projectedByID.reserveCapacity(entries.count)
+        intervals.reserveCapacity(entries.count)
+
+        for entry in entries where projectedByID[entry.id] == nil {
+            let origin = position(of: entry.interval.start, compression: compression, axisLength: axisLength)
+            let naturalEnd = max(
+                origin,
+                position(of: entry.interval.end, compression: compression, axisLength: axisLength)
+            )
+            let extent = min(
+                max(0, totalExtent - origin),
+                max(markExtent, naturalEnd - origin)
+            )
+            projectedByID[entry.id] = (origin, extent)
+            intervals.append(
+                TimelineLaneInterval(
+                    id: entry.id,
+                    start: Double(origin),
+                    end: Double(origin + extent)
+                )
+            )
+        }
+
+        let assignments = TimelineLaneAllocator.assignments(
+            for: intervals,
+            minimumGap: Double(minimumBarSpacing),
+            allowsReuseAtMinimumGap: true
+        )
+        var placementByID: [TimelineEntryID: TimelineChartBarPlacement] = [:]
+        placementByID.reserveCapacity(assignments.count)
+        var laneCount = 0
+        for assignment in assignments {
+            guard let projected = projectedByID[assignment.id] else { continue }
+            placementByID[assignment.id] = TimelineChartBarPlacement(
+                id: assignment.id,
+                lane: assignment.lane,
+                axisOrigin: projected.origin,
+                axisExtent: projected.extent
+            )
+            laneCount = max(laneCount, assignment.lane + 1)
+        }
+
+        return TimelineChartBarLayout(
+            axisLength: axisLength,
+            placementByID: placementByID,
+            laneCount: laneCount
         )
     }
 
@@ -269,66 +238,50 @@ nonisolated enum TimelineChartLayout {
         gaps: [TimelineOmittedGap],
         compression: TimelineAxisCompression,
         axisLength: CGFloat,
-        labelWidths: [String: CGFloat],
-        minimumSpacing: CGFloat = horizontalGapLabelMinimumSpacing
+        labelWidths: [String: CGFloat]
     ) -> TimelineChartHorizontalGapLabelLayout {
-        let length = finiteNonnegative(axisLength)
-        guard length > 0, gaps.isEmpty == false else {
-            return TimelineChartHorizontalGapLabelLayout(
-                placements: [],
-                rowCount: 0
-            )
+        guard axisLength > 0, gaps.isEmpty == false else {
+            return TimelineChartHorizontalGapLabelLayout(placements: [], rowCount: 0)
         }
-        let spacing = finiteNonnegative(minimumSpacing)
-        let candidates = gaps.compactMap { gap -> HorizontalGapLabelCandidate? in
-            let width = finiteNonnegative(labelWidths[gap.id] ?? 0)
+        let candidates = gaps.compactMap { gap -> TimelineChartHorizontalGapLabelPlacement? in
+            let width = labelWidths[gap.id] ?? 0
             guard width > 0 else { return nil }
-            let rawPosition = length * CGFloat(
-                compression.ratio(
-                    forCompressedOffset: gap.compressedMidpointOffset
-                )
+            let position = axisLength * CGFloat(
+                compression.ratio(forCompressedOffset: gap.compressedMidpointOffset)
             )
-            let position = rawPosition.isFinite ? rawPosition : 0
-            let origin = min(
-                max(0, position - width / 2),
-                max(0, length - width)
-            )
-            return HorizontalGapLabelCandidate(
+            return TimelineChartHorizontalGapLabelPlacement(
                 id: gap.id,
-                origin: origin,
-                extent: width
+                row: 0,
+                axisOrigin: min(max(0, position - width / 2), max(0, axisLength - width)),
+                axisExtent: width
             )
         }
         .sorted {
-            if $0.origin != $1.origin {
-                return $0.origin < $1.origin
+            if $0.axisOrigin != $1.axisOrigin {
+                return $0.axisOrigin < $1.axisOrigin
             }
-            if $0.end != $1.end {
-                return $0.end < $1.end
+            if $0.axisExtent != $1.axisExtent {
+                return $0.axisExtent < $1.axisExtent
             }
             return $0.id < $1.id
         }
 
         var rowEnds: [CGFloat] = []
-        var placements: [TimelineChartHorizontalGapLabelPlacement] = []
-        placements.reserveCapacity(candidates.count)
-
-        for candidate in candidates {
+        let placements = candidates.map { candidate in
+            let end = candidate.axisOrigin + candidate.axisExtent
             let row = rowEnds.firstIndex { rowEnd in
-                candidate.origin - rowEnd >= spacing
+                candidate.axisOrigin - rowEnd >= horizontalGapLabelMinimumSpacing
             } ?? rowEnds.count
             if row == rowEnds.count {
-                rowEnds.append(candidate.end)
+                rowEnds.append(end)
             } else {
-                rowEnds[row] = candidate.end
+                rowEnds[row] = end
             }
-            placements.append(
-                TimelineChartHorizontalGapLabelPlacement(
-                    id: candidate.id,
-                    row: row,
-                    axisOrigin: candidate.origin,
-                    axisExtent: candidate.extent
-                )
+            return TimelineChartHorizontalGapLabelPlacement(
+                id: candidate.id,
+                row: row,
+                axisOrigin: candidate.axisOrigin,
+                axisExtent: candidate.axisExtent
             )
         }
 
@@ -338,54 +291,47 @@ nonisolated enum TimelineChartLayout {
         )
     }
 
+    /// Stacks omitted-gap labels in the vertical axis gutter near their gaps,
+    /// dropping evenly spaced labels when the axis cannot fit them all.
     static func verticalGapLabels(
         gaps: [TimelineOmittedGap],
         compression: TimelineAxisCompression,
         axisLength: CGFloat,
-        labelHeight: CGFloat = verticalGapLabelHeight,
-        minimumSpacing: CGFloat = verticalGapLabelMinimumSpacing,
-        boundaryInset: CGFloat = verticalGapLabelBoundaryInset
-    ) -> TimelineChartVerticalGapLabelLayout {
-        let length = finiteNonnegative(axisLength)
-        let height = finiteNonnegative(labelHeight)
-        let spacing = finiteNonnegative(minimumSpacing)
-        let inset = min(finiteNonnegative(boundaryInset), length / 2)
+        labelHeight: CGFloat = verticalGapLabelHeight
+    ) -> [TimelineChartVerticalGapLabelPlacement] {
+        let spacing = verticalGapLabelMinimumSpacing
+        let inset = min(verticalGapLabelBoundaryInset, axisLength / 2)
         let availableStart = inset
-        let availableEnd = max(availableStart, length - inset)
+        let availableEnd = max(availableStart, axisLength - inset)
         let availableExtent = availableEnd - availableStart
 
         guard gaps.isEmpty == false,
-              height > 0,
-              availableExtent >= height
+              labelHeight > 0,
+              availableExtent >= labelHeight
         else {
-            return TimelineChartVerticalGapLabelLayout(
-                placements: [],
-                hiddenCount: gaps.count
-            )
+            return []
         }
 
         let candidates = gaps.map { gap in
-            let rawPosition = length * CGFloat(
-                compression.ratio(
-                    forCompressedOffset: gap.compressedMidpointOffset
-                )
+            let position = min(
+                max(0, axisLength * CGFloat(
+                    compression.ratio(forCompressedOffset: gap.compressedMidpointOffset)
+                )),
+                axisLength
             )
-            let position = rawPosition.isFinite
-                ? min(max(0, rawPosition), length)
-                : 0
-            let origin = min(
-                max(availableStart, position - height / 2),
-                availableEnd - height
-            )
-            return VerticalGapLabelCandidate(
+            return TimelineChartVerticalGapLabelPlacement(
                 id: gap.id,
                 anchorPosition: position,
-                desiredOrigin: origin
+                axisOrigin: min(
+                    max(availableStart, position - labelHeight / 2),
+                    availableEnd - labelHeight
+                ),
+                axisExtent: labelHeight
             )
         }
         .sorted {
-            if $0.desiredOrigin != $1.desiredOrigin {
-                return $0.desiredOrigin < $1.desiredOrigin
+            if $0.axisOrigin != $1.axisOrigin {
+                return $0.axisOrigin < $1.axisOrigin
             }
             if $0.anchorPosition != $1.anchorPosition {
                 return $0.anchorPosition < $1.anchorPosition
@@ -395,12 +341,9 @@ nonisolated enum TimelineChartLayout {
 
         let capacity = max(
             1,
-            Int(floor((availableExtent + spacing) / (height + spacing)))
+            Int(floor((availableExtent + spacing) / (labelHeight + spacing)))
         )
-        let visibleCandidates = evenlySpacedCandidates(
-            candidates,
-            maximumCount: capacity
-        )
+        let visibleCandidates = evenlySpaced(candidates, maximumCount: capacity)
         var placements: [TimelineChartVerticalGapLabelPlacement] = []
         placements.reserveCapacity(visibleCandidates.count)
 
@@ -409,43 +352,25 @@ nonisolated enum TimelineChartLayout {
                 $0.axisOrigin + $0.axisExtent + spacing
             } ?? availableStart
             let remainingCount = visibleCandidates.count - index - 1
-            let upperBound = availableEnd - height -
-                CGFloat(remainingCount) * (height + spacing)
-            let origin = min(
-                max(candidate.desiredOrigin, lowerBound),
-                max(lowerBound, upperBound)
-            )
+            let upperBound = availableEnd - labelHeight -
+                CGFloat(remainingCount) * (labelHeight + spacing)
             placements.append(
                 TimelineChartVerticalGapLabelPlacement(
                     id: candidate.id,
                     anchorPosition: candidate.anchorPosition,
-                    axisOrigin: origin,
-                    axisExtent: height
+                    axisOrigin: min(
+                        max(candidate.axisOrigin, lowerBound),
+                        max(lowerBound, upperBound)
+                    ),
+                    axisExtent: labelHeight
                 )
             )
         }
-
-        return TimelineChartVerticalGapLabelLayout(
-            placements: placements,
-            hiddenCount: max(0, gaps.count - placements.count)
-        )
+        return placements
     }
 
-    static func verticalGapLabelFrame(
-        placement: TimelineChartVerticalGapLabelPlacement,
-        axisLabelWidth: CGFloat = verticalAxisLabelWidth,
-        horizontalInset: CGFloat = verticalGapLabelHorizontalInset
-    ) -> CGRect {
-        let gutterWidth = finiteNonnegative(axisLabelWidth)
-        let inset = min(finiteNonnegative(horizontalInset), gutterWidth / 2)
-        return CGRect(
-            x: inset,
-            y: finiteNonnegative(placement.axisOrigin),
-            width: max(0, gutterWidth - 2 * inset),
-            height: finiteNonnegative(placement.axisExtent)
-        )
-    }
-
+    /// Hour ticks for a vertical axis, without interior ticks whose labels
+    /// would collide with an omitted-gap label in the same gutter.
     static func verticalAxisTicks(
         displayInterval: DateInterval,
         compression: TimelineAxisCompression,
@@ -457,41 +382,42 @@ nonisolated enum TimelineChartLayout {
         axisLabelWidth: CGFloat = verticalAxisLabelWidth,
         gapLabelHeight: CGFloat = verticalGapLabelHeight
     ) -> [TimelineChartAxisTick] {
-        let length = finiteNonnegative(axisLength)
-        let labelHeight = min(finiteNonnegative(tickLabelHeight), length)
-        let clearance = finiteNonnegative(collisionClearance)
+        let labelHeight = min(tickLabelHeight, axisLength)
+        let inset = min(verticalGapLabelHorizontalInset, axisLabelWidth / 2)
         let gapFrames = verticalGapLabels(
             gaps: compression.omittedGaps,
             compression: compression,
-            axisLength: length,
+            axisLength: axisLength,
             labelHeight: gapLabelHeight
-        ).placements.map { placement in
-            verticalGapLabelFrame(
-                placement: placement,
-                axisLabelWidth: axisLabelWidth
+        ).map { placement in
+            CGRect(
+                x: inset,
+                y: placement.axisOrigin,
+                width: max(0, axisLabelWidth - 2 * inset),
+                height: placement.axisExtent
             )
         }
 
         return axisTicks(
             displayInterval: displayInterval,
             compression: compression,
-            axisLength: length,
+            axisLength: axisLength,
             minimumSpacing: minimumSpacing,
             calendar: calendar
         )
         .filter { tick in
             guard tick.role == .interior else { return true }
-            let position = length * CGFloat(compression.ratio(for: tick.date))
+            let position = axisLength * CGFloat(compression.ratio(for: tick.date))
             let tickFrame = CGRect(
                 x: 0,
                 y: axisLabelOrigin(
                     position: position,
-                    axisLength: length,
+                    axisLength: axisLength,
                     labelExtent: labelHeight,
                     role: tick.role
-                ) - clearance,
+                ) - collisionClearance,
                 width: axisLabelWidth,
-                height: labelHeight + 2 * clearance
+                height: labelHeight + 2 * collisionClearance
             )
             return gapFrames.contains { $0.intersects(tickFrame) } == false
         }
@@ -504,36 +430,27 @@ nonisolated enum TimelineChartLayout {
         minimumSpacing: CGFloat,
         calendar: Calendar = .current
     ) -> [TimelineChartAxisTick] {
-        let start = TimelineChartAxisTick(
-            date: displayInterval.start,
-            role: .start
-        )
+        let start = TimelineChartAxisTick(date: displayInterval.start, role: .start)
         guard displayInterval.end > displayInterval.start else {
             return [start]
         }
         let length = max(0, axisLength)
-        let spacing = max(0, minimumSpacing)
-        let endPosition = length * CGFloat(
-            compression.ratio(for: displayInterval.end)
-        )
+        let endPosition = length * CGFloat(compression.ratio(for: displayInterval.end))
         var ticks = [start]
         var lastPosition: CGFloat = 0
-        for date in interiorHourTicks(
-            in: displayInterval,
-            calendar: calendar
-        ) where !compression.isInsideOmittedGap(date) {
+        for date in interiorHourTicks(in: displayInterval, calendar: calendar)
+            where !compression.isInsideOmittedGap(date)
+        {
             let position = length * CGFloat(compression.ratio(for: date))
-            guard position - lastPosition >= spacing,
-                  endPosition - position >= spacing
+            guard position - lastPosition >= minimumSpacing,
+                  endPosition - position >= minimumSpacing
             else {
                 continue
             }
             ticks.append(TimelineChartAxisTick(date: date, role: .interior))
             lastPosition = position
         }
-        ticks.append(
-            TimelineChartAxisTick(date: displayInterval.end, role: .end)
-        )
+        ticks.append(TimelineChartAxisTick(date: displayInterval.end, role: .end))
         return ticks
     }
 
@@ -557,7 +474,6 @@ nonisolated enum TimelineChartLayout {
     }
 
     private static func centeredLanes(
-        plotOrigin: CGFloat,
         plotExtent: CGFloat,
         laneCount: Int,
         preferredLaneExtent: CGFloat,
@@ -565,147 +481,43 @@ nonisolated enum TimelineChartLayout {
     ) -> TimelineChartLaneLayout {
         let count = max(1, laneCount)
         let available = max(1, plotExtent)
-        let gapCount = max(0, count - 1)
-        let spacing: CGFloat = if gapCount == 0 {
-            0
-        } else {
-            min(
-                preferredSpacing,
-                max(0, (available - CGFloat(count)) / CGFloat(gapCount))
-            )
-        }
+        let gapCount = count - 1
+        let spacing: CGFloat = gapCount == 0
+            ? 0
+            : min(preferredSpacing, max(0, (available - CGFloat(count)) / CGFloat(gapCount)))
         let laneExtent = max(
             1,
-            min(
-                preferredLaneExtent,
-                (available - spacing * CGFloat(gapCount)) / CGFloat(count)
-            )
+            min(preferredLaneExtent, (available - spacing * CGFloat(gapCount)) / CGFloat(count))
         )
-        let groupExtent =
-            laneExtent * CGFloat(count) + spacing * CGFloat(gapCount)
-        let origin = plotOrigin + max(0, (available - groupExtent) / 2)
-
+        let groupExtent = laneExtent * CGFloat(count) + spacing * CGFloat(gapCount)
         return TimelineChartLaneLayout(
-            origin: origin,
+            origin: max(0, (available - groupExtent) / 2),
             laneExtent: laneExtent,
             laneSpacing: spacing,
             groupExtent: groupExtent
         )
     }
 
-    private static func projectedBars(
-        entries: [AnalyticsTimelineEntry],
-        compression: TimelineAxisCompression,
-        totalAxisExtent: CGFloat,
-        minimumBarExtent: CGFloat,
-        minimumSpacing: CGFloat
-    ) -> TimelineChartBarLayout {
-        let totalExtent = finiteNonnegative(totalAxisExtent)
-        let markExtent = min(
-            totalExtent,
-            finiteNonnegative(minimumBarExtent)
-        )
-        let axisLength = max(0, totalExtent - markExtent)
-        let spacing = finiteNonnegative(minimumSpacing)
-        guard totalExtent > 0, entries.isEmpty == false else {
-            return TimelineChartBarLayout(
-                axisLength: axisLength,
-                placements: [],
-                laneCount: 0
-            )
-        }
-
-        var projectedByID: [TimelineEntryID: ProjectedBar] = [:]
-        var intervals: [TimelineLaneInterval] = []
-        projectedByID.reserveCapacity(entries.count)
-        intervals.reserveCapacity(entries.count)
-
-        for entry in entries where projectedByID[entry.id] == nil {
-            let origin = projectedPosition(
-                for: entry.interval.start,
-                compression: compression,
-                axisLength: axisLength
-            )
-            let naturalEnd = max(
-                origin,
-                projectedPosition(
-                    for: entry.interval.end,
-                    compression: compression,
-                    axisLength: axisLength
-                )
-            )
-            let availableExtent = max(0, totalExtent - origin)
-            let extent = min(
-                availableExtent,
-                max(markExtent, naturalEnd - origin)
-            )
-            let projected = ProjectedBar(origin: origin, extent: extent)
-            projectedByID[entry.id] = projected
-            intervals.append(
-                TimelineLaneInterval(
-                    id: entry.id,
-                    start: Double(origin),
-                    end: Double(projected.end)
-                )
-            )
-        }
-
-        let assignments = TimelineLaneAllocator.assignments(
-            for: intervals,
-            minimumGap: Double(spacing),
-            allowsReuseAtMinimumGap: true
-        )
-        let placements = assignments.compactMap { assignment in
-            projectedByID[assignment.id].map { projected in
-                TimelineChartBarPlacement(
-                    id: assignment.id,
-                    lane: assignment.lane,
-                    axisOrigin: projected.origin,
-                    axisExtent: projected.extent
-                )
-            }
-        }
-
-        return TimelineChartBarLayout(
-            axisLength: axisLength,
-            placements: placements,
-            laneCount: (placements.map(\.lane).max() ?? -1) + 1
-        )
-    }
-
-    private static func projectedPosition(
-        for date: Date,
+    private static func position(
+        of date: Date,
         compression: TimelineAxisCompression,
         axisLength: CGFloat
     ) -> CGFloat {
-        let rawRatio = compression.ratio(for: date)
-        let ratio = rawRatio.isFinite ? min(max(0, rawRatio), 1) : 0
-        return axisLength * CGFloat(ratio)
+        axisLength * CGFloat(min(max(0, compression.ratio(for: date)), 1))
     }
 
-    private static func evenlySpacedCandidates(
-        _ candidates: [VerticalGapLabelCandidate],
-        maximumCount: Int
-    ) -> [VerticalGapLabelCandidate] {
-        let count = max(0, maximumCount)
+    private static func evenlySpaced<Element>(
+        _ candidates: [Element],
+        maximumCount count: Int
+    ) -> [Element] {
         guard count > 0, candidates.isEmpty == false else { return [] }
         guard candidates.count > count else { return candidates }
         guard count > 1 else { return [candidates[(candidates.count - 1) / 2]] }
 
         let lastIndex = candidates.count - 1
-        var selected: [VerticalGapLabelCandidate] = []
-        selected.reserveCapacity(count)
-        for index in 0 ..< count {
-            let sourceIndex = Int(
-                (Double(index) * Double(lastIndex) / Double(count - 1)).rounded()
-            )
-            selected.append(candidates[sourceIndex])
+        return (0 ..< count).map { index in
+            candidates[Int((Double(index) * Double(lastIndex) / Double(count - 1)).rounded())]
         }
-        return selected
-    }
-
-    private static func finiteNonnegative(_ value: CGFloat) -> CGFloat {
-        value.isFinite ? max(0, value) : 0
     }
 
     private static func interiorHourTicks(
@@ -714,17 +526,10 @@ nonisolated enum TimelineChartLayout {
     ) -> [Date] {
         let totalHours = max(1, interval.duration / 3600)
         let step = totalHours <= 4 ? 1 : (totalHours <= 10 ? 2 : 4)
-        var tick = calendar.dateInterval(
-            of: .hour,
-            for: interval.start
-        )?.start ?? interval.start
+        var tick = calendar.dateInterval(of: .hour, for: interval.start)?.start ?? interval.start
         var result: [Date] = []
 
-        while let next = calendar.date(
-            byAdding: .hour,
-            value: step,
-            to: tick
-        ) {
+        while let next = calendar.date(byAdding: .hour, value: step, to: tick) {
             tick = next
             guard tick < interval.end else { break }
             if tick > interval.start {
@@ -732,30 +537,5 @@ nonisolated enum TimelineChartLayout {
             }
         }
         return result
-    }
-}
-
-private nonisolated struct HorizontalGapLabelCandidate {
-    let id: String
-    let origin: CGFloat
-    let extent: CGFloat
-
-    var end: CGFloat {
-        origin + extent
-    }
-}
-
-private nonisolated struct VerticalGapLabelCandidate {
-    let id: String
-    let anchorPosition: CGFloat
-    let desiredOrigin: CGFloat
-}
-
-private nonisolated struct ProjectedBar {
-    let origin: CGFloat
-    let extent: CGFloat
-
-    var end: CGFloat {
-        origin + extent
     }
 }

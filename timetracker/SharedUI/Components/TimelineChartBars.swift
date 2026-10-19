@@ -1,42 +1,16 @@
 import SwiftUI
 
 extension TimelineChart {
-    func horizontalBar(
-        entry: AnalyticsTimelineEntry,
-        placement: TimelineChartBarPlacement,
-        lanes: TimelineChartLaneLayout
+    /// One ledger mark; `TimelineChartBarsLayout` sizes and places it.
+    func bar(
+        _ entry: AnalyticsTimelineEntry,
+        axis: TimelineChartAxis
     ) -> some View {
-        RoundedRectangle(cornerRadius: 5, style: .continuous)
+        RoundedRectangle(cornerRadius: axis == .horizontal ? 5 : 6, style: .continuous)
             .fill(Color(hex: entry.colorHex) ?? .blue)
-            .frame(width: placement.axisExtent, height: lanes.laneExtent)
-            .overlay {
+            .overlay(alignment: axis == .horizontal ? .center : .top) {
                 barIcon(for: entry)
             }
-            .offset(
-                x: placement.axisOrigin,
-                y: lanes.offset(for: placement.lane)
-            )
-            .help("\(entry.title) \(shortRange(entry))")
-            .accessibilityElement(children: .ignore)
-            .accessibilityIdentifier("timeline.bar.\(entry.id.stableSortKey)")
-            .accessibilityLabel(entry.title)
-            .accessibilityValue(shortRange(entry))
-    }
-
-    func verticalBar(
-        entry: AnalyticsTimelineEntry,
-        placement: TimelineChartBarPlacement,
-        lanes: TimelineChartLaneLayout
-    ) -> some View {
-        let x = lanes.offset(for: placement.lane)
-
-        return RoundedRectangle(cornerRadius: 6, style: .continuous)
-            .fill(Color(hex: entry.colorHex) ?? .blue)
-            .frame(width: lanes.laneExtent, height: placement.axisExtent)
-            .overlay(alignment: .top) {
-                barIcon(for: entry)
-            }
-            .offset(x: x, y: placement.axisOrigin)
             .help("\(entry.title) \(shortRange(entry))")
             .accessibilityElement(children: .ignore)
             .accessibilityIdentifier("timeline.bar.\(entry.id.stableSortKey)")

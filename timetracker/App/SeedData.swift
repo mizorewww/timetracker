@@ -21,30 +21,27 @@ enum SeedData {
         let deviceID = DeviceIdentity.current
         // CloudKit user-fact models retain a tombstone so offline devices receive
         // the reset instead of resurrecting old rows.
-        try tombstone(context.fetch(FetchDescriptor<CountdownEvent>()), now: now, deviceID: deviceID)
-        if includesPreferences {
-            try tombstone(context.fetch(FetchDescriptor<SyncedPreference>()), now: now, deviceID: deviceID)
+        for model in TimeTrackerModelRegistry.currentModels
+            where includesPreferences || model != SyncedPreference.self
+        {
+            try tombstoneAll(model, context: context, now: now, deviceID: deviceID)
         }
-        try tombstone(context.fetch(FetchDescriptor<PomodoroRun>()), now: now, deviceID: deviceID)
-        try tombstone(context.fetch(FetchDescriptor<TimeSegment>()), now: now, deviceID: deviceID)
-        try tombstone(context.fetch(FetchDescriptor<TimeSession>()), now: now, deviceID: deviceID)
-        try tombstone(context.fetch(FetchDescriptor<TaskRecurrenceOccurrence>()), now: now, deviceID: deviceID)
-        try tombstone(context.fetch(FetchDescriptor<TaskQuantityEntry>()), now: now, deviceID: deviceID)
-        try tombstone(context.fetch(FetchDescriptor<TaskQuantityGoal>()), now: now, deviceID: deviceID)
-        try tombstone(context.fetch(FetchDescriptor<TaskRecurrenceRule>()), now: now, deviceID: deviceID)
-        try tombstone(context.fetch(FetchDescriptor<ChecklistItem>()), now: now, deviceID: deviceID)
-        try tombstone(context.fetch(FetchDescriptor<ChecklistItemVisual>()), now: now, deviceID: deviceID)
-        try tombstone(context.fetch(FetchDescriptor<InboxSuggestion>()), now: now, deviceID: deviceID)
-        try tombstone(context.fetch(FetchDescriptor<InboxItem>()), now: now, deviceID: deviceID)
-        try tombstone(context.fetch(FetchDescriptor<InboxCaptureReceipt>()), now: now, deviceID: deviceID)
-        try tombstone(context.fetch(FetchDescriptor<TaskNode>()), now: now, deviceID: deviceID)
-        try tombstone(context.fetch(FetchDescriptor<TaskCategory>()), now: now, deviceID: deviceID)
-        try tombstone(context.fetch(FetchDescriptor<TaskCategoryAssignment>()), now: now, deviceID: deviceID)
         try context.saveAfterMutationStep()
     }
 
-    static func tombstone<Model: SoftDeletablePersistentUUIDModel>(
-        _ models: [Model],
+    private static func tombstoneAll<Model: PersistentModel>(
+        _: Model.Type,
+        context: ModelContext,
+        now: Date,
+        deviceID: String
+    ) throws {
+        let rows = try context.fetch(FetchDescriptor<Model>())
+            .compactMap { $0 as? any SoftDeletablePersistentUUIDModel }
+        tombstone(rows, now: now, deviceID: deviceID)
+    }
+
+    static func tombstone(
+        _ models: [any SoftDeletablePersistentUUIDModel],
         now: Date,
         deviceID: String
     ) {

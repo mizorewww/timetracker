@@ -3,6 +3,7 @@ import SwiftData
 
 extension TimeTrackerStore {
     func clearAllData() throws {
+        let session = try requireMutationSession()
         let previousAPIKey = try llmCredentialStore.readAPIKey()
         let defaults = AppDefaults.shared
         let previousAutomaticSuggestions = defaults.object(
@@ -10,12 +11,11 @@ extension TimeTrackerStore {
         )
         var localSettingsWereCleared = false
         do {
-            try perform(events: [.fullSync]) {
-                guard let modelContext else { throw StoreError.notConfigured }
+            try session.withFreshMutationContext { context in
                 try llmCredentialStore.writeAPIKey("")
                 defaults.removeObject(forKey: AppLocalPreferenceKey.llmAutomaticSuggestionsEnabled)
                 localSettingsWereCleared = true
-                try SeedData.clearAll(context: modelContext)
+                try SeedData.clearAll(context: context)
             }
         } catch {
             if localSettingsWereCleared {
@@ -33,6 +33,7 @@ extension TimeTrackerStore {
             }
             throw error
         }
+        finishStoreScopedMutation(events: [.fullSync])
         selectedTaskID = nil
         tasksRoute = nil
         todayTaskRoute = nil
@@ -47,10 +48,10 @@ extension TimeTrackerStore {
 #if DEBUG
 extension TimeTrackerStore {
     func replaceWithDemoData() throws {
-        try perform(events: [.fullSync]) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try SeedData.replaceWithDemoData(context: modelContext)
+        try requireMutationSession().withFreshMutationContext { context in
+            try SeedData.replaceWithDemoData(context: context)
         }
+        finishStoreScopedMutation(events: [.fullSync])
         tasksRoute = nil
         todayTaskRoute = nil
     }
@@ -70,10 +71,10 @@ extension TimeTrackerStore {
         })?.taskID ?? tasks.first(where: {
             $0.deviceID != "demo" && isTaskAvailableForTracking($0)
         })?.id
-        try perform(events: [.fullSync]) {
-            guard let modelContext else { throw StoreError.notConfigured }
-            try SeedData.clearDemoData(context: modelContext)
+        try requireMutationSession().withFreshMutationContext { context in
+            try SeedData.clearDemoData(context: context)
         }
+        finishStoreScopedMutation(events: [.fullSync])
         if selectedDemoTaskID != nil {
             selectedTaskID = replacementSelectionID
         }

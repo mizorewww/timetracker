@@ -17,12 +17,6 @@ private enum UnpresentedFailureDiagnostics {
 }
 
 extension TimeTrackerStore {
-    /// Whole-store maintenance mutation; failures are thrown to the caller.
-    func perform(events: Set<StoreDomainEvent>, _ action: () throws -> Void) throws {
-        try executeAuthorizedMutation(action)
-        finishCommittedMutation(events: events)
-    }
-
     /// The mutation session for the configured store, or
     /// `StoreError.notConfigured` when the store has not been configured yet.
     func requireMutationSession() throws -> StoreMutationSession {
@@ -176,21 +170,6 @@ extension TimeTrackerStore {
             }
         } catch {
             logReadModelRefreshFailure(error)
-        }
-    }
-
-    private func executeAuthorizedMutation<Result>(
-        _ action: () throws -> Result
-    ) throws -> Result {
-        try PerformanceSignpost.interval("mutation.transaction") {
-            try writeAuthorization.requireUserWritesAllowed()
-            if let modelContext {
-                return try modelContext.performAtomicMutation(
-                    author: .localMutation,
-                    action
-                )
-            }
-            return try action()
         }
     }
 

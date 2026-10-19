@@ -9,7 +9,11 @@ typealias LLMChatSender = (ChatQuery, LLMRequestConfiguration) async throws -> C
 /// `OpenAI` client. Requests carry the API key, so the endpoint must be HTTPS
 /// (plain HTTP only for loopback) and redirects are refused.
 nonisolated enum LLMClient {
+    /// Longest silence tolerated while waiting for the server.
     static let timeoutInterval: TimeInterval = 90
+    /// Longest a whole request may take; reasoning models can think for
+    /// minutes before answering one tool round.
+    static let resourceTimeoutInterval: TimeInterval = 600
 
     static func isValidEndpoint(_ endpoint: String) -> Bool {
         configuration(endpoint: endpoint, apiKey: "") != nil
@@ -83,7 +87,8 @@ nonisolated enum LLMClient {
     /// server that keeps the connection open without finishing.
     private static let session: URLSession = {
         let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForResource = timeoutInterval
+        configuration.timeoutIntervalForRequest = timeoutInterval
+        configuration.timeoutIntervalForResource = resourceTimeoutInterval
         return URLSession(configuration: configuration, delegate: RedirectRefusingDelegate(), delegateQueue: nil)
     }()
 
@@ -118,7 +123,8 @@ private final class RedirectRefusingDelegate: NSObject, URLSessionTaskDelegate, 
 
 extension LLMReasoningEffort {
     /// `automatic` omits `reasoning_effort`, which models without reasoning
-    /// controls reject.
+    /// controls reject. `max` is sent verbatim for endpoints that accept a
+    /// level above `high`; Settings warns that others may reject it.
     nonisolated var chatQueryValue: ChatQuery.ReasoningEffort? {
         switch self {
         case .automatic: nil

@@ -221,7 +221,7 @@ extension LLMPromptKind {
         case .checklistVisual:
             LLMChecklistVisualSuggestionService.responseContract
         case .taskPlan:
-            LLMTaskWorkspacePlanningService.responseContract
+            LLMTaskWorkspacePlanningService.systemContract
         }
     }
 

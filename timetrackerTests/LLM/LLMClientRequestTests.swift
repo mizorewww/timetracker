@@ -6,9 +6,9 @@ import Testing
 struct LLMClientRequestTests {
     @Test
     func endpointAcceptsPastedBaseOrOperationURLs() throws {
-        let deepSeek = try #require(LLMClient.configuration(endpoint: "https://api.deepseek.com", apiKey: "k"))
-        #expect(deepSeek.host == "api.deepseek.com")
-        #expect(deepSeek.basePath == "")
+        let bare = try #require(LLMClient.configuration(endpoint: "https://api.example.test", apiKey: "k"))
+        #expect(bare.host == "api.example.test")
+        #expect(bare.basePath == "")
 
         let pasted = try #require(
             LLMClient.configuration(endpoint: "https://example.test/v1/chat/completions/", apiKey: "k")
@@ -31,7 +31,7 @@ struct LLMClientRequestTests {
     @Test @MainActor
     func planningQueryLeavesToolChoiceAndReasoningToTheProviderByDefault() throws {
         let body = try wireJSON(LLMTaskWorkspacePlanningService.query(
-            modelID: "deepseek-flash",
+            modelID: "reasoning-model",
             messages: [.user(.init(content: .string("plan")))],
             reasoningEffort: .automatic
         ))
@@ -44,7 +44,7 @@ struct LLMClientRequestTests {
     @Test @MainActor
     func selectedEffortAndEchoedReasoningReachTheWire() throws {
         let body = try wireJSON(LLMTaskWorkspacePlanningService.query(
-            modelID: "deepseek-flash",
+            modelID: "reasoning-model",
             messages: [.assistant(.init(
                 reasoningContent: "thinking",
                 toolCalls: [.init(id: "c1", function: .init(arguments: "{}", name: "list_workspace"))]

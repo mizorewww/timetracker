@@ -7,14 +7,14 @@ enum TaskNotesInteractionStyle: Hashable {
 
 struct TaskNotesEditorSection: View {
     @Binding var notes: String
-    let validationError: TaskPersistenceValidationError?
+    let validationError: PersistedFieldValidationError?
     let interactionStyle: TaskNotesInteractionStyle
     let focusedTextField: FocusState<TaskEditorTextField?>.Binding
     @State private var mode: TaskNotesEditorMode
 
     init(
         notes: Binding<String>,
-        validationError: TaskPersistenceValidationError?,
+        validationError: PersistedFieldValidationError?,
         interactionStyle: TaskNotesInteractionStyle = .editor,
         focusedTextField: FocusState<TaskEditorTextField?>.Binding
     ) {

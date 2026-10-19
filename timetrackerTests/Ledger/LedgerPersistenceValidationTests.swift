@@ -60,8 +60,8 @@ struct LedgerPersistenceValidationTests {
             byteCount: LedgerPersistencePolicy.maximumNoteByteCount
         ) + "x"
 
-        #expect(throws: LedgerPersistenceValidationError.byteLimitExceeded(
-            field: .note,
+        #expect(throws: PersistedFieldValidationError.byteLimitExceeded(
+            field: .ledgerNote,
             actual: LedgerPersistencePolicy.maximumNoteByteCount + 1,
             maximum: LedgerPersistencePolicy.maximumNoteByteCount
         )) {
@@ -115,7 +115,7 @@ struct LedgerPersistenceValidationTests {
             nowProvider: { mutationDate }
         )
 
-        #expect(throws: LedgerPersistenceValidationError.controlCharacter(field: .note)) {
+        #expect(throws: PersistedFieldValidationError.controlCharacter(field: .ledgerNote)) {
             try repository.updateSegment(
                 segmentID: segment.id,
                 taskID: targetTask.id,
@@ -127,7 +127,7 @@ struct LedgerPersistenceValidationTests {
 
         targetTask.title = "Invalid\nTitle"
         try context.save()
-        #expect(throws: LedgerPersistenceValidationError.controlCharacter(field: .titleSnapshot)) {
+        #expect(throws: PersistedFieldValidationError.controlCharacter(field: .ledgerTitleSnapshot)) {
             try repository.updateSegment(
                 segmentID: segment.id,
                 taskID: targetTask.id,
@@ -158,7 +158,7 @@ struct LedgerPersistenceValidationTests {
         try context.save()
         let repository = SwiftDataTimeTrackingRepository(context: context, deviceID: "ledger-device")
 
-        #expect(throws: LedgerPersistenceValidationError.controlCharacter(field: .titleSnapshot)) {
+        #expect(throws: PersistedFieldValidationError.controlCharacter(field: .ledgerTitleSnapshot)) {
             try repository.startTask(taskID: task.id, source: .timer)
         }
 
@@ -167,8 +167,8 @@ struct LedgerPersistenceValidationTests {
             byteCount: LedgerPersistencePolicy.maximumTitleSnapshotByteCount
         ) + "x"
         try context.save()
-        #expect(throws: LedgerPersistenceValidationError.byteLimitExceeded(
-            field: .titleSnapshot,
+        #expect(throws: PersistedFieldValidationError.byteLimitExceeded(
+            field: .ledgerTitleSnapshot,
             actual: LedgerPersistencePolicy.maximumTitleSnapshotByteCount + 1,
             maximum: LedgerPersistencePolicy.maximumTitleSnapshotByteCount
         )) {
@@ -207,7 +207,7 @@ struct LedgerPersistenceValidationTests {
                     note: "Must roll back"
                 )
                 Issue.record("Expected the read-only store to reject the manual insert")
-            } catch let error as LedgerPersistenceValidationError {
+            } catch let error as PersistedFieldValidationError {
                 Issue.record("Expected a persistence failure, got validation error: \(error)")
             } catch {
                 // The concrete SwiftData save error is intentionally not part of the repository API.

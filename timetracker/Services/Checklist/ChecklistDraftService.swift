@@ -99,7 +99,10 @@ nonisolated enum ChecklistDraftPersistencePolicy {
         index: Int,
         field: ChecklistDraftField
     ) throws {
-        guard !value.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
+        guard !PersistedFieldValidator.containsUnsupportedControl(
+            value,
+            allowsMultilineWhitespace: false
+        ) else {
             throw ChecklistDraftValidationError.controlCharacter(index: index, field: field)
         }
     }

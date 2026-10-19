@@ -122,20 +122,11 @@ nonisolated enum LLMSuggestionInputPolicy {
     }
 
     static func boundedTrimmedUTF8(_ value: String, maximumByteCount: Int) -> String {
-        guard maximumByteCount > 0 else { return "" }
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.utf8.count > maximumByteCount else { return trimmed }
-
-        var result = ""
-        result.reserveCapacity(maximumByteCount)
-        var byteCount = 0
-        for character in trimmed {
-            let characterByteCount = String(character).utf8.count
-            guard byteCount + characterByteCount <= maximumByteCount else { break }
-            result.append(character)
-            byteCount += characterByteCount
-        }
-        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+        SystemSurfaceTextBounds.boundedUTF8Prefix(
+            value.trimmingCharacters(in: .whitespacesAndNewlines),
+            maximumUTF8Bytes: maximumByteCount
+        )
+        .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private struct RankedCandidate {

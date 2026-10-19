@@ -91,7 +91,7 @@ struct TaskInfoEditorSection: View {
         }
     }
 
-    private var visibleTitleError: TaskPersistenceValidationError? {
+    private var visibleTitleError: PersistedFieldValidationError? {
         guard let error = validation.titleError else { return nil }
         if case .required = error,
            draft.taskID == nil,

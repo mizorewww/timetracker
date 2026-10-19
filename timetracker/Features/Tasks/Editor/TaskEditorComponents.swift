@@ -121,10 +121,10 @@ struct TaskEditorSections: View {
 }
 
 struct TaskEditorValidation: Equatable {
-    let titleError: TaskPersistenceValidationError?
-    let notesError: TaskPersistenceValidationError?
-    let iconNameError: TaskPersistenceValidationError?
-    let colorHexError: TaskPersistenceValidationError?
+    let titleError: PersistedFieldValidationError?
+    let notesError: PersistedFieldValidationError?
+    let iconNameError: PersistedFieldValidationError?
+    let colorHexError: PersistedFieldValidationError?
 
     init(title: String, notes: String, iconName: String, colorHex: String) {
         let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -144,7 +144,7 @@ struct TaskEditorValidation: Equatable {
 }
 
 struct TaskEditorInlineValidationMessage: View {
-    let error: TaskPersistenceValidationError
+    let error: PersistedFieldValidationError
     let accessibilityIdentifier: String
 
     var body: some View {

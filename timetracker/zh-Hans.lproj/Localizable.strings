@@ -989,9 +989,6 @@
 "inbox.persistence.field.color" = "推荐颜色";
 "inbox.persistence.field.model" = "推荐模型";
 "inbox.persistence.field.titleSnapshot" = "推荐标题";
-"inbox.persistence.error.requiredFormat" = "请填写%@。";
-"inbox.persistence.error.controlCharacterFormat" = "%@包含不支持的字符。";
-"inbox.persistence.error.tooLongFormat" = "%@内容过长，请缩短后重试。";
 "editor.task.info" = "基本信息";
 "editor.task.name" = "任务名称";
 "editor.task.parent" = "父任务";
@@ -1071,8 +1068,6 @@
 "segment.note.placeholder" = "这段时间的说明";
 "ledger.persistence.field.note" = "备注";
 "ledger.persistence.field.titleSnapshot" = "保存的任务名称";
-"ledger.persistence.error.controlCharacterFormat" = "%@包含不支持的字符。";
-"ledger.persistence.error.tooLongFormat" = "%@内容过长，请缩短后重试。";
 "manual.title" = "手动补录";
 "manual.subtitle" = "修正遗忘的工作时间，仍然写入统一时间账本。";
 "manual.note.placeholder" = "例如：会议、补录、客户沟通";

@@ -80,22 +80,21 @@ extension View {
     /// (large continuous corners, grouped background, no stroke) while
     /// keeping every visualization in its own card. Consecutive grouped
     /// `Section`s merge into one continuous card on iOS 26+, so per-task
-    /// heatmaps cannot rely on system section separation. The List supplies
-    /// the content inset; the background expands back to the native grouped
-    /// card boundary so the content is not inset twice.
+    /// heatmaps cannot rely on system section separation. The row has no
+    /// list insets, so the card spans the native grouped card boundary and
+    /// insets its own content.
     func homeVisualizationListCard(
         accessibilityIdentifier: String
     ) -> some View {
-        padding(.vertical, AppLayout.cardPadding)
+        padding(AppLayout.cardPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background {
-                RoundedRectangle(
+            .background(
+                AppColors.cardBackground,
+                in: RoundedRectangle(
                     cornerRadius: AppLayout.nativeGroupedCardRadius,
                     style: .continuous
                 )
-                .fill(AppColors.cardBackground)
-                .padding(.horizontal, -AppLayout.cardPadding)
-            }
+            )
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier(accessibilityIdentifier)
             .padding(.vertical, 5)

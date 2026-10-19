@@ -56,6 +56,10 @@ extension TimeTrackerStore {
     /// when another writer actually changed a visible segment.
     func convergeLiveTimerReadModels() throws {
         guard let timeRepository else { return }
+        let previousRuns = pomodoroRuns
+        let previousActiveSegments = activeSegments
+        let previousTodaySegments = todaySegments
+        let previousSessions = sessions
         try refreshPomodoroDomain()
         ledgerDomainStore.resetRollupChanges()
         try ledgerDomainStore.refreshVisible(repository: timeRepository)
@@ -72,12 +76,17 @@ extension TimeTrackerStore {
             )
         }
         if segmentChanges.contains(where: { $0.before != $0.after }) {
+            // Bumps analyticsRevision, which keys the Today read model.
             refreshAnalyticsDomain()
+        } else if pomodoroRuns != previousRuns ||
+            activeSegments != previousActiveSegments ||
+            todaySegments != previousTodaySegments ||
+            sessions != previousSessions
+        {
+            // A model identity changed without a segment value change, so
+            // analyticsRevision stays put; drop the revision-keyed Today cache.
+            todayReadModelCache = TodayReadModelCache()
         }
-        // This path changes the visible ledger without bumping
-        // analyticsRevision, so the revision-keyed Today read model would
-        // serve stale active segments. Invalidate it explicitly.
-        todayReadModelCache = TodayReadModelCache()
     }
 
     func schedulePomodoroReconciliation(now: Date = Date()) {

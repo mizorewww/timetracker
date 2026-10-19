@@ -48,7 +48,7 @@ check-hooks: ## 只读校验钩子是否就位
 	@$(TOOL).install_git_hooks --check
 
 .PHONY: bump-version
-bump-version: ## 发布前手动递增 marketing/build 版本(见 Docs/Versioning.md)
+bump-version: ## 发布前手动递增 marketing/build 版本
 	@$(TOOL).bump_marketing_version
 
 # ── 构建 / 测试 ────────────────────────────────────────────────

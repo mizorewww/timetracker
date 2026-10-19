@@ -1,6 +1,6 @@
 # HIG Skill Routing Index
 
-_Auto-generated from frontmatter by `scripts/generate_routing_index.py`. Do not edit manually._
+_Auto-generated from distilled frontmatter._
 
 ## tier-1 (always load)
 

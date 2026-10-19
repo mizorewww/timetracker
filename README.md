@@ -18,7 +18,7 @@
 ## 构建要求
 
 - Xcode 需匹配声明的 SDK:iOS/iPadOS 26.2、macOS 15.7、watchOS 26.2。
-- 自动签名,team `LT98S43NKA`;**不要**用 `CODE_SIGNING_ALLOWED=NO`、空 team 或 ad-hoc 签名让构建"通过"。签名与能力验证规则见 [Testing](Docs/Testing.md)。
+- 自动签名,team `LT98S43NKA`;**不要**用 `CODE_SIGNING_ALLOWED=NO`、空 team 或 ad-hoc 签名让构建"通过"。
 - 格式化工具:`brew install swiftformat`。
 - clone 后执行一次 `make install-hooks`,安装只校验三语种 `.strings` key parity 的 pre-commit 钩子。
 
@@ -35,27 +35,15 @@ make build-install-all   # 构建并安装 iOS+Watch 与 macOS(默认 Release,�
 make export-artifacts    # 归档并导出签名产物(iOS IPA + macOS app/zip,默认到 build/Archives 与 build/Exports)
 make localization-check  # 校验三语种 .strings key 一致(也是 pre-commit 闸门,无需 xcodebuild)
 make format              # SwiftFormat 原地格式化;make format-check 只读校验
-make bump-version        # 发布前手动递增版本,见 Versioning
+make bump-version        # 发布前手动递增 patch 版本与 build 号(所有 target)
 make clean               # 删除 build/ 下的导出、归档与安装产物
 ```
 
 命令行变量与 shell 环境变量等价(`CONFIGURATION=Release make export-artifacts` 等于 `make CONFIGURATION=Release export-artifacts`);内联构建/测试目标用 `make DEVELOPMENT_TEAM=<team> build-ios`。`make build-info` 由 Xcode 构建阶段自动调用,不是手动门禁。
 
-## 文档地图
+## 文档
 
-| 我想… | 读这里 |
-| --- | --- |
-| 第一次了解代码结构、找文件 | [ProjectMap](Docs/ProjectMap.md)(第一站) |
-| 理解架构、领域模型、写代码放哪 | [Architecture](Docs/Architecture.md) |
-| 看当前实现细节与维护者笔记 | [CodeGuide](Docs/CodeGuide.md) |
-| 查必须遵守的工程决策 | [AgentDecisions](Docs/AgentDecisions.md) |
-| 写/跑测试、验证与发布门禁 | [Testing](Docs/Testing.md) |
-| 跑构建/发布/版本命令、工具链细节 | 本文件 + [Versioning](Docs/Versioning.md) |
-| 改 UI | [UI-Design](Docs/UI-Design.md) + 仓库内 `apple-hig` / `swiftui-expert-skill` |
-| 改用户可见文案 | [Localization](Docs/Localization.md) |
-| 了解用户视角的当前行为 | [UserGuide](Docs/UserGuide.md) |
-| 碰数据、AI、同步 | [PrivacyAndSecurity](Docs/PrivacyAndSecurity.md) |
-| 计划下一步功能 | [NextDevelopmentPlan](Docs/NextDevelopmentPlan.md) |
-| 用户反馈清单(任务来源) | [userfeedback](Docs/userfeedback.md) |
-
-Agent 工作流程(文档阅读顺序、任务生命周期、验证分级、提交纪律)定义在 [AGENTS.md](AGENTS.md)。
+- [AGENTS.md](AGENTS.md) — agent 规则与门禁
+- [Architecture](Docs/Architecture.md) — 结构、领域不变量、schema 规则
+- [AgentDecisions](Docs/AgentDecisions.md) — 必须遵守的长期决策
+- [userfeedback](Docs/userfeedback.md) — 用户反馈清单

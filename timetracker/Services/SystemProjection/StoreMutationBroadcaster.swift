@@ -25,8 +25,9 @@ enum StoreMutationBroadcaster {
         } else {
             pendingSource = source
             hasPendingPost = true
+            // Runs after the current main-actor job, so the mutating scene
+            // finishes its own refresh before siblings catch up.
             Task { @MainActor in
-                await Task.yield()
                 post()
             }
         }

@@ -30,80 +30,67 @@ struct HomeWeeklyGrossTimeSection: View {
 
     @ViewBuilder
     private func section(snapshot: WeeklyGrossTimeSnapshot?) -> some View {
+        let header = HomeWeeklyGrossTimeHeader(
+            container: container,
+            total: snapshot.flatMap(Self.totalText)
+        )
         switch container {
         case .card:
             VStack(alignment: .leading, spacing: 10) {
-                HomeWeeklyGrossTimeHeader(
-                    container: .card,
-                    total: snapshot.flatMap { snapshot -> String? in
-                        snapshot.hasTrackedTime
-                            ? String.localizedStringWithFormat(
-                                AppStrings.localized(
-                                    "home.weeklyGross.totalFormat"
-                                ),
-                                DurationFormatter.chart(
-                                    snapshot.totalGrossSeconds
-                                ),
-                                DurationFormatter.chart(
-                                    snapshot.totalWallSeconds
-                                )
-                            )
-                            : nil
-                    }
-                )
-                Group {
-                    if let snapshot {
-                        HomeWeeklyGrossTimeChart(
-                            snapshot: snapshot,
-                            chartHeight: 210,
-                            emptyHeight: 96,
-                            calendar: calendar
-                        )
-                    } else {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 210)
-                    }
-                }
-                .padding(HomeLayoutPolicy.visualizationCardPadding)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .appCard(padding: 0)
-                .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("home.weeklyGross.card")
+                header
+                chart(snapshot: snapshot, chartHeight: 210, emptyHeight: 96)
+                    .padding(HomeLayoutPolicy.visualizationCardPadding)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .appCard(padding: 0)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("home.weeklyGross.card")
             }
         case .listSection:
             Section {
-                Group {
-                    if let snapshot {
-                        HomeWeeklyGrossTimeChart(
-                            snapshot: snapshot,
-                            chartHeight: 190,
-                            emptyHeight: 64,
-                            calendar: calendar
-                        )
-                    } else {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 190)
-                    }
-                }
-                .homeVisualizationListCard(
-                    accessibilityIdentifier: "home.weeklyGross.card"
-                )
+                chart(snapshot: snapshot, chartHeight: 190, emptyHeight: 64)
+                    .homeVisualizationListCard(
+                        accessibilityIdentifier: "home.weeklyGross.card"
+                    )
             } header: {
-                HomeWeeklyGrossTimeHeader(
-                    container: .listSection,
-                    total: nil
-                )
-                .textCase(nil)
+                header
+                    .textCase(nil)
             }
         }
+    }
+
+    @ViewBuilder
+    private func chart(
+        snapshot: WeeklyGrossTimeSnapshot?,
+        chartHeight: CGFloat,
+        emptyHeight: CGFloat
+    ) -> some View {
+        if let snapshot {
+            HomeWeeklyGrossTimeChart(
+                snapshot: snapshot,
+                chartHeight: chartHeight,
+                emptyHeight: emptyHeight,
+                calendar: calendar
+            )
+        } else {
+            ProgressView()
+                .frame(maxWidth: .infinity)
+                .frame(height: chartHeight)
+        }
+    }
+
+    private static func totalText(_ snapshot: WeeklyGrossTimeSnapshot) -> String? {
+        guard snapshot.hasTrackedTime else { return nil }
+        return String.localizedStringWithFormat(
+            AppStrings.localized("home.weeklyGross.totalFormat"),
+            DurationFormatter.chart(snapshot.totalGrossSeconds),
+            DurationFormatter.chart(snapshot.totalWallSeconds)
+        )
     }
 }
 
 private struct HomeWeeklyGrossTimeHeader: View {
     let container: HomeSectionContainer
-    var total: String?
+    let total: String?
 
     var body: some View {
         HomeSectionHeader(

@@ -143,10 +143,8 @@ final class TimeTrackerStore {
     /// memo from a view's `body` must not itself publish a change.
     @ObservationIgnored var analyticsDomainStore = AnalyticsStore()
     var analyticsRevision: UInt = 0
-    /// Today timeline snapshot cache (see TimeTrackerStore+Timeline.swift).
-    /// Keyed by data revisions + day + minute bucket so repeated body
-    /// evaluations after unrelated store writes reuse the last projection.
-    @ObservationIgnored var todayTimelineSnapshotCache: TodayTimelineSnapshotCache?
+    /// Today page read model; see TimeTrackerStore+TodayReadModels.swift.
+    @ObservationIgnored var todayReadModelCache = TodayReadModelCache()
     /// Tasks-page row supplement projection cache (recurrence roles +
     /// quantity progress). Keyed by taskReadModelRevision; see
     /// TimeTrackerStore+TaskReadModels.swift.
@@ -155,14 +153,6 @@ final class TimeTrackerStore {
     /// Subtree-active-timer index cache; see TimeTrackerStore+TaskReadModels.swift.
     @ObservationIgnored var taskIDsWithActiveTimerInSubtreeCache:
         (taskRevision: UInt64, analyticsRevision: UInt, taskIDs: Set<UUID>)?
-    /// Today page read-model cache; see Features/Home/HomeReadModels.swift.
-    @ObservationIgnored var todayHomeContentCache:
-        (key: TodayHomeContentCacheKey, content: TodayHomeContent)?
-    /// Today metrics cache; see Features/Home/HomeReadModels.swift. Keyed by
-    /// ledger revision + minute bucket so repeated same-minute calls (30 s
-    /// tick, static tab-switch renders, both shells) share one interval query.
-    @ObservationIgnored var todayMetricsSnapshotCache:
-        (key: (revision: UInt, minuteBucket: Int), snapshot: TodayMetricsSnapshot)?
     var selectedTaskID: UUID?
     var errorMessage: String?
     var desktopDestination: DesktopDestination = .today

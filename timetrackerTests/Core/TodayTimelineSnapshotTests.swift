@@ -3,7 +3,7 @@ import SwiftData
 import Testing
 @testable import timetracker
 
-/// Today timeline snapshot cache contracts.
+/// Today read-model cache contracts for the timeline.
 ///
 /// The cache is an internal accelerator, so these tests assert the observable
 /// snapshot semantics the cache must preserve: repeated same-minute reads are
@@ -57,22 +57,13 @@ struct TodayTimelineSnapshotTests {
     func ledgerMutationIsReflectedAfterCachedRead() throws {
         let (store, task, _) = try makeStoreWithSegments(now: Date())
         let beforeNow = Date()
-        let segments = store.timelineSegments
-        let before = store.timelineSnapshot(
-            segments: segments,
-            date: beforeNow,
-            now: beforeNow
-        )
+        let before = store.todaySnapshot(now: beforeNow).live.timeline
         #expect(before.entries.count == 1)
 
         // Durable ledger write through the facade path (starts a second timer).
         #expect(store.startTask(task))
         let afterNow = Date()
-        let after = store.timelineSnapshot(
-            segments: store.timelineSegments,
-            date: afterNow,
-            now: afterNow
-        )
+        let after = store.todaySnapshot(now: afterNow).live.timeline
 
         #expect(after.entries.count == 2)
         let activeEntry = try #require(
@@ -85,11 +76,7 @@ struct TodayTimelineSnapshotTests {
     func taskEditIsReflectedAfterCachedRead() throws {
         let now = Date()
         let (store, task, _) = try makeStoreWithSegments(now: now)
-        let before = store.timelineSnapshot(
-            segments: store.timelineSegments,
-            date: now,
-            now: now
-        )
+        let before = store.todaySnapshot(now: now).live.timeline
         #expect(before.entries.first?.title == "Timeline owner")
 
         var draft = TaskEditorDraft(
@@ -105,11 +92,7 @@ struct TodayTimelineSnapshotTests {
             return
         }
 
-        let after = store.timelineSnapshot(
-            segments: store.timelineSegments,
-            date: now,
-            now: now
-        )
+        let after = store.todaySnapshot(now: now).live.timeline
         #expect(after.entries.first?.title == "Renamed owner")
         #expect(after.entries.first?.colorHex == "7C3AED")
     }
@@ -121,17 +104,9 @@ struct TodayTimelineSnapshotTests {
         #expect(store.startTask(task))
 
         let firstNow = now.addingTimeInterval(60)
-        let first = store.timelineSnapshot(
-            segments: store.timelineSegments,
-            date: firstNow,
-            now: firstNow
-        )
+        let first = store.todaySnapshot(now: firstNow).live.timeline
         let later = now.addingTimeInterval(180)
-        let second = store.timelineSnapshot(
-            segments: store.timelineSegments,
-            date: later,
-            now: later
-        )
+        let second = store.todaySnapshot(now: later).live.timeline
 
         let firstEntry = try #require(
             first.entries.first { $0.taskID == task.id && $0.usesCurrentEndLabel }
@@ -141,5 +116,23 @@ struct TodayTimelineSnapshotTests {
         )
         #expect(secondEntry.durationSeconds > firstEntry.durationSeconds)
         #expect(secondEntry.endedAt > firstEntry.endedAt)
+    }
+
+    @Test
+    func startedTimerRefreshesCachedContentAndMarksTodayLive() throws {
+        let now = Date()
+        let (store, task, _) = try makeStoreWithSegments(now: now)
+        let before = store.todaySnapshot(now: now)
+        #expect(before.content.activeSegments.isEmpty)
+        #expect(before.live.isLive == false)
+
+        #expect(store.startTask(task))
+        let later = Date()
+        let after = store.todaySnapshot(now: later)
+
+        #expect(after.content.activeSegments.map(\.taskID) == [task.id])
+        #expect(after.live.isLive)
+        #expect(after.live.rows.first?.usesCurrentEndLabel == true)
+        #expect(after.live.metrics.grossSeconds >= before.live.metrics.grossSeconds)
     }
 }

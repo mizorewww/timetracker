@@ -2,10 +2,10 @@ import SwiftUI
 
 struct CompactTodaySummaryRow: View {
     let store: TimeTrackerStore
-    let now: Date
+    let metrics: TodayMetricsSnapshot
 
     var body: some View {
-        summaryContent(snapshot: store.todayMetricsSnapshot(now: now))
+        summaryContent(snapshot: metrics)
     }
 
     private func summaryContent(snapshot: TodayMetricsSnapshot) -> some View {

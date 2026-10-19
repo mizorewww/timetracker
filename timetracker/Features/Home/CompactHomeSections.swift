@@ -115,18 +115,11 @@ struct CompactQuickStartSection: View {
 
 struct CompactTimelineSection: View {
     let store: TimeTrackerStore
-    let segments: [TimeSegment]
-    let now: Date
+    let live: TodayLiveSnapshot
     let openTask: (UUID) -> Void
 
     var body: some View {
-        let timeline = store.timelineSnapshot(
-            segments: segments,
-            date: now,
-            now: now
-        )
-        let entries = Array(timeline.entries.reversed())
-        let segmentByID = segments.latestByID()
+        let timeline = live.timeline
 
         Section {
             if timeline.entries.isEmpty {
@@ -145,11 +138,11 @@ struct CompactTimelineSection: View {
                     compactHeight: 340
                 )
 
-                ForEach(entries) { entry in
+                ForEach(live.rows) { entry in
                     TodayTimelineEntryRow(
                         store: store,
                         entry: entry,
-                        segmentByID: segmentByID,
+                        segmentByID: live.segmentByID,
                         showsDivider: false,
                         openTaskDetail: openTask
                     )

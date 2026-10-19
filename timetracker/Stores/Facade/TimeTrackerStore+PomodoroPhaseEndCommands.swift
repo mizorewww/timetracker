@@ -65,11 +65,9 @@ extension TimeTrackerStore {
             refreshAnalyticsDomain()
         }
         // This path changes the visible ledger without bumping
-        // analyticsRevision, so the revision-keyed Today caches would serve
-        // stale active segments. Invalidate them explicitly.
-        todayHomeContentCache = nil
-        todayMetricsSnapshotCache = nil
-        todayTimelineSnapshotCache = nil
+        // analyticsRevision, so the revision-keyed Today read model would
+        // serve stale active segments. Invalidate it explicitly.
+        todayReadModelCache = TodayReadModelCache()
     }
 
     func schedulePomodoroReconciliation(now: Date = Date()) {

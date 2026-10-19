@@ -49,16 +49,11 @@ struct ActiveTimersSection: View {
 
 struct TimelineSection: View {
     let store: TimeTrackerStore
-    let segments: [TimeSegment]
-    let now: Date
+    let live: TodayLiveSnapshot
     let openTask: (UUID) -> Void
 
     var body: some View {
-        let timeline = store.timelineSnapshot(
-            segments: segments,
-            date: now,
-            now: now
-        )
+        let timeline = live.timeline
 
         VStack(alignment: .leading, spacing: 10) {
             SectionTitle(title: AppStrings.todayTimeline)
@@ -80,14 +75,12 @@ struct TimelineSection: View {
 
                     Divider()
 
-                    let entries = Array(timeline.entries.reversed())
-                    let segmentByID = segments.latestByID()
-                    let lastEntryID = entries.last?.id
-                    ForEach(entries) { entry in
+                    let lastEntryID = live.rows.last?.id
+                    ForEach(live.rows) { entry in
                         TodayTimelineEntryRow(
                             store: store,
                             entry: entry,
-                            segmentByID: segmentByID,
+                            segmentByID: live.segmentByID,
                             showsDivider: entry.id != lastEntryID,
                             openTaskDetail: openTask
                         )

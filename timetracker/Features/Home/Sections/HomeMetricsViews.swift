@@ -2,7 +2,7 @@ import SwiftUI
 
 struct TodayOverviewSection: View {
     let store: TimeTrackerStore
-    let now: Date
+    let metrics: TodayMetricsSnapshot
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -10,7 +10,7 @@ struct TodayOverviewSection: View {
                 container: .card,
                 showsWallTime: store.preferences.showGrossAndWallTogether
             )
-            CompactTodaySummaryRow(store: store, now: now)
+            CompactTodaySummaryRow(store: store, metrics: metrics)
                 .accessibilityIdentifier("home.overview")
                 .padding(14)
                 .frame(maxWidth: .infinity)

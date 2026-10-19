@@ -11,10 +11,11 @@ struct CompactHomeView: View {
     @State private var clockNow = Date()
 
     var body: some View {
-        let content = store.todayHomeContent()
         // A ledger write can re-render the page between clock ticks; never
         // read a just-written stop date as a still-open future end.
         let now = max(clockNow, Date())
+        let today = store.todaySnapshot(now: now)
+        let content = today.content
 
         List {
             CompactNowSection(
@@ -25,7 +26,7 @@ struct CompactHomeView: View {
             )
 
             Section {
-                CompactTodaySummaryRow(store: store, now: now)
+                CompactTodaySummaryRow(store: store, metrics: today.live.metrics)
                     .accessibilityIdentifier("home.overview")
             } header: {
                 HomeOverviewHeader(
@@ -59,8 +60,7 @@ struct CompactHomeView: View {
 
             CompactTimelineSection(
                 store: store,
-                segments: content.timelineSegments,
-                now: now,
+                live: today.live,
                 openTask: openTask
             )
 
@@ -91,7 +91,7 @@ struct CompactHomeView: View {
         .navigationBarTitleDisplayMode(.large)
         #endif
         .accessibilityIdentifier("home.view")
-        .liveClock($clockNow, until: store.todayClockDeadline(after: now))
+        .liveClock($clockNow, until: LiveClockDeadline.next(after: now, isLive: today.live.isLive))
         .toolbar {
             // `.primaryAction` resolves to the navigation bar's trailing slot on
             // iOS and the window toolbar on macOS, so no branch is needed.

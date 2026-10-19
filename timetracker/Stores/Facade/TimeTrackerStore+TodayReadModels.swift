@@ -40,8 +40,15 @@ struct TodayReadModelCache {
         let minuteBucket: Int
     }
 
+    fileprivate struct WeeklyKey: Equatable {
+        let analyticsRevision: UInt
+        let weekStart: Date
+        let minuteBucket: Int
+    }
+
     fileprivate var content: (key: ContentKey, value: TodayHomeContent)?
     fileprivate var live: (key: LiveKey, value: TodayLiveSnapshot)?
+    fileprivate var weekly: (key: WeeklyKey, value: WeeklyGrossTimeSnapshot)?
 }
 
 extension TimeTrackerStore {
@@ -202,6 +209,15 @@ extension TimeTrackerStore {
                 requiresLiveRefresh: false
             )
         }
+        // Same minute-granular contract as `todayLive`.
+        let key = TodayReadModelCache.WeeklyKey(
+            analyticsRevision: analyticsRevision,
+            weekStart: interval.start,
+            minuteBucket: Int(now.timeIntervalSinceReferenceDate / 60)
+        )
+        if let cached = todayReadModelCache.weekly, cached.key == key {
+            return cached.value
+        }
 
         let segments = visibleSegments(
             overlapping: interval,
@@ -218,10 +234,12 @@ extension TimeTrackerStore {
             guard segment.startedAt < interval.end else { return false }
             return segment.endedAt.map { $0 > evaluation.cutoff } ?? true
         }
-        return WeeklyGrossTimeSnapshot(
+        let snapshot = WeeklyGrossTimeSnapshot(
             interval: interval,
             daily: daily,
             requiresLiveRefresh: requiresLiveRefresh
         )
+        todayReadModelCache.weekly = (key, snapshot)
+        return snapshot
     }
 }

@@ -29,4 +29,39 @@ struct UserDataExportTests {
         #expect(json.contains(AppPreferenceKey.allowParallelTimers.rawValue))
         #expect(json.contains("secret-key") == false)
     }
+
+    /// A new synced model must get an export section (or a deliberate entry
+    /// here); otherwise its data silently disappears from exports.
+    @Test
+    func everySyncedModelHasAnExportSection() throws {
+        let sectionByModel = [
+            "TaskNode": "tasks",
+            "TaskCategory": "taskCategories",
+            "TaskCategoryAssignment": "taskCategoryAssignments",
+            "TimeSession": "sessions",
+            "TimeSegment": "segments",
+            "PomodoroRun": "pomodoroRuns",
+            "CountdownEvent": "countdownEvents",
+            "SyncedPreference": "syncedPreferences",
+            "ChecklistItem": "checklistItems",
+            "ChecklistItemVisual": "checklistItemVisuals",
+            "InboxItem": "inboxItems",
+            "InboxSuggestion": "inboxSuggestions",
+            "InboxCaptureReceipt": "inboxCaptureReceipts",
+            "TaskRecurrenceRule": "taskRecurrenceRules",
+            "TaskRecurrenceOccurrence": "taskRecurrenceOccurrences",
+            "TaskQuantityGoal": "taskQuantityGoals",
+            "TaskQuantityEntry": "taskQuantityEntries",
+        ]
+        let context = try makeTestContext()
+
+        let json = try UserDataExport.encodedJSON(container: context.container)
+        let root = try #require(
+            JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any]
+        )
+        let data = try #require(root["data"] as? [String: Any])
+
+        #expect(Set(sectionByModel.keys) == TimeTrackerModelRegistry.cloudSyncedUserModelNames)
+        #expect(Set(data.keys) == Set(sectionByModel.values))
+    }
 }

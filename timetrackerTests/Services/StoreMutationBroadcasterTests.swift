@@ -32,11 +32,7 @@ struct StoreMutationBroadcasterTests {
         StoreMutationBroadcaster.publish(events: [second])
         #expect(recorder.posts.contains { $0.contains(first) } == false)
 
-        for _ in 0 ..< 100
-            where recorder.posts.contains(where: { $0.contains(first) }) == false
-        {
-            await Task.yield()
-        }
+        #expect(await eventually { recorder.posts.contains { $0.contains(first) } })
         // Other suites may publish concurrently; ours must share one post.
         let posts = recorder.posts.filter {
             $0.contains(first) || $0.contains(second)

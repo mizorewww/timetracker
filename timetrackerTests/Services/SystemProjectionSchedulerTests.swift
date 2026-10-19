@@ -137,13 +137,6 @@ struct SystemProjectionSchedulerTests {
         )
     }
 
-    private func eventually(_ condition: @MainActor () -> Bool) async -> Bool {
-        for _ in 0 ..< 100 where condition() == false {
-            await Task.yield()
-        }
-        return condition()
-    }
-
     private enum ExpectedFailure: Error {
         case once
     }

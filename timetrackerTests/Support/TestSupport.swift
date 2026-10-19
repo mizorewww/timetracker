@@ -110,3 +110,17 @@ func makeStoreDirectory() throws -> URL {
     try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     return url
 }
+
+/// Yields the main actor until `condition` holds or `timeout` elapses, then
+/// returns the final evaluation.
+@MainActor
+func eventually(
+    timeout: Duration = .seconds(2),
+    _ condition: @MainActor () -> Bool
+) async -> Bool {
+    let deadline = ContinuousClock.now.advanced(by: timeout)
+    while condition() == false, ContinuousClock.now < deadline {
+        await Task.yield()
+    }
+    return condition()
+}

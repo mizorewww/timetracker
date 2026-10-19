@@ -41,6 +41,7 @@ struct TestHostIsolationTests {
         #expect(UserDefaults.standard.string(forKey: probeKey) == nil)
     }
 
+    #if DEBUG
     @Test
     func demoDataOverrideWritesStayOutOfTheInstalledAppDomain() {
         let overrideKey = AppDemoDataConfiguration.overrideKey
@@ -62,6 +63,7 @@ struct TestHostIsolationTests {
         #expect(standard.string(forKey: overrideKey) == beforeOverride)
         #expect(standard.object(forKey: seedingKey) as? Bool == beforeSeeding)
     }
+    #endif
 
     @Test
     func widgetSnapshotSuiteIsNamespacedAwayFromTheSharedAppGroup() {

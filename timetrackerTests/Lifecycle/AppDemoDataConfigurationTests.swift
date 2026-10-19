@@ -1,3 +1,4 @@
+#if DEBUG
 import Testing
 @testable import timetracker
 
@@ -11,3 +12,4 @@ struct AppDemoDataConfigurationTests {
         #expect(AppDemoDataConfiguration.commandLineMode(arguments: ["app", key, "unknown"]) == nil)
     }
 }
+#endif

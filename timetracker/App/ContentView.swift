@@ -3,9 +3,6 @@ import SwiftData
 import SwiftUI
 
 struct ContentView: View {
-    private static let analyticsPreheatDelay: Duration = .seconds(2)
-    private static let pomodoroPreheatDelay: Duration = .seconds(4)
-
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @State private var store: TimeTrackerStore
@@ -49,32 +46,6 @@ struct ContentView: View {
             drainPendingDeepLinks()
             registerForWatchCommandsIfNeeded()
             store.materializeCurrentDailyTaskRecurrences()
-            // Resolve the pages' Swift view types and layout descriptors
-            // off-screen, so first switches do not pay the lazy resolution
-            // costs (~800 ms for Tasks on dense data before preheating).
-            // Tasks runs immediately (the dominant cost); the remaining pages
-            // preheat later and only while the user is still on Today, so a
-            // short background stall never interrupts an actual switch.
-            ViewTypePreheater.preheatPage(
-                destination: .tasks,
-                store: store,
-                presentationRouter: presentationRouter,
-                feedbackRouter: feedbackRouter
-            )
-            scheduleDeferredPreheat(
-                after: Self.analyticsPreheatDelay,
-                destination: .analytics,
-                store: store,
-                presentationRouter: presentationRouter,
-                feedbackRouter: feedbackRouter
-            )
-            scheduleDeferredPreheat(
-                after: Self.pomodoroPreheatDelay,
-                destination: .pomodoro,
-                store: store,
-                presentationRouter: presentationRouter,
-                feedbackRouter: feedbackRouter
-            )
         }
         .onChange(of: scenePhase) { _, phase in
             updateWatchCommandRoute(for: phase)
@@ -123,31 +94,6 @@ struct ContentView: View {
         .onChange(of: store.taskDetailNavigationGuard.hasPendingNavigation) { _, hasPendingNavigation in
             guard hasPendingNavigation == false else { return }
             drainPendingDeepLinks()
-        }
-    }
-
-    private func scheduleDeferredPreheat(
-        after delay: Duration,
-        destination: TimeTrackerStore.DesktopDestination,
-        store: TimeTrackerStore,
-        presentationRouter: AppPresentationRouter,
-        feedbackRouter: AppSceneFeedbackRouter
-    ) {
-        Task { @MainActor in
-            do {
-                try await Task.sleep(for: delay)
-            } catch {
-                return
-            }
-            // Only preheat while the user is still on Today; an active switch
-            // takes priority over background warm-up.
-            guard store.desktopDestination == .today else { return }
-            ViewTypePreheater.preheatPage(
-                destination: destination,
-                store: store,
-                presentationRouter: presentationRouter,
-                feedbackRouter: feedbackRouter
-            )
         }
     }
 

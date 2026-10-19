@@ -56,9 +56,8 @@ extension SwiftDataTimeTrackingRepository {
         let replacementID = TimerRapidRestartPolicy.replacementSegmentID(
             predecessorSegmentID: predecessor.id
         )
-        let targetReplacementID = replacementID
         let replacementDescriptor = FetchDescriptor<TimeSegment>(
-            predicate: #Predicate { $0.id == targetReplacementID }
+            predicate: #Predicate { $0.id == replacementID }
         )
         // A stable identity may already exist after partial CloudKit delivery
         // or an older restart generation. Never overwrite that independent LWW
@@ -83,7 +82,6 @@ extension SwiftDataTimeTrackingRepository {
               session.startedAt == predecessor.startedAt,
               session.endedAt == predecessorEnd,
               session.sourceRaw == predecessor.sourceRaw,
-              TimeSessionSource(rawValue: session.sourceRaw) == predecessorSource,
               hasLinkedPomodoro == false
         else {
             return nil

@@ -84,6 +84,9 @@ nonisolated struct CommittedMutationSystemProjectionMaterialization:
 /// allowing a cached generation to cross container boundaries.
 @ModelActor
 actor CommittedMutationSystemSurfaceMaterializer {
+    /// Usage ranking for compact surfaces considers this many recent days.
+    static let activityWindowDays = 90
+
     func materialize(
         now: Date = Date(),
         calendar: Calendar = .current
@@ -105,11 +108,12 @@ actor CommittedMutationSystemSurfaceMaterializer {
             rules: fetchedRecurrenceRules,
             occurrences: fetchedRecurrenceOccurrences
         )
+        let segments = try activitySegments(now: now, calendar: calendar)
+        let sessionIDs = Array(Set(segments.map(\.sessionID)))
         let sessions = try modelContext
-            .fetch(FetchDescriptor<TimeSession>())
-            .visibleDeduplicatedByID()
-        let segments = try modelContext
-            .fetch(FetchDescriptor<TimeSegment>())
+            .fetch(FetchDescriptor<TimeSession>(
+                predicate: #Predicate { sessionIDs.contains($0.id) }
+            ))
             .visibleDeduplicatedByID()
         let preferences = try modelContext
             .fetch(FetchDescriptor<SyncedPreference>())
@@ -187,6 +191,34 @@ actor CommittedMutationSystemSurfaceMaterializer {
             liveActivity: liveActivity,
             generatedAt: now
         )
+    }
+
+    /// Running segments plus every segment that ended inside the activity
+    /// window. The window covers today's totals and bounds usage ranking, so a
+    /// timer start or stop never reads the whole ledger history.
+    private func activitySegments(
+        now: Date,
+        calendar: Calendar
+    ) throws -> [TimeSegment] {
+        let windowStart = calendar.date(
+            byAdding: .day,
+            value: -Self.activityWindowDays,
+            to: calendar.startOfDay(for: now)
+        ) ?? now
+        let candidateIDs = try Array(Set(modelContext
+                .fetch(FetchDescriptor<TimeSegment>(
+                    predicate: #Predicate {
+                        ($0.endedAt ?? now) > windowStart
+                    }
+                ))
+                .map(\.id)))
+        // Re-read by ID so last-writer-wins sees every duplicate row of a
+        // candidate before tombstones are filtered.
+        return try modelContext
+            .fetch(FetchDescriptor<TimeSegment>(
+                predicate: #Predicate { candidateIDs.contains($0.id) }
+            ))
+            .visibleDeduplicatedByID()
     }
 
     private func completeRecurrenceFacts(

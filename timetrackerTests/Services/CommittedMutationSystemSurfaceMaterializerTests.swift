@@ -143,6 +143,71 @@ struct CommittedMutationSystemSurfaceMaterializerTests {
         #expect(materialization.liveActivity == .inactive)
     }
 
+    @Test
+    func usageRankingOnlyCountsTheRecentActivityWindow() async throws {
+        let context = try makeTestContext()
+        let calendar = utcCalendar()
+        let now = try #require(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 7,
+            day: 20,
+            hour: 12
+        )))
+        let staleTask = TaskNode(title: "Stale", parentID: nil, deviceID: "fixture")
+        let recentTask = TaskNode(title: "Recent", parentID: nil, deviceID: "fixture")
+        context.insert(staleTask)
+        context.insert(recentTask)
+        let windowDays = CommittedMutationSystemSurfaceMaterializer.activityWindowDays
+        let staleStart = now.addingTimeInterval(-Double(windowDays + 30) * 86400)
+        for offset in 0 ..< 3 {
+            insertClosedSegment(
+                taskID: staleTask.id,
+                startedAt: staleStart.addingTimeInterval(Double(offset) * 3600),
+                context: context
+            )
+        }
+        insertClosedSegment(
+            taskID: recentTask.id,
+            startedAt: now.addingTimeInterval(-86400),
+            context: context
+        )
+        try context.save()
+
+        let materialization = try await CommittedMutationSystemSurfaceMaterializer(
+            modelContainer: context.container
+        )
+        .materialize(now: now, calendar: calendar)
+
+        #expect(materialization.watchSnapshot.recentTasks.map(\.taskID) == [
+            recentTask.id,
+            staleTask.id,
+        ])
+        #expect(materialization.widgetSnapshot.recentTasks.first?.taskID == recentTask.id)
+        #expect(materialization.widgetSnapshot.todayGrossSeconds == 0)
+    }
+
+    private func insertClosedSegment(
+        taskID: UUID,
+        startedAt: Date,
+        context: ModelContext
+    ) {
+        let session = TimeSession(
+            taskID: taskID,
+            source: .timer,
+            deviceID: "fixture",
+            startedAt: startedAt
+        )
+        context.insert(session)
+        context.insert(TimeSegment(
+            sessionID: session.id,
+            taskID: taskID,
+            source: .timer,
+            deviceID: "fixture",
+            startedAt: startedAt,
+            endedAt: startedAt.addingTimeInterval(600)
+        ))
+    }
+
     private func utcCalendar() -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC") ?? .current

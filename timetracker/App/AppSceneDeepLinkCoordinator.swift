@@ -4,85 +4,61 @@ import Foundation
 struct AppSceneDeepLinkCoordinator {
     let store: TimeTrackerStore
     let presentationRouter: AppPresentationRouter
-    let pendingDeepLinks: PendingDeepLinkQueue
+    let pendingDeepLink: PendingDeepLink
 
     func enqueueAndDrain(_ url: URL) {
-        guard pendingDeepLinks.enqueue(url) else { return }
+        guard pendingDeepLink.set(url) else { return }
         drain()
     }
 
     func drain() {
-        guard pendingDeepLinks.urls.isEmpty == false,
-              store.taskDetailNavigationGuard.hasPendingNavigation == false
+        guard pendingDeepLink.url != nil,
+              store.taskDetailNavigationGuard.hasPendingNavigation == false,
+              let url = pendingDeepLink.take(),
+              let action = AppDeepLinkRouter().action(for: url)
         else {
             return
         }
 
-        let queuedURLs = pendingDeepLinks.drain()
-        var preparedActions = prepareActions(for: queuedURLs)
-        if presentationRouter.canPresent == false {
-            let deferredURLs = preparedActions.compactMap(\.deepLinkURL)
-            pendingDeepLinks.restoreToFront(deferredURLs)
-            preparedActions.removeAll { $0.deepLinkURL != nil }
+        switch action {
+        case .startTimer, .stopTimer:
+            // System actions run now; only the navigation waits for the guard.
+            let disposition = store.handleDeepLink(
+                url,
+                presentationRouter: presentationRouter,
+                routesAfterSystemAction: false
+            )
+            guard disposition == .handled else { return }
+            navigate {
+                store.closeTaskDetailNavigation()
+                store.desktopDestination = .today
+            }
+        case let .openTask(taskID):
+            guard store.isTaskDetailRouteValid(taskID) else { return }
+            route(url)
+        case .open, .openSettings, .startTimerPicker, .newTask:
+            route(url)
         }
-        guard preparedActions.isEmpty == false else { return }
+    }
 
+    private func route(_ url: URL) {
+        guard presentationRouter.canPresent else {
+            pendingDeepLink.restore(url)
+            return
+        }
+        navigate {
+            if store.handleDeepLink(url, presentationRouter: presentationRouter) == .deferred {
+                pendingDeepLink.restore(url)
+            }
+        }
+    }
+
+    private func navigate(_ perform: @escaping () -> Void) {
         store.taskDetailNavigationGuard.requestNavigation(
             dismissingActiveDetail: true
         ) {
-            perform(preparedActions)
+            perform()
             drain()
         }
-    }
-
-    private func prepareActions(for urls: [URL]) -> [PreparedDeepLinkAction] {
-        let router = AppDeepLinkRouter()
-        return urls.compactMap { url in
-            guard let action = router.action(for: url) else { return nil }
-            switch action {
-            case .startTimer, .stopTimer:
-                let disposition = store.handleDeepLink(
-                    url,
-                    presentationRouter: presentationRouter,
-                    routesAfterSystemAction: false
-                )
-                return disposition == .handled ? .routeToToday : nil
-            case let .openTask(taskID):
-                guard store.isTaskDetailRouteValid(taskID) else {
-                    return nil
-                }
-                return .deepLink(url)
-            case .open, .openSettings, .startTimerPicker, .newTask:
-                return .deepLink(url)
-            }
-        }
-    }
-
-    private func perform(_ actions: [PreparedDeepLinkAction]) {
-        for action in actions {
-            switch action {
-            case .routeToToday:
-                store.closeTaskDetailNavigation()
-                store.desktopDestination = .today
-            case let .deepLink(url):
-                let disposition = store.handleDeepLink(
-                    url,
-                    presentationRouter: presentationRouter
-                )
-                if disposition == .deferred {
-                    pendingDeepLinks.enqueue(url)
-                }
-            }
-        }
-    }
-}
-
-private enum PreparedDeepLinkAction {
-    case deepLink(URL)
-    case routeToToday
-
-    var deepLinkURL: URL? {
-        guard case let .deepLink(url) = self else { return nil }
-        return url
     }
 }

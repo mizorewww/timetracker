@@ -8,7 +8,7 @@ struct ContentView: View {
     @State private var store: TimeTrackerStore
     @State private var presentationRouter = AppPresentationRouter()
     @State private var feedbackRouter = AppSceneFeedbackRouter()
-    @State private var pendingDeepLinks = PendingDeepLinkQueue()
+    @State private var pendingDeepLink = PendingDeepLink()
     @State private var hasFinishedInitialConfiguration = false
     #if os(iOS) && canImport(WatchConnectivity)
     @State private var watchCommandRegistrationID: UUID?
@@ -74,13 +74,13 @@ struct ContentView: View {
         .onOpenURL { url in
             guard AppDeepLinkRouter().action(for: url) != nil else { return }
             guard AppCloudSync.allowsUserWrites, store.taskRepository != nil else {
-                pendingDeepLinks.enqueue(url)
+                pendingDeepLink.set(url)
                 return
             }
             deepLinkCoordinator.enqueueAndDrain(url)
         }
         .onDisappear {
-            pendingDeepLinks.removeAll()
+            pendingDeepLink.clear()
             hasFinishedInitialConfiguration = false
             unregisterFromWatchCommands()
         }
@@ -106,7 +106,7 @@ struct ContentView: View {
         AppSceneDeepLinkCoordinator(
             store: store,
             presentationRouter: presentationRouter,
-            pendingDeepLinks: pendingDeepLinks
+            pendingDeepLink: pendingDeepLink
         )
     }
 

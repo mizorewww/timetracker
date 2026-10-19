@@ -160,57 +160,31 @@ private enum TimerStopParameter {
     case invalid
 }
 
-/// A small, scene-local buffer for URLs received before SwiftData is ready.
-///
-/// Entries are deduplicated by semantic action, oldest-first capped, and only
-/// accepted after the same strict validation used for immediate routing.
-final class PendingDeepLinkQueue {
-    static let defaultCapacity = 16
-
-    private(set) var urls: [URL] = []
-    let capacity: Int
-
-    init(capacity: Int = PendingDeepLinkQueue.defaultCapacity) {
-        self.capacity = max(1, capacity)
-    }
+/// The one URL received before SwiftData (or the scene) could route it.
+/// A newer link replaces an older one; only validated links are kept.
+final class PendingDeepLink {
+    private(set) var url: URL?
 
     @discardableResult
-    func enqueue(
-        _ url: URL,
-        router: AppDeepLinkRouter = AppDeepLinkRouter()
-    ) -> Bool {
-        guard let action = router.action(for: url) else { return false }
-
-        urls.removeAll { router.action(for: $0) == action }
-        if urls.count == capacity {
-            urls.removeFirst()
-        }
-        urls.append(url)
+    func set(_ url: URL) -> Bool {
+        guard AppDeepLinkRouter().action(for: url) != nil else { return false }
+        self.url = url
         return true
     }
 
-    func drain() -> [URL] {
-        let pendingURLs = urls
-        urls.removeAll(keepingCapacity: true)
-        return pendingURLs
+    func take() -> URL? {
+        defer { url = nil }
+        return url
     }
 
-    func restoreToFront(
-        _ restoredURLs: [URL],
-        router: AppDeepLinkRouter = AppDeepLinkRouter()
-    ) {
-        var restoredActions: [AppDeepLinkAction] = []
-        var mergedURLs: [URL] = []
-        for url in restoredURLs + urls {
-            guard let action = router.action(for: url),
-                  restoredActions.contains(action) == false else { continue }
-            restoredActions.append(action)
-            mergedURLs.append(url)
+    /// Puts back a link that could not run yet, unless a newer one arrived.
+    func restore(_ url: URL) {
+        if self.url == nil {
+            self.url = url
         }
-        urls = Array(mergedURLs.prefix(capacity))
     }
 
-    func removeAll() {
-        urls.removeAll(keepingCapacity: false)
+    func clear() {
+        url = nil
     }
 }

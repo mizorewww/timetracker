@@ -150,25 +150,37 @@ nonisolated extension SwiftDataTaskRepository {
         try context.saveAfterMutationStep()
     }
 
+    /// Stamps every write past all rows observed for the task, tombstones
+    /// included, so a device whose clock runs ahead cannot hide this change.
     func setCategoryAssignment(categoryID: UUID?, forRootTaskID taskID: UUID) throws {
-        let now = Date()
-        let existing = try activeCategoryAssignments(forRootTaskID: taskID)
+        let rows = try categoryAssignmentRows(forRootTaskID: taskID)
+        let mutationDate = PersistentLWWMutationDate.strictlyDominating(
+            preferred: Date(),
+            observed: rows.map(\.updatedAt)
+        )
+        // Live rows newest first: the first is reused and the rest are
+        // tombstoned so one row remains authoritative.
+        let existing = rows
+            .filter { $0.deletedAt == nil }
+            .sorted { $0.isPreferredLogicalWinner(over: $1) }
 
         guard let categoryID, try category(id: categoryID) != nil else {
             for assignment in existing {
-                markCategoryAssignmentDeleted(assignment, now: now)
+                markCategoryAssignmentDeleted(assignment, now: mutationDate)
             }
             return
         }
 
         if let winner = existing.first {
             winner.categoryID = categoryID
-            winner.markMutated(at: now, deviceID: deviceID)
+            winner.markMutated(at: mutationDate, deviceID: deviceID)
             for duplicate in existing.dropFirst() {
-                markCategoryAssignmentDeleted(duplicate, now: now)
+                markCategoryAssignmentDeleted(duplicate, now: mutationDate)
             }
         } else {
-            context.insert(TaskCategoryAssignment(taskID: taskID, categoryID: categoryID, deviceID: deviceID))
+            let assignment = TaskCategoryAssignment(taskID: taskID, categoryID: categoryID, deviceID: deviceID)
+            assignment.updatedAt = mutationDate
+            context.insert(assignment)
         }
     }
 
@@ -178,14 +190,6 @@ nonisolated extension SwiftDataTaskRepository {
             predicate: #Predicate { $0.taskID == rootTaskID }
         )
         return try context.fetch(descriptor).deduplicatedByID()
-    }
-
-    /// Rows still live for the task, newest first. Setting a category reuses
-    /// the first and tombstones the rest so one row remains authoritative.
-    private func activeCategoryAssignments(forRootTaskID taskID: UUID) throws -> [TaskCategoryAssignment] {
-        try categoryAssignmentRows(forRootTaskID: taskID)
-            .filter { $0.deletedAt == nil }
-            .sorted { $0.isPreferredLogicalWinner(over: $1) }
     }
 
     private func markCategoryAssignmentDeleted(_ assignment: TaskCategoryAssignment, now: Date) {

@@ -140,7 +140,7 @@ final class TimeTrackerStore {
     /// Snapshot loads still aggregating; see
     /// TimeTrackerStore+AnalyticsLoading.swift.
     @ObservationIgnored var analyticsSnapshotLoads:
-        [AnalyticsSnapshotLoadKey: Task<AnalyticsSnapshot?, Never>] = [:]
+        [AnalyticsSnapshotLoadKey: Task<AnalyticsSnapshot, Never>] = [:]
     var analyticsRevision: UInt = 0
     /// Today page read model; see TimeTrackerStore+TodayReadModels.swift.
     @ObservationIgnored var todayReadModelCache = TodayReadModelCache()

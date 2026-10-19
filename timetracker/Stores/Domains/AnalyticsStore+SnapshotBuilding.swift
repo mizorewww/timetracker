@@ -1,13 +1,11 @@
 import Foundation
 
 nonisolated extension AnalyticsStore {
-    /// Aggregates `input` off the main actor; nil when the caller's task was
-    /// cancelled. The aggregation reads only value records, never the cache.
+    /// Aggregates `input` off the main actor. The aggregation reads only
+    /// value records, never the cache.
     @concurrent
-    static func buildSnapshot(_ input: AnalyticsSnapshotInput) async -> AnalyticsSnapshot? {
-        guard Task.isCancelled == false else { return nil }
-        let snapshot = AnalyticsStore().snapshot(input)
-        return Task.isCancelled ? nil : snapshot
+    static func buildSnapshot(_ input: AnalyticsSnapshotInput) async -> AnalyticsSnapshot {
+        AnalyticsStore().snapshot(input)
     }
 
     func snapshot(_ input: AnalyticsSnapshotInput) -> AnalyticsSnapshot {

@@ -42,7 +42,7 @@ extension TimeTrackerStore {
         )
         let snapshot = await load.value
         analyticsSnapshotLoads[loadKey] = nil
-        guard let snapshot, analyticsRevision == revision else {
+        guard analyticsRevision == revision else {
             return nil
         }
         analyticsDomainStore.storeSnapshot(snapshot, evaluationKey: evaluationKey)
@@ -54,7 +54,7 @@ extension TimeTrackerStore {
         evaluation: AnalyticsPeriodEvaluation,
         calendar: Calendar,
         key: AnalyticsSnapshotLoadKey
-    ) -> Task<AnalyticsSnapshot?, Never> {
+    ) -> Task<AnalyticsSnapshot, Never> {
         let segments = analyticsSegments(
             for: range,
             evaluation: evaluation,

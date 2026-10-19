@@ -28,7 +28,7 @@ struct AppRootView: View {
             case .compact:
                 CompactShellRootView(
                     store: store,
-                    requestOpenSettings: presentSettings
+                    requestOpenSettings: { presentationRouter.present(.settings) }
                 )
             case .regular:
                 RegularShellRootView(store: store)
@@ -46,14 +46,10 @@ struct AppRootView: View {
         } action: { shell in
             measuredShell = shell
         }
-    }
-
-    private func presentSettings() -> Bool {
         #if os(macOS)
-        openSettings()
-        return true
-        #else
-        return presentationRouter.present(.settings)
+        .onAppear {
+            presentationRouter.openNativeSettings = { openSettings() }
+        }
         #endif
     }
 }

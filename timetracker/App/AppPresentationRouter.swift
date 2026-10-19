@@ -50,6 +50,11 @@ struct SingleTaskCategoryPickerPresentation {
 @Observable
 final class AppPresentationRouter {
     var sheet: AppPresentation?
+    #if os(macOS)
+    /// Settings is a native window on macOS, not a sheet. Set by the root view
+    /// from the `openSettings` environment action.
+    @ObservationIgnored var openNativeSettings: (() -> Void)?
+    #endif
 
     var canPresent: Bool {
         sheet == nil
@@ -57,6 +62,12 @@ final class AppPresentationRouter {
 
     @discardableResult
     func present(_ content: AppPresentation.Content) -> Bool {
+        #if os(macOS)
+        if case .settings = content, let openNativeSettings {
+            openNativeSettings()
+            return true
+        }
+        #endif
         guard canPresent else { return false }
         sheet = AppPresentation(content: content)
         return true

@@ -57,7 +57,7 @@ struct TodayHomeContent {
             if titleComparison != .orderedSame {
                 return titleComparison == .orderedAscending
             }
-            return lhs.id.uuidString < rhs.id.uuidString
+            return lhs.id < rhs.id
         }
     }
 }

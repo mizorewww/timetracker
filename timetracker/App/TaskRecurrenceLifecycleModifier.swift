@@ -61,10 +61,11 @@ private struct TaskRecurrenceLifecycleModifier: ViewModifier {
             isActive: scenePhase == .active,
             clockRevision: clockRevision,
             taskReadModelRevision: store.taskReadModelRevision,
-            ruleMutationIDs: store.taskRecurrenceRules
-                .filter(\.isEnabled)
-                .sorted { $0.id.uuidString < $1.id.uuidString }
-                .map(\.clientMutationID)
+            ruleMutationIDs: Set(
+                store.taskRecurrenceRules
+                    .filter(\.isEnabled)
+                    .map(\.clientMutationID)
+            )
         )
     }
 
@@ -116,5 +117,5 @@ private struct TaskRecurrenceScheduleIdentity: Hashable {
     let isActive: Bool
     let clockRevision: UUID
     let taskReadModelRevision: UInt64
-    let ruleMutationIDs: [UUID]
+    let ruleMutationIDs: Set<UUID>
 }

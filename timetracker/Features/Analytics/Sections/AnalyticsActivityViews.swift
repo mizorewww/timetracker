@@ -25,7 +25,7 @@ struct TodayActivityContent: View {
         }
         .sorted { lhs, rhs in
             if lhs.seconds == rhs.seconds {
-                return lhs.taskID.uuidString < rhs.taskID.uuidString
+                return lhs.taskID < rhs.taskID
             }
             return lhs.seconds > rhs.seconds
         }

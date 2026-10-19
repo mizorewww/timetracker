@@ -19,7 +19,7 @@ nonisolated struct LiveActivityProjectionService {
                 if $0.startedAt != $1.startedAt {
                     return $0.startedAt < $1.startedAt
                 }
-                return $0.id.uuidString < $1.id.uuidString
+                return $0.id < $1.id
             }
     }
 

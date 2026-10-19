@@ -1,8 +1,24 @@
+import Foundation
 import SwiftData
 
-nonisolated enum TimeTrackerHistoryAuthor: String, Sendable {
-    case localMutation = "me.mezorewww.timetracker.local-mutation.v1"
-    case bootstrapMaintenance = "me.mezorewww.timetracker.bootstrap-maintenance.v1"
+nonisolated enum TimeTrackerHistoryAuthor: Sendable {
+    case localMutation
+    case bootstrapMaintenance
+
+    /// Store mutations carry this process's identity so the remote-change
+    /// catch-up can skip commits whose scenes already refreshed in-process
+    /// (`StoreMutationBroadcaster`), while widget, Shortcuts, Watch, and
+    /// CloudKit transactions still refresh.
+    private static let processInstanceID = UUID().uuidString
+
+    var transactionAuthor: String {
+        switch self {
+        case .localMutation:
+            "me.mezorewww.timetracker.local-mutation.v1.\(Self.processInstanceID)"
+        case .bootstrapMaintenance:
+            "me.mezorewww.timetracker.bootstrap-maintenance.v1"
+        }
+    }
 }
 
 private nonisolated enum ModelContextMutationState {
@@ -17,7 +33,7 @@ nonisolated extension ModelContext {
         _ operation: () throws -> Result
     ) rethrows -> Result {
         let previousAuthor = author
-        author = historyAuthor.rawValue
+        author = historyAuthor.transactionAuthor
         defer { author = previousAuthor }
         return try operation()
     }

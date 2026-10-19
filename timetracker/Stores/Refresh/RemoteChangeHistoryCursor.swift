@@ -3,7 +3,9 @@ import SwiftData
 
 /// Reads persistent history since the previous remote catch-up so a CloudKit
 /// import or another process's commit refreshes only the read models whose
-/// models actually changed.
+/// models actually changed. This process's own store mutations are skipped:
+/// every scene in the process already refreshed through the mutating store or
+/// `StoreMutationBroadcaster`.
 @MainActor
 final class RemoteChangeHistoryCursor {
     private var lastToken: DefaultHistoryToken?
@@ -38,8 +40,12 @@ final class RemoteChangeHistoryCursor {
         if let newestToken = transactions.map(\.token).max() {
             lastToken = newestToken
         }
+        let ownAuthor = TimeTrackerHistoryAuthor.localMutation.transactionAuthor
         let entityNames = Set(
-            transactions.lazy.flatMap(\.changes).map(\.changedPersistentIdentifier.entityName)
+            transactions.lazy
+                .filter { $0.author != ownAuthor }
+                .flatMap(\.changes)
+                .map(\.changedPersistentIdentifier.entityName)
         )
         return Self.scopes(forChangedEntityNames: entityNames)
     }

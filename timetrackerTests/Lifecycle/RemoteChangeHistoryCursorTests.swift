@@ -24,6 +24,25 @@ struct RemoteChangeHistoryCursorTests {
     }
 
     @Test
+    func catchUpSkipsThisProcessesStoreMutationsButNotOtherWriters() throws {
+        let container = try makeFileBackedContainer()
+        let readerContext = ModelContext(container)
+        let cursor = RemoteChangeHistoryCursor(baselineDate: Date())
+
+        let localContext = ModelContext(container)
+        try localContext.performAtomicMutation(author: .localMutation) {
+            localContext.insert(CountdownEvent(title: "Local", date: Date(), deviceID: "local"))
+        }
+        #expect(cursor.scopesSinceLastCatchUp(in: readerContext).isEmpty)
+
+        let otherProcessContext = ModelContext(container)
+        otherProcessContext.author = "me.mezorewww.timetracker.local-mutation.v1.other-process"
+        otherProcessContext.insert(SyncedPreference(key: "Example", valueJSON: "1", deviceID: "widget"))
+        try otherProcessContext.save()
+        #expect(cursor.scopesSinceLastCatchUp(in: readerContext) == [.preferences])
+    }
+
+    @Test
     func everyCurrentModelMapsToANarrowerScopeThanFullRefresh() {
         for model in TimeTrackerModelRegistry.currentModels {
             let scopes = RemoteChangeHistoryCursor.scopes(

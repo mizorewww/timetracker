@@ -224,7 +224,7 @@ extension TimeTrackerStore {
             now: interval.end
         )
         let daily = analyticsDomainStore.dailyBreakdown(
-            segments: AnalyticsSegmentRecord.records(segments),
+            segments: segments.map(AnalyticsSegmentRecord.init),
             range: .week,
             interval: interval,
             evaluatedAt: evaluation.cutoff,

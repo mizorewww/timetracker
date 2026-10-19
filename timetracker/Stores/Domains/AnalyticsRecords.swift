@@ -1,9 +1,9 @@
 import Foundation
 
 /// Value copies of the SwiftData rows analytics reads. They are captured on
-/// the main actor, already deduplicated with the models' last-write-wins
-/// order, so the aggregation can run off the main actor without touching a
-/// persistent model.
+/// the main actor from the store's read models, which already hold one
+/// last-write-wins row per ID, so the aggregation can run off the main actor
+/// without touching a persistent model or deduplicating again.
 nonisolated struct AnalyticsSegmentRecord: PersistentUUIDModel, Sendable {
     let id: UUID
     let sessionID: UUID
@@ -28,11 +28,6 @@ nonisolated struct AnalyticsSegmentRecord: PersistentUUIDModel, Sendable {
         updatedAt = segment.updatedAt
         deletedAt = segment.deletedAt
         deviceID = segment.deviceID
-    }
-
-    @MainActor
-    static func records(_ segments: [TimeSegment]) -> [AnalyticsSegmentRecord] {
-        segments.deduplicatedByID().map(AnalyticsSegmentRecord.init)
     }
 }
 
@@ -59,11 +54,6 @@ nonisolated struct AnalyticsTaskRecord: PersistentUUIDModel, Sendable {
         deletedAt = task.deletedAt
         deviceID = task.deviceID
     }
-
-    @MainActor
-    static func records(_ tasks: [TaskNode]) -> [AnalyticsTaskRecord] {
-        tasks.deduplicatedByID().map(AnalyticsTaskRecord.init)
-    }
 }
 
 nonisolated struct AnalyticsSessionRecord: PersistentUUIDModel, Sendable {
@@ -86,11 +76,6 @@ nonisolated struct AnalyticsSessionRecord: PersistentUUIDModel, Sendable {
         updatedAt = session.updatedAt
         deletedAt = session.deletedAt
         deviceID = session.deviceID
-    }
-
-    @MainActor
-    static func records(_ sessions: [TimeSession]) -> [AnalyticsSessionRecord] {
-        sessions.deduplicatedByID().map(AnalyticsSessionRecord.init)
     }
 }
 
@@ -152,14 +137,13 @@ nonisolated struct AnalyticsSnapshotInput: Sendable {
         self.period = period
         self.evaluatedAt = evaluatedAt
         self.calendar = calendar
-        self.tasks = AnalyticsTaskRecord.records(tasks)
-        self.taskCategories = taskCategories.deduplicatedByID().map(AnalyticsCategoryRecord.init)
+        self.tasks = tasks.map(AnalyticsTaskRecord.init)
+        self.taskCategories = taskCategories.map(AnalyticsCategoryRecord.init)
         categoryIDByRootTaskID = taskCategoryAssignments
-            .deduplicatedByID()
             .logicalWinnersByTaskID()
             .compactMapValues { $0.deletedAt == nil ? $0.categoryID : nil }
-        self.segments = AnalyticsSegmentRecord.records(segments)
-        self.sessions = AnalyticsSessionRecord.records(sessions)
+        self.segments = segments.map(AnalyticsSegmentRecord.init)
+        self.sessions = sessions.map(AnalyticsSessionRecord.init)
         self.cancelledPomodoroSessionIDs = cancelledPomodoroSessionIDs
         self.taskPathByID = taskPathByID
         self.taskParentPathByID = taskParentPathByID

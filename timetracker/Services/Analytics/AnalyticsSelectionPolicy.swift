@@ -38,7 +38,7 @@ nonisolated enum AnalyticsSelectionPolicy {
         sessions: [AnalyticsSessionRecord],
         restrictingTo taskIDs: Set<UUID>? = nil
     ) -> [UUID: String] {
-        let latestSessionByTaskID = sessions.deduplicatedByID().reduce(
+        let latestSessionByTaskID = sessions.reduce(
             into: [UUID: AnalyticsSessionRecord]()
         ) { result, session in
             guard session.deletedAt == nil,

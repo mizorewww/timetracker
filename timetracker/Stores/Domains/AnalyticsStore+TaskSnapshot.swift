@@ -15,14 +15,13 @@ nonisolated extension AnalyticsStore {
     ) -> TaskAnalyticsSnapshot {
         let interval = analyticsInterval(for: range, now: now, calendar: calendar)
             ?? DateInterval(start: .distantPast, end: now)
-        let canonicalSegments = segments.deduplicatedByID()
-        let filtered = canonicalSegments.filter {
+        let filtered = segments.filter {
             taskIDs.contains($0.taskID) && segmentOverlaps($0, interval: interval, now: now)
         }
         let bounded = boundedSegments(filtered, in: interval, taskIDs: taskIDs, now: now)
         let overview = overview(items: bounded)
         let comparison = comparison(
-            segments: canonicalSegments,
+            segments: segments,
             range: range,
             taskIDs: taskIDs,
             now: now,
@@ -91,7 +90,7 @@ nonisolated extension AnalyticsStore {
             ),
             daily: daily,
             recentRecords: recentRecords(
-                segments: recentSegments ?? canonicalSegments,
+                segments: recentSegments ?? segments,
                 sessions: sessions,
                 tasks: tasks,
                 taskIDs: taskIDs,

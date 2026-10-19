@@ -28,7 +28,7 @@ nonisolated struct AnalyticsVisualSnapshotInput: Sendable {
         self.period = period
         self.evaluatedAt = evaluatedAt
         self.calendar = calendar
-        self.segments = segments.deduplicatedByID().map(AnalyticsVisualSegment.init)
+        self.segments = segments.map(AnalyticsVisualSegment.init)
         taskByID = tasks.latestByID().reduce(into: [:]) { result, pair in
             result[pair.key] = AnalyticsVisualTask(
                 title: pair.value.title,
@@ -38,7 +38,7 @@ nonisolated struct AnalyticsVisualSnapshotInput: Sendable {
             )
         }
         timelineFallbackTitleByTaskID = Dictionary(
-            grouping: sessions.deduplicatedByID(),
+            grouping: sessions,
             by: \.taskID
         ).compactMapValues { $0.first?.titleSnapshot }
         overlapFallbackTitleByTaskID = AnalyticsSelectionPolicy.latestSessionTitleByTaskID(

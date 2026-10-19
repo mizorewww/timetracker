@@ -287,7 +287,6 @@ extension TimeTrackerStore {
     private func rebuildTaskCategoryIndexes() {
         taskCategoryByID = taskCategories.visibleDeduplicatedByID().latestByID()
         let logicalWinners = taskCategoryAssignments
-            .deduplicatedByID()
             .logicalWinnersByTaskID()
         taskCategoryAssignmentByRootTaskID = logicalWinners.filter {
             $0.value.deletedAt == nil

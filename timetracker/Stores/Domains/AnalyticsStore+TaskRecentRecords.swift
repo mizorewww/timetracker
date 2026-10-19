@@ -10,8 +10,8 @@ nonisolated extension AnalyticsStore {
         now: Date
     ) -> [TaskRecentRecordPoint] {
         let taskByID = tasks.latestByID()
-        let sessionByID = Dictionary(uniqueKeysWithValues: sessions.deduplicatedByID().map { ($0.id, $0) })
-        return segments.deduplicatedByID()
+        let sessionByID = Dictionary(uniqueKeysWithValues: sessions.map { ($0.id, $0) })
+        return segments
             .filter { taskIDs.contains($0.taskID) && $0.deletedAt == nil }
             .sorted {
                 if $0.startedAt != $1.startedAt {

@@ -39,33 +39,32 @@ nonisolated extension AnalyticsStore {
             return emptyComparison(at: cutoff)
         }
 
-        let canonicalSegments = segments.deduplicatedByID()
         return AnalyticsComparison(
             window: window,
             currentGrossSeconds: seconds(
                 in: window.current,
-                segments: canonicalSegments,
+                segments: segments,
                 taskIDs: taskIDs,
                 mode: .gross,
                 now: window.current.end
             ),
             previousGrossSeconds: seconds(
                 in: window.previous,
-                segments: canonicalSegments,
+                segments: segments,
                 taskIDs: taskIDs,
                 mode: .gross,
                 now: window.previous.end
             ),
             currentWallSeconds: seconds(
                 in: window.current,
-                segments: canonicalSegments,
+                segments: segments,
                 taskIDs: taskIDs,
                 mode: .wallClock,
                 now: window.current.end
             ),
             previousWallSeconds: seconds(
                 in: window.previous,
-                segments: canonicalSegments,
+                segments: segments,
                 taskIDs: taskIDs,
                 mode: .wallClock,
                 now: window.previous.end

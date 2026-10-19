@@ -59,7 +59,7 @@ nonisolated extension AnalyticsStore {
         calendar: Calendar
     ) -> AnalyticsSnapshot {
         let boundedRangeSegments = boundedSegments(
-            rangeSegments.deduplicatedByID(),
+            rangeSegments,
             in: period,
             now: cutoff
         )

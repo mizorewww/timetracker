@@ -35,8 +35,8 @@ struct AnalyticsTimelineSnapshotService {
         now: Date
     ) -> [TimelinePresentationSeed] {
         let taskByID = tasks.latestByID()
-        let sessionsByTaskID = Dictionary(grouping: sessions.deduplicatedByID(), by: \.taskID)
-        return segments.visibleDeduplicatedByID().compactMap { segment -> TimelinePresentationSeed? in
+        let sessionsByTaskID = Dictionary(grouping: sessions, by: \.taskID)
+        return segments.compactMap { segment -> TimelinePresentationSeed? in
             guard segment.deletedAt == nil,
                   let interval = TrackedTimePolicy.interval(
                       startedAt: segment.startedAt,

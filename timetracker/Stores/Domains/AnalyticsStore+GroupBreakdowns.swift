@@ -10,7 +10,7 @@ nonisolated extension AnalyticsStore {
         evaluatedAt cutoff: Date
     ) -> [AnalyticsGroupBreakdownPoint] {
         let taskByID = tasks.latestByID()
-        let sessionsByTaskID = Dictionary(grouping: sessions.deduplicatedByID(), by: \.taskID)
+        let sessionsByTaskID = Dictionary(grouping: sessions, by: \.taskID)
         let bounded = boundedSegments(segments, in: interval, now: cutoff)
         let grouped = Dictionary(grouping: bounded) { item -> String in
             guard let task = taskByID[item.segment.taskID],

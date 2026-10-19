@@ -9,8 +9,7 @@ enum AppDeepLinkHandlingDisposition: Equatable {
 extension TimeTrackerStore {
     func handleDeepLink(
         _ url: URL,
-        presentationRouter: AppPresentationRouter,
-        routesAfterSystemAction: Bool = true
+        presentationRouter: AppPresentationRouter
     ) -> AppDeepLinkHandlingDisposition {
         let router = AppDeepLinkRouter()
         guard let action = router.action(for: url) else { return .rejected }
@@ -45,10 +44,8 @@ extension TimeTrackerStore {
             }) == true else {
                 return .rejected
             }
-            if routesAfterSystemAction {
-                closeTaskDetailNavigation()
-                desktopDestination = .today
-            }
+            closeTaskDetailNavigation()
+            desktopDestination = .today
             return .handled
         case let .stopTimer(target):
             let didStop = presentationRouter.feedbackRouter.perform {
@@ -64,10 +61,8 @@ extension TimeTrackerStore {
             guard didStop == true else {
                 return .rejected
             }
-            if routesAfterSystemAction {
-                closeTaskDetailNavigation()
-                desktopDestination = .today
-            }
+            closeTaskDetailNavigation()
+            desktopDestination = .today
             return .handled
         case .newTask:
             guard presentationRouter.presentNewTask(

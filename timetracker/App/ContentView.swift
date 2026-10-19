@@ -89,7 +89,6 @@ struct ContentView: View {
         }
         .taskRecurrenceLifecycle(store: store, isConfigured: hasFinishedInitialConfiguration)
         .onOpenURL { url in
-            guard AppDeepLinkRouter().action(for: url) != nil else { return }
             guard AppCloudSync.allowsUserWrites, store.taskRepository != nil else {
                 pendingDeepLink.set(url)
                 return

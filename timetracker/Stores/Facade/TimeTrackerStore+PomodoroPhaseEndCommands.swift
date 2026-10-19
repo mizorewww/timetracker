@@ -42,14 +42,29 @@ extension TimeTrackerStore {
     }
 
     /// Lightweight convergence for page-appear paths: re-fetches pomodoro
-    /// runs and the active/today segment read models only, without touching
-    /// analytics revisions, rollups, or the timeline snapshot cache. The full
-    /// refresh pipeline still runs for actual mutations.
+    /// runs and the active/today segment read models only. Rollups consume
+    /// the resulting segment deltas; analytics caches are invalidated only
+    /// when another writer actually changed a visible segment.
     func convergeLiveTimerReadModels() throws {
         guard let timeRepository, let pomodoroRepository else { return }
         pomodoroRuns = try pomodoroRepository.runs()
+        ledgerDomainStore.resetRollupChanges()
         try ledgerDomainStore.refreshVisible(repository: timeRepository)
         try refreshLedgerRelationshipVisibility()
+        let segmentChanges = ledgerDomainStore.rollupChanges
+        if segmentChanges.isEmpty == false {
+            rollupDomainStore.refreshAffected(
+                directTaskIDs: [],
+                explicitAncestorTaskIDs: [],
+                segmentChanges: segmentChanges,
+                checklistItemsByTaskID: [:],
+                forecastEligibleTaskIDs: forecastEligibleTaskIDs(),
+                now: Date()
+            )
+        }
+        if segmentChanges.contains(where: { $0.before != $0.after }) {
+            refreshAnalyticsDomain(plan: StoreRefreshPlan(scopes: [.analytics]))
+        }
         schedulePomodoroReconciliation(now: Date())
         // This path changes the visible ledger without bumping
         // analyticsRevision, so the revision-keyed Today caches would serve

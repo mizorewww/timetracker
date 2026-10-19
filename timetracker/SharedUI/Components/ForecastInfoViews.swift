@@ -12,7 +12,7 @@ struct ForecastInfoButton: View {
     }
 }
 
-struct ForecastInfoView: View {
+private struct ForecastInfoView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {

@@ -47,9 +47,7 @@ extension TimeTrackerStore {
         let descriptor = FetchDescriptor<ChecklistItemVisual>(
             predicate: #Predicate { requestedItemIDs.contains($0.checklistItemID) }
         )
-        let all = try modelContext.fetch(descriptor)
-            .deduplicatedByID()
-            .filter { checklistItemIDs.contains($0.checklistItemID) }
+        let all = try modelContext.fetch(descriptor).deduplicatedByID()
         return all.logicalWinnersByChecklistItemID().values
             .filter { $0.deletedAt == nil }
     }

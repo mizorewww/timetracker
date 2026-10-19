@@ -31,7 +31,7 @@ extension AnalyticsStore {
     ) -> [AnalyticsGroupBreakdownPoint] {
         let taskByID = tasks.latestByID()
         let sessionsByTaskID = Dictionary(grouping: sessions.deduplicatedByID(), by: \.taskID)
-        let bounded = boundedSegments(segments.deduplicatedByID(), in: interval, now: cutoff)
+        let bounded = boundedSegments(segments, in: interval, now: cutoff)
         let grouped = Dictionary(grouping: bounded) { item -> String in
             guard let task = taskByID[item.segment.taskID],
                   let root = rootTask(for: task, taskByID: taskByID)
@@ -100,7 +100,7 @@ extension AnalyticsStore {
             guard assignment.deletedAt == nil else { return nil }
             return assignment.categoryID
         }
-        let bounded = boundedSegments(segments.deduplicatedByID(), in: interval, now: cutoff)
+        let bounded = boundedSegments(segments, in: interval, now: cutoff)
         let grouped = Dictionary(grouping: bounded) { item -> String in
             guard let task = taskByID[item.segment.taskID],
                   let root = rootTask(for: task, taskByID: taskByID),

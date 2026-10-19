@@ -80,18 +80,8 @@ extension TimeTrackerStore {
         events: Set<StoreDomainEvent>,
         referencedTaskIDs: Set<UUID>
     ) {
-        var missingTaskRefreshError: Error?
-        if referencedTaskIDs.contains(where: { taskByID[$0] == nil }) {
-            do {
-                try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
-            } catch {
-                missingTaskRefreshError = error
-            }
-        }
+        refreshTasksIfAnyAreMissing(referencedTaskIDs)
         finishStoreScopedMutation(events: events)
-        if let missingTaskRefreshError {
-            logReadModelRefreshFailure(missingTaskRefreshError)
-        }
     }
 
     func refreshStoreScopedPomodoroAdmissionReadModels() {

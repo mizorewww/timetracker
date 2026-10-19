@@ -111,15 +111,7 @@ extension TimeTrackerStore {
     func finishStoreScopedTimerCommand(
         _ outcome: StoreScopedTimerCommandOutcome
     ) -> Bool {
-        var missingTaskRefreshError: Error?
-        if outcome.referencedTaskIDs.contains(where: { taskByID[$0] == nil }) {
-            do {
-                try refresh(plan: StoreRefreshPlan(scopes: [.tasks]))
-            } catch {
-                missingTaskRefreshError = error
-            }
-        }
-
+        refreshTasksIfAnyAreMissing(outcome.referencedTaskIDs)
         if outcome.didMutate {
             finishCommittedMutation(events: outcome.events)
         } else {
@@ -133,10 +125,15 @@ extension TimeTrackerStore {
                 logReadModelRefreshFailure(error)
             }
         }
-        if let missingTaskRefreshError {
-            logReadModelRefreshFailure(missingTaskRefreshError)
-        }
         return outcome.subjectSegmentID != nil
+    }
+
+    /// A command that committed in a fresh context can reference a task this
+    /// scene has not loaded yet (for example one created by another writer).
+    /// Load tasks before the mutation refresh so its read models resolve them.
+    func refreshTasksIfAnyAreMissing(_ taskIDs: Set<UUID>) {
+        guard taskIDs.contains(where: { taskByID[$0] == nil }) else { return }
+        refreshLoggingFailure(plan: StoreRefreshPlan(scopes: [.tasks]))
     }
 
     /// Refreshes the scene and schedules projection work for a mutation that

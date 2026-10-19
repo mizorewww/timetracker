@@ -14,15 +14,14 @@ struct TaskStore {
 
     mutating func refresh(repository: SwiftDataTaskRepository) throws {
         tasks = try repository.allNodes()
-        categories = try repository.categories().deduplicatedByID()
-        categoryAssignments = try repository.categoryAssignments().deduplicatedByID()
+        categories = try repository.categories()
+        categoryAssignments = try repository.categoryAssignments()
         try refreshAllTaskProgress(repository: repository)
     }
 
     mutating func refreshTaskScoped(taskIDs: Set<UUID>, repository: SwiftDataTaskRepository) throws {
         guard taskIDs.isEmpty == false else { return }
         var fetchedTasks = try repository.tasks(ids: taskIDs)
-            .deduplicatedByID()
         let visibleScopeIDs = Set(fetchedTasks.map(\.id))
         let cachedRelatedTaskIDs = Set(
             recurrenceOccurrences.lazy.filter {
@@ -54,8 +53,8 @@ struct TaskStore {
         tasks = sortedTasks(
             (tasks.filter { replacedTaskIDs.contains($0.id) == false } + fetchedTasks).deduplicatedByID()
         )
-        categories = try repository.categories().deduplicatedByID()
-        categoryAssignments = try repository.categoryAssignments().deduplicatedByID()
+        categories = try repository.categories()
+        categoryAssignments = try repository.categoryAssignments()
         try refreshTaskProgress(
             queryTaskIDs: scopedTaskIDs,
             replacingTaskIDs: replacedTaskIDs,
@@ -67,13 +66,9 @@ struct TaskStore {
         repository: SwiftDataTaskRepository
     ) throws {
         recurrenceRules = try repository.taskRecurrenceRules()
-            .deduplicatedByID()
         recurrenceOccurrences = try repository.taskRecurrenceOccurrences()
-            .deduplicatedByID()
         quantityGoals = try repository.taskQuantityGoals()
-            .deduplicatedByID()
         quantityEntries = try repository.taskQuantityEntries()
-            .deduplicatedByID()
         hideIncompleteTaskProgressRelationships()
     }
 
@@ -106,8 +101,8 @@ struct TaskStore {
             } +
                 fetchedOccurrences
         ).deduplicatedByID()
-        quantityGoals = fetchedGoals.deduplicatedByID()
-        quantityEntries = fetchedEntries.deduplicatedByID()
+        quantityGoals = fetchedGoals
+        quantityEntries = fetchedEntries
         hideIncompleteTaskProgressRelationships()
     }
 

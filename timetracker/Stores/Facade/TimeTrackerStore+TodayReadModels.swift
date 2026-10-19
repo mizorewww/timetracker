@@ -144,7 +144,6 @@ extension TimeTrackerStore {
 
         let combinedInterval = DateInterval(start: previousInterval.start, end: todayInterval.end)
         let segments = visibleSegments(overlapping: combinedInterval, now: now)
-            .visibleDeduplicatedByID()
         var todayGrossSeconds = 0
         var previousGrossSeconds = 0
         var todayIntervals: [DateInterval] = []
@@ -208,7 +207,6 @@ extension TimeTrackerStore {
             overlapping: interval,
             now: interval.end
         )
-        .visibleDeduplicatedByID()
         let daily = analyticsDomainStore.dailyBreakdown(
             segments: segments,
             range: .week,

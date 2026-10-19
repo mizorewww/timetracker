@@ -45,11 +45,12 @@ extension TimeTrackerStore {
         inboxSuggestionFailureByItemID[item.id] = nil
     }
 
-    func rebuildInboxSuggestionIndexes() {
-        inboxSuggestionByItemID = InboxSuggestionIdentityService.index(
-            items: inboxItems,
-            suggestions: inboxSuggestions
-        )
+    var inboxSuggestionByItemID: [UUID: InboxSuggestion] {
+        inboxDomainStore.suggestionByItemID
+    }
+
+    var inboxItemReadModelByItemID: [UUID: InboxItemReadModel] {
+        inboxDomainStore.itemReadModelByItemID
     }
 
     private func inboxSort(_ lhs: InboxItem, _ rhs: InboxItem) -> Bool {

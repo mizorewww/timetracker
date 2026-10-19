@@ -117,10 +117,6 @@ extension TimeTrackerStore {
                 suggestions: fetchInboxSuggestions(inboxItemIDs: plan.affectedInboxItemIDs)
             )
         }
-        inboxItemReadModelByItemID = Dictionary(
-            uniqueKeysWithValues: inboxDomainStore.itemReadModels.map { ($0.item.id, $0) }
-        )
-        rebuildInboxSuggestionIndexes()
         cancelInvalidInboxSuggestionRequests()
     }
 

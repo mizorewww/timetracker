@@ -3,6 +3,8 @@ import Foundation
 struct InboxStore {
     private(set) var itemReadModels: [InboxItemReadModel] = []
     private(set) var suggestions: [InboxSuggestion] = []
+    private(set) var itemReadModelByItemID: [UUID: InboxItemReadModel] = [:]
+    private(set) var suggestionByItemID: [UUID: InboxSuggestion] = [:]
 
     var items: [InboxItem] {
         itemReadModels.map(\.item)
@@ -14,6 +16,10 @@ struct InboxStore {
     ) {
         self.itemReadModels = sortedItemReadModels(itemReadModels)
         self.suggestions = sortedSuggestions(suggestions.deduplicatedByID())
+        itemReadModelByItemID = Dictionary(
+            uniqueKeysWithValues: self.itemReadModels.map { ($0.item.id, $0) }
+        )
+        rebuildSuggestionIndex()
     }
 
     mutating func refreshSuggestionScoped(
@@ -23,6 +29,14 @@ struct InboxStore {
         guard inboxItemIDs.isEmpty == false else { return }
         suggestions = sortedSuggestions(
             (suggestions.filter { inboxItemIDs.contains($0.inboxItemID) == false } + fetchedSuggestions).deduplicatedByID()
+        )
+        rebuildSuggestionIndex()
+    }
+
+    private mutating func rebuildSuggestionIndex() {
+        suggestionByItemID = InboxSuggestionIdentityService.index(
+            items: items,
+            suggestions: suggestions
         )
     }
 

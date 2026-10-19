@@ -257,8 +257,6 @@ final class TimeTrackerStore {
         (ledgerRevision: UInt64, existingTaskIDs: Set<UUID>)?
     @ObservationIgnored var existingTaskIDs: Set<UUID> = []
     @ObservationIgnored var trackableTasksCache: (revision: UInt64, tasks: [TaskNode])?
-    var inboxSuggestionByItemID: [UUID: InboxSuggestion] = [:]
-    var inboxItemReadModelByItemID: [UUID: InboxItemReadModel] = [:]
     @ObservationIgnored var scheduledSyncRefreshTask: Task<Void, Never>?
     @ObservationIgnored var pendingSyncActivityReason: SyncRefreshReason?
     @ObservationIgnored let remoteChangeHistory = RemoteChangeHistoryCursor()

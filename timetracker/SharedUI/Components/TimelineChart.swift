@@ -142,11 +142,12 @@ extension TimelineChart {
                                 .timelineChartLayoutRole(.gapLabel(gap.id))
                                 .zIndex(1)
 
-                            verticalGapConnector(
-                                descends: placement.anchorPosition >=
-                                    placement.axisOrigin + placement.axisExtent / 2
-                            )
-                            .timelineChartLayoutRole(.gapConnector(gap.id))
+                            // Both directions are supplied; the layout shows
+                            // the one that matches the measured label position.
+                            verticalGapConnector(descends: true)
+                                .timelineChartLayoutRole(.gapConnector(gap.id, descends: true))
+                            verticalGapConnector(descends: false)
+                                .timelineChartLayoutRole(.gapConnector(gap.id, descends: false))
                         }
                     }
                 }
@@ -189,7 +190,7 @@ private nonisolated enum TimelineChartLayoutSubviewRole: Hashable {
     case plot
     case axisLabels
     case gapLabel(String)
-    case gapConnector(String)
+    case gapConnector(String, descends: Bool)
 }
 
 private nonisolated struct TimelineChartLayoutSubviewRoleKey: LayoutValueKey {
@@ -418,7 +419,7 @@ private struct TimelineChartVerticalLayout: Layout {
                     anchor: .center,
                     proposal: ProposedViewSize(size)
                 )
-            case let .gapConnector(id):
+            case let .gapConnector(id, descends):
                 guard let placement = metrics.placementByID[id],
                       let size = metrics.labelSizes[id]
                 else {
@@ -427,6 +428,10 @@ private struct TimelineChartVerticalLayout: Layout {
                 let labelTrailing = bounds.minX + (metrics.axisLabelWidth + size.width) / 2
                 let labelMidY = bounds.minY + placement.axisOrigin + placement.axisExtent / 2
                 let anchorY = bounds.minY + placement.anchorPosition
+                guard descends == (anchorY >= labelMidY) else {
+                    subview.place(at: bounds.origin, proposal: .zero)
+                    continue
+                }
                 subview.place(
                     at: CGPoint(x: labelTrailing, y: min(labelMidY, anchorY)),
                     anchor: .topLeading,

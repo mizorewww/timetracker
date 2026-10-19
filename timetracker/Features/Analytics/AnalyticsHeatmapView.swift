@@ -1,8 +1,6 @@
 import SwiftUI
 
 struct AnalyticsHeatmapView: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
     let store: TimeTrackerStore
     @State private var now = Date()
 
@@ -26,11 +24,7 @@ struct AnalyticsHeatmapView: View {
                     )
                 }
                 .appSheetListStyle()
-                .contentMargins(
-                    .bottom,
-                    dynamicTypeSize.isAccessibilitySize ? 112 : 16,
-                    for: .scrollContent
-                )
+                .bottomScrollClearance()
                 .scrollContentBackground(.hidden)
                 .accessibilityIdentifier("analytics.heatmaps.view")
             }

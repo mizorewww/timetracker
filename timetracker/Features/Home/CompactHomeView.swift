@@ -7,7 +7,6 @@ struct CompactHomeView: View {
     let openSettings: () -> Void
     let openTask: (UUID) -> Void
     @Environment(AppPresentationRouter.self) private var presentationRouter
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var clockNow = Date()
 
     var body: some View {
@@ -81,7 +80,7 @@ struct CompactHomeView: View {
         #else
         .listStyle(.inset)
         #endif
-        .contentMargins(.bottom, dynamicTypeSize.isAccessibilitySize ? 112 : 16, for: .scrollContent)
+        .bottomScrollClearance()
         .scrollContentBackground(.hidden)
         .background(AppColors.background)
         .navigationTitle(AppStrings.today)

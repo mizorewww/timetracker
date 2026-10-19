@@ -1,8 +1,6 @@
 import SwiftUI
 
 struct AnalyticsCategoryDetailView: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
     let store: TimeTrackerStore
     let category: AnalyticsCategory
     @Binding var range: AnalyticsRange
@@ -77,11 +75,7 @@ struct AnalyticsCategoryDetailView: View {
             )
         }
         .appSheetListStyle()
-        .contentMargins(
-            .bottom,
-            dynamicTypeSize.isAccessibilitySize ? 112 : 16,
-            for: .scrollContent
-        )
+        .bottomScrollClearance()
         .scrollContentBackground(.hidden)
         .background(AppColors.background)
         .navigationTitle(category.destinationTitle)

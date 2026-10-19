@@ -41,11 +41,7 @@ struct PomodoroPageLayout<Primary: View, Secondary: View>: View {
                 .padding(.vertical, layout.verticalPadding)
                 .frame(maxWidth: .infinity)
             }
-            .contentMargins(
-                .bottom,
-                dynamicTypeSize.isAccessibilitySize ? 144 : 16,
-                for: .scrollContent
-            )
+            .bottomScrollClearance(accessibilitySize: 144)
         }
         .accessibilityIdentifier("pomodoro.dashboard")
     }

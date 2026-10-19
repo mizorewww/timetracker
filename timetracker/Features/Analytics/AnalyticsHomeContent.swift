@@ -1,8 +1,6 @@
 import SwiftUI
 
 struct AnalyticsContent: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
     /// `nil` only during the first uncached load. Later period changes keep
     /// the last section shells mounted with redacted, non-interactive content.
     let snapshot: AnalyticsSnapshot?
@@ -37,11 +35,7 @@ struct AnalyticsContent: View {
             }
         }
         .appSheetListStyle()
-        .contentMargins(
-            .bottom,
-            dynamicTypeSize.isAccessibilitySize ? 112 : 16,
-            for: .scrollContent
-        )
+        .bottomScrollClearance()
         .scrollContentBackground(.hidden)
         .background(AppColors.background)
         .accessibilityIdentifier("analytics.view")

@@ -8,7 +8,6 @@ struct SettingsView: View {
     #if os(macOS)
     @Environment(MacKeyboardShortcutSettings.self) var shortcutSettings
     #endif
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State var pendingDestructiveConfirmation: SettingsDestructiveConfirmation?
     @State var isExportPresented = false
     @State private var exportDocument = JSONExportDocument(text: "")
@@ -64,7 +63,7 @@ struct SettingsView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .contentMargins(.bottom, dynamicTypeSize.isAccessibilitySize ? 112 : 16, for: .scrollContent)
+        .bottomScrollClearance()
         #endif
     }
 

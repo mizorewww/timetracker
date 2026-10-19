@@ -144,3 +144,24 @@ struct AppRowIcon: View {
             .accessibilityHidden(true)
     }
 }
+
+extension View {
+    /// Bottom scroll margin that keeps the last rows clear of the tab bar and
+    /// bottom accessories, which grow at accessibility text sizes.
+    func bottomScrollClearance(accessibilitySize: CGFloat = 112) -> some View {
+        modifier(BottomScrollClearance(accessibilityMargin: accessibilitySize))
+    }
+}
+
+private struct BottomScrollClearance: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    let accessibilityMargin: CGFloat
+
+    func body(content: Content) -> some View {
+        content.contentMargins(
+            .bottom,
+            dynamicTypeSize.isAccessibilitySize ? accessibilityMargin : 16,
+            for: .scrollContent
+        )
+    }
+}

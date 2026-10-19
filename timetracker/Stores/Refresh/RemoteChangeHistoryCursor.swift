@@ -50,14 +50,14 @@ final class RemoteChangeHistoryCursor {
         }
     }
 
-    /// Mirrors `StoreRefreshPlanner.scopes(after:)` for the domain event each
+    /// Mirrors `StoreRefreshPlanner.plan(after:)` scopes for the domain event each
     /// model's commands publish. A model missing here refreshes everything.
     private static let scopesByEntityName: [String: Set<StoreRefreshScope>] = {
-        let task: Set<StoreRefreshScope> = [.tasks, .rollups, .analytics, .liveActivities]
+        let task: Set<StoreRefreshScope> = [.tasks, .rollups, .analytics]
         let ledger: Set<StoreRefreshScope> = [
-            .ledgerVisible, .ledgerHistory, .pomodoro, .rollups, .analytics, .liveActivities,
+            .ledgerVisible, .ledgerHistory, .pomodoro, .rollups, .analytics,
         ]
-        let pomodoro: Set<StoreRefreshScope> = [.ledgerVisible, .pomodoro, .rollups, .analytics, .liveActivities]
+        let pomodoro: Set<StoreRefreshScope> = [.ledgerVisible, .pomodoro, .rollups, .analytics]
         let checklist: Set<StoreRefreshScope> = [.checklist, .rollups, .analytics]
         let entries: [(any PersistentModel.Type, Set<StoreRefreshScope>)] = [
             (TaskNode.self, task),

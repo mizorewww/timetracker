@@ -32,10 +32,10 @@ actor StoreScopedAITaskAtomicMutationCoordinator {
 
     func captureBaseline() throws -> AITaskAtomicMutationBaseline {
         try PerformanceSignpost.interval("AI workspace baseline capture") {
-            try StoreMutationTransaction(
+            try StoreMutationSession.withLockedFreshContext(
                 scope: scope,
                 container: container
-            ).withFreshReadContext { context in
+            ) { context in
                 try Self.captureBaseline(in: context)
             }
         }
@@ -46,44 +46,46 @@ actor StoreScopedAITaskAtomicMutationCoordinator {
     ) async throws -> AITaskAtomicMutationOutcome {
         try await writeAuthorization.requireUserWritesAllowed()
         return try PerformanceSignpost.interval("AI workspace atomic apply") {
-            try StoreMutationTransaction(
+            try StoreMutationSession.withLockedFreshContext(
                 scope: scope,
                 container: container
-            ).withFreshContext(author: .localMutation) { context in
-                let current = try Self.captureBaseline(in: context)
-                guard current == plan.baseline else {
-                    throw AITaskAtomicMutationError.workspaceChanged
-                }
+            ) { context in
+                try context.performAtomicMutation(author: .localMutation) {
+                    let current = try Self.captureBaseline(in: context)
+                    guard current == plan.baseline else {
+                        throw AITaskAtomicMutationError.workspaceChanged
+                    }
 
-                try validate(
-                    operations: plan.operations,
-                    context: context
-                )
-
-                let repository = SwiftDataTaskRepository(
-                    context: context,
-                    deviceID: deviceID
-                )
-                for (index, operation) in plan.operations.enumerated() {
-                    try apply(
-                        operation,
-                        repository: repository,
+                    try validate(
+                        operations: plan.operations,
                         context: context
                     )
-                    try didReachCheckpoint(.operationApplied(index: index))
-                }
 
-                let didMutateTasks = plan.operations.contains {
-                    $0.mutatesTaskDomain
+                    let repository = SwiftDataTaskRepository(
+                        context: context,
+                        deviceID: deviceID
+                    )
+                    for (index, operation) in plan.operations.enumerated() {
+                        try apply(
+                            operation,
+                            repository: repository,
+                            context: context
+                        )
+                        try didReachCheckpoint(.operationApplied(index: index))
+                    }
+
+                    let didMutateTasks = plan.operations.contains {
+                        $0.mutatesTaskDomain
+                    }
+                    let didMutateChecklists = plan.operations.contains {
+                        $0.mutatesChecklistDomain
+                    }
+                    return AITaskAtomicMutationOutcome(
+                        didMutate: didMutateTasks || didMutateChecklists,
+                        didMutateTasks: didMutateTasks,
+                        didMutateChecklists: didMutateChecklists
+                    )
                 }
-                let didMutateChecklists = plan.operations.contains {
-                    $0.mutatesChecklistDomain
-                }
-                return AITaskAtomicMutationOutcome(
-                    didMutate: didMutateTasks || didMutateChecklists,
-                    didMutateTasks: didMutateTasks,
-                    didMutateChecklists: didMutateChecklists
-                )
             }
         }
     }

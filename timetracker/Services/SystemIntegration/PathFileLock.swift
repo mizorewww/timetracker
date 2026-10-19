@@ -5,11 +5,12 @@ import Foundation
 /// process so nested access by the same owner does not self-block.
 final nonisolated class PathProcessFileLock: @unchecked Sendable {
     /// Widget and Shortcuts processes share these lock files. Waiting forever
-    /// would freeze the caller (often the main thread), so acquisition retries
-    /// with backoff for a bounded budget and then fails.
-    static var acquireTimeout: Duration = .seconds(5)
-    private static let initialBackoff: useconds_t = 25000
-    private static let maximumBackoff: useconds_t = 250_000
+    /// would freeze the caller (usually the main thread), so acquisition
+    /// retries with short backoff for about a second and then fails; every
+    /// critical section is a short local SwiftData transaction.
+    static let acquireTimeout: Duration = .seconds(1)
+    private static let initialBackoff: useconds_t = 10000
+    private static let maximumBackoff: useconds_t = 100_000
 
     private let lockURL: URL
     private let recursiveLock = NSRecursiveLock()

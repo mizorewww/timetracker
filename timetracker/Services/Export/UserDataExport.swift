@@ -74,10 +74,11 @@ struct UserDataExport: Encodable {
     /// Captures under the store lock in a fresh read context so the export is
     /// one consistent cut of the store.
     static func encodedJSON(container: ModelContainer, exportedAt: Date = Date()) throws -> String {
-        let snapshot = try StoreMutationTransaction(
+        let snapshot = try StoreMutationSession.withLockedFreshContext(
             scope: StoreScope(container: container),
-            container: container
-        ).withFreshReadContext(UserDataSnapshot.capture)
+            container: container,
+            UserDataSnapshot.capture
+        )
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]

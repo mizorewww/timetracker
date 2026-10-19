@@ -6,35 +6,32 @@ nonisolated enum StoreScopeResolutionError: Error, Equatable {
     case ambiguousConfigurations(Int)
 }
 
+/// Resolves each container's scope once for the container's lifetime, so
+/// in-memory stores keep one identity and every command skips re-resolving
+/// the canonical store path.
 @MainActor
-private final class InMemoryStoreScopeRegistry {
-    static let shared = InMemoryStoreScopeRegistry()
+private final class StoreScopeCache {
+    static let shared = StoreScopeCache()
 
-    private final class Entry {
+    private struct Entry {
         weak var container: ModelContainer?
-        let identity: UUID
-
-        init(container: ModelContainer, identity: UUID = UUID()) {
-            self.container = container
-            self.identity = identity
-        }
+        let scope: StoreScope
     }
 
     private var entriesByContainerID: [ObjectIdentifier: Entry] = [:]
 
-    func identity(for container: ModelContainer) -> UUID {
-        entriesByContainerID = entriesByContainerID.filter {
-            $0.value.container != nil
-        }
-
+    func scope(
+        for container: ModelContainer,
+        resolve: () throws -> StoreScope
+    ) rethrows -> StoreScope {
         let containerID = ObjectIdentifier(container)
         if let entry = entriesByContainerID[containerID], entry.container === container {
-            return entry.identity
+            return entry.scope
         }
-
-        let entry = Entry(container: container)
-        entriesByContainerID[containerID] = entry
-        return entry.identity
+        entriesByContainerID = entriesByContainerID.filter { $0.value.container != nil }
+        let scope = try resolve()
+        entriesByContainerID[containerID] = Entry(container: container, scope: scope)
+        return scope
     }
 }
 
@@ -55,24 +52,19 @@ nonisolated struct StoreScope: Hashable, Sendable {
     /// in-memory stores receive an identity scoped to the container's lifetime.
     @MainActor
     init(container: ModelContainer) throws {
-        let configurations = container.configurations
-        guard let configuration = configurations.first else {
-            throw StoreScopeResolutionError.missingConfiguration
-        }
-        guard configurations.count == 1 else {
-            throw StoreScopeResolutionError.ambiguousConfigurations(
-                configurations.count
-            )
-        }
-
-        if configuration.isStoredInMemoryOnly {
-            self.init(
-                inMemoryIdentity: InMemoryStoreScopeRegistry.shared.identity(
-                    for: container
+        self = try StoreScopeCache.shared.scope(for: container) {
+            let configurations = container.configurations
+            guard let configuration = configurations.first else {
+                throw StoreScopeResolutionError.missingConfiguration
+            }
+            guard configurations.count == 1 else {
+                throw StoreScopeResolutionError.ambiguousConfigurations(
+                    configurations.count
                 )
-            )
-        } else {
-            self.init(persistentStoreURL: configuration.url)
+            }
+            return configuration.isStoredInMemoryOnly
+                ? StoreScope(inMemoryIdentity: UUID())
+                : StoreScope(persistentStoreURL: configuration.url)
         }
     }
 
@@ -93,12 +85,12 @@ nonisolated struct StoreScope: Hashable, Sendable {
         switch storage {
         case let .persistent(storeURL):
             storeURL.deletingLastPathComponent().appendingPathComponent(
-                storeURL.lastPathComponent + StoreMutationLock.fileSuffix
+                storeURL.lastPathComponent + StoreMutationSession.lockFileSuffix
             )
         case let .inMemory(identity):
             FileManager.default.temporaryDirectory.appendingPathComponent(
                 "timetracker-\(identity.uuidString.lowercased())"
-                    + StoreMutationLock.fileSuffix
+                    + StoreMutationSession.lockFileSuffix
             )
         }
     }

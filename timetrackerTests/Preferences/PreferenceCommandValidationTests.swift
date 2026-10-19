@@ -34,7 +34,7 @@ struct PreferenceCommandValidationTests {
         let context = try makeTestContext()
         let handler = PreferenceCommandHandler()
 
-        #expect(throws: LLMTaskPlanInstructionsValidationError.controlCharacter) {
+        #expect(throws: LLMPromptInstructionsValidationError.controlCharacter) {
             try handler.set(
                 key: .llmTaskPlanInstructions,
                 valueJSON: PreferenceJSON.encode("Plan\u{0000}tasks"),

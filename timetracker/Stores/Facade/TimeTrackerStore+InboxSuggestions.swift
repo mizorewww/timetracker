@@ -138,10 +138,7 @@ extension TimeTrackerStore {
     }
 
     var canAutoSuggestLLMSuggestions: Bool {
-        preferences.llmAutomaticSuggestionsEnabled &&
-            preferences.llmEndpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false &&
-            preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false &&
-            preferences.llmSelectedModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+        preferences.llmAutomaticSuggestionsEnabled && preferences.isLLMConfigured
     }
 
     private func shouldAutoSuggestInboxItem(_ item: InboxItem) -> Bool {

@@ -316,7 +316,7 @@ private nonisolated extension LLMTaskWorkspacePlanningService {
         do {
             preparedInstructions = try AppPreferenceValueSanitizer
                 .llmPromptInstructions(instructions, for: .taskPlan)
-        } catch let error as LLMTaskPlanInstructionsValidationError {
+        } catch let error as LLMPromptInstructionsValidationError {
             switch error {
             case .controlCharacter:
                 throw LLMTaskPlanningError.invalidField

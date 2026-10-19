@@ -18,8 +18,6 @@ enum LLMPromptInstructionsValidationError: LocalizedError, Equatable {
     }
 }
 
-typealias LLMTaskPlanInstructionsValidationError = LLMPromptInstructionsValidationError
-
 enum AppPreferenceValueSanitizer {
     static let maximumPomodoroPlanCount = 24
     static let maximumPomodoroPlanNameLength = 80

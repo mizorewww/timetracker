@@ -4,73 +4,49 @@ import Foundation
 /// Persistent history and CloudKit remain the cross-process convergence path.
 @MainActor
 enum StoreMutationBroadcaster {
-    private struct PendingBroadcast {
-        let events: Set<StoreDomainEvent>
-        weak var source: TimeTrackerStore?
-    }
-
-    private static let notificationName = Notification.Name(
+    static let notification = Notification.Name(
         "\(AppIdentity.bundleIdentifier).storeMutationCommitted"
     )
     private static let eventsUserInfoKey = "events"
-    private static let pendingBroadcastRetentionLimit = 64
-    private static var pendingBroadcasts: [PendingBroadcast] = []
-    private static var drainTask: Task<Void, Never>?
+    private static var pendingEvents: Set<StoreDomainEvent> = []
+    private weak static var pendingSource: TimeTrackerStore?
+    private static var hasPendingPost = false
 
+    /// Coalesces every mutation of the current main-actor turn into one post.
+    /// The mutating scene completes its own refresh and returns before sibling
+    /// scenes perform their read-only catch-up. When several sources mutate in
+    /// the same turn, the post names no source and every scene catches up.
     static func publish(events: Set<StoreDomainEvent>, source: TimeTrackerStore? = nil) {
         guard events.isEmpty == false else { return }
-        let boundedEvents = StoreDomainEventBatchLimiter.bounded(events)
-        let alreadyCollapsed = pendingBroadcasts.count == 1
-            && pendingBroadcasts[0].events == [.fullSync]
-            && pendingBroadcasts[0].source == nil
-        if alreadyCollapsed {
-            return
-        }
-        if boundedEvents == [.fullSync], source == nil {
-            pendingBroadcasts = [
-                PendingBroadcast(events: [.fullSync], source: nil),
-            ]
-        } else if pendingBroadcasts.count >= pendingBroadcastRetentionLimit {
-            // Every observer reads the latest committed facts. Under an
-            // unusual burst, one source-neutral full refresh subsumes every
-            // queued source-specific catch-up without retaining their IDs.
-            pendingBroadcasts = [
-                PendingBroadcast(events: [.fullSync], source: nil),
-            ]
+        if hasPendingPost {
+            if pendingSource !== source {
+                pendingSource = nil
+            }
         } else {
-            pendingBroadcasts.append(
-                PendingBroadcast(events: boundedEvents, source: source)
-            )
-        }
-        guard drainTask == nil else { return }
-        drainTask = Task { @MainActor in
-            // The mutating scene completes its own visible projection and
-            // returns before sibling scenes perform their read-only catch-up.
-            await Task.yield()
-            drainPendingBroadcasts()
-        }
-    }
-
-    private static func drainPendingBroadcasts() {
-        while pendingBroadcasts.isEmpty == false {
-            let batch = pendingBroadcasts
-            pendingBroadcasts.removeAll(keepingCapacity: true)
-            for broadcast in batch {
-                NotificationCenter.default.post(
-                    name: notificationName,
-                    object: broadcast.source,
-                    userInfo: [eventsUserInfoKey: broadcast.events]
-                )
+            pendingSource = source
+            hasPendingPost = true
+            Task { @MainActor in
+                await Task.yield()
+                post()
             }
         }
-        drainTask = nil
+        pendingEvents.formUnion(events)
+    }
+
+    private static func post() {
+        let events = pendingEvents
+        let source = pendingSource
+        pendingEvents = []
+        pendingSource = nil
+        hasPendingPost = false
+        NotificationCenter.default.post(
+            name: notification,
+            object: source,
+            userInfo: [eventsUserInfoKey: events]
+        )
     }
 
     static func events(from notification: Notification) -> Set<StoreDomainEvent>? {
         notification.userInfo?[eventsUserInfoKey] as? Set<StoreDomainEvent>
-    }
-
-    static var notification: Notification.Name {
-        notificationName
     }
 }

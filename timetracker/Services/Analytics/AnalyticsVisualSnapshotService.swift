@@ -7,11 +7,11 @@ nonisolated struct AnalyticsVisualSnapshotService {
         }
         let visible = input.segments.compactMap { segment -> AnalyticsVisualBoundedSegment? in
             guard segment.deletedAt == nil,
-                  let interval = clippedInterval(
+                  let interval = TrackedTimePolicy.interval(
                       startedAt: segment.startedAt,
                       endedAt: segment.endedAt,
-                      in: input.period,
-                      evaluatedAt: input.evaluatedAt
+                      now: input.evaluatedAt,
+                      clippedTo: input.period
                   )
             else {
                 return nil
@@ -137,17 +137,5 @@ nonisolated struct AnalyticsVisualSnapshotService {
                 busyIntervals: layout.items.map(\.interval)
             )
         )
-    }
-
-    private func clippedInterval(
-        startedAt: Date,
-        endedAt: Date?,
-        in bounds: DateInterval,
-        evaluatedAt cutoff: Date
-    ) -> DateInterval? {
-        let start = max(startedAt, bounds.start)
-        let end = min(min(endedAt ?? cutoff, cutoff), bounds.end)
-        guard start < cutoff, end > start else { return nil }
-        return DateInterval(start: start, end: end)
     }
 }

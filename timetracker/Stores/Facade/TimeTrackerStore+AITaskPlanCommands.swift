@@ -13,7 +13,7 @@ extension TimeTrackerStore {
     func applyAITaskWorkspaceReview(
         _ draft: AITaskWorkspaceReviewDraft
     ) async -> AITaskWorkspaceApplyResult {
-        guard let modelContext else {
+        guard modelContext != nil else {
             return .failed(message: StoreError.notConfigured.localizedDescription)
         }
 

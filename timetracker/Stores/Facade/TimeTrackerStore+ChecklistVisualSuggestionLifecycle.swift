@@ -24,7 +24,7 @@ extension TimeTrackerStore {
                   kind: .checklistVisual
               ),
               preferences.llmAutomaticSuggestionsEnabled,
-              let modelContext
+              modelContext != nil
         else {
             return
         }

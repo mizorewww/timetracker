@@ -48,6 +48,24 @@ struct TaskLifecycleAndCategoryCommandTests {
     }
 
     @Test
+    func archiveSavesPendingDetailEditsBeforeTheTaskIsArchived() throws {
+        let context = try makeTestContext()
+        let created = try SwiftDataTaskRepository(context: context, deviceID: "seed")
+            .createTask(title: "Draft title", parentID: nil)
+        let store = makeTestStore()
+        try store.configureIfNeeded(context: context)
+        var archivedWhenFlushed: Bool?
+        store.pendingTaskEditFlushes[UUID()] = {
+            archivedWhenFlushed = (try? task(created.id, in: context.container))?.archivedAt != nil
+        }
+
+        try store.archiveSelectedTask(taskID: created.id)
+
+        #expect(archivedWhenFlushed == false)
+        #expect(try task(created.id, in: context.container).archivedAt != nil)
+    }
+
+    @Test
     func deletingACategoryRemovesItsAssignmentsButNotItsTasks() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "seed")

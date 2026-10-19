@@ -6,10 +6,13 @@ import AppKit
 
 /// Debounced autosave plus a synchronous commit whenever the edit could be
 /// left behind: focus leaves a field, the scene backgrounds, the detail
-/// disappears (navigation), or the Mac app terminates.
+/// disappears (navigation), the Mac app terminates, or another surface is
+/// about to change the task's lifecycle (archive).
 private struct TaskDetailAutosaveModifier: ViewModifier {
     @Environment(\.scenePhase) private var scenePhase
+    @State private var registrationID = UUID()
 
+    let store: TimeTrackerStore
     let controller: TaskDetailAutosaveController
     let request: TaskDetailAutosaveRequest
     let focusedTextField: TaskEditorTextField?
@@ -30,7 +33,15 @@ private struct TaskDetailAutosaveModifier: ViewModifier {
                 guard phase != .active else { return }
                 flush()
             }
-            .onDisappear(perform: flush)
+            .onAppear {
+                store.pendingTaskEditFlushes[registrationID] = { [controller] in
+                    controller.flush()
+                }
+            }
+            .onDisappear {
+                store.pendingTaskEditFlushes[registrationID] = nil
+                flush()
+            }
             .taskDetailAutosaveTerminationFlush(perform: flush)
     }
 
@@ -49,6 +60,7 @@ private struct TaskDetailAutosaveModifier: ViewModifier {
 
 extension View {
     func taskDetailAutosave(
+        store: TimeTrackerStore,
         controller: TaskDetailAutosaveController,
         request: TaskDetailAutosaveRequest,
         focusedTextField: TaskEditorTextField?,
@@ -56,6 +68,7 @@ extension View {
     ) -> some View {
         modifier(
             TaskDetailAutosaveModifier(
+                store: store,
                 controller: controller,
                 request: request,
                 focusedTextField: focusedTextField,

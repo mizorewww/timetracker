@@ -80,6 +80,9 @@ final class TimeTrackerStore {
     var sessions: [TimeSession] = []
     var pomodoroRuns: [PomodoroRun] = []
     @ObservationIgnored var pomodoroReconciliationTask: Task<Void, Never>?
+    /// Open task-detail editors register here so lifecycle commands can save
+    /// their debounced edit first.
+    @ObservationIgnored var pendingTaskEditFlushes: [UUID: () -> Void] = [:]
     var countdownEvents: [CountdownEvent] = []
     var syncedPreferences: [SyncedPreference] {
         preferenceDomainStore.syncedPreferences

@@ -21,7 +21,26 @@ struct AppSceneFeedback: Identifiable, Equatable {
 @Observable
 final class AppSceneFeedbackRouter {
     private(set) var current: AppSceneFeedback?
+    /// Hosts in presentation order: the scene root first, then each sheet
+    /// over it. Only the topmost can show an alert the user sees; an alert
+    /// attached under an open sheet stays hidden behind it.
+    private(set) var hostIDs: [UUID] = []
     @ObservationIgnored private var pending: [AppSceneFeedback] = []
+
+    func registerHost(_ id: UUID) {
+        guard hostIDs.contains(id) == false else { return }
+        hostIDs.append(id)
+    }
+
+    func unregisterHost(_ id: UUID) {
+        hostIDs.removeAll { $0 == id }
+    }
+
+    /// The feedback the host shows: the current one while it is the topmost
+    /// host, else nil.
+    func feedback(forHost hostID: UUID) -> AppSceneFeedback? {
+        hostIDs.last == hostID ? current : nil
+    }
 
     func present(_ feedback: AppSceneFeedback) {
         guard current == nil else {

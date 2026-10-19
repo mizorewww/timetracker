@@ -16,6 +16,7 @@ private struct AppPresentationHostModifier: ViewModifier {
             )
             .environment(router)
             .environment(feedbackRouter)
+            .appSceneFeedbackHost(router: feedbackRouter)
         }
     }
 }

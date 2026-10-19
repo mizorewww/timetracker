@@ -91,6 +91,7 @@ struct TaskDetailList: View {
         .accessibilityIdentifier("task.detail")
         .sheet(item: $quantityEditorRoute) { route in
             TaskQuantityEntryEditorSheet(store: store, route: route)
+                .appSceneFeedbackHost(router: feedbackRouter)
         }
     }
 

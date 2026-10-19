@@ -11,22 +11,11 @@ struct AnalyticsCategoryDetailView: View {
 
     var body: some View {
         let evaluation = range.evaluation(referenceDate: referenceDate, liveNow: liveNow)
-        let request = AnalyticsSnapshotRequest(
+        let presentation = AnalyticsSnapshotPresentation(
+            store: store,
             range: range,
             evaluation: evaluation,
-            revision: store.analyticsRevision,
-            liveRefreshBucket: store.analyticsLiveRefreshBucket(for: evaluation)
-        )
-        let exactCachedPresentation = store.cachedAnalyticsSnapshot(
-            for: range,
-            evaluation: evaluation
-        ).map {
-            AnalyticsLoadedSnapshot(snapshot: $0, request: request)
-        }
-        let displayedPresentation = exactCachedPresentation ?? loadedPresentation
-        let presentationPhase = AnalyticsSnapshotPresentationPhase.resolve(
-            loadedRequest: displayedPresentation?.request,
-            currentRequest: request
+            loaded: loadedPresentation
         )
 
         List {
@@ -35,15 +24,15 @@ struct AnalyticsCategoryDetailView: View {
                 referenceDate: $referenceDate,
                 liveNow: liveNow,
                 monthNavigationAnchor: $monthNavigationAnchor,
-                isRefreshing: presentationPhase.isRefreshing
+                isRefreshing: presentation.phase.isRefreshing
             )
-            if let displayedPresentation {
+            if let displayedPresentation = presentation.displayed {
                 categoryContent(
                     snapshot: displayedPresentation.snapshot,
                     displayedRange: displayedPresentation.request.range,
                     displayedReferenceDate:
                     displayedPresentation.request.evaluationKey.interval.start,
-                    isPlaceholder: presentationPhase.obscuresLoadedMetrics
+                    isPlaceholder: presentation.phase.obscuresLoadedMetrics
                 )
             } else {
                 ProgressView()
@@ -52,27 +41,13 @@ struct AnalyticsCategoryDetailView: View {
                     .accessibilityIdentifier("analytics.detail.initialLoading")
             }
         }
-        .task(id: request) {
-            if let cachedSnapshot = store.cachedAnalyticsSnapshot(
-                for: range,
+        .task(id: presentation.request) {
+            guard let loaded = await presentation.load(
+                store: store,
+                range: range,
                 evaluation: evaluation
-            ) {
-                guard Task.isCancelled == false else { return }
-                loadedPresentation = AnalyticsLoadedSnapshot(
-                    snapshot: cachedSnapshot,
-                    request: request
-                )
-                return
-            }
-            await Task.yield()
-            guard Task.isCancelled == false, let resolvedSnapshot = await store.loadAnalyticsSnapshot(
-                for: range,
-                evaluation: evaluation
-            ), Task.isCancelled == false else { return }
-            loadedPresentation = AnalyticsLoadedSnapshot(
-                snapshot: resolvedSnapshot,
-                request: request
-            )
+            ) else { return }
+            loadedPresentation = loaded
         }
         .appSheetListStyle()
         .bottomScrollClearance()

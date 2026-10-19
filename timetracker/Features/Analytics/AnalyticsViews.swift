@@ -17,15 +17,17 @@ struct AnalyticsView: View {
             referenceDate: effectiveReferenceDate,
             liveNow: liveNow
         )
-        let liveRefreshBucket = store.analyticsLiveRefreshBucket(for: evaluation)
-        let request = AnalyticsSnapshotRequest(
+        let presentation = AnalyticsSnapshotPresentation(
+            store: store,
             range: range,
             evaluation: evaluation,
-            revision: store.analyticsRevision,
-            liveRefreshBucket: liveRefreshBucket
+            loaded: loadedPresentation
         )
         let clockDeadline = followsCurrentPeriod
-            ? LiveClockDeadline.next(after: liveNow, isLive: liveRefreshBucket != nil)
+            ? LiveClockDeadline.next(
+                after: liveNow,
+                isLive: presentation.request.evaluationKey.liveRefreshBucket != nil
+            )
             : nil
         let effectiveReferenceDateBinding = Binding(
             get: { followsCurrentPeriod ? liveNow : referenceDate },
@@ -36,48 +38,22 @@ struct AnalyticsView: View {
                 followsCurrentPeriod = range.isCurrentPeriod(newDate, liveNow: actionNow)
             }
         )
-        let exactCachedPresentation = store.cachedAnalyticsSnapshot(
-            for: range,
-            evaluation: evaluation
-        ).map {
-            AnalyticsLoadedSnapshot(snapshot: $0, request: request)
-        }
-        let displayedPresentation = exactCachedPresentation ?? loadedPresentation
-        let presentationPhase = AnalyticsSnapshotPresentationPhase.resolve(
-            loadedRequest: displayedPresentation?.request,
-            currentRequest: request
-        )
-
         AnalyticsContent(
-            snapshot: displayedPresentation?.snapshot,
-            contentIsPlaceholder: presentationPhase.obscuresLoadedMetrics,
+            snapshot: presentation.displayed?.snapshot,
+            contentIsPlaceholder: presentation.phase.obscuresLoadedMetrics,
             range: $range,
             referenceDate: effectiveReferenceDateBinding,
             liveNow: liveNow,
             monthNavigationAnchor: $monthNavigationAnchor,
-            isRefreshing: presentationPhase.isRefreshing
+            isRefreshing: presentation.phase.isRefreshing
         )
-        .task(id: request) {
-            if let cachedSnapshot = store.cachedAnalyticsSnapshot(
-                for: range,
+        .task(id: presentation.request) {
+            guard let loaded = await presentation.load(
+                store: store,
+                range: range,
                 evaluation: evaluation
-            ) {
-                guard Task.isCancelled == false else { return }
-                loadedPresentation = AnalyticsLoadedSnapshot(
-                    snapshot: cachedSnapshot,
-                    request: request
-                )
-                return
-            }
-            await Task.yield()
-            guard Task.isCancelled == false, let resolvedSnapshot = await store.loadAnalyticsSnapshot(
-                for: range,
-                evaluation: evaluation
-            ), Task.isCancelled == false else { return }
-            loadedPresentation = AnalyticsLoadedSnapshot(
-                snapshot: resolvedSnapshot,
-                request: request
-            )
+            ) else { return }
+            loadedPresentation = loaded
         }
         .liveClock($liveNow, until: clockDeadline)
         .navigationDestination(for: AnalyticsCategory.self) { category in
@@ -113,6 +89,57 @@ struct AnalyticsView: View {
 struct AnalyticsLoadedSnapshot {
     let snapshot: AnalyticsSnapshot
     let request: AnalyticsSnapshotRequest
+}
+
+/// What an analytics page shows for its selected period: the store's exact
+/// cached snapshot when there is one, else the last one the page loaded, and
+/// how that relates to the current request. Shared by the analytics home and
+/// category detail pages.
+@MainActor
+struct AnalyticsSnapshotPresentation {
+    let request: AnalyticsSnapshotRequest
+    let displayed: AnalyticsLoadedSnapshot?
+    let phase: AnalyticsSnapshotPresentationPhase
+
+    init(
+        store: TimeTrackerStore,
+        range: AnalyticsRange,
+        evaluation: AnalyticsPeriodEvaluation,
+        loaded: AnalyticsLoadedSnapshot?
+    ) {
+        let request = AnalyticsSnapshotRequest(
+            range: range,
+            evaluation: evaluation,
+            revision: store.analyticsRevision,
+            liveRefreshBucket: store.analyticsLiveRefreshBucket(for: evaluation)
+        )
+        let cached = store.cachedAnalyticsSnapshot(for: range, evaluation: evaluation)
+            .map { AnalyticsLoadedSnapshot(snapshot: $0, request: request) }
+        self.request = request
+        displayed = cached ?? loaded
+        phase = AnalyticsSnapshotPresentationPhase.resolve(
+            loadedRequest: displayed?.request,
+            currentRequest: request
+        )
+    }
+
+    /// The snapshot for `request`, or nil when the load was cancelled.
+    func load(
+        store: TimeTrackerStore,
+        range: AnalyticsRange,
+        evaluation: AnalyticsPeriodEvaluation
+    ) async -> AnalyticsLoadedSnapshot? {
+        if let cached = store.cachedAnalyticsSnapshot(for: range, evaluation: evaluation) {
+            return Task.isCancelled ? nil : AnalyticsLoadedSnapshot(snapshot: cached, request: request)
+        }
+        // Aggregation runs on the main actor; let the loading state render first.
+        await Task.yield()
+        guard Task.isCancelled == false,
+              let snapshot = await store.loadAnalyticsSnapshot(for: range, evaluation: evaluation),
+              Task.isCancelled == false
+        else { return nil }
+        return AnalyticsLoadedSnapshot(snapshot: snapshot, request: request)
+    }
 }
 
 nonisolated enum AnalyticsSnapshotPresentationPhase: Equatable, Sendable {

@@ -40,10 +40,6 @@ struct AppSceneDeepLinkCoordinator {
     }
 
     private func route(_ url: URL) {
-        guard presentationRouter.canPresent else {
-            pendingDeepLink.restore(url)
-            return
-        }
         if store.handleDeepLink(url, presentationRouter: presentationRouter) == .deferred {
             pendingDeepLink.restore(url)
             return

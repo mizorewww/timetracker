@@ -53,11 +53,10 @@ final class AppPresentationRouter {
     /// The scene's feedback router; a presentation that cannot open because
     /// its target is stale reports why there.
     @ObservationIgnored let feedbackRouter: AppSceneFeedbackRouter
-    #if os(macOS)
-    /// Settings is a native window on macOS, not a sheet. Set by the root view
-    /// from the `openSettings` environment action.
+    /// Opens Settings as its own window instead of a sheet. Set on macOS by
+    /// the scene's content view from the `openSettings` environment action;
+    /// nil where Settings is a sheet.
     @ObservationIgnored var openNativeSettings: (() -> Void)?
-    #endif
 
     /// The open task detail's synchronous save of its pending edit, keyed by
     /// the detail instance so a disappearing detail cannot clear its
@@ -74,12 +73,10 @@ final class AppPresentationRouter {
 
     @discardableResult
     func present(_ content: AppPresentation.Content) -> Bool {
-        #if os(macOS)
         if case .settings = content, let openNativeSettings {
             openNativeSettings()
             return true
         }
-        #endif
         guard canPresent else { return false }
         sheet = AppPresentation(content: content)
         return true
@@ -91,6 +88,11 @@ final class AppPresentationRouter {
         with content: AppPresentation.Content
     ) -> Bool {
         guard sheet?.id == presentationID else { return false }
+        if case .settings = content, let openNativeSettings {
+            sheet = nil
+            openNativeSettings()
+            return true
+        }
         sheet = AppPresentation(content: content)
         return true
     }

@@ -36,4 +36,36 @@ struct AppDeepLinkSettingsTests {
             return
         }
     }
+
+    @Test
+    func nativeSettingsWindowOpensEvenWhileASheetIsPresented() {
+        let store = makeTestStore()
+        let router = AppPresentationRouter(feedbackRouter: AppSceneFeedbackRouter())
+        var openedNativeSettings = 0
+        router.openNativeSettings = { openedNativeSettings += 1 }
+        router.present(.startTaskPicker)
+
+        let disposition = store.handleDeepLink(settingsURL, presentationRouter: router)
+
+        #expect(disposition == .handled)
+        #expect(openedNativeSettings == 1)
+        guard case .startTaskPicker? = router.sheet?.content else {
+            Issue.record("Opening the Settings window replaced the presented sheet.")
+            return
+        }
+    }
+
+    @Test
+    func replacingASheetWithNativeSettingsClosesTheSheet() throws {
+        let router = AppPresentationRouter(feedbackRouter: AppSceneFeedbackRouter())
+        var openedNativeSettings = 0
+        router.openNativeSettings = { openedNativeSettings += 1 }
+        router.present(.aiTaskPlanGenerator)
+        let presentationID = try #require(router.sheet?.id)
+
+        #expect(router.replace(presentationID: presentationID, with: .settings))
+
+        #expect(openedNativeSettings == 1)
+        #expect(router.sheet == nil)
+    }
 }

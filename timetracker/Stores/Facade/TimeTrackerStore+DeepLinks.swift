@@ -17,9 +17,11 @@ extension TimeTrackerStore {
 
         if presentationRouter.canPresent == false {
             switch action {
-            case .startTimer, .stopTimer:
+            // Settings decides for itself: a native Settings window opens
+            // over a sheet, a Settings sheet waits for it.
+            case .startTimer, .stopTimer, .openSettings:
                 break
-            case .open, .openSettings, .startTimerPicker, .newTask, .openTask:
+            case .open, .startTimerPicker, .newTask, .openTask:
                 return .deferred
             }
         }

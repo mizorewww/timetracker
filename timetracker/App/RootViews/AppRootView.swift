@@ -10,9 +10,6 @@ struct AppRootView: View {
     let store: TimeTrackerStore
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    #if os(macOS)
-    @Environment(\.openSettings) private var openSettings
-    #endif
     /// Only the shell is retained, not the raw width: a live window resize
     /// would otherwise invalidate the whole app shell on every frame.
     @State private var measuredShell: RootLayoutPolicy.Shell?
@@ -46,11 +43,6 @@ struct AppRootView: View {
         } action: { shell in
             measuredShell = shell
         }
-        #if os(macOS)
-        .onAppear {
-            presentationRouter.openNativeSettings = { openSettings() }
-        }
-        #endif
     }
 }
 

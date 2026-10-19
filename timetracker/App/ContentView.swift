@@ -10,6 +10,9 @@ struct ContentView: View {
     @State private var feedbackRouter: AppSceneFeedbackRouter
     @State private var pendingDeepLink = PendingDeepLink()
     @State private var hasFinishedInitialConfiguration = false
+    #if os(macOS)
+    @Environment(\.openSettings) private var openSettings
+    #endif
     #if os(iOS) && canImport(WatchConnectivity)
     @State private var watchCommandRegistrationID: UUID?
     #endif
@@ -44,6 +47,11 @@ struct ContentView: View {
             feedbackRouter: feedbackRouter
         )
         .appSceneFeedbackHost(router: feedbackRouter)
+        #if os(macOS)
+        .onAppear {
+            presentationRouter.openNativeSettings = { openSettings() }
+        }
+        #endif
         .task {
             do {
                 try store.configureIfNeeded(context: modelContext)

@@ -46,12 +46,10 @@ nonisolated struct StoreMutationSession: Sendable {
         container: ModelContainer,
         _ operation: (ModelContext) throws -> Result
     ) throws -> Result {
-        try PathFileLockRegistry.shared
-            .lock(for: scope.mutationLockURL)
-            .withExclusiveAccess {
-                let context = ModelContext(container)
-                context.autosaveEnabled = false
-                return try operation(context)
-            }
+        try PathFileLockRegistry.shared.withExclusiveAccess(to: scope.mutationLockURL) {
+            let context = ModelContext(container)
+            context.autosaveEnabled = false
+            return try operation(context)
+        }
     }
 }

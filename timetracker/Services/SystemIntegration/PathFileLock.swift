@@ -71,28 +71,46 @@ final nonisolated class PathProcessFileLock: @unchecked Sendable {
     }
 }
 
-/// One lock instance per canonical path, so aliases of the same file share the
-/// in-process recursion state.
+/// One lock instance per canonical path while any caller uses it, so aliases
+/// of the same file share the in-process recursion state. An entry is dropped
+/// once its last user returns, so short-lived (for example in-memory test)
+/// stores do not accumulate locks for the life of the process.
 final nonisolated class PathFileLockRegistry: @unchecked Sendable {
     static let shared = PathFileLockRegistry()
 
     private let registryLock = NSLock()
-    /// Strong references: a weak table can drop a lock instance mid-flight and
-    /// hand the same path a second guard, defeating in-process recursion safety.
-    private var locksByPath: [String: PathProcessFileLock] = [:]
+    private var entriesByPath: [String: (lock: PathProcessFileLock, users: Int)] = [:]
 
-    func lock(for url: URL) -> PathProcessFileLock {
+    func withExclusiveAccess<Result>(
+        to url: URL,
+        _ operation: () throws -> Result
+    ) throws -> Result {
         let standardizedURL = url.standardizedFileURL
         let canonicalURL = CanonicalFileURL
             .resolvingExistingAncestor(of: standardizedURL.deletingLastPathComponent())
             .appendingPathComponent(standardizedURL.lastPathComponent)
+        let lock = retainLock(for: canonicalURL)
+        defer { releaseLock(for: canonicalURL.path) }
+        return try lock.withExclusiveAccess(operation)
+    }
+
+    private func retainLock(for canonicalURL: URL) -> PathProcessFileLock {
         registryLock.lock()
         defer { registryLock.unlock() }
-        if let existing = locksByPath[canonicalURL.path] {
-            return existing
+        let path = canonicalURL.path
+        let lock = entriesByPath[path]?.lock ?? PathProcessFileLock(lockURL: canonicalURL)
+        entriesByPath[path] = (lock, (entriesByPath[path]?.users ?? 0) + 1)
+        return lock
+    }
+
+    private func releaseLock(for path: String) {
+        registryLock.lock()
+        defer { registryLock.unlock() }
+        guard let entry = entriesByPath[path] else { return }
+        if entry.users <= 1 {
+            entriesByPath.removeValue(forKey: path)
+        } else {
+            entriesByPath[path] = (entry.lock, entry.users - 1)
         }
-        let created = PathProcessFileLock(lockURL: canonicalURL)
-        locksByPath[canonicalURL.path] = created
-        return created
     }
 }

@@ -115,57 +115,10 @@ extension AnalyticsStore {
         )
     }
 
-    mutating func cachedDailySnapshot(
-        range: AnalyticsRange,
-        tasks: [TaskNode],
-        taskCategories: [TaskCategory],
-        taskCategoryAssignments: [TaskCategoryAssignment],
-        rangeSegments: [TimeSegment],
-        allSegments: [TimeSegment],
-        sessions: [TimeSession],
-        cancelledPomodoroSessionIDs: Set<UUID> = [],
-        taskPathByID: [UUID: String],
-        taskParentPathByID: [UUID: String],
-        period: DateInterval,
-        evaluatedAt cutoff: Date,
-        visualSnapshot: AnalyticsVisualSnapshot? = nil,
-        calendar: Calendar
-    ) -> AnalyticsSnapshot {
-        let daily = cachedDailyBreakdown(
-            segments: rangeSegments,
-            range: range,
-            interval: period,
-            evaluatedAt: cutoff,
-            calendar: calendar
-        )
-        return analyticsSnapshot(
-            range: range,
-            tasks: tasks,
-            taskCategories: taskCategories,
-            taskCategoryAssignments: taskCategoryAssignments,
-            rangeSegments: rangeSegments,
-            allSegments: allSegments,
-            sessions: sessions,
-            cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs,
-            taskPathByID: taskPathByID,
-            taskParentPathByID: taskParentPathByID,
-            daily: daily,
-            period: period,
-            evaluatedAt: cutoff,
-            visualSnapshot: visualSnapshot,
-            calendar: calendar
-        )
-    }
-
-    mutating func invalidateSnapshots(invalidatedIntervals: [DateInterval] = []) {
+    mutating func invalidateSnapshots() {
         snapshots.removeAll(keepingCapacity: true)
         snapshotEvaluationKeys.removeAll(keepingCapacity: true)
         taskSnapshots.removeAll(keepingCapacity: true)
         taskSnapshotOrder.removeAll(keepingCapacity: true)
-        if invalidatedIntervals.isEmpty {
-            ledgerBucketCache.removeAll()
-        } else {
-            ledgerBucketCache.invalidate(intervals: invalidatedIntervals)
-        }
     }
 }

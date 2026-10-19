@@ -80,7 +80,7 @@ struct StoreRefreshCoordinator {
         }
         if plan.refreshAnalytics {
             PerformanceSignpost.interval("Analytics cache refresh") {
-                store.refreshAnalyticsDomain(plan: plan)
+                store.refreshAnalyticsDomain()
             }
         }
     }

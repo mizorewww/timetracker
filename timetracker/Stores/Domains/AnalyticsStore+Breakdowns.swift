@@ -110,33 +110,6 @@ extension AnalyticsStore {
         }
     }
 
-    mutating func cachedDailyBreakdown(
-        segments: [TimeSegment],
-        range: AnalyticsRange,
-        interval: DateInterval,
-        evaluatedAt cutoff: Date,
-        calendar: Calendar
-    ) -> [DailyAnalyticsPoint] {
-        let summaries = ledgerBucketCache.summaries(
-            segments: segments,
-            interval: interval,
-            now: cutoff,
-            calendar: calendar
-        )
-        return DailySummaryService().visibleSummaries(
-            summaries,
-            interval: interval,
-            evaluatedAt: cutoff
-        ).map { summary in
-            DailyAnalyticsPoint(
-                date: summary.date,
-                grossSeconds: summary.grossSeconds,
-                wallSeconds: summary.wallClockSeconds,
-                label: dayLabel(for: summary.date, range: range, calendar: calendar)
-            )
-        }
-    }
-
     func segmentsForAnalytics(
         _ segments: [TimeSegment],
         interval: DateInterval,

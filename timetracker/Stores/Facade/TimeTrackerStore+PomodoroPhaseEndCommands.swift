@@ -63,7 +63,7 @@ extension TimeTrackerStore {
             )
         }
         if segmentChanges.contains(where: { $0.before != $0.after }) {
-            refreshAnalyticsDomain(plan: StoreRefreshPlan(scopes: [.analytics]))
+            refreshAnalyticsDomain()
         }
         schedulePomodoroReconciliation(now: Date())
         // This path changes the visible ledger without bumping

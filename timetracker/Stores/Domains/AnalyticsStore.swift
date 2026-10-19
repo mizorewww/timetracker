@@ -9,7 +9,6 @@ struct AnalyticsStore {
         let evaluationKey: AnalyticsEvaluationCacheKey
     }
 
-    var ledgerBucketCache = LedgerBucketCache()
     var snapshots: [AnalyticsRange: AnalyticsSnapshot] = [:]
     var snapshotEvaluationKeys: [AnalyticsRange: AnalyticsEvaluationCacheKey] = [:]
     var taskSnapshots: [TaskSnapshotCacheKey: TaskAnalyticsSnapshot] = [:]
@@ -83,7 +82,7 @@ struct AnalyticsStore {
                 interval: period,
                 evaluatedAt: cutoff
             )
-            let snapshot = cachedDailySnapshot(
+            let snapshot = analyticsSnapshot(
                 range: range,
                 tasks: tasks,
                 taskCategories: taskCategories,
@@ -94,6 +93,13 @@ struct AnalyticsStore {
                 cancelledPomodoroSessionIDs: cancelledPomodoroSessionIDs,
                 taskPathByID: taskPathByID,
                 taskParentPathByID: taskParentPathByID,
+                daily: dailyBreakdown(
+                    segments: rangeSegments,
+                    range: range,
+                    interval: period,
+                    evaluatedAt: cutoff,
+                    calendar: calendar
+                ),
                 period: period,
                 evaluatedAt: cutoff,
                 visualSnapshot: visualSnapshot,

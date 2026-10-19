@@ -174,10 +174,8 @@ extension TimeTrackerStore {
         }
     }
 
-    func refreshAnalyticsDomain(plan: StoreRefreshPlan) {
-        invalidateAnalyticsSnapshots(
-            invalidatedIntervals: plan.affectedLedgerRanges.map(\.dateInterval)
-        )
+    func refreshAnalyticsDomain() {
+        analyticsDomainStore.invalidateSnapshots()
         analyticsRevision &+= 1
     }
 

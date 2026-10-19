@@ -16,12 +16,6 @@ extension TimeTrackerStore {
         )
     }
 
-    func invalidateAnalyticsSnapshots(invalidatedIntervals: [DateInterval] = []) {
-        var store = analyticsDomainStore
-        store.invalidateSnapshots(invalidatedIntervals: invalidatedIntervals)
-        analyticsDomainStore = store
-    }
-
     func cachedTaskAnalyticsSnapshot(
         for request: TaskAnalyticsSnapshotRequest
     ) -> TaskAnalyticsSnapshot? {

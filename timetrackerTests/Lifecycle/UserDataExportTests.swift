@@ -64,4 +64,14 @@ struct UserDataExportTests {
         #expect(Set(sectionByModel.keys) == TimeTrackerModelRegistry.cloudSyncedUserModelNames)
         #expect(Set(data.keys) == Set(sectionByModel.values))
     }
+
+    @Test
+    func jsonExportFailureThrowsWithoutMutatingGlobalFeedback() {
+        let store = makeTestStore()
+
+        #expect(throws: TimeTrackerStore.StoreError.self) {
+            try store.jsonExport()
+        }
+        #expect(store.errorMessage == nil)
+    }
 }

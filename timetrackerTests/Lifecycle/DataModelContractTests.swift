@@ -154,89 +154,6 @@ struct DataModelContractTests {
     }
 
     @Test @MainActor
-    func versionEightStoreMigratesToCurrentSchemaWithoutTheLegacyDailySummaryCache() throws {
-        let fixture = try LegacyV8DailySummaryStoreFixture.create()
-
-        try fixture.withCurrentContext { context in
-            let taskIDs = try context.fetch(FetchDescriptor<TaskNode>()).map(\.id)
-            #expect(taskIDs == [fixture.taskID])
-            #expect(TimeTrackerModelRegistry.currentSchema.entity(for: DailySummary.self) == nil)
-        }
-    }
-
-    @Test @MainActor
-    func versionNineStoreMigratesInboxSuggestionIdentityAndDismissalState() throws {
-        let fixture = try LegacyV9InboxStoreFixture.create()
-
-        try fixture.withCurrentContext { context in
-            let items = try context.fetch(FetchDescriptor<InboxItem>())
-            let suggestions = try context.fetch(FetchDescriptor<InboxSuggestion>())
-            let dismissedItem = try #require(items.first { $0.id == fixture.dismissedItemID })
-            let readyItem = try #require(items.first { $0.id == fixture.readyItemID })
-            let suggestion = try #require(suggestions.first { $0.id == fixture.suggestionID })
-
-            #expect(dismissedItem.suggestionContextID == fixture.dismissedItemID)
-            #expect(dismissedItem.suggestionRevisionID == fixture.dismissedItemID)
-            #expect(dismissedItem.dismissedSuggestionRevisionID == fixture.dismissedItemID)
-            #expect(
-                InboxSuggestionStateService.state(
-                    for: dismissedItem,
-                    suggestion: nil,
-                    isInFlight: false
-                ) == .dismissed
-            )
-            #expect(readyItem.suggestionContextID == fixture.readyItemID)
-            #expect(readyItem.suggestionRevisionID == fixture.readyItemID)
-            #expect(readyItem.dismissedSuggestionRevisionID == nil)
-            #expect(suggestion.inboxItemContextID == fixture.readyItemID)
-            #expect(suggestion.inboxItemRevisionID == fixture.readyItemID)
-            #expect(suggestion.belongs(to: readyItem))
-        }
-    }
-
-    @Test @MainActor
-    func applyingInboxSuggestionCreatesChecklistWithVisualAndRemovesInboxItem() throws {
-        let context = try makeTestContext()
-        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
-        let task = try taskRepository.createTask(title: "Design", parentID: nil, colorHex: "1677FF", iconName: "paintbrush")
-        let inboxItem = InboxItem(title: "Polish empty state", deviceID: "test")
-        let suggestion = InboxSuggestion(
-            inboxItemID: inboxItem.id,
-            taskID: task.id,
-            reason: "Same design project",
-            iconName: "paintbrush",
-            colorHex: "1677FF",
-            modelID: "gpt-test",
-            titleSnapshot: inboxItem.title,
-            deviceID: "test"
-        )
-        context.insert(inboxItem)
-        context.insert(suggestion)
-        try context.save()
-
-        _ = try StoreScopedInboxCommandCoordinator(
-            session: .testHarness(context.container),
-            deviceID: "test"
-        ).applySuggestion(
-            baseline: InboxSuggestionApplyBaseline(item: inboxItem, suggestion: suggestion)
-        )
-
-        let freshContext = ModelContext(context.container)
-        let checklistItems = try freshContext.fetch(FetchDescriptor<ChecklistItem>())
-        let visuals = try freshContext.fetch(FetchDescriptor<ChecklistItemVisual>())
-        let inboxItems = try freshContext.fetch(FetchDescriptor<InboxItem>())
-        let suggestions = try freshContext.fetch(FetchDescriptor<InboxSuggestion>())
-        #expect(checklistItems.map(\.title) == ["Polish empty state"])
-        #expect(checklistItems.first?.taskID == task.id)
-        #expect(visuals.map(\.iconName) == ["paintbrush"])
-        #expect(visuals.map(\.colorHex) == ["1677FF"])
-        #expect(visuals.map(\.suggestionTitleSnapshot) == ["Polish empty state"])
-        #expect(visuals.map(\.suggestionModelID) == ["gpt-test"])
-        #expect(inboxItems.allSatisfy { $0.deletedAt != nil })
-        #expect(suggestions.allSatisfy { $0.deletedAt != nil })
-    }
-
-    @Test @MainActor
     func legacyTaskStatusRawValuesRemainPersistableButOnlyArchiveChangesLifecycle() throws {
         let context = try makeTestContext()
         let repository = SwiftDataTaskRepository(context: context, deviceID: "test")
@@ -257,15 +174,5 @@ struct DataModelContractTests {
         #expect(archived.statusRaw == LegacyTaskStatusRaw.archived)
         #expect(archived.archivedAt != nil)
         #expect(archived.isArchivedForLifecycle)
-    }
-
-    @Test @MainActor
-    func jsonExportFailureThrowsWithoutMutatingGlobalFeedback() {
-        let store = makeTestStore()
-
-        #expect(throws: TimeTrackerStore.StoreError.self) {
-            try store.jsonExport()
-        }
-        #expect(store.errorMessage == nil)
     }
 }

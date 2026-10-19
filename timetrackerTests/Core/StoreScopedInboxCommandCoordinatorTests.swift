@@ -117,6 +117,48 @@ struct StoreScopedInboxCommandCoordinatorTests {
         #expect(rows.first { $0.id == b.id }?.isCompleted == true)
     }
 
+    @Test
+    func applyingInboxSuggestionCreatesChecklistWithVisualAndRemovesInboxItem() throws {
+        let context = try makeTestContext()
+        let taskRepository = SwiftDataTaskRepository(context: context, deviceID: "test")
+        let task = try taskRepository.createTask(title: "Design", parentID: nil, colorHex: "1677FF", iconName: "paintbrush")
+        let inboxItem = InboxItem(title: "Polish empty state", deviceID: "test")
+        let suggestion = InboxSuggestion(
+            inboxItemID: inboxItem.id,
+            taskID: task.id,
+            reason: "Same design project",
+            iconName: "paintbrush",
+            colorHex: "1677FF",
+            modelID: "gpt-test",
+            titleSnapshot: inboxItem.title,
+            deviceID: "test"
+        )
+        context.insert(inboxItem)
+        context.insert(suggestion)
+        try context.save()
+
+        _ = try StoreScopedInboxCommandCoordinator(
+            session: .testHarness(context.container),
+            deviceID: "test"
+        ).applySuggestion(
+            baseline: InboxSuggestionApplyBaseline(item: inboxItem, suggestion: suggestion)
+        )
+
+        let freshContext = ModelContext(context.container)
+        let checklistItems = try freshContext.fetch(FetchDescriptor<ChecklistItem>())
+        let visuals = try freshContext.fetch(FetchDescriptor<ChecklistItemVisual>())
+        let inboxItems = try freshContext.fetch(FetchDescriptor<InboxItem>())
+        let suggestions = try freshContext.fetch(FetchDescriptor<InboxSuggestion>())
+        #expect(checklistItems.map(\.title) == ["Polish empty state"])
+        #expect(checklistItems.first?.taskID == task.id)
+        #expect(visuals.map(\.iconName) == ["paintbrush"])
+        #expect(visuals.map(\.colorHex) == ["1677FF"])
+        #expect(visuals.map(\.suggestionTitleSnapshot) == ["Polish empty state"])
+        #expect(visuals.map(\.suggestionModelID) == ["gpt-test"])
+        #expect(inboxItems.allSatisfy { $0.deletedAt != nil })
+        #expect(suggestions.allSatisfy { $0.deletedAt != nil })
+    }
+
     private func coordinator(
         _ container: ModelContainer,
         deviceID: String = "scene"

@@ -15,10 +15,6 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    override func tearDownWithError() throws {
-        XCUIApplication().terminate()
-    }
-
     @MainActor
     func testRunningTimerAppearsOnSystemSurfaces() throws {
         #if os(iOS) && targetEnvironment(simulator)
@@ -28,17 +24,7 @@ final class LiveActivitySystemSurfaceUITests: XCTestCase {
         }
         XCUIDevice.shared.orientation = .portrait
 
-        let app = XCUIApplication()
-        app.launchArguments = [
-            "--uitesting",
-            "--uitesting-live-activity-long-timer",
-            "-ApplePersistenceIgnoreState", "YES",
-            "-AppleLanguages", "(en)",
-            "-AppleLocale", "en_US",
-            "-TimeTrackerAutomaticDemoDataModeOverride", "replaceOnLaunch",
-            "-TimeTrackerAutomaticDemoSeedingDisabled", "NO",
-        ]
-        app.launch()
+        let app = launchDemoApp(extraArguments: ["--uitesting-live-activity-long-timer"])
 
         let expectedTaskTitle = "Read Apple HIG"
         let runningTask = app.buttons.matching(NSPredicate(

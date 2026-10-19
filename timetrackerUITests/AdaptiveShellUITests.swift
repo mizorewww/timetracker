@@ -9,9 +9,8 @@ import XCTest
 ///
 /// The shells are identified by the navigation affordance each one owns rather
 /// than by a container identifier. `TabView`'s own `.accessibilityIdentifier`
-/// does not surface as a queryable element under the iOS 26+ floating tab bar —
-/// verified to be true before this refactor as well as after — so asserting on
-/// it would test the SwiftUI version, not the app.
+/// does not surface as a queryable element under the iOS 26+ floating tab bar,
+/// so asserting on it would test the SwiftUI version, not the app.
 final class AdaptiveShellUITests: XCTestCase {
     override func setUp() {
         super.setUp()

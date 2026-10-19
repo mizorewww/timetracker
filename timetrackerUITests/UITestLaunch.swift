@@ -3,7 +3,10 @@ import XCTest
 extension XCTestCase {
     /// Launches an isolated demo-data app in English and waits until initial
     /// configuration finishes. The app is terminated at teardown.
-    func launchDemoApp(windowSize: CGSize? = nil) -> XCUIApplication {
+    func launchDemoApp(
+        windowSize: CGSize? = nil,
+        extraArguments: [String] = []
+    ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
             "--uitesting",
@@ -12,7 +15,7 @@ extension XCTestCase {
             "-AppleLocale", "en_US",
             "-TimeTrackerAutomaticDemoDataModeOverride", "replaceOnLaunch",
             "-TimeTrackerAutomaticDemoSeedingDisabled", "NO",
-        ]
+        ] + extraArguments
         app.launchEnvironment["ApplePersistenceIgnoreState"] = "YES"
         #if os(macOS)
         if let windowSize {

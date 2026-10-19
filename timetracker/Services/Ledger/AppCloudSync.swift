@@ -17,8 +17,6 @@ enum AppCloudSync {
     nonisolated static let enabledKey = "TimeTrackerCloudSyncEnabled"
     nonisolated static let modeKey = "TimeTrackerPersistenceMode"
     nonisolated static let errorKey = "TimeTrackerPersistenceError"
-    nonisolated static let accountStatusKey =
-        "TimeTrackerCloudAccountStatus"
     nonisolated static let modeICloud = "iCloud"
     nonisolated static let modeLocal = "Local"
     nonisolated static let modeLocalFallback = "Local fallback"

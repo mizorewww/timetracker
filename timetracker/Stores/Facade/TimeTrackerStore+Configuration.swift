@@ -70,14 +70,9 @@ extension TimeTrackerStore {
         }
         reconcileActivePomodoro(now: Date())
         startupConfigurationPhase = .completed
-        enqueueCommittedMutationSystemProjections(
-            events: [.fullSync],
-            // A Watch command can have a terminal outcome without creating
-            // SwiftData history (duplicate, missing, invalid, or failed).
-            // Re-publish current state at startup so that forced-only work
-            // interrupted by process exit still converges.
-            forcedSystemSinks: [.watch]
-        )
+        // `.fullSync` republishes every system surface, including the Watch
+        // state a terminal Watch command outcome may not have recorded.
+        enqueueCommittedMutationSystemProjections(events: [.fullSync])
         if writeAuthorization.usesApplicationState,
            AppRuntimeEnvironment.isUnitTestHost() == false
         {

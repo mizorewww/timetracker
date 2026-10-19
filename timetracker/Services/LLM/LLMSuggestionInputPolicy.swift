@@ -24,8 +24,6 @@ nonisolated struct LLMChecklistVisualSuggestionPreparedInput: Equatable, Sendabl
 }
 
 nonisolated enum LLMSuggestionInputPolicy {
-    // Model ID and reason are persisted on suggestions; bound them here.
-    static let maximumModelIDByteCount = 256
     static let maximumReasonByteCount = 512
     static let maximumTaskIDByteCount = 64
 

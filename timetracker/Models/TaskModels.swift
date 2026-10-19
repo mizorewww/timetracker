@@ -10,13 +10,6 @@ nonisolated enum LegacyTaskStatusRaw {
     static let planned = "planned"
     static let completed = "completed"
     static let archived = "archived"
-
-    static let acceptedValues: Set<String> = [
-        active,
-        planned,
-        completed,
-        archived,
-    ]
 }
 
 @Model

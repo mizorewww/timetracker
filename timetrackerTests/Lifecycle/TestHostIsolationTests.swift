@@ -83,7 +83,6 @@ struct TestHostIsolationTests {
             AppCloudSync.enabledKey,
             AppCloudSync.modeKey,
             AppCloudSync.errorKey,
-            AppCloudSync.accountStatusKey,
         ]
         let defaults = UserDefaults.standard
         let before = defaults.dictionaryWithValues(forKeys: keys) as NSDictionary

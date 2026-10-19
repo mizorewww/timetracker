@@ -29,25 +29,6 @@ extension TimeTrackerStore {
         }.count
     }
 
-    var averageFocusSeconds: Int {
-        averageFocusSeconds(now: Date())
-    }
-
-    func averageFocusSeconds(now: Date, calendar: Calendar = .current) -> Int {
-        guard let interval = calendar.dateInterval(of: .day, for: now) else { return 0 }
-        let focus = visibleSegments(overlapping: interval, now: now)
-            .filter { $0.source == .pomodoro }
-        guard !focus.isEmpty else { return 0 }
-        let seconds = LedgerSummaryService.secondsInInterval(
-            taskIDs: Set(focus.map(\.taskID)),
-            segments: focus,
-            interval: interval,
-            mode: .gross,
-            now: now
-        )
-        return seconds / focus.count
-    }
-
     func activePomodoroRun(for taskID: UUID) -> PomodoroRun? {
         pomodoroRuns.first { run in
             run.taskID == taskID &&

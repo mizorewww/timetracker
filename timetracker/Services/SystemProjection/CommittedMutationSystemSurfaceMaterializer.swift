@@ -24,18 +24,6 @@ nonisolated enum CommittedMutationLiveActivityProjection:
 
     static func materialize(
         activeSegments: [TimeSegment],
-        tasks: [TaskNode],
-        now: Date
-    ) -> Self {
-        materialize(
-            activeSegments: activeSegments,
-            indexes: TaskTreeService().indexes(tasks: tasks),
-            now: now
-        )
-    }
-
-    static func materialize(
-        activeSegments: [TimeSegment],
         indexes: TaskTreeIndexes,
         now: Date
     ) -> Self {

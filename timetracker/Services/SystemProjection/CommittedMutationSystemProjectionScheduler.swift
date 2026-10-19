@@ -40,8 +40,6 @@ private nonisolated enum CommittedMutationSystemProjectionError:
     case storeContainerReleased
     case watchNotActivated
     case watchDeliveryFailed(String)
-    case liveActivityDidNotSettle
-    case liveActivityUnavailable(LiveActivityFailure)
 
     var errorDescription: String? {
         switch self {
@@ -51,10 +49,6 @@ private nonisolated enum CommittedMutationSystemProjectionError:
             "Watch connectivity is not activated."
         case let .watchDeliveryFailed(message):
             "Watch application-context delivery failed: \(message)"
-        case .liveActivityDidNotSettle:
-            "Live Activity synchronization did not settle."
-        case let .liveActivityUnavailable(failure):
-            "Live Activity synchronization is unavailable: \(String(describing: failure))."
         }
     }
 }
@@ -217,31 +211,7 @@ final class CommittedMutationSystemProjectionScheduler {
         _ projection: CommittedMutationLiveActivityProjection
     ) async throws {
         #if os(iOS) && canImport(ActivityKit)
-        let coordinator = LiveActivityCoordinator.shared
-        coordinator.sync(projection: projection)
-        await coordinator.waitUntilIdle()
-
-        switch coordinator.status {
-        case .ready, .active:
-            return
-        case .synchronizing:
-            throw CommittedMutationSystemProjectionError.liveActivityDidNotSettle
-        case let .unavailable(failure):
-            switch failure {
-            case .backgroundStart, .capacity, .system:
-                throw CommittedMutationSystemProjectionError
-                    .liveActivityUnavailable(failure)
-            case .unsupported,
-                 .denied,
-                 .configuration,
-                 .payloadTooLarge,
-                 .removed:
-                // These require a capability, settings, configuration, or
-                // explicit user action. Automatic retries would not make
-                // progress and could recreate a dismissed activity.
-                return
-            }
-        }
+        try await LiveActivityCoordinator.shared.apply(projection)
         #else
         _ = projection
         #endif

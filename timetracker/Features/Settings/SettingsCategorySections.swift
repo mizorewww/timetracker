@@ -11,7 +11,7 @@ extension SettingsView {
             )
 
             #if os(iOS)
-            LiveActivitySettingsSection(store: store)
+            LiveActivitySettingsSection()
             #endif
 
             TodayHeatmapSettingsSection(

@@ -27,12 +27,12 @@ struct StoreScopedCountdownCommandCoordinatorTests {
         let coordinator = makeCoordinator(container: context.container)
         try coordinator.add()
         let added = try #require(try allEvents(in: context.container).only)
-        let baseline = CountdownMutationBaseline(event: added)
+        let eventID = added.id
         let now = Date(timeIntervalSinceReferenceDate: 500_000)
         let newDate = Date(timeIntervalSinceReferenceDate: 900_000)
 
         try makeCoordinator(container: context.container, now: now)
-            .update(baseline: baseline, title: "  Launch day  ", date: newDate)
+            .update(eventID: eventID, title: "  Launch day  ", date: newDate)
 
         let persisted = try #require(try allEvents(in: context.container).only)
         #expect(persisted.title == "Launch day")
@@ -47,10 +47,10 @@ struct StoreScopedCountdownCommandCoordinatorTests {
         let coordinator = makeCoordinator(container: context.container)
         try coordinator.add()
         let added = try #require(try allEvents(in: context.container).only)
-        let baseline = CountdownMutationBaseline(event: added)
+        let eventID = added.id
 
         #expect(throws: CountdownTitleValidationError.empty) {
-            try coordinator.update(baseline: baseline, title: "   ", date: nil)
+            try coordinator.update(eventID: eventID, title: "   ", date: nil)
         }
 
         let persisted = try #require(try allEvents(in: context.container).only)
@@ -60,43 +60,12 @@ struct StoreScopedCountdownCommandCoordinatorTests {
     }
 
     @Test
-    func staleBaselineCannotOverwriteANewerMutationFromAnotherScene() throws {
-        let context = try makeTestContext()
-        let coordinator = makeCoordinator(container: context.container)
-        try coordinator.add()
-        let added = try #require(try allEvents(in: context.container).only)
-        let staleBaseline = CountdownMutationBaseline(event: added)
-        let sibling = StoreScopedCountdownCommandCoordinator(
-            session: .testHarness(context.container),
-            deviceID: "sibling",
-            nowProvider: { Date(timeIntervalSinceReferenceDate: 500_000) }
-        )
-        try sibling.update(
-            baseline: staleBaseline,
-            title: "Sibling edit",
-            date: nil
-        )
-
-        #expect(throws: StoreScopedCountdownMutationError.eventChanged) {
-            try coordinator.update(
-                baseline: staleBaseline,
-                title: "Stale overwrite",
-                date: nil
-            )
-        }
-
-        let persisted = try #require(try allEvents(in: context.container).only)
-        #expect(persisted.title == "Sibling edit")
-        #expect(persisted.deviceID == "sibling")
-    }
-
-    @Test
     func mutationAgainstATombstonedEventFailsAsUnavailable() throws {
         let context = try makeTestContext()
         let coordinator = makeCoordinator(container: context.container)
         try coordinator.add()
         let added = try #require(try allEvents(in: context.container).only)
-        let baseline = CountdownMutationBaseline(event: added)
+        let eventID = added.id
         let tombstonedAt = Date(timeIntervalSinceReferenceDate: 500_000)
 
         let siblingContext = ModelContext(context.container)
@@ -110,10 +79,10 @@ struct StoreScopedCountdownCommandCoordinatorTests {
         try siblingContext.save()
 
         #expect(throws: StoreScopedCountdownMutationError.eventUnavailable) {
-            try coordinator.update(baseline: baseline, title: "Revive", date: nil)
+            try coordinator.update(eventID: eventID, title: "Revive", date: nil)
         }
         #expect(throws: StoreScopedCountdownMutationError.eventUnavailable) {
-            try coordinator.delete(baseline: baseline)
+            try coordinator.delete(eventID: eventID)
         }
 
         let persisted = try #require(try allEvents(in: context.container).only)
@@ -127,11 +96,11 @@ struct StoreScopedCountdownCommandCoordinatorTests {
         let coordinator = makeCoordinator(container: context.container)
         try coordinator.add()
         let added = try #require(try allEvents(in: context.container).only)
-        let baseline = CountdownMutationBaseline(event: added)
+        let eventID = added.id
         let now = Date(timeIntervalSinceReferenceDate: 500_000)
 
         try makeCoordinator(container: context.container, now: now)
-            .delete(baseline: baseline)
+            .delete(eventID: eventID)
 
         let persisted = try #require(try allEvents(in: context.container).only)
         #expect(persisted.deletedAt == now)
@@ -139,7 +108,7 @@ struct StoreScopedCountdownCommandCoordinatorTests {
         #expect(persisted.clientMutationID != added.clientMutationID)
 
         #expect(throws: StoreScopedCountdownMutationError.eventUnavailable) {
-            try coordinator.delete(baseline: baseline)
+            try coordinator.delete(eventID: eventID)
         }
     }
 

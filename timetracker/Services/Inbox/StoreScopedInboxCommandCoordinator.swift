@@ -1,30 +1,6 @@
 import Foundation
 import SwiftData
 
-struct InboxOrderMutationBaseline: Equatable, Sendable {
-    let itemMutationIDs: [UUID: UUID]
-    let orderedItemIDs: [UUID]
-
-    init(items: [InboxItem]) {
-        itemMutationIDs = items.reduce(into: [:]) { result, item in
-            result[item.id] = item.clientMutationID
-        }
-        orderedItemIDs = Self.ordered(items).map(\.id)
-    }
-
-    private static func ordered(_ items: [InboxItem]) -> [InboxItem] {
-        items.sorted { lhs, rhs in
-            if lhs.sortOrder != rhs.sortOrder {
-                return lhs.sortOrder < rhs.sortOrder
-            }
-            if lhs.createdAt != rhs.createdAt {
-                return lhs.createdAt < rhs.createdAt
-            }
-            return lhs.id.uuidString < rhs.id.uuidString
-        }
-    }
-}
-
 enum StoreScopedInboxMutationError: LocalizedError, Equatable {
     case inboxChanged
     case taskUnavailable
@@ -87,19 +63,11 @@ struct StoreScopedInboxCommandCoordinator {
         self.nowProvider = nowProvider
     }
 
-    func reorder(
-        baseline: InboxOrderMutationBaseline,
-        orderedItemIDs: [UUID]
-    ) throws -> InboxMutationOutcome {
+    func reorder(orderedItemIDs: [UUID]) throws -> InboxMutationOutcome {
         try withFreshLockedContext { context in
             let items = try openItems(context: context)
-            let currentMutationIDs = items.reduce(into: [UUID: UUID]()) {
-                $0[$1.id] = $1.clientMutationID
-            }
             let currentOrder = Self.ordered(items).map(\.id)
-            guard currentMutationIDs == baseline.itemMutationIDs,
-                  currentOrder == baseline.orderedItemIDs,
-                  orderedItemIDs.count == items.count,
+            guard orderedItemIDs.count == items.count,
                   Set(orderedItemIDs) == Set(items.map(\.id))
             else {
                 throw StoreScopedInboxMutationError.inboxChanged
@@ -124,8 +92,8 @@ struct StoreScopedInboxCommandCoordinator {
         }
     }
 
-    func toggle(baseline: InboxItemMutationBaseline) throws -> InboxMutationOutcome {
-        try mutateItem(baseline: baseline) { item, context in
+    func toggle(itemID: UUID) throws -> InboxMutationOutcome {
+        try mutateItem(itemID: itemID) { item, context in
             try toggle(
                 item,
                 context: context,
@@ -136,10 +104,10 @@ struct StoreScopedInboxCommandCoordinator {
     }
 
     func updateTitle(
-        baseline: InboxItemMutationBaseline,
+        itemID: UUID,
         title: String
     ) throws -> InboxMutationOutcome {
-        try mutateItem(baseline: baseline) { item, context in
+        try mutateItem(itemID: itemID) { item, context in
             try updateTitle(
                 item,
                 title: title,
@@ -150,8 +118,8 @@ struct StoreScopedInboxCommandCoordinator {
         }
     }
 
-    func delete(baseline: InboxItemMutationBaseline) throws -> InboxMutationOutcome {
-        try mutateItem(baseline: baseline) { item, context in
+    func delete(itemID: UUID) throws -> InboxMutationOutcome {
+        try mutateItem(itemID: itemID) { item, context in
             try softDelete(
                 item,
                 context: context,
@@ -161,8 +129,8 @@ struct StoreScopedInboxCommandCoordinator {
         }
     }
 
-    func discardSuggestion(baseline: InboxItemMutationBaseline) throws -> InboxMutationOutcome {
-        try mutateItem(baseline: baseline) { item, context in
+    func discardSuggestion(itemID: UUID) throws -> InboxMutationOutcome {
+        try mutateItem(itemID: itemID) { item, context in
             try discardSuggestion(
                 item,
                 context: context,
@@ -179,11 +147,11 @@ struct StoreScopedInboxCommandCoordinator {
     }
 
     private func mutateItem(
-        baseline: InboxItemMutationBaseline,
+        itemID: UUID,
         operation: (InboxItem, ModelContext) throws -> Void
     ) throws -> InboxMutationOutcome {
         try withFreshLockedContext { context in
-            guard let item = try visibleItem(id: baseline.itemID, context: context), item.clientMutationID == baseline.clientMutationID else {
+            guard let item = try visibleItem(id: itemID, context: context) else {
                 throw StoreScopedInboxMutationError.inboxChanged
             }
             let mutationIDBeforeOperation = item.clientMutationID

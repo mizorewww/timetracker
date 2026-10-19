@@ -1,22 +1,9 @@
 import Foundation
 import SwiftData
 
-struct ChecklistMutationBaseline: Equatable, Sendable {
-    let itemID: UUID
-    let taskID: UUID
-    let clientMutationID: UUID
-
-    init(item: ChecklistItem) {
-        itemID = item.id
-        taskID = item.taskID
-        clientMutationID = item.clientMutationID
-    }
-}
-
 enum StoreScopedChecklistMutationError: LocalizedError, Equatable {
     case taskUnavailable
     case itemUnavailable
-    case checklistChanged
 
     var errorDescription: String? {
         switch self {
@@ -24,8 +11,6 @@ enum StoreScopedChecklistMutationError: LocalizedError, Equatable {
             AppStrings.localized("systemAction.error.taskNotFound")
         case .itemUnavailable:
             AppStrings.localized("checklist.error.unavailable")
-        case .checklistChanged:
-            AppStrings.localized("checklist.error.changed")
         }
     }
 }
@@ -93,16 +78,14 @@ struct StoreScopedChecklistCommandCoordinator {
     }
 
     func setCompletion(
-        baseline: ChecklistMutationBaseline,
+        taskID: UUID,
+        itemID: UUID,
         isCompleted: Bool
     ) throws -> ChecklistMutationOutcome {
-        try withCanonicalTask(taskID: baseline.taskID) { context, _ in
-            let items = try visibleItems(taskID: baseline.taskID, context: context)
-            guard let item = items.first(where: { $0.id == baseline.itemID }) else {
+        try withCanonicalTask(taskID: taskID) { context, _ in
+            let items = try visibleItems(taskID: taskID, context: context)
+            guard let item = items.first(where: { $0.id == itemID }) else {
                 throw StoreScopedChecklistMutationError.itemUnavailable
-            }
-            guard item.clientMutationID == baseline.clientMutationID else {
-                throw StoreScopedChecklistMutationError.checklistChanged
             }
             guard item.isCompleted != isCompleted else {
                 return (item.id, false)
@@ -128,26 +111,28 @@ struct StoreScopedChecklistCommandCoordinator {
         }
     }
 
+    /// Resolves the task and its parent chain by ID after the lock is held.
+    /// The operation learns whether the branch can still receive work (no
+    /// archived task on the chain); the outcome carries the ancestors whose
+    /// rollups the checklist change affects.
     func withCanonicalTask(
         taskID: UUID,
-        operation: (ModelContext, [TaskNode]) throws -> (itemID: UUID?, didMutate: Bool)
+        operation: (ModelContext, _ isTrackable: Bool) throws -> (itemID: UUID?, didMutate: Bool)
     ) throws -> ChecklistMutationOutcome {
         try session.withFreshMutationContext { context in
-            let tasks = try SwiftDataTaskRepository(
-                context: context,
-                deviceID: deviceID
-            ).allNodes()
-            guard tasks.contains(where: { $0.id == taskID }) else {
+            let repository = SwiftDataTaskRepository(context: context, deviceID: deviceID)
+            guard let task = try repository.task(id: taskID) else {
                 throw StoreScopedChecklistMutationError.taskUnavailable
             }
-            let result = try operation(context, tasks)
-            let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
-            let ancestorIDs = Set(
-                StoreSelectionCoordinator().ancestorTaskIDs(
-                    for: taskID,
-                    taskByID: taskByID
-                )
-            )
+            var ancestorIDs: Set<UUID> = []
+            var isTrackable = task.isArchivedForLifecycle == false
+            var cursor = task
+            while let parentID = cursor.parentID, ancestorIDs.insert(parentID).inserted {
+                guard let parent = try repository.task(id: parentID) else { break }
+                isTrackable = isTrackable && parent.isArchivedForLifecycle == false
+                cursor = parent
+            }
+            let result = try operation(context, isTrackable)
             return ChecklistMutationOutcome(
                 taskID: taskID,
                 itemID: result.itemID,

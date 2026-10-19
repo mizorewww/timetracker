@@ -11,7 +11,7 @@ extension TimeTrackerStore {
 
     func toggleInboxItem(_ item: InboxItem) {
         _ = performStoreScopedInboxMutation { coordinator in
-            try coordinator.toggle(baseline: InboxItemMutationBaseline(item: item))
+            try coordinator.toggle(itemID: item.id)
         }
     }
 
@@ -20,7 +20,7 @@ extension TimeTrackerStore {
         let newTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let outcome = performStoreScopedInboxMutation { coordinator in
             try coordinator.updateTitle(
-                baseline: InboxItemMutationBaseline(item: item),
+                itemID: item.id,
                 title: title
             )
         }
@@ -36,7 +36,7 @@ extension TimeTrackerStore {
 
     func deleteInboxItem(_ item: InboxItem) {
         let outcome = performStoreScopedInboxMutation { coordinator in
-            try coordinator.delete(baseline: InboxItemMutationBaseline(item: item))
+            try coordinator.delete(itemID: item.id)
         }
         if outcome?.didMutate == true {
             inboxSuggestionFailureByItemID[item.id] = nil
@@ -45,7 +45,7 @@ extension TimeTrackerStore {
 
     func discardInboxSuggestion(_ item: InboxItem) {
         let outcome = performStoreScopedInboxMutation { coordinator in
-            try coordinator.discardSuggestion(baseline: InboxItemMutationBaseline(item: item))
+            try coordinator.discardSuggestion(itemID: item.id)
         }
         if outcome?.didMutate == true {
             inboxSuggestionFailureByItemID[item.id] = nil
@@ -61,10 +61,7 @@ extension TimeTrackerStore {
             destination: destination
         )
         return performStoreScopedInboxMutation { coordinator in
-            try coordinator.reorder(
-                baseline: InboxOrderMutationBaseline(items: currentItems),
-                orderedItemIDs: orderedIDs
-            )
+            try coordinator.reorder(orderedItemIDs: orderedIDs)
         } != nil
     }
 

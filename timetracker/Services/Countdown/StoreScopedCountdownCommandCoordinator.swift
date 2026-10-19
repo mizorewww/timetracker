@@ -1,34 +1,20 @@
 import Foundation
 import SwiftData
 
-struct CountdownMutationBaseline: Equatable, Sendable {
-    let eventID: UUID
-    let clientMutationID: UUID
-
-    init(event: CountdownEvent) {
-        eventID = event.id
-        clientMutationID = event.clientMutationID
-    }
-}
-
 enum StoreScopedCountdownMutationError: LocalizedError, Equatable {
     case eventUnavailable
-    case eventChanged
 
     var errorDescription: String? {
         switch self {
         case .eventUnavailable:
             AppStrings.localized("settings.countdown.error.unavailable")
-        case .eventChanged:
-            AppStrings.localized("settings.countdown.error.changed")
         }
     }
 }
 
 /// Serializes countdown edits with the rest of the store mutation domain and
-/// resolves the logical event only after the lock is held. A scene must not
-/// write through an older SwiftData object after another scene has updated or
-/// tombstoned the same logical event.
+/// resolves the logical event by ID only after the lock is held, so a scene
+/// never writes through an older SwiftData object or revives a tombstone.
 @MainActor
 struct StoreScopedCountdownCommandCoordinator {
     let session: StoreMutationSession
@@ -57,12 +43,12 @@ struct StoreScopedCountdownCommandCoordinator {
     }
 
     func update(
-        baseline: CountdownMutationBaseline,
+        eventID: UUID,
         title: String?,
         date: Date?
     ) throws {
         let normalizedTitle = try title.map(CountdownTitlePolicy.normalized)
-        try mutate(baseline: baseline) { event, _ in
+        try mutate(eventID: eventID) { event, _ in
             if let normalizedTitle {
                 event.title = normalizedTitle
             }
@@ -72,18 +58,17 @@ struct StoreScopedCountdownCommandCoordinator {
         }
     }
 
-    func delete(baseline: CountdownMutationBaseline) throws {
-        try mutate(baseline: baseline) { event, now in
+    func delete(eventID: UUID) throws {
+        try mutate(eventID: eventID) { event, now in
             event.deletedAt = now
         }
     }
 
     private func mutate(
-        baseline: CountdownMutationBaseline,
+        eventID: UUID,
         operation: (CountdownEvent, Date) -> Void
     ) throws {
         try session.withFreshMutationContext { context in
-            let eventID = baseline.eventID
             let descriptor = FetchDescriptor<CountdownEvent>(
                 predicate: #Predicate { $0.id == eventID }
             )
@@ -93,9 +78,6 @@ struct StoreScopedCountdownCommandCoordinator {
                 event.deletedAt == nil
             else {
                 throw StoreScopedCountdownMutationError.eventUnavailable
-            }
-            guard event.clientMutationID == baseline.clientMutationID else {
-                throw StoreScopedCountdownMutationError.eventChanged
             }
             let now = nowProvider()
             operation(event, now)

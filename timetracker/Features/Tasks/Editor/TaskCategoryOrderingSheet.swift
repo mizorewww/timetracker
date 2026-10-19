@@ -3,17 +3,11 @@ import SwiftUI
 struct TaskCategoryOrderingSheet: View {
     let store: TimeTrackerStore
     @Environment(\.dismiss) private var dismiss
-    @State private var baseline: TaskCategoryOrderMutationBaseline
     @State private var orderedCategories: [TaskCategoryOrderingItem]
 
     init(store: TimeTrackerStore) {
         self.store = store
         let categories = store.taskCategories
-        _baseline = State(
-            initialValue: TaskCategoryOrderMutationBaseline(
-                categories: categories
-            )
-        )
         _orderedCategories = State(
             initialValue: categories.map {
                 TaskCategoryOrderingItem(category: $0)
@@ -52,8 +46,7 @@ struct TaskCategoryOrderingSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(AppStrings.done) {
                         if store.reorderTaskCategories(
-                            orderedCategoryIDs: orderedCategories.map(\.id),
-                            baseline: baseline
+                            orderedCategoryIDs: orderedCategories.map(\.id)
                         ) {
                             dismiss()
                         }

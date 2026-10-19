@@ -11,7 +11,8 @@ extension TimeTrackerStore {
             try StoreScopedChecklistCommandCoordinator(
                 session: session
             ).setCompletion(
-                baseline: ChecklistMutationBaseline(item: item),
+                taskID: item.taskID,
+                itemID: item.id,
                 isCompleted: !item.isCompleted
             )
         } != nil

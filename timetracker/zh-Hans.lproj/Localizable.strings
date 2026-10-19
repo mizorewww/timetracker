@@ -459,7 +459,6 @@
 "persistence.reopenHint" = "检查 iCloud 访问权限后，请从 App 切换器关闭时间追踪器，然后重新打开。";
 "persistence.quit" = "退出时间追踪器";
 "settings.countdown.error.unavailable" = "此倒计时已不存在。已重新载入最新的倒计时列表。";
-"settings.countdown.error.changed" = "此倒计时已在其他窗口或设备上发生变化。请检查最新内容后重试。";
 "tab.home" = "首页";
 "sidebar.show" = "显示侧边栏";
 "sidebar.hide" = "隐藏侧边栏";
@@ -971,7 +970,6 @@
 "checklist.draft.error.controlCharacterFormat" = "清单第 %d 项的%@包含不支持的字符。";
 "checklist.draft.error.tooLongFormat" = "清单第 %d 项的%@内容过长，请缩短后重试。";
 "checklist.error.unavailable" = "此清单项已不可用。";
-"checklist.error.changed" = "此清单已在其他位置发生变化。请查看最新版本后重试。";
 "persistence.field.taskName" = "任务名称";
 "persistence.field.categoryName" = "分类名称";
 "persistence.field.notes" = "备注";

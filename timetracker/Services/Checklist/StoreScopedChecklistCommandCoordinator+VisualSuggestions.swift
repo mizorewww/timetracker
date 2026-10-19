@@ -29,12 +29,10 @@ extension StoreScopedChecklistCommandCoordinator {
         baseline: ChecklistVisualSuggestionBaseline,
         result: LLMChecklistVisualSuggestionResult
     ) throws -> ChecklistMutationOutcome {
-        try withCanonicalTask(taskID: baseline.taskID) { context, tasks in
-            guard TaskTrackingAvailabilityService()
-                .trackableTaskIDs(tasks: tasks)
-                .contains(baseline.taskID),
-                let item = try visibleItems(taskID: baseline.taskID, context: context)
-                    .first(where: { $0.id == baseline.itemID }),
+        try withCanonicalTask(taskID: baseline.taskID) { context, isTrackable in
+            guard isTrackable,
+                  let item = try visibleItems(taskID: baseline.taskID, context: context)
+                      .first(where: { $0.id == baseline.itemID }),
                   item.clientMutationID == baseline.itemMutationID,
                   ChecklistVisualSuggestionPolicy().normalizedTitle(item.title) == baseline.normalizedTitle,
                   item.isCompleted == false

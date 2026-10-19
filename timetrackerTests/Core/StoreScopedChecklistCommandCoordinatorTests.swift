@@ -7,33 +7,6 @@ import Testing
 @MainActor
 struct StoreScopedChecklistCommandCoordinatorTests {
     @Test
-    func staleSceneCannotOverwriteANewerCompletionMutation() throws {
-        let context = try makeTestContext()
-        let task = try makeTask(in: context, title: "Checklist owner")
-        let store = makeTestStore()
-        store.configureIfNeeded(context: context)
-        #expect(store.addChecklistItem(taskID: task.id, title: "Original"))
-        let staleItem = try #require(store.checklistItems(for: task.id).first)
-
-        let sibling = StoreScopedChecklistCommandCoordinator(
-            session: .testHarness(context.container),
-            deviceID: "sibling",
-            nowProvider: { Date(timeIntervalSinceReferenceDate: 1000) }
-        )
-        _ = try sibling.setCompletion(
-            baseline: ChecklistMutationBaseline(item: staleItem),
-            isCompleted: true
-        )
-
-        #expect(store.toggleChecklistItem(staleItem) == false)
-        #expect(store.errorMessage == AppStrings.localized("checklist.error.changed"))
-        let winner = try #require(try visibleItems(in: context.container).first)
-        #expect(winner.isCompleted)
-        #expect(winner.deviceID == "sibling")
-        #expect(store.checklistItems(for: task.id).first?.isCompleted == true)
-    }
-
-    @Test
     func staleSceneCannotResurrectADeletedChecklistItem() throws {
         let context = try makeTestContext()
         let task = try makeTask(in: context, title: "Checklist owner")

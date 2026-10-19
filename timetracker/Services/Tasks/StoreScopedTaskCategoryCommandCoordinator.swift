@@ -44,32 +44,22 @@ struct StoreScopedTaskCategoryCommandCoordinator {
         self.nowProvider = nowProvider
     }
 
+    /// Rejects an ordering whose category set no longer matches the store
+    /// (a category was added or deleted elsewhere); concurrent writers are
+    /// already serialized by the store lock.
     func reorder(
-        orderedCategoryIDs: [UUID],
-        baseline: TaskCategoryOrderMutationBaseline
+        orderedCategoryIDs: [UUID]
     ) throws -> TaskCategoryOrderMutationOutcome {
         try withFreshRepository { repository in
-            let categories = try repository.categories()
-            let currentBaseline = TaskCategoryOrderMutationBaseline(
-                categories: categories
-            )
-            guard currentBaseline == baseline,
-                  orderedCategoryIDs.count == categories.count,
-                  Set(orderedCategoryIDs) == Set(categories.map(\.id))
-            else {
+            let didMutate: Bool
+            do {
+                didMutate = try repository.reorderCategories(
+                    orderedCategoryIDs: orderedCategoryIDs,
+                    now: nowProvider()
+                )
+            } catch TaskRepositoryError.categoryUnavailable {
                 throw StoreScopedTaskCategoryMutationError.categoryChanged
             }
-            guard currentBaseline.orderedCategoryIDs != orderedCategoryIDs else {
-                return TaskCategoryOrderMutationOutcome(
-                    affectedCategoryIDs: Set(orderedCategoryIDs),
-                    didMutate: false
-                )
-            }
-
-            let didMutate = try repository.reorderCategories(
-                orderedCategoryIDs: orderedCategoryIDs,
-                now: nowProvider()
-            )
             return TaskCategoryOrderMutationOutcome(
                 affectedCategoryIDs: Set(orderedCategoryIDs),
                 didMutate: didMutate

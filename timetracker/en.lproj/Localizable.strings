@@ -459,7 +459,6 @@
 "persistence.reopenHint" = "After checking iCloud access, close Time Tracker from the App Switcher and reopen it.";
 "persistence.quit" = "Quit Time Tracker";
 "settings.countdown.error.unavailable" = "This countdown is no longer available. The latest countdowns have been reloaded.";
-"settings.countdown.error.changed" = "This countdown changed in another window or device. Review the latest value and try again.";
 "tab.home" = "Home";
 "sidebar.show" = "Show Sidebar";
 "sidebar.hide" = "Hide Sidebar";
@@ -971,7 +970,6 @@
 "checklist.draft.error.controlCharacterFormat" = "Checklist item %d contains unsupported characters in its %@.";
 "checklist.draft.error.tooLongFormat" = "Checklist item %d has too much text in its %@. Shorten it and try again.";
 "checklist.error.unavailable" = "This checklist item is no longer available.";
-"checklist.error.changed" = "This checklist changed elsewhere. Review the latest version, then try again.";
 "persistence.field.taskName" = "task name";
 "persistence.field.categoryName" = "category name";
 "persistence.field.notes" = "notes";

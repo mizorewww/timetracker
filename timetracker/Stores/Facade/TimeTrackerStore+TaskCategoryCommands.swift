@@ -4,29 +4,12 @@ import SwiftData
 extension TimeTrackerStore {
     @discardableResult
     func reorderTaskCategories(orderedCategoryIDs: [UUID]) -> Bool {
-        reorderTaskCategories(
-            orderedCategoryIDs: orderedCategoryIDs,
-            baseline: TaskCategoryOrderMutationBaseline(
-                categories: taskCategories
-            )
-        )
-    }
-
-    @discardableResult
-    func reorderTaskCategories(
-        orderedCategoryIDs: [UUID],
-        baseline: TaskCategoryOrderMutationBaseline
-    ) -> Bool {
         performStoreCommand(
             eventsForOutcome: { $0.events },
             onError: handleStoreScopedTaskCategoryError
         ) { session in
-            try StoreScopedTaskCategoryCommandCoordinator(
-                session: session
-            ).reorder(
-                orderedCategoryIDs: orderedCategoryIDs,
-                baseline: baseline
-            )
+            try StoreScopedTaskCategoryCommandCoordinator(session: session)
+                .reorder(orderedCategoryIDs: orderedCategoryIDs)
         } != nil
     }
 

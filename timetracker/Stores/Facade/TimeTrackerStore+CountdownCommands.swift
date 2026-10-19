@@ -22,7 +22,7 @@ extension TimeTrackerStore {
             try StoreScopedCountdownCommandCoordinator(
                 session: session
             ).update(
-                baseline: CountdownMutationBaseline(event: event),
+                eventID: event.id,
                 title: title,
                 date: date
             )
@@ -37,7 +37,7 @@ extension TimeTrackerStore {
         ) { session in
             try StoreScopedCountdownCommandCoordinator(
                 session: session
-            ).delete(baseline: CountdownMutationBaseline(event: event))
+            ).delete(eventID: event.id)
         } != nil
     }
 

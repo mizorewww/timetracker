@@ -5,7 +5,7 @@ import SwiftUI
 /// window dragged below `RootLayoutPolicy.regularShellMinimumWidth`.
 struct CompactShellRootView: View {
     let store: TimeTrackerStore
-    let requestOpenSettings: () -> Bool
+    let openSettings: () -> Void
 
     var body: some View {
         TabView(selection: selectedDestinationBinding) {
@@ -80,10 +80,6 @@ struct CompactShellRootView: View {
             get: { store.desktopDestination },
             set: { store.desktopDestination = $0 }
         )
-    }
-
-    private func openSettings() {
-        _ = requestOpenSettings()
     }
 
     private func openTask(_ taskID: UUID) {

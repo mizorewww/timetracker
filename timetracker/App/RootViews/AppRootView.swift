@@ -25,7 +25,7 @@ struct AppRootView: View {
             case .compact:
                 CompactShellRootView(
                     store: store,
-                    requestOpenSettings: { presentationRouter.present(.settings) }
+                    openSettings: { presentationRouter.present(.settings) }
                 )
             case .regular:
                 RegularShellRootView(store: store)

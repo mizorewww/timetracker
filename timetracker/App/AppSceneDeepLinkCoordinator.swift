@@ -12,8 +12,7 @@ struct AppSceneDeepLinkCoordinator {
     }
 
     func drain() {
-        guard pendingDeepLink.url != nil,
-              let url = pendingDeepLink.take(),
+        guard let url = pendingDeepLink.take(),
               let action = AppDeepLinkRouter().action(for: url)
         else {
             return
@@ -30,7 +29,6 @@ struct AppSceneDeepLinkCoordinator {
             guard disposition == .handled else { return }
             store.closeTaskDetailNavigation()
             store.desktopDestination = .today
-            drain()
         case let .openTask(taskID):
             guard store.isTaskDetailRouteValid(taskID) else { return }
             route(url)
@@ -42,8 +40,6 @@ struct AppSceneDeepLinkCoordinator {
     private func route(_ url: URL) {
         if store.handleDeepLink(url, presentationRouter: presentationRouter) == .deferred {
             pendingDeepLink.restore(url)
-            return
         }
-        drain()
     }
 }

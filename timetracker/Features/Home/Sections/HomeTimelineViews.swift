@@ -64,13 +64,27 @@ struct HomeTimelineSection: View {
     private func rows(showsDividers: Bool) -> some View {
         let lastEntryID = live.rows.last?.id
         return ForEach(live.rows) { entry in
-            TodayTimelineEntryRow(
-                store: store,
-                entry: entry,
-                segmentByID: live.segmentByID,
-                showsDivider: showsDividers && entry.id != lastEntryID,
-                openTaskDetail: openTask
-            )
+            if case let .trackedSegment(segmentID) = entry.id,
+               let segment = live.segmentByID[segmentID]
+            {
+                VStack(spacing: 0) {
+                    TimelineRow(
+                        store: store,
+                        entry: entry,
+                        segment: segment,
+                        openTaskDetail: openTask
+                    )
+
+                    if showsDividers, entry.id != lastEntryID {
+                        Divider()
+                            .padding(.leading, 18)
+                    }
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier(
+                    "home.timeline.entry.\(entry.id.namespacedKey)"
+                )
+            }
         }
     }
 }

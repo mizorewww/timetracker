@@ -150,7 +150,7 @@ extension SwiftDataTimeTrackingRepository {
                 if lhs.startedAt != rhs.startedAt {
                     return lhs.startedAt < rhs.startedAt
                 }
-                return lhs.id.uuidString < rhs.id.uuidString
+                return lhs.id < rhs.id
             }
     }
 

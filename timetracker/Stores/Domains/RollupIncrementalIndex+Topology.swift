@@ -60,7 +60,7 @@ extension RollupIncrementalIndex {
     func makePostorderTaskIDs(taskIDs: Set<UUID>) -> [UUID] {
         var stateByID: [UUID: UInt8] = [:]
         var result: [UUID] = []
-        for startID in taskIDs.sorted(by: { $0.uuidString < $1.uuidString }) {
+        for startID in taskIDs.sorted(by: { $0 < $1 }) {
             guard stateByID[startID] == nil else { continue }
             var stack: [(id: UUID, expanded: Bool)] = [(startID, false)]
             while let entry = stack.popLast() {
@@ -76,7 +76,7 @@ extension RollupIncrementalIndex {
                 let children = (childrenByParent[entry.id] ?? [])
                     .map(\.id)
                     .filter { taskIDs.contains($0) && stateByID[$0] == nil }
-                    .sorted { $0.uuidString > $1.uuidString }
+                    .sorted { $0 > $1 }
                 stack.append(contentsOf: children.map { ($0, false) })
             }
         }

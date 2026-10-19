@@ -264,7 +264,7 @@ enum SyncedPreferenceService {
                         (preference.deletedAt == nil) == (existing.deletedAt == nil) &&
                         (preference.createdAt > existing.createdAt ||
                             (preference.createdAt == existing.createdAt &&
-                                preference.id.uuidString > existing.id.uuidString)))
+                                preference.id > existing.id)))
                 {
                     result[preference.key] = preference
                 }

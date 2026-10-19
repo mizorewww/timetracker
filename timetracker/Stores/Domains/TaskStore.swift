@@ -176,12 +176,12 @@ struct TaskStore {
             taskIDs.contains($0.taskID) == false ||
                 goalByID[$0.quantityGoalID]?.taskID != $0.taskID
         }
-        recurrenceRules.sort { $0.id.uuidString < $1.id.uuidString }
-        recurrenceOccurrences.sort { $0.id.uuidString < $1.id.uuidString }
-        quantityGoals.sort { $0.id.uuidString < $1.id.uuidString }
+        recurrenceRules.sort { $0.id < $1.id }
+        recurrenceOccurrences.sort { $0.id < $1.id }
+        quantityGoals.sort { $0.id < $1.id }
         quantityEntries.sort {
             $0.recordedAt == $1.recordedAt
-                ? $0.id.uuidString < $1.id.uuidString
+                ? $0.id < $1.id
                 : $0.recordedAt < $1.recordedAt
         }
     }
@@ -210,7 +210,7 @@ struct TaskStore {
             if lhs.createdAt != rhs.createdAt {
                 return lhs.createdAt < rhs.createdAt
             }
-            return lhs.id.uuidString < rhs.id.uuidString
+            return lhs.id < rhs.id
         }
     }
 }

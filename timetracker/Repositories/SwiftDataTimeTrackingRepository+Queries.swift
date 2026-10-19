@@ -9,7 +9,7 @@ extension SwiftDataTimeTrackingRepository {
         let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
         return try canonicalSegments(ids: candidateIDs)
             .filter { $0.endedAt == nil }
-            .sorted(by: segmentStartOrder)
+            .sorted(by: TimeSegment.startOrder)
     }
 
     func sessions() throws -> [TimeSession] {
@@ -30,7 +30,7 @@ extension SwiftDataTimeTrackingRepository {
     }
 
     func segments(ids: Set<UUID>) throws -> [TimeSegment] {
-        try canonicalSegments(ids: ids).sorted(by: segmentStartOrder)
+        try canonicalSegments(ids: ids).sorted(by: TimeSegment.startOrder)
     }
 
     func segments(sessionIDs: Set<UUID>) throws -> [TimeSegment] {
@@ -42,7 +42,7 @@ extension SwiftDataTimeTrackingRepository {
         let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
         return try canonicalSegments(ids: candidateIDs)
             .filter { sessionIDs.contains($0.sessionID) }
-            .sorted(by: segmentStartOrder)
+            .sorted(by: TimeSegment.startOrder)
     }
 
     func segments(from: Date, to: Date) throws -> [TimeSegment] {
@@ -70,13 +70,13 @@ extension SwiftDataTimeTrackingRepository {
                     now: now
                 )
             }
-            .sorted(by: segmentStartOrder)
+            .sorted(by: TimeSegment.startOrder)
     }
 
     func allSegments() throws -> [TimeSegment] {
         try context.fetch(FetchDescriptor<TimeSegment>())
             .visibleDeduplicatedByID()
-            .sorted(by: segmentStartOrder)
+            .sorted(by: TimeSegment.startOrder)
     }
 
     func canonicalSegments(ids: Set<UUID>) throws -> [TimeSegment] {
@@ -108,17 +108,10 @@ extension SwiftDataTimeTrackingRepository {
         return try LedgerPersistencePolicy.prepareTitleSnapshot(task.title)
     }
 
-    private func segmentStartOrder(_ lhs: TimeSegment, _ rhs: TimeSegment) -> Bool {
-        if lhs.startedAt != rhs.startedAt {
-            return lhs.startedAt < rhs.startedAt
-        }
-        return lhs.id.uuidString < rhs.id.uuidString
-    }
-
     private func sessionStartOrder(_ lhs: TimeSession, _ rhs: TimeSession) -> Bool {
         if lhs.startedAt != rhs.startedAt {
             return lhs.startedAt > rhs.startedAt
         }
-        return lhs.id.uuidString < rhs.id.uuidString
+        return lhs.id < rhs.id
     }
 }

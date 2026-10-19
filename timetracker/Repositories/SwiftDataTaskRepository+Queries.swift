@@ -172,13 +172,13 @@ nonisolated extension SwiftDataTaskRepository {
         if lhs.createdAt != rhs.createdAt {
             return lhs.createdAt < rhs.createdAt
         }
-        return lhs.id.uuidString < rhs.id.uuidString
+        return lhs.id < rhs.id
     }
 
     private func persistentIdentityOrder<Model: PersistentUUIDModel>(
         _ lhs: Model,
         _ rhs: Model
     ) -> Bool {
-        lhs.id.uuidString < rhs.id.uuidString
+        lhs.id < rhs.id
     }
 }

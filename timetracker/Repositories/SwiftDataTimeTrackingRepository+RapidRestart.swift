@@ -150,6 +150,6 @@ extension SwiftDataTimeTrackingRepository {
         if lhsEnd != rhsEnd {
             return lhsEnd > rhsEnd
         }
-        return lhs.id.uuidString < rhs.id.uuidString
+        return lhs.id < rhs.id
     }
 }

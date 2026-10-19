@@ -97,7 +97,7 @@ nonisolated extension PersistentUUIDModel {
            let otherMutation = other as? ClientMutationTrackedModel,
            mutation.clientMutationID != otherMutation.clientMutationID
         {
-            return mutation.clientMutationID.uuidString > otherMutation.clientMutationID.uuidString
+            return mutation.clientMutationID > otherMutation.clientMutationID
         }
         if let segment = self as? TimeSegment,
            let otherSegment = other as? TimeSegment,
@@ -119,7 +119,7 @@ nonisolated extension PersistentUUIDModel {
         if other.isPreferred(over: self) {
             return false
         }
-        return id.uuidString > other.id.uuidString
+        return id > other.id
     }
 }
 

@@ -178,4 +178,12 @@ extension TimeSegment {
     var isActive: Bool {
         endedAt == nil && deletedAt == nil
     }
+
+    /// Canonical ledger order: earlier start first, then stable identity.
+    static func startOrder(_ lhs: TimeSegment, _ rhs: TimeSegment) -> Bool {
+        if lhs.startedAt != rhs.startedAt {
+            return lhs.startedAt < rhs.startedAt
+        }
+        return lhs.id < rhs.id
+    }
 }

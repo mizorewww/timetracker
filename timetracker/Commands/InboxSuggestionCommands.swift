@@ -64,7 +64,7 @@ extension InboxCommandHandler {
                 if lhs.updatedAt != rhs.updatedAt {
                     return lhs.updatedAt > rhs.updatedAt
                 }
-                return lhs.id.uuidString > rhs.id.uuidString
+                return lhs.id > rhs.id
             }
         let identity = winner.suggestionIdentity
         let active = existing.first {

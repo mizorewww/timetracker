@@ -37,7 +37,7 @@ extension AnalyticsStore {
             }
         }
         return canonicalByID.values.sorted {
-            $0.segment.id.uuidString < $1.segment.id.uuidString
+            $0.segment.id < $1.segment.id
         }
     }
 

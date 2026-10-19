@@ -8,7 +8,7 @@ nonisolated struct OverlapAnalyticsParticipant: Identifiable, Equatable, Compara
         if lhs.title != rhs.title {
             return lhs.title < rhs.title
         }
-        return lhs.id.uuidString < rhs.id.uuidString
+        return lhs.id < rhs.id
     }
 }
 

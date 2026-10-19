@@ -134,7 +134,7 @@ extension RollupIncrementalIndex {
             if leftDepth != rightDepth {
                 return leftDepth > rightDepth
             }
-            return lhs.uuidString < rhs.uuidString
+            return lhs < rhs
         }
     }
 }

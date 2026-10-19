@@ -30,7 +30,7 @@ extension LedgerStore {
         }
 
         guard let model else { return }
-        let insertionIndex = allSegments.partitioningIndex { segmentStartOrder($0, model) }
+        let insertionIndex = allSegments.partitioningIndex { TimeSegment.startOrder($0, model) }
         allSegments.insert(model, at: insertionIndex)
         reindexFlatSegments(from: insertionIndex)
     }
@@ -40,13 +40,6 @@ extension LedgerStore {
         for index in startIndex ..< allSegments.count {
             segmentArrayIndexByID[allSegments[index].id] = index
         }
-    }
-
-    func segmentStartOrder(_ lhs: TimeSegment, _ rhs: TimeSegment) -> Bool {
-        if lhs.startedAt != rhs.startedAt {
-            return lhs.startedAt < rhs.startedAt
-        }
-        return lhs.id.uuidString < rhs.id.uuidString
     }
 }
 

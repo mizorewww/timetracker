@@ -82,7 +82,7 @@ extension AnalyticsStore {
         let shortCount = durations.filter { $0 < 5 * 60 }.count
         let sorted = items.sorted {
             if $0.interval.start == $1.interval.start {
-                return $0.segment.id.uuidString < $1.segment.id.uuidString
+                return $0.segment.id < $1.segment.id
             }
             return $0.interval.start < $1.interval.start
         }

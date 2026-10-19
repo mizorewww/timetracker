@@ -18,7 +18,7 @@ extension TimeTrackerStore {
                 if lhs.updatedAt != rhs.updatedAt {
                     return lhs.updatedAt > rhs.updatedAt
                 }
-                return lhs.id.uuidString < rhs.id.uuidString
+                return lhs.id < rhs.id
             }
             .prefix(4)
             .map { $0 }
@@ -59,7 +59,7 @@ extension TimeTrackerStore {
                 if lhs.title.localizedStandardCompare(rhs.title) != .orderedSame {
                     return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
                 }
-                return lhs.id.uuidString < rhs.id.uuidString
+                return lhs.id < rhs.id
             }
     }
 

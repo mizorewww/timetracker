@@ -36,19 +36,19 @@ struct InboxStore {
             if lhs.createdAt != rhs.createdAt {
                 return lhs.createdAt < rhs.createdAt
             }
-            return lhs.id.uuidString < rhs.id.uuidString
+            return lhs.id < rhs.id
         }
     }
 
     private func sortedSuggestions(_ suggestions: [InboxSuggestion]) -> [InboxSuggestion] {
         suggestions.sorted { lhs, rhs in
             if lhs.inboxItemID != rhs.inboxItemID {
-                return lhs.inboxItemID.uuidString < rhs.inboxItemID.uuidString
+                return lhs.inboxItemID < rhs.inboxItemID
             }
             if lhs.updatedAt != rhs.updatedAt {
                 return lhs.updatedAt > rhs.updatedAt
             }
-            return lhs.id.uuidString > rhs.id.uuidString
+            return lhs.id > rhs.id
         }
     }
 }

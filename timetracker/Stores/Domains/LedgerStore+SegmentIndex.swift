@@ -9,7 +9,7 @@ extension LedgerStore {
         allSegments = segments
             .deduplicatedByID()
             .filter { $0.deletedAt == nil }
-            .sorted(by: segmentStartOrder)
+            .sorted(by: TimeSegment.startOrder)
         segmentByID = Dictionary(uniqueKeysWithValues: allSegments.map { ($0.id, $0) })
         segmentSnapshotByID = Dictionary(uniqueKeysWithValues: allSegments.map {
             ($0.id, LedgerSegmentSnapshot($0))
@@ -104,7 +104,7 @@ extension LedgerStore {
             )
         }
         rollupChanges = pendingRollupChangeByID.values.sorted {
-            $0.id.uuidString < $1.id.uuidString
+            $0.id < $1.id
         }
     }
 

@@ -32,7 +32,7 @@ extension TimeTrackerStore {
                 if lhsPath != rhsPath {
                     return lhsPath < rhsPath
                 }
-                return lhs.id.uuidString < rhs.id.uuidString
+                return lhs.id < rhs.id
             }
 
         return LLMSuggestionInputPolicy.completeCandidates(
@@ -67,7 +67,7 @@ extension TimeTrackerStore {
                 if lhs.title != rhs.title {
                     return lhs.title < rhs.title
                 }
-                return lhs.id.uuidString < rhs.id.uuidString
+                return lhs.id < rhs.id
             }
             .map { category in
                 LLMCategoryCandidate(

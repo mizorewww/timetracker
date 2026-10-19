@@ -11,7 +11,7 @@ extension ChecklistStore {
 
     func itemOrder(_ lhs: ChecklistItem, _ rhs: ChecklistItem) -> Bool {
         if lhs.taskID != rhs.taskID {
-            return lhs.taskID.uuidString < rhs.taskID.uuidString
+            return lhs.taskID < rhs.taskID
         }
         if lhs.sortOrder != rhs.sortOrder {
             return lhs.sortOrder < rhs.sortOrder
@@ -19,17 +19,17 @@ extension ChecklistStore {
         if lhs.createdAt != rhs.createdAt {
             return lhs.createdAt < rhs.createdAt
         }
-        return lhs.id.uuidString < rhs.id.uuidString
+        return lhs.id < rhs.id
     }
 
     func visualOrder(_ lhs: ChecklistItemVisual, _ rhs: ChecklistItemVisual) -> Bool {
         if lhs.checklistItemID != rhs.checklistItemID {
-            return lhs.checklistItemID.uuidString < rhs.checklistItemID.uuidString
+            return lhs.checklistItemID < rhs.checklistItemID
         }
         if lhs.updatedAt != rhs.updatedAt {
             return lhs.updatedAt > rhs.updatedAt
         }
-        return lhs.id.uuidString < rhs.id.uuidString
+        return lhs.id < rhs.id
     }
 
     func canReuseItemArray(

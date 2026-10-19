@@ -79,7 +79,7 @@ struct ChecklistCommandHandler {
             if lhs.createdAt != rhs.createdAt {
                 return lhs.createdAt < rhs.createdAt
             }
-            return lhs.id.uuidString < rhs.id.uuidString
+            return lhs.id < rhs.id
         }
         let itemByID = items.latestByID()
         let orderedItems = orderedItemIDs.compactMap { itemByID[$0] }

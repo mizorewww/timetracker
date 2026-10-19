@@ -102,13 +102,13 @@ extension LedgerStore {
         if lhs.startedAt != rhs.startedAt {
             return lhs.startedAt > rhs.startedAt
         }
-        return lhs.id.uuidString < rhs.id.uuidString
+        return lhs.id < rhs.id
     }
 
     private nonisolated static func isMoreRecent(_ lhs: TimeSegment, _ rhs: TimeSegment) -> Bool {
         if lhs.startedAt != rhs.startedAt {
             return lhs.startedAt > rhs.startedAt
         }
-        return lhs.id.uuidString < rhs.id.uuidString
+        return lhs.id < rhs.id
     }
 }

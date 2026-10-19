@@ -137,6 +137,10 @@ final class TimeTrackerStore {
     /// `analyticsRevision`, which every invalidation bumps, so filling the
     /// memo from a view's `body` must not itself publish a change.
     @ObservationIgnored var analyticsDomainStore = AnalyticsStore()
+    /// Snapshot loads still aggregating; see
+    /// TimeTrackerStore+AnalyticsLoading.swift.
+    @ObservationIgnored var analyticsSnapshotLoads:
+        [AnalyticsSnapshotLoadKey: Task<AnalyticsSnapshot?, Never>] = [:]
     var analyticsRevision: UInt = 0
     /// Today page read model; see TimeTrackerStore+TodayReadModels.swift.
     @ObservationIgnored var todayReadModelCache = TodayReadModelCache()

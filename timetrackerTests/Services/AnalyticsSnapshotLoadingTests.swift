@@ -112,6 +112,27 @@ struct AnalyticsSnapshotLoadingTests {
     }
 
     @Test
+    func concurrentLoadsOfOnePeriodShareTheAggregation() async throws {
+        let fixture = try makeFixture()
+        let evaluation = AnalyticsRange.week.evaluation(
+            referenceDate: fixture.referenceDate,
+            liveNow: Date(),
+            calendar: fixture.calendar
+        )
+
+        async let first = fixture.store.loadAnalyticsSnapshot(
+            for: .week, evaluation: evaluation, calendar: fixture.calendar
+        )
+        async let second = fixture.store.loadAnalyticsSnapshot(
+            for: .week, evaluation: evaluation, calendar: fixture.calendar
+        )
+        let snapshots = await [first, second]
+
+        #expect(snapshots.map { $0?.overview.grossSeconds } == [8400, 8400])
+        #expect(fixture.store.analyticsSnapshotLoads.isEmpty)
+    }
+
+    @Test
     func todaySnapshotIncludesTheVisualReadModels() async throws {
         let fixture = try makeFixture()
         let evaluation = AnalyticsRange.today.evaluation(

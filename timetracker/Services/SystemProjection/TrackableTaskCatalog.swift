@@ -38,6 +38,27 @@ nonisolated struct TrackableTaskCatalog {
         trackableTasks = tasks.filter { trackableTaskIDs.contains($0.id) }
     }
 
+    /// AD-036: segments whose task row and owning session have arrived, in
+    /// ledger order. A staged CloudKit import can deliver a segment first.
+    func readableSegments(
+        _ segments: [TimeSegment],
+        sessions: [TimeSession]
+    ) -> [TimeSegment] {
+        let existingTaskIDs = Set(canonicalTaskRows.map(\.id))
+        var taskIDBySessionID: [UUID: UUID] = [:]
+        for session in sessions
+            where existingTaskIDs.contains(session.taskID)
+        {
+            taskIDBySessionID[session.id] = session.taskID
+        }
+        return segments
+            .filter {
+                existingTaskIDs.contains($0.taskID) &&
+                    taskIDBySessionID[$0.sessionID] == $0.taskID
+            }
+            .sorted(by: TimeSegment.startOrder)
+    }
+
     private static func completeRecurrenceFacts(
         tasks: [TaskNode],
         rules: [TaskRecurrenceRule],

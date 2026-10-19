@@ -149,19 +149,19 @@ struct ActiveTimerEntityQuery: EntityQuery {
     @MainActor
     private func fetchTimerEntities() throws -> [ActiveTimerAppEntity] {
         let context = SystemActionContextProvider.makeContext()
-        let activeSegments = try SwiftDataTimeTrackingRepository(context: context).activeSegments()
-        let tasks = try SwiftDataTaskRepository(context: context).allNodes()
-        let taskByID = tasks.reduce(into: [UUID: TaskNode]()) { result, task in
-            result[task.id] = task
-        }
-        let parentPathByID = TaskTreeService.indexes(tasks: tasks).taskParentPathByID
-
-        return activeSegments.compactMap { segment in
-            guard let task = taskByID[segment.taskID] else { return nil }
+        let timeRepository = SwiftDataTimeTrackingRepository(context: context)
+        let activeSegments = try timeRepository.activeSegments()
+        let catalog = try TrackableTaskCatalog(context: context)
+        let readableSegments = try catalog.readableSegments(
+            activeSegments,
+            sessions: timeRepository.sessions(ids: Set(activeSegments.map(\.sessionID)))
+        )
+        return readableSegments.compactMap { segment in
+            guard let task = catalog.tree.taskByID[segment.taskID] else { return nil }
             return ActiveTimerAppEntity(
                 id: segment.id.uuidString,
                 title: task.title,
-                path: parentPathByID[task.id] ?? ""
+                path: catalog.tree.taskParentPathByID[task.id] ?? ""
             )
         }
     }

@@ -91,11 +91,7 @@ actor CommittedMutationSystemSurfaceMaterializer {
             .fetch(FetchDescriptor<SyncedPreference>())
             .deduplicatedByID()
 
-        let readableSegments = readableSegments(
-            canonicalTaskRows: catalog.canonicalTaskRows,
-            sessions: sessions,
-            segments: segments
-        )
+        let readableSegments = catalog.readableSegments(segments, sessions: sessions)
 
         let tree = catalog.tree
         let activityByTaskID = taskActivityByTaskID(
@@ -108,7 +104,6 @@ actor CommittedMutationSystemSurfaceMaterializer {
         )
         let activeSegments = readableSegments
             .filter { $0.endedAt == nil }
-            .sorted(by: segmentStartOrder)
         let activeTaskIDs = Set(activeSegments.map(\.taskID))
         let recentTasks = TaskUsageRankingService.frequentRecentTasks(
             availableTasks: availableTasks,
@@ -181,26 +176,6 @@ actor CommittedMutationSystemSurfaceMaterializer {
                 predicate: #Predicate { candidateIDs.contains($0.id) }
             ))
             .visibleDeduplicatedByID()
-    }
-
-    private func readableSegments(
-        canonicalTaskRows: [TaskNode],
-        sessions: [TimeSession],
-        segments: [TimeSegment]
-    ) -> [TimeSegment] {
-        let existingTaskIDs = Set(canonicalTaskRows.map(\.id))
-        var taskIDBySessionID: [UUID: UUID] = [:]
-        for session in sessions
-            where existingTaskIDs.contains(session.taskID)
-        {
-            taskIDBySessionID[session.id] = session.taskID
-        }
-        return segments
-            .filter {
-                existingTaskIDs.contains($0.taskID) &&
-                    taskIDBySessionID[$0.sessionID] == $0.taskID
-            }
-            .sorted(by: segmentStartOrder)
     }
 
     private func taskActivityByTaskID(
@@ -321,15 +296,5 @@ actor CommittedMutationSystemSurfaceMaterializer {
             quickStartTasks: pinnedTasks + fillTasks,
             taskParentPathByID: tree.taskParentPathByID
         )
-    }
-
-    private func segmentStartOrder(
-        _ lhs: TimeSegment,
-        _ rhs: TimeSegment
-    ) -> Bool {
-        if lhs.startedAt != rhs.startedAt {
-            return lhs.startedAt < rhs.startedAt
-        }
-        return lhs.id.uuidString < rhs.id.uuidString
     }
 }

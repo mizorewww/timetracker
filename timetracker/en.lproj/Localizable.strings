@@ -152,10 +152,6 @@
 "settings.keyboardShortcuts.resetAll" = "Restore Default Shortcuts";
 "settings.keyboardShortcuts.none" = "None";
 "settings.keyboardShortcuts.duplicateFormat" = "%@ already uses this shortcut.";
-"settings.defaultMode" = "Default Mode";
-"settings.focusMinutes" = "Focus Minutes";
-"settings.breakMinutes" = "Break Minutes";
-"settings.defaultRounds" = "Default Rounds";
 "settings.pomodoro.footer" = "Pomodoro plans sync through iCloud with the rest of your settings.";
 "settings.countdown" = "Countdown Events";
 "settings.countdown.empty" = "No countdown events yet. Add an event to see it on Today.";

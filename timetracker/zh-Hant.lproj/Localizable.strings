@@ -152,10 +152,6 @@
 "settings.keyboardShortcuts.resetAll" = "還原預設快速鍵";
 "settings.keyboardShortcuts.none" = "無";
 "settings.keyboardShortcuts.duplicateFormat" = "%@ 已使用這個快速鍵。";
-"settings.defaultMode" = "預設模式";
-"settings.focusMinutes" = "專注分鐘";
-"settings.breakMinutes" = "休息分鐘";
-"settings.defaultRounds" = "預設輪次";
 "settings.pomodoro.footer" = "番茄鐘計劃會和其他設定一起透過 iCloud 同步。";
 "settings.countdown" = "倒數事件";
 "settings.countdown.empty" = "還沒有倒數事件。加入事件後會顯示在「今日」中。";

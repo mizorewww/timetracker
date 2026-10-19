@@ -46,11 +46,13 @@ struct StoreScopedCountdownCommandCoordinator {
     }
 
     func add() throws {
+        let title = try CountdownTitlePolicy.normalized(AppStrings.localized("task.newEvent"))
         try session.withFreshMutationContext { context in
-            _ = try CountdownCommandHandler().add(
-                context: context,
+            context.insert(CountdownEvent(
+                title: title,
+                date: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date(),
                 deviceID: deviceID
-            )
+            ))
         }
     }
 
@@ -59,32 +61,26 @@ struct StoreScopedCountdownCommandCoordinator {
         title: String?,
         date: Date?
     ) throws {
-        try mutate(baseline: baseline) { event, context in
-            try CountdownCommandHandler().update(
-                event,
-                title: title,
-                date: date,
-                context: context,
-                now: nowProvider(),
-                deviceID: deviceID
-            )
+        let normalizedTitle = try title.map(CountdownTitlePolicy.normalized)
+        try mutate(baseline: baseline) { event, _ in
+            if let normalizedTitle {
+                event.title = normalizedTitle
+            }
+            if let date {
+                event.date = date
+            }
         }
     }
 
     func delete(baseline: CountdownMutationBaseline) throws {
-        try mutate(baseline: baseline) { event, context in
-            try CountdownCommandHandler().softDelete(
-                event,
-                context: context,
-                now: nowProvider(),
-                deviceID: deviceID
-            )
+        try mutate(baseline: baseline) { event, now in
+            event.deletedAt = now
         }
     }
 
     private func mutate(
         baseline: CountdownMutationBaseline,
-        operation: (CountdownEvent, ModelContext) throws -> Void
+        operation: (CountdownEvent, Date) -> Void
     ) throws {
         try session.withFreshMutationContext { context in
             let eventID = baseline.eventID
@@ -101,7 +97,9 @@ struct StoreScopedCountdownCommandCoordinator {
             guard event.clientMutationID == baseline.clientMutationID else {
                 throw StoreScopedCountdownMutationError.eventChanged
             }
-            try operation(event, context)
+            let now = nowProvider()
+            operation(event, now)
+            event.markMutated(at: now, deviceID: deviceID)
         }
     }
 }

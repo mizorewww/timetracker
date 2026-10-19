@@ -1,7 +1,10 @@
 import SwiftUI
 
-struct TaskForecastSummarySection: View {
+/// Today's checklist forecasts, as a grouped list section (compact) or a
+/// titled card (regular canvas). Draws nothing when no forecast task exists.
+struct HomeForecastSection: View {
     let store: TimeTrackerStore
+    let container: HomeSectionContainer
     let forecasts: [ForecastDisplayItem]
     let openTask: (UUID) -> Void
 
@@ -13,29 +16,49 @@ struct TaskForecastSummarySection: View {
         }
 
         if !rows.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    SectionTitle(title: AppStrings.localized("forecast.today.title"))
-                        .accessibilityIdentifier("home.forecasts.header")
-                    ForecastInfoButton()
-                }
-
-                VStack(spacing: 0) {
+            switch container {
+            case .listSection:
+                Section {
                     ForEach(rows) { row in
-                        ForecastSummaryRow(
-                            store: store,
-                            task: row.task,
-                            rollup: row.item.rollup,
-                            openTaskDetail: openTask
-                        )
-                        if row.id != rows.last?.id {
-                            Divider().padding(.leading, 54)
-                        }
+                        summaryRow(row)
+                    }
+                } header: {
+                    HStack {
+                        Text(AppStrings.localized("forecast.today.title"))
+                            .accessibilityIdentifier("home.forecasts.header")
+                        Spacer()
+                        ForecastInfoButton()
                     }
                 }
-                .appCard(padding: 0)
+            case .card:
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        SectionTitle(title: AppStrings.localized("forecast.today.title"))
+                            .accessibilityIdentifier("home.forecasts.header")
+                        ForecastInfoButton()
+                    }
+
+                    VStack(spacing: 0) {
+                        ForEach(rows) { row in
+                            summaryRow(row)
+                            if row.id != rows.last?.id {
+                                Divider().padding(.leading, 54)
+                            }
+                        }
+                    }
+                    .appCard(padding: 0)
+                }
             }
         }
+    }
+
+    private func summaryRow(_ row: ForecastPresentationRow) -> some View {
+        ForecastSummaryRow(
+            store: store,
+            task: row.task,
+            rollup: row.item.rollup,
+            openTaskDetail: openTask
+        )
     }
 }
 

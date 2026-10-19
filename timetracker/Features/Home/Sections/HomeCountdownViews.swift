@@ -1,25 +1,38 @@
 import SwiftUI
 
+/// Upcoming countdown events, as a grouped list section (compact) or a
+/// titled card (regular canvas). Draws nothing without events.
 struct HomeCountdownSection: View {
+    let container: HomeSectionContainer
     let events: [CountdownEvent]
 
     var body: some View {
         if !events.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                SectionTitle(title: AppStrings.localized("settings.countdown"))
-
-                LazyVStack(spacing: 0) {
+            switch container {
+            case .listSection:
+                Section(AppStrings.localized("settings.countdown")) {
                     ForEach(events) { event in
                         HomeCountdownRow(event: event)
-                            .padding(14)
-                        if event.id != events.last?.id {
-                            Divider().padding(.leading, 58)
-                        }
                     }
                 }
-                .appCard(padding: 0)
+                .accessibilityIdentifier("home.countdown")
+            case .card:
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionTitle(title: AppStrings.localized("settings.countdown"))
+
+                    LazyVStack(spacing: 0) {
+                        ForEach(events) { event in
+                            HomeCountdownRow(event: event)
+                                .padding(14)
+                            if event.id != events.last?.id {
+                                Divider().padding(.leading, 58)
+                            }
+                        }
+                    }
+                    .appCard(padding: 0)
+                }
+                .accessibilityIdentifier("home.countdown")
             }
-            .accessibilityIdentifier("home.countdown")
         }
     }
 }

@@ -117,8 +117,8 @@ final class AdaptiveShellUITests: XCTestCase {
     private static let shellBreakpoint: CGFloat = 720
 
     /// Today's Now section must survive whichever shell is chosen — the two
-    /// shells build it from different section types, so a regression can hide
-    /// in one and not the other.
+    /// shells host it in different containers (list section vs. card), so a
+    /// regression can hide in one and not the other.
     func testNowSectionRendersInWhicheverShellIsChosen() {
         let app = launchApp()
 

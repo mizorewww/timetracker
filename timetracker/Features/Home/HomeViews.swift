@@ -64,20 +64,15 @@ private struct DesktopTodayContent: View {
     let openTask: (UUID) -> Void
     let startTimer: () -> Void
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     private var content: TodayHomeContent {
         today.content
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: layout.contentSpacing) {
-            DesktopTodayCurrentStateSections(
-                store: store,
-                segments: content.activeSegments,
-                metrics: today.live.metrics,
-                layout: layout,
-                openTask: openTask,
-                startTimer: startTimer
-            )
+            currentState
             visualizationAndQuickStart
 
             if layout.usesTwoColumnContent, content.hasSupportingContent {
@@ -92,6 +87,52 @@ private struct DesktopTodayContent: View {
                 supportingSections
             }
         }
+    }
+
+    @ViewBuilder
+    private var currentState: some View {
+        if layout.usesSideBySideCurrentState(
+            prefersSingleColumn: dynamicTypeSize.isAccessibilitySize
+        ) {
+            HStack(alignment: .top, spacing: layout.contentSpacing) {
+                nowSection
+                    .frame(
+                        width: layout.currentStatePrimaryColumnWidth,
+                        alignment: .topLeading
+                    )
+                    .frame(maxHeight: .infinity, alignment: .topLeading)
+                overviewSection
+                    .frame(
+                        width: layout.currentStateOverviewColumnWidth,
+                        alignment: .topLeading
+                    )
+                    .frame(maxHeight: .infinity, alignment: .topLeading)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        } else {
+            VStack(alignment: .leading, spacing: layout.contentSpacing) {
+                nowSection
+                overviewSection
+            }
+        }
+    }
+
+    private var nowSection: some View {
+        HomeNowSection(
+            store: store,
+            container: .card,
+            segments: content.activeSegments,
+            openTask: openTask,
+            startTimer: startTimer
+        )
+    }
+
+    private var overviewSection: some View {
+        HomeOverviewSection(
+            container: .card,
+            metrics: today.live.metrics,
+            showsWallTime: store.preferences.showGrossAndWallTogether
+        )
     }
 
     @ViewBuilder
@@ -120,16 +161,19 @@ private struct DesktopTodayContent: View {
     }
 
     private var quickStartSection: some View {
-        QuickStartSection(
+        HomeQuickStartSection(
             store: store,
+            container: .card,
             tasks: content.quickStartTasks,
-            openTask: openTask
+            openTask: openTask,
+            startTimer: startTimer
         )
     }
 
     private var timelineSection: some View {
-        TimelineSection(
+        HomeTimelineSection(
             store: store,
+            container: .card,
             live: today.live,
             openTask: openTask
         )
@@ -152,63 +196,16 @@ private struct DesktopTodayContent: View {
 
     private var supportingSections: some View {
         VStack(alignment: .leading, spacing: layout.contentSpacing) {
-            TaskForecastSummarySection(
+            HomeForecastSection(
                 store: store,
+                container: .card,
                 forecasts: content.forecasts,
                 openTask: openTask
             )
-            HomeCountdownSection(events: content.countdownEvents)
+            HomeCountdownSection(
+                container: .card,
+                events: content.countdownEvents
+            )
         }
-    }
-}
-
-private struct DesktopTodayCurrentStateSections: View {
-    let store: TimeTrackerStore
-    let segments: [TimeSegment]
-    let metrics: TodayMetricsSnapshot
-    let layout: HomeLayoutPolicy
-    let openTask: (UUID) -> Void
-    let startTimer: () -> Void
-
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-    var body: some View {
-        if layout.usesSideBySideCurrentState(
-            prefersSingleColumn: dynamicTypeSize.isAccessibilitySize
-        ) {
-            HStack(alignment: .top, spacing: layout.contentSpacing) {
-                activeTimers
-                    .frame(
-                        width: layout.currentStatePrimaryColumnWidth,
-                        alignment: .topLeading
-                    )
-                    .frame(maxHeight: .infinity, alignment: .topLeading)
-                overview
-                    .frame(
-                        width: layout.currentStateOverviewColumnWidth,
-                        alignment: .topLeading
-                    )
-                    .frame(maxHeight: .infinity, alignment: .topLeading)
-            }
-            .fixedSize(horizontal: false, vertical: true)
-        } else {
-            VStack(alignment: .leading, spacing: layout.contentSpacing) {
-                activeTimers
-                overview
-            }
-        }
-    }
-
-    private var activeTimers: some View {
-        ActiveTimersSection(
-            store: store,
-            segments: segments,
-            openTask: openTask,
-            startTimer: startTimer
-        )
-    }
-
-    private var overview: some View {
-        TodayOverviewSection(store: store, metrics: metrics)
     }
 }

@@ -18,24 +18,11 @@ struct QuickStartTaskGroup: View {
     var body: some View {
         LazyVGrid(columns: columns, spacing: 12) {
             ForEach(tasks, id: \.id) { task in
-                let activeSegment = store.activeSegment(for: task.id)
-                HomeTimerTaskRow(
-                    presentation: store.taskIdentityPresentation(for: task),
-                    activeSegment: activeSegment,
-                    command: store.timerPickerSelectionCommand(for: task),
+                HomeQuickStartTaskRow(
+                    store: store,
+                    task: task,
                     actionLabelStyle: .titleAndIcon,
-                    openTask: {
-                        openTask(task.id)
-                    },
-                    performTimerAction: {
-                        if let activeSegment {
-                            store.stop(segment: activeSegment)
-                        } else {
-                            store.performTimerPickerSelection(task)
-                        }
-                    },
-                    taskAccessibilityIdentifier: "home.quickStart.task.\(task.id.uuidString)",
-                    actionAccessibilityIdentifier: "home.quickStart.timer.\(task.id.uuidString)"
+                    openTask: openTask
                 )
                 .appCard(padding: 12)
             }

@@ -16,25 +16,22 @@ struct CompactHomeView: View {
         let now = max(clockNow, Date())
         let today = store.todaySnapshot(now: now)
         let content = today.content
+        let startTimer: () -> Void = { presentationRouter.present(.startTaskPicker) }
 
         List {
-            CompactNowSection(
+            HomeNowSection(
                 store: store,
+                container: .listSection,
                 segments: content.activeSegments,
                 openTask: openTask,
-                startTimer: { presentationRouter.present(.startTaskPicker) }
+                startTimer: startTimer
             )
 
-            Section {
-                CompactTodaySummaryRow(store: store, metrics: today.live.metrics)
-                    .accessibilityIdentifier("home.overview")
-            } header: {
-                HomeOverviewHeader(
-                    container: .listSection,
-                    showsWallTime: store.preferences.showGrossAndWallTogether
-                )
-                .textCase(nil)
-            }
+            HomeOverviewSection(
+                container: .listSection,
+                metrics: today.live.metrics,
+                showsWallTime: store.preferences.showGrossAndWallTogether
+            )
 
             HomeWeeklyGrossTimeSection(
                 store: store,
@@ -50,31 +47,32 @@ struct CompactHomeView: View {
             )
             .homeVisualizationListSection()
 
-            CompactQuickStartSection(
+            HomeQuickStartSection(
                 store: store,
+                container: .listSection,
                 tasks: content.quickStartTasks,
-                startTimer: { presentationRouter.present(.startTaskPicker) },
-                editQuickStart: { presentationRouter.present(.quickStartEditor(selectedIDs: store.preferences.quickStartTaskIDs)) },
-                openTask: openTask
+                openTask: openTask,
+                startTimer: startTimer
             )
 
-            CompactTimelineSection(
+            HomeTimelineSection(
                 store: store,
+                container: .listSection,
                 live: today.live,
                 openTask: openTask
             )
 
-            if !content.forecasts.isEmpty {
-                CompactForecastSection(
-                    store: store,
-                    forecasts: content.forecasts,
-                    openTask: openTask
-                )
-            }
+            HomeForecastSection(
+                store: store,
+                container: .listSection,
+                forecasts: content.forecasts,
+                openTask: openTask
+            )
 
-            if !content.countdownEvents.isEmpty {
-                CompactCountdownSection(events: content.countdownEvents)
-            }
+            HomeCountdownSection(
+                container: .listSection,
+                events: content.countdownEvents
+            )
         }
         // `.insetGrouped` and keyboard dismissal have no AppKit equivalent.
         #if os(iOS)

@@ -22,10 +22,21 @@ nonisolated enum CommittedMutationLiveActivityProjection:
     case inactive
     case active(CommittedMutationLiveActivityState)
 
-    @MainActor
     static func materialize(
         activeSegments: [TimeSegment],
         tasks: [TaskNode],
+        now: Date
+    ) -> Self {
+        materialize(
+            activeSegments: activeSegments,
+            indexes: TaskTreeService().indexes(tasks: tasks),
+            now: now
+        )
+    }
+
+    static func materialize(
+        activeSegments: [TimeSegment],
+        indexes: TaskTreeIndexes,
         now: Date
     ) -> Self {
         let projectionService = LiveActivityProjectionService()
@@ -37,7 +48,7 @@ nonisolated enum CommittedMutationLiveActivityProjection:
         }
         let task = projectionService.taskProjection(
             taskID: primary.taskID,
-            tasks: tasks,
+            indexes: indexes,
             fallbackTitle: AppStrings.activeTimers
         )
         return .active(CommittedMutationLiveActivityState(

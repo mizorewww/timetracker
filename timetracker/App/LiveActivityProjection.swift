@@ -25,18 +25,6 @@ nonisolated struct LiveActivityProjectionService {
 
     func taskProjection(
         taskID: UUID,
-        tasks: [TaskNode],
-        fallbackTitle: String
-    ) -> LiveActivityTaskProjection {
-        taskProjection(
-            taskID: taskID,
-            indexes: TaskTreeService().indexes(tasks: tasks),
-            fallbackTitle: fallbackTitle
-        )
-    }
-
-    func taskProjection(
-        taskID: UUID,
         indexes: TaskTreeIndexes,
         fallbackTitle: String
     ) -> LiveActivityTaskProjection {

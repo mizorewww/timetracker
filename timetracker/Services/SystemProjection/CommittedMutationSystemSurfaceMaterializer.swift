@@ -119,9 +119,9 @@ actor CommittedMutationSystemSurfaceMaterializer {
             quickStartTaskIDs: quickStartTaskIDs,
             widgetSnapshot: widgetSnapshot
         )
-        let liveActivity = liveActivityProjection(
+        let liveActivity = CommittedMutationLiveActivityProjection.materialize(
             activeSegments: activeSegments,
-            tree: tree,
+            indexes: tree,
             now: now
         )
         let materialization =
@@ -314,35 +314,6 @@ actor CommittedMutationSystemSurfaceMaterializer {
             taskParentPathByID: tree.taskParentPathByID,
             quickStartTaskIDs: quickStartTaskIDs
         )
-    }
-
-    private func liveActivityProjection(
-        activeSegments: [TimeSegment],
-        tree: TaskTreeIndexes,
-        now: Date
-    ) -> CommittedMutationLiveActivityProjection {
-        let service = LiveActivityProjectionService()
-        guard let primary = service.primarySegment(
-            from: activeSegments,
-            now: now
-        ) else {
-            return .inactive
-        }
-        let task = service.taskProjection(
-            taskID: primary.taskID,
-            indexes: tree,
-            fallbackTitle: AppStrings.localized("home.activeTimers")
-        )
-        return .active(CommittedMutationLiveActivityState(
-            segmentID: primary.id.uuidString,
-            taskID: primary.taskID.uuidString,
-            taskTitle: task.title,
-            taskPath: task.path,
-            taskPathAbbreviated: task.abbreviatedPath,
-            iconName: task.iconName,
-            colorHex: task.colorHex,
-            startedAt: primary.startedAt
-        ))
     }
 
     private func taskHierarchyOrder(

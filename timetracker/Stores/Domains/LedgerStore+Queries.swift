@@ -26,6 +26,10 @@ extension LedgerStore {
         models(for: segmentIDs(forTaskIDs: taskIDs))
     }
 
+    func snapshots(forTaskID taskID: UUID) -> [LedgerSegmentSnapshot] {
+        (segmentIDsByTaskID[taskID] ?? []).compactMap { segmentSnapshotByID[$0] }
+    }
+
     private func segmentIDs(forTaskIDs taskIDs: Set<UUID>) -> Set<UUID> {
         taskIDs.reduce(into: Set<UUID>()) { result, taskID in
             result.formUnion(segmentIDsByTaskID[taskID] ?? [])

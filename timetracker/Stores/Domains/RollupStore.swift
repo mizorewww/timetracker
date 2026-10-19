@@ -77,10 +77,6 @@ struct RollupStore {
         taskRollups[taskID]
     }
 
-    func activitySummary(for taskID: UUID) -> TaskLedgerActivitySummary? {
-        incrementalIndex.activitySummary(for: taskID)
-    }
-
     func checklistProgress(for taskID: UUID, checklistItems: [ChecklistItem]) -> ChecklistProgress {
         rollupService.checklistProgress(for: taskID, checklistItems: checklistItems)
     }

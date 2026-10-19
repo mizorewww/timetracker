@@ -12,12 +12,10 @@ struct RollupIncrementalIndex {
     private(set) var ownWorkedSecondsByTaskID: [UUID: Int] = [:]
     private(set) var checklistProgressByTaskID: [UUID: ChecklistProgress] = [:]
     var historicalPaceByTaskID: [UUID: TaskRollupHistoricalPace] = [:]
-    var activitySummaryByTaskID: [UUID: TaskLedgerActivitySummary] = [:]
 
     var parentByTaskID: [UUID: UUID] = [:]
     var depthByTaskID: [UUID: Int] = [:]
     var segmentByID: [UUID: LedgerSegmentSnapshot] = [:]
-    var segmentIDsByTaskID: [UUID: Set<UUID>] = [:]
     var timeSensitiveSegmentIDs: Set<UUID> = []
     var ownRecentDaySecondsByTaskID: [UUID: [Date: Int]] = [:]
     var subtreeRecentDaySecondsByTaskID: [UUID: [Date: Int]] = [:]
@@ -66,10 +64,7 @@ struct RollupIncrementalIndex {
             canonicalSegments.append(LedgerSegmentSnapshot(segment))
         }
         segmentByID = Dictionary(uniqueKeysWithValues: canonicalSegments.map { ($0.id, $0) })
-        segmentIDsByTaskID = Dictionary(grouping: canonicalSegments, by: \.taskID)
-            .mapValues { Set($0.map(\.id)) }
         timeSensitiveSegmentIDs = Set(canonicalSegments.lazy.filter { $0.isTimeSensitive(at: now) }.map(\.id))
-        rebuildActivitySummaries()
         ownWorkedSecondsByTaskID.removeAll(keepingCapacity: true)
         for segment in canonicalSegments {
             ownWorkedSecondsByTaskID[segment.taskID, default: 0] += segment.elapsedSeconds(at: now)

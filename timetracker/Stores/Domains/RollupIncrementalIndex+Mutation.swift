@@ -71,10 +71,6 @@ extension RollupIncrementalIndex {
                     into: &ownDayDeltasByTaskID[before.taskID, default: [:]],
                     multiplier: -1
                 )
-                segmentIDsByTaskID[before.taskID]?.remove(segmentID)
-                if segmentIDsByTaskID[before.taskID]?.isEmpty == true {
-                    segmentIDsByTaskID.removeValue(forKey: before.taskID)
-                }
             }
 
             if let after {
@@ -86,7 +82,6 @@ extension RollupIncrementalIndex {
                     multiplier: 1
                 )
                 segmentByID[segmentID] = after
-                segmentIDsByTaskID[after.taskID, default: []].insert(segmentID)
                 if after.isTimeSensitive(at: now) {
                     timeSensitiveSegmentIDs.insert(segmentID)
                 } else {
@@ -100,7 +95,6 @@ extension RollupIncrementalIndex {
 
         for taskID in timeAffectedTaskIDs {
             clampOwnWorkedSecondsToZero(for: taskID)
-            rebuildActivitySummary(for: taskID)
         }
         for (taskID, deltas) in ownDayDeltasByTaskID {
             applyOwnDayDeltas(taskID: taskID, deltas: deltas)

@@ -261,12 +261,13 @@ struct TaskNodeEntityQuery: EntityStringQuery {
 
     @MainActor
     func entities(matching string: String) async throws -> [TaskNodeAppEntity] {
-        let query = string.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let query = string.trimmingCharacters(in: .whitespacesAndNewlines)
         guard query.isEmpty == false else {
             return try await suggestedEntities()
         }
         return try fetchTaskEntities().filter {
-            $0.title.lowercased().contains(query) || $0.path.lowercased().contains(query)
+            $0.title.localizedStandardContains(query) ||
+                $0.path.localizedStandardContains(query)
         }
     }
 
@@ -277,25 +278,14 @@ struct TaskNodeEntityQuery: EntityStringQuery {
 
     @MainActor
     private func fetchTaskEntities() throws -> [TaskNodeAppEntity] {
-        let context = SystemActionContextProvider.makeContext()
-        let repository = SwiftDataTaskRepository(context: context)
-        let tasks = try repository.allNodes()
-        let trackableTaskIDs = try TaskTrackingAvailabilityService()
-            .directWorkTaskIDs(
-                tasks: tasks,
-                recurrenceRules: repository.taskRecurrenceRules(),
-                recurrenceOccurrences:
-                repository.taskRecurrenceOccurrences()
-            )
-        let trackableTasks = tasks.filter { trackableTaskIDs.contains($0.id) }
-        let parentPathByID = TaskTreeService()
-            .indexes(tasks: tasks)
-            .taskParentPathByID
-        return trackableTasks.map { task in
+        let catalog = try TrackableTaskCatalog(
+            context: SystemActionContextProvider.makeContext()
+        )
+        return catalog.trackableTasks.map { task in
             TaskNodeAppEntity(
                 id: task.id.uuidString,
                 title: task.title,
-                path: parentPathByID[task.id] ?? ""
+                path: catalog.tree.taskParentPathByID[task.id] ?? ""
             )
         }
     }

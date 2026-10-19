@@ -91,23 +91,7 @@ actor CommittedMutationSystemSurfaceMaterializer {
         now: Date = Date(),
         calendar: Calendar = .current
     ) throws -> CommittedMutationSystemProjectionMaterialization {
-        let canonicalTaskRows = try modelContext
-            .fetch(FetchDescriptor<TaskNode>())
-            .deduplicatedByID()
-        let tasks = canonicalTaskRows
-            .filter { $0.deletedAt == nil }
-            .sorted(by: taskHierarchyOrder)
-        let fetchedRecurrenceRules = try modelContext
-            .fetch(FetchDescriptor<TaskRecurrenceRule>())
-            .visibleDeduplicatedByID()
-        let fetchedRecurrenceOccurrences = try modelContext
-            .fetch(FetchDescriptor<TaskRecurrenceOccurrence>())
-            .visibleDeduplicatedByID()
-        let recurrence = completeRecurrenceFacts(
-            tasks: tasks,
-            rules: fetchedRecurrenceRules,
-            occurrences: fetchedRecurrenceOccurrences
-        )
+        let catalog = try TrackableTaskCatalog(context: modelContext)
         let segments = try activitySegments(now: now, calendar: calendar)
         let sessionIDs = Array(Set(segments.map(\.sessionID)))
         let sessions = try modelContext
@@ -120,25 +104,16 @@ actor CommittedMutationSystemSurfaceMaterializer {
             .deduplicatedByID()
 
         let readableSegments = readableSegments(
-            canonicalTaskRows: canonicalTaskRows,
+            canonicalTaskRows: catalog.canonicalTaskRows,
             sessions: sessions,
             segments: segments
         )
 
-        let tree = TaskTreeService().indexes(tasks: tasks)
-        let trackableTaskIDs = TaskTrackingAvailabilityService()
-            .directWorkTaskIDs(
-                tasks: tasks,
-                recurrenceRules: recurrence.rules,
-                recurrenceOccurrences: recurrence.occurrences
-            )
-            .subtracting(recurrence.incompleteTaskIDs)
+        let tree = catalog.tree
         let activityByTaskID = taskActivityByTaskID(
             segments: readableSegments
         )
-        let availableTasks = tasks.filter {
-            trackableTaskIDs.contains($0.id)
-        }
+        let availableTasks = catalog.trackableTasks
         let rankingService = TaskUsageRankingService()
         let rankedTasks = rankingService.rankedTasks(
             availableTasks: availableTasks,
@@ -219,51 +194,6 @@ actor CommittedMutationSystemSurfaceMaterializer {
                 predicate: #Predicate { candidateIDs.contains($0.id) }
             ))
             .visibleDeduplicatedByID()
-    }
-
-    private func completeRecurrenceFacts(
-        tasks: [TaskNode],
-        rules: [TaskRecurrenceRule],
-        occurrences: [TaskRecurrenceOccurrence]
-    ) -> (
-        rules: [TaskRecurrenceRule],
-        occurrences: [TaskRecurrenceOccurrence],
-        incompleteTaskIDs: Set<UUID>
-    ) {
-        let taskIDs = Set(tasks.map(\.id))
-        let visibleRuleByID = rules.latestByID()
-        var incompleteTaskIDs = Set<UUID>()
-
-        for occurrence in occurrences {
-            let relationshipIsComplete =
-                visibleRuleByID[occurrence.ruleID]?.templateTaskID ==
-                occurrence.templateTaskID &&
-                taskIDs.contains(occurrence.templateTaskID) &&
-                taskIDs.contains(occurrence.generatedTaskID)
-            guard relationshipIsComplete == false else { continue }
-            if taskIDs.contains(occurrence.templateTaskID) {
-                incompleteTaskIDs.insert(occurrence.templateTaskID)
-            }
-            if taskIDs.contains(occurrence.generatedTaskID) {
-                incompleteTaskIDs.insert(occurrence.generatedTaskID)
-            }
-        }
-
-        let completeRules = rules.filter {
-            taskIDs.contains($0.templateTaskID)
-        }
-        let completeRuleByID = completeRules.latestByID()
-        let completeOccurrences = occurrences.filter {
-            completeRuleByID[$0.ruleID]?.templateTaskID ==
-                $0.templateTaskID &&
-                taskIDs.contains($0.templateTaskID) &&
-                taskIDs.contains($0.generatedTaskID)
-        }
-        return (
-            completeRules,
-            completeOccurrences,
-            incompleteTaskIDs
-        )
     }
 
     private func readableSegments(
@@ -405,22 +335,6 @@ actor CommittedMutationSystemSurfaceMaterializer {
             quickStartTasks: pinnedTasks + fillTasks,
             taskParentPathByID: tree.taskParentPathByID
         )
-    }
-
-    private func taskHierarchyOrder(
-        _ lhs: TaskNode,
-        _ rhs: TaskNode
-    ) -> Bool {
-        if lhs.depth != rhs.depth {
-            return lhs.depth < rhs.depth
-        }
-        if lhs.sortOrder != rhs.sortOrder {
-            return lhs.sortOrder < rhs.sortOrder
-        }
-        if lhs.createdAt != rhs.createdAt {
-            return lhs.createdAt < rhs.createdAt
-        }
-        return lhs.id.uuidString < rhs.id.uuidString
     }
 
     private func segmentStartOrder(

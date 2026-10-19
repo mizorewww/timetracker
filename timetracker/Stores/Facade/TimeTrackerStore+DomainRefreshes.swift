@@ -34,7 +34,12 @@ extension TimeTrackerStore {
     }
 
     func refreshPomodoroDomain(schedulesReconciliation: Bool = true) throws {
-        pomodoroRuns = try pomodoroRepository?.runs() ?? []
+        let runs = try pomodoroRepository?.runs() ?? []
+        // Page-appear convergence calls this often; keep observers quiet
+        // when the run set is unchanged.
+        if runs != pomodoroRuns {
+            pomodoroRuns = runs
+        }
         if schedulesReconciliation {
             schedulePomodoroReconciliation()
         }

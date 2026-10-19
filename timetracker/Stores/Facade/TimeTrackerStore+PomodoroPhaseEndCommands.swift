@@ -46,8 +46,8 @@ extension TimeTrackerStore {
     /// the resulting segment deltas; analytics caches are invalidated only
     /// when another writer actually changed a visible segment.
     func convergeLiveTimerReadModels() throws {
-        guard let timeRepository, let pomodoroRepository else { return }
-        pomodoroRuns = try pomodoroRepository.runs()
+        guard let timeRepository else { return }
+        try refreshPomodoroDomain()
         ledgerDomainStore.resetRollupChanges()
         try ledgerDomainStore.refreshVisible(repository: timeRepository)
         try refreshLedgerRelationshipVisibility()
@@ -65,7 +65,6 @@ extension TimeTrackerStore {
         if segmentChanges.contains(where: { $0.before != $0.after }) {
             refreshAnalyticsDomain()
         }
-        schedulePomodoroReconciliation(now: Date())
         // This path changes the visible ledger without bumping
         // analyticsRevision, so the revision-keyed Today caches would serve
         // stale active segments. Invalidate them explicitly.

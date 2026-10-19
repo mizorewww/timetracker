@@ -51,15 +51,6 @@ nonisolated enum AppRuntimeEnvironment {
         environment["XCTestConfigurationFilePath"] != nil
             || environment["XCTestBundlePath"] != nil
     }
-
-    /// Suffix appended to shared on-disk and defaults namespaces under test.
-    static let testNamespaceSuffix = "Tests"
-
-    /// Namespaces a shared identifier so a test host can never collide with the
-    /// installed app's copy of the same resource.
-    static func namespaced(_ identifier: String) -> String {
-        isTestHost ? "\(identifier)-\(testNamespaceSuffix)" : identifier
-    }
 }
 
 /// The single entry point for app-level `UserDefaults` access.

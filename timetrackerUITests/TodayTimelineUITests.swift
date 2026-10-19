@@ -15,14 +15,24 @@ final class TodayTimelineUITests: XCTestCase {
         let chart = app.descendants(matching: .any)["home.timeline.chart"]
         let home = app.descendants(matching: .any)["home.view"]
         for _ in 0 ..< 8 where chart.waitForExistence(timeout: 2) == false {
-            home.scroll(byDeltaX: 0, deltaY: -400)
+            scrollDown(home)
         }
         XCTAssertTrue(chart.exists, "Today's timeline chart never rendered.")
         let bar = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH 'timeline.bar.'"))
             .firstMatch
         XCTAssertTrue(bar.waitForExistence(timeout: 10), "Demo data produced no timeline bars.")
-        home.scroll(byDeltaX: 0, deltaY: -400)
+        scrollDown(home)
         attachScreenshot(app, named: "Today timeline")
+    }
+
+    /// macOS scrolls with a pointer; iOS simulators without pointer support
+    /// need a swipe.
+    private func scrollDown(_ element: XCUIElement) {
+        #if os(macOS)
+        element.scroll(byDeltaX: 0, deltaY: -400)
+        #else
+        element.swipeUp()
+        #endif
     }
 }

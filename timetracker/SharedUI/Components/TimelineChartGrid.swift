@@ -91,6 +91,7 @@ extension TimelineChart {
 
     private func hourLabelText(_ tick: TimelineChartAxisTick) -> some View {
         Text(hourLabel(tick.date))
+            .accessibilityHidden(true)
             .font(
                 .footnote
                     .weight(tick.role.isBoundary ? .semibold : .regular)

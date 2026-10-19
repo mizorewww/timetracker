@@ -72,9 +72,6 @@ final class TimelineChartBarLayoutMemo {
 struct TimelineChart: View {
     let timeline: AnalyticsTimelineSnapshot
     var compactHeight: CGFloat = 360
-    /// The bars stay out of VoiceOver (the legend rows carry that content)
-    /// but are queryable under UI tests.
-    let exposesUITestingMarks = AppRuntimeEnvironment.isUITesting
     @Environment(\.layoutShell) private var layoutShell
     @State private var barLayoutMemo = TimelineChartBarLayoutMemo()
 
@@ -98,7 +95,7 @@ struct TimelineChart: View {
                 horizontalTimeline
             }
         }
-        .accessibilityHidden(!exposesUITestingMarks)
+        .accessibilityElement(children: .contain)
     }
 
     var displayInterval: DateInterval {

@@ -17,10 +17,10 @@ extension TimelineChart {
                 y: lanes.offset(for: placement.lane)
             )
             .help("\(entry.title) \(shortRange(entry))")
-            .accessibilityElement(children: .contain)
+            .accessibilityElement(children: .ignore)
             .accessibilityIdentifier("timeline.bar.\(entry.id.stableSortKey)")
             .accessibilityLabel(entry.title)
-            .accessibilityHidden(!exposesUITestingMarks)
+            .accessibilityValue(shortRange(entry))
     }
 
     func verticalBar(
@@ -38,10 +38,10 @@ extension TimelineChart {
             }
             .offset(x: x, y: placement.axisOrigin)
             .help("\(entry.title) \(shortRange(entry))")
-            .accessibilityElement(children: .contain)
+            .accessibilityElement(children: .ignore)
             .accessibilityIdentifier("timeline.bar.\(entry.id.stableSortKey)")
             .accessibilityLabel(entry.title)
-            .accessibilityHidden(!exposesUITestingMarks)
+            .accessibilityValue(shortRange(entry))
     }
 
     private func barIcon(
@@ -54,9 +54,7 @@ extension TimelineChart {
                 width: TimelineChartLayout.barIconExtent,
                 height: TimelineChartLayout.barIconExtent
             )
-            .accessibilityLabel("\(entry.title) icon")
-            .accessibilityIdentifier("timeline.barIcon.\(entry.id.stableSortKey)")
-            .accessibilityHidden(!exposesUITestingMarks)
+            .accessibilityHidden(true)
             .frame(
                 width: TimelineChartLayout.minimumBarFootprint,
                 height: TimelineChartLayout.minimumBarFootprint

@@ -24,7 +24,7 @@
 
 ## 常用命令
 
-所有开发命令经 **Makefile** 唯一入口(Xcode `Write Build Info` 构建阶段与 pre-commit 钩子也调用 `make`);Makefile 经 `uv run --no-project --python 3.12` 调用 `tools/timetracker_tools/` 的纯标准库 Python 模块(系统 Python 只有 3.9)。
+所有开发命令经 **Makefile** 唯一入口(Xcode `Write Build Info` 构建阶段与 pre-commit 钩子也调用 `make`);Makefile 经系统 `python3`(3.9 即可)调用 `tools/timetracker_tools/` 的纯标准库 Python 模块。
 
 ```sh
 make help                # 列出全部目标

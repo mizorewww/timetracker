@@ -2,7 +2,7 @@
 """手动递增 pbxproj 中全部 target 的版本信息。
 
 MARKETING_VERSION 的 patch 加一,CURRENT_PROJECT_VERSION 加一。
-版本号不再随提交自动递增;发布前运行 `make bump-version`。
+发布前运行 `make bump-version`。
 """
 
 from __future__ import annotations

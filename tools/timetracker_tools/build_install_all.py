@@ -54,8 +54,7 @@ def plist_value(plist_path: Path, key: str) -> str | None:
     # plistlib decodes plist booleans as Python `bool`, whose str() is
     # capitalized ("True"/"False"). The TRUEISH/FALSEISH sets below use the
     # plist/PlistBuddy convention ("true"/"false", "YES"/"NO"), so normalize
-    # booleans to lowercase to keep the shell-script behavior the rewrite was
-    # based on. Without this, an embedded Watch app whose
+    # booleans to lowercase. Without this, an embedded Watch app whose
     # WKRunsIndependentlyOfCompanionApp is `false` reads back as "False" and
     # is misclassified as independent, aborting before any device install.
     if isinstance(value, bool):

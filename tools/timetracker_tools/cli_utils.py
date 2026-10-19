@@ -8,8 +8,8 @@ import subprocess
 from pathlib import Path
 from typing import Sequence
 
-# pbxproj 中版本字段的正则。保留与原 bash/perl 行为一致:
-# MARKETING_VERSION 形如 1.2 或 1.2.3 或 1.2.3.4(后两段可选),CURRENT_PROJECT_VERSION 为纯整数。
+# pbxproj 中版本字段的正则:
+# MARKETING_VERSION 形如 1.2 或 1.2.3,CURRENT_PROJECT_VERSION 为纯整数。
 MARKETING_VALUE_RE = re.compile(rb"MARKETING_VERSION = ([0-9]+(?:\.[0-9]+){1,2});")
 BUILD_VALUE_RE = re.compile(rb"CURRENT_PROJECT_VERSION = ([0-9]+);")
 MARKETING_FIELD_RE = re.compile(rb"MARKETING_VERSION = [0-9]+(?:\.[0-9]+){1,2};")

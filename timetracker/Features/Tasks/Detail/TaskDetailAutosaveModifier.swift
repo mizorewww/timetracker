@@ -40,7 +40,7 @@ private struct TaskDetailAutosaveModifier: ViewModifier {
             }
             .onDisappear {
                 presentationRouter.unregisterOpenTaskDetailSave(id: registrationID)
-                flush()
+                reportUnsavedEditsOnLeave()
             }
             .taskDetailAutosaveTerminationFlush(perform: flush)
     }
@@ -55,6 +55,18 @@ private struct TaskDetailAutosaveModifier: ViewModifier {
 
     private func flush() {
         controller.flush(request)
+    }
+
+    /// The detail and its in-place status are going away, so an edit that
+    /// cannot be saved is reported to the scene instead of vanishing.
+    private func reportUnsavedEditsOnLeave() {
+        guard controller.flush(request) == false,
+              let message = controller.unsavedChangesMessage
+        else { return }
+        presentationRouter.feedbackRouter.present(
+            title: AppStrings.localized("task.autosave.failed"),
+            message: message
+        )
     }
 }
 

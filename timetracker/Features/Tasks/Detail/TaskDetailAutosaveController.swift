@@ -29,6 +29,20 @@ final class TaskDetailAutosaveController {
 
     private(set) var status: Status = .idle
 
+    /// Why the latest edits are not persisted, or nil when nothing is lost.
+    var unsavedChangesMessage: String? {
+        switch status {
+        case let .failed(message):
+            message
+        case .validationBlocked:
+            AppStrings.localized("task.autosave.invalidNotSaved")
+        case .conflicted:
+            AppStrings.localized("task.editor.staleDraft")
+        case .idle, .scheduled, .saving, .saved:
+            nil
+        }
+    }
+
     @ObservationIgnored private let delay: Duration
     @ObservationIgnored private let commit: (
         TaskEditorDraft

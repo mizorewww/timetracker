@@ -1,9 +1,11 @@
 import Foundation
 
+/// In-memory ledger read model: every visible segment keyed by ID plus a
+/// per-task bucket. Range reads scan the immutable value snapshots, which keeps
+/// open and future-ended records correct without any day-bucket bookkeeping.
 struct LedgerStore {
     private(set) var activeSegments: [TimeSegment] = []
     private(set) var todaySegments: [TimeSegment] = []
-    var allSegments: [TimeSegment] = []
     var rollupChanges: [LedgerSegmentChange] = []
 
     var sessions: [TimeSession] {
@@ -16,22 +18,16 @@ struct LedgerStore {
         segmentRevision &+ sessionIndex.revision
     }
 
-    var segmentByID: [UUID: TimeSegment] = [:]
-    var segmentSnapshotByID: [UUID: LedgerSegmentSnapshot] = [:]
-    var segmentArrayIndexByID: [UUID: Int] = [:]
-    var segmentIDsByDay: [Date: Set<UUID>] = [:]
-    var longSpanSegmentIDs: Set<UUID> = []
-    var segmentIDsByTaskID: [UUID: Set<UUID>] = [:]
-    var recentSegmentIDsByTaskID: [UUID: [UUID]] = [:]
-    var segmentIDsBySessionID: [UUID: Set<UUID>] = [:]
-    var activeSegmentIDs: Set<UUID> = []
-    var timeSensitiveSegmentIDs: Set<UUID> = []
-    var pendingRollupChangeByID: [UUID: LedgerSegmentChange] = [:]
+    private(set) var segmentByID: [UUID: TimeSegment] = [:]
+    /// Value copies of `segmentByID`: SwiftData edits models in place, so the
+    /// snapshot is the "before" value for rollup deltas and the cheap
+    /// field source for range scans.
+    private(set) var segmentSnapshotByID: [UUID: LedgerSegmentSnapshot] = [:]
+    private(set) var segmentIDsByTaskID: [UUID: Set<UUID>] = [:]
+    private var pendingRollupChangeByID: [UUID: LedgerSegmentChange] = [:]
     /// Advances whenever a visible segment is added, removed, replaced, or
     /// changes value; time-only refreshes of running segments do not count.
-    var segmentRevision: UInt64 = 0
-    var segmentIndexEvaluationDate = Date.distantPast
-    var segmentIndexCalendar = Calendar.current
+    private var segmentRevision: UInt64 = 0
     private(set) var hasLoadedHistory = false
     private var sessionIndex = LedgerSessionIndex()
 
@@ -39,24 +35,23 @@ struct LedgerStore {
         activeSegments = try repository.activeSegments()
         let today = calendar.dateInterval(of: .day, for: now) ?? DateInterval(start: now, duration: 24 * 60 * 60)
         todaySegments = try repository.segments(from: today.start, to: today.end, now: now)
-        try refreshHistory(repository: repository, now: now, calendar: calendar)
+        try refreshHistory(repository: repository)
     }
 
     mutating func refreshVisible(repository: SwiftDataTimeTrackingRepository, now: Date = Date(), calendar: Calendar = .current) throws {
         let refreshedActive = try repository.activeSegments()
         let today = calendar.dateInterval(of: .day, for: now) ?? DateInterval(start: now, duration: 24 * 60 * 60)
         let refreshedToday = try repository.segments(from: today.start, to: today.end, now: now)
-        if segmentIndexEvaluationDate != .distantPast, segmentIndexCalendar != calendar {
-            rebuildSegmentDayIndex(now: now, calendar: calendar)
-        }
         let visibleFetched = uniqueSegments(refreshedActive + refreshedToday)
-        let impactedIDs = segmentIDs(overlapping: [today], now: now)
-            .union(activeSegmentIDs)
-            .union(visibleFetched.map(\.id))
         // A previously active segment can close outside today's interval (for
         // example, startup reconciliation just after midnight). Re-fetch every
-        // impacted identity so the full-history index receives that terminal
-        // version instead of retaining the old active object or deleting it.
+        // impacted identity so the index receives that terminal version
+        // instead of retaining the old active object or deleting it.
+        let impactedIDs = Set(
+            segmentSnapshotByID.values.lazy
+                .filter { $0.endedAt == nil || $0.overlaps(today, at: now) }
+                .map(\.id)
+        ).union(visibleFetched.map(\.id))
         let fetched = try uniqueSegments(
             visibleFetched + (repository.segments(ids: impactedIDs))
         )
@@ -64,13 +59,7 @@ struct LedgerStore {
             impactedIDs.compactMap { segmentSnapshotByID[$0]?.sessionID }
         ).union(fetched.map(\.sessionID))
 
-        replaceSegments(
-            ids: impactedIDs,
-            with: fetched,
-            now: now,
-            calendar: calendar,
-            refreshUnchangedTimeSensitiveSegments: true
-        )
+        replaceSegments(ids: impactedIDs, with: fetched, now: now)
         if impactedSessionIDs.isEmpty == false {
             try sessionIndex.replace(
                 ids: impactedSessionIDs,
@@ -81,13 +70,8 @@ struct LedgerStore {
         todaySegments = refreshedToday
     }
 
-    mutating func refreshHistory(
-        repository: SwiftDataTimeTrackingRepository,
-        now: Date = Date(),
-        calendar: Calendar = .current
-    ) throws {
-        let fetchedSegments = try repository.allSegments()
-        rebuildSegmentIndexes(segments: fetchedSegments, now: now, calendar: calendar)
+    private mutating func refreshHistory(repository: SwiftDataTimeTrackingRepository) throws {
+        try rebuildSegmentIndexes(segments: repository.allSegments())
         try sessionIndex.rebuild(repository.sessions())
         hasLoadedHistory = true
         resetRollupChanges()
@@ -103,18 +87,13 @@ struct LedgerStore {
             return DateInterval(start: range.start, end: range.end)
         }
         guard intervals.isEmpty == false, hasLoadedHistory else {
-            try refreshHistory(repository: repository, now: now)
+            try refreshHistory(repository: repository)
             return
         }
 
-        let newlyOverlappingTimeSensitiveIDs = timeSensitiveSegmentIDs.filter { id in
-            guard let snapshot = segmentSnapshotByID[id] else { return false }
-            return intervals.contains { snapshot.overlaps($0, at: now) }
+        let existingImpactedSnapshots = segmentSnapshotByID.values.filter { snapshot in
+            intervals.contains { snapshot.overlaps($0, at: now) }
         }
-        let existingImpactedIDs = segmentIDs(overlapping: intervals, now: now)
-            .union(newlyOverlappingTimeSensitiveIDs)
-        let existingImpactedSnapshots = existingImpactedIDs.compactMap { segmentSnapshotByID[$0] }
-
         var fetchedSegments: [TimeSegment] = []
         for interval in intervals {
             fetchedSegments += try repository.segments(from: interval.start, to: interval.end, now: now)
@@ -124,11 +103,9 @@ struct LedgerStore {
         let impactedSessionIDs = Set(existingImpactedSnapshots.map(\.sessionID))
             .union(fetchedSegments.map(\.sessionID))
         replaceSegments(
-            ids: existingImpactedIDs.union(fetchedSegments.map(\.id)),
+            ids: Set(existingImpactedSnapshots.map(\.id)).union(fetchedSegments.map(\.id)),
             with: fetchedSegments,
-            now: now,
-            calendar: segmentIndexCalendar,
-            refreshUnchangedTimeSensitiveSegments: true
+            now: now
         )
 
         if impactedSessionIDs.isEmpty == false {
@@ -152,5 +129,71 @@ struct LedgerStore {
 
     func sessions(for ids: Set<UUID>) -> [TimeSession] {
         sessionIndex.sessions(for: ids)
+    }
+
+    private mutating func rebuildSegmentIndexes(segments: [TimeSegment]) {
+        // The repository already resolves LWW and hides tombstones.
+        segmentByID = segments.reduce(into: [:]) { $0[$1.id] = $1 }
+        segmentSnapshotByID = segmentByID.mapValues(LedgerSegmentSnapshot.init)
+        segmentIDsByTaskID = Dictionary(grouping: segmentSnapshotByID.values, by: \.taskID)
+            .mapValues { Set($0.map(\.id)) }
+        segmentRevision &+= 1
+    }
+
+    private mutating func replaceSegments(
+        ids: Set<UUID>,
+        with fetchedSegments: [TimeSegment],
+        now: Date
+    ) {
+        let fetchedByID = fetchedSegments.reduce(into: [UUID: TimeSegment]()) {
+            $0[$1.id] = $1
+        }
+
+        for id in ids {
+            let before = segmentSnapshotByID[id]
+            let afterModel = fetchedByID[id]
+            let after = afterModel.map(LedgerSegmentSnapshot.init)
+            // Running and future-ended records are re-reported even when
+            // unchanged so the rollup re-evaluates their elapsed time.
+            if before != after || after?.isTimeSensitive(at: now) == true {
+                recordRollupChange(id: id, before: before, after: after)
+            }
+            if before != after || segmentByID[id] !== afterModel {
+                segmentRevision &+= 1
+            }
+
+            if let before, before.taskID != after?.taskID {
+                segmentIDsByTaskID[before.taskID]?.remove(id)
+                if segmentIDsByTaskID[before.taskID]?.isEmpty == true {
+                    segmentIDsByTaskID.removeValue(forKey: before.taskID)
+                }
+            }
+            if let afterModel, let after {
+                segmentByID[id] = afterModel
+                segmentSnapshotByID[id] = after
+                segmentIDsByTaskID[after.taskID, default: []].insert(id)
+            } else {
+                segmentByID.removeValue(forKey: id)
+                segmentSnapshotByID.removeValue(forKey: id)
+            }
+        }
+
+        rollupChanges = pendingRollupChangeByID.values.sorted {
+            $0.id < $1.id
+        }
+    }
+
+    private mutating func recordRollupChange(
+        id: UUID,
+        before: LedgerSegmentSnapshot?,
+        after: LedgerSegmentSnapshot?
+    ) {
+        // Coalesced changes keep the first-seen "before" (nil for inserts).
+        let firstBefore = pendingRollupChangeByID[id].map(\.before) ?? before
+        pendingRollupChangeByID[id] = LedgerSegmentChange(id: id, before: firstBefore, after: after)
+    }
+
+    private func uniqueSegments(_ segments: [TimeSegment]) -> [TimeSegment] {
+        segments.deduplicatedByID().filter { $0.deletedAt == nil }
     }
 }

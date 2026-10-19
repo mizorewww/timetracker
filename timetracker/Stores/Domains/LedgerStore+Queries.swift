@@ -1,85 +1,43 @@
 import Foundation
 
 extension LedgerStore {
-    var hasIndexedSegmentHistory: Bool {
-        hasLoadedHistory
-    }
+    nonisolated static let maximumRecentSegmentsPerTask = 8
 
-    /// Returns only the indexed records that overlap the requested interval.
-    /// Active records are included explicitly because they can cross into a
-    /// new day after the day index was last rebuilt.
+    /// Returns the indexed records that overlap the requested interval, with
+    /// open and future-ended records clipped at `now`. Before the first full
+    /// history load the index holds only the visible (today/active) window.
     func segments(overlapping interval: DateInterval, now: Date) -> [TimeSegment] {
-        segments(
-            overlapping: interval,
-            evaluatedAt: now,
-            clockReference: now
-        )
-    }
-
-    /// `evaluatedAt` clips open and future-ended records for the requested
-    /// read model. `clockReference` is kept separate so a historical cutoff is
-    /// not mistaken for a real backward system-clock correction.
-    func segments(
-        overlapping interval: DateInterval,
-        evaluatedAt cutoff: Date,
-        clockReference: Date
-    ) -> [TimeSegment] {
-        guard hasLoadedHistory else { return [] }
-        let candidateIDs = segmentCandidateIDs(
-            overlapping: interval,
-            evaluatedAt: cutoff,
-            clockReference: clockReference
-        )
-        return candidateIDs.compactMap { id in
-            guard let segment = segmentByID[id], segment.deletedAt == nil, TrackedTimePolicy.overlaps(
-                startedAt: segment.startedAt,
-                endedAt: segment.endedAt,
-                interval: interval,
-                now: cutoff
-            ) else {
-                return nil
-            }
-            return segment
-        }
+        models(for: segmentSnapshotByID.values.lazy.filter {
+            $0.overlaps(interval, at: now)
+        }.map(\.id))
     }
 
     func segments(
         overlapping interval: DateInterval,
         taskIDs: Set<UUID>,
-        evaluatedAt cutoff: Date,
-        clockReference: Date
+        now: Date
     ) -> [TimeSegment] {
-        guard hasLoadedHistory else { return [] }
-        return taskScopedSegmentIDs(
-            overlapping: interval,
-            taskIDs: taskIDs,
-            evaluatedAt: cutoff,
-            clockReference: clockReference
-        ).compactMap { id in
-            guard let segment = segmentByID[id], segment.deletedAt == nil, TrackedTimePolicy.overlaps(
-                startedAt: segment.startedAt,
-                endedAt: segment.endedAt,
-                interval: interval,
-                now: cutoff
-            ) else {
-                return nil
-            }
-            return segment
+        models(for: segmentIDs(forTaskIDs: taskIDs).filter { id in
+            segmentSnapshotByID[id]?.overlaps(interval, at: now) == true
+        })
+    }
+
+    func segments(forTaskIDs taskIDs: Set<UUID>) -> [TimeSegment] {
+        models(for: segmentIDs(forTaskIDs: taskIDs))
+    }
+
+    private func segmentIDs(forTaskIDs taskIDs: Set<UUID>) -> Set<UUID> {
+        taskIDs.reduce(into: Set<UUID>()) { result, taskID in
+            result.formUnion(segmentIDsByTaskID[taskID] ?? [])
         }
     }
 
-    /// Internal diagnostic boundary shared with performance-focused tests.
-    /// Only a genuine wall-clock rewind expands a query to the full ledger.
-    func segmentCandidateIDs(
-        overlapping interval: DateInterval,
-        evaluatedAt cutoff: Date,
-        clockReference: Date
-    ) -> Set<UUID> {
-        let clockRewindIDs = clockReference < segmentIndexEvaluationDate
-            ? Set(segmentSnapshotByID.keys)
-            : []
-        return segmentIDs(overlapping: [interval], now: cutoff)
-            .union(timeSensitiveSegmentIDs)
-            .union(clockRewindIDs)
+    /// Snapshots carry the indexed values; the live model still decides
+    /// visibility so an in-context soft delete hides the row immediately.
+    private func models(for ids: some Sequence<UUID>) -> [TimeSegment] {
+        ids.compactMap { id in
+            guard let segment = segmentByID[id], segment.deletedAt == nil else { return nil }
+            return segment
+        }
     }
 }

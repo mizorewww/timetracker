@@ -46,26 +46,11 @@ extension TimeTrackerStore {
     }
 
     func segmentEditorDraft(for entryID: TimelineEntryID) -> SegmentEditorDraft? {
-        guard case let .trackedSegment(segmentID) = entryID else {
-            return nil
-        }
-
-        let segment: TimeSegment? = if ledgerDomainStore.hasIndexedSegmentHistory {
-            ledgerDomainStore.segment(for: segmentID).flatMap { candidate in
-                guard candidate.deletedAt == nil,
-                      isReadableLedgerSegment(candidate)
-                else {
-                    return nil
-                }
-                return candidate
-            }
-        } else {
-            allSegments
-                .visibleDeduplicatedByID()
-                .first { $0.id == segmentID }
-        }
-
-        guard let segment else {
+        guard case let .trackedSegment(segmentID) = entryID,
+              let segment = ledgerDomainStore.segment(for: segmentID),
+              segment.deletedAt == nil,
+              isReadableLedgerSegment(segment)
+        else {
             return nil
         }
         return segmentEditorDraft(for: segment)
@@ -84,35 +69,18 @@ extension TimeTrackerStore {
         )
     }
 
+    /// `clockReference` is kept for API compatibility; range reads scan the
+    /// ledger snapshots, so only `cutoff` affects the result.
     func visibleSegments(
         overlapping interval: DateInterval,
         evaluatedAt cutoff: Date,
-        clockReference: Date
+        clockReference _: Date
     ) -> [TimeSegment] {
-        if ledgerDomainStore.hasIndexedSegmentHistory {
-            return ledgerDomainStore.segments(
-                overlapping: interval,
-                evaluatedAt: cutoff,
-                clockReference: clockReference
-            )
+        ledgerDomainStore.segments(overlapping: interval, now: cutoff)
             .filter(isReadableLedgerSegment)
-        }
-        return allSegments.filter { segment in
-            guard segment.deletedAt == nil else { return false }
-            return TrackedTimePolicy.overlaps(
-                startedAt: segment.startedAt,
-                endedAt: segment.endedAt,
-                interval: interval,
-                now: cutoff
-            )
-        }
     }
 
     func visibleSessions(for segments: [TimeSegment]) -> [TimeSession] {
-        let sessionIDs = Set(segments.map(\.sessionID))
-        if ledgerDomainStore.hasIndexedSegmentHistory {
-            return ledgerDomainStore.sessions(for: sessionIDs)
-        }
-        return sessions.filter { sessionIDs.contains($0.id) && $0.deletedAt == nil }
+        ledgerDomainStore.sessions(for: Set(segments.map(\.sessionID)))
     }
 }

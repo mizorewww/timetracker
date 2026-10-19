@@ -118,17 +118,8 @@ struct LedgerStoreRefreshEquivalenceTests {
             #expect(ids(incremental.segments(overlapping: interval, now: later)) ==
                 ids(rebuilt.segments(overlapping: interval, now: later)))
             for taskID in [taskA.id, taskB.id] {
-                #expect(ids(incremental.segments(
-                    overlapping: interval,
-                    taskIDs: [taskID],
-                    evaluatedAt: later,
-                    clockReference: later
-                )) == ids(rebuilt.segments(
-                    overlapping: interval,
-                    taskIDs: [taskID],
-                    evaluatedAt: later,
-                    clockReference: later
-                )))
+                #expect(ids(incremental.segments(overlapping: interval, taskIDs: [taskID], now: later)) ==
+                    ids(rebuilt.segments(overlapping: interval, taskIDs: [taskID], now: later)))
             }
         }
         let history = ids(rebuilt.segments(overlapping: intervals[3], now: later))

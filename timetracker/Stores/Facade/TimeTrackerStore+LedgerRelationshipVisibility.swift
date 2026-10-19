@@ -37,11 +37,18 @@ extension TimeTrackerStore {
                 readableSessions.map { ($0.id, $0.taskID) },
                 uniquingKeysWith: { first, _ in first }
             )
-            let readableSegments = ledgerDomainStore.allSegments.filter { segment in
-                existingTaskIDs.contains(segment.taskID) &&
-                    taskIDBySessionID[segment.sessionID] == segment.taskID
+            let readableSnapshots = ledgerDomainStore.segmentSnapshotByID.values
+                .filter { snapshot in
+                    existingTaskIDs.contains(snapshot.taskID) &&
+                        taskIDBySessionID[snapshot.sessionID] == snapshot.taskID
+                }
+                .sorted { lhs, rhs in
+                    lhs.startedAt != rhs.startedAt ? lhs.startedAt < rhs.startedAt : lhs.id < rhs.id
+                }
+            readableLedgerSegmentIDs = Set(readableSnapshots.map(\.id))
+            let readableSegments = readableSnapshots.compactMap {
+                ledgerDomainStore.segment(for: $0.id)
             }
-            readableLedgerSegmentIDs = Set(readableSegments.map(\.id))
             ledgerRelationshipVisibilityKey = (ledgerRevision, existingTaskIDs)
             // Assign only on change: each of these is observed, and an
             // unchanged reassignment would still invalidate every reader.

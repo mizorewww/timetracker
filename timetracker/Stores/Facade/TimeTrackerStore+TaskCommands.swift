@@ -8,7 +8,7 @@ extension TimeTrackerStore {
             categoryID: taskCategoryIDByRootTaskID[task.id],
             categoryAssignment: taskCategoryAssignmentByRootTaskID[task.id],
             checklistItems: checklistItems(for: task.id),
-            visualByChecklistID: checklistVisualByItemID,
+            visualByChecklistID: checklistDomainStore.visualByChecklistItemID,
             quantityGoal: taskQuantityGoals.first {
                 $0.taskID == task.id
             },

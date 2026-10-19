@@ -246,7 +246,6 @@ final class TimeTrackerStore {
     @ObservationIgnored var todayHeatmapRecurrenceProjection =
         TodayHeatmapRecurrenceProjection.empty
     @ObservationIgnored var taskTreeProjectionCache = TaskTreeProjectionCache()
-    var checklistByTaskID: [UUID: [ChecklistItem]] = [:]
     var taskPathByID: [UUID: String] = [:]
     var taskParentPathByID: [UUID: String] = [:]
     var visibleTaskIDs: Set<UUID> = []
@@ -260,7 +259,6 @@ final class TimeTrackerStore {
         (ledgerRevision: UInt64, existingTaskIDs: Set<UUID>)?
     @ObservationIgnored var existingTaskIDs: Set<UUID> = []
     @ObservationIgnored var trackableTasksCache: (revision: UInt64, tasks: [TaskNode])?
-    var checklistVisualByItemID: [UUID: ChecklistItemVisual] = [:]
     var inboxSuggestionByItemID: [UUID: InboxSuggestion] = [:]
     var inboxItemReadModelByItemID: [UUID: InboxItemReadModel] = [:]
     @ObservationIgnored var scheduledSyncRefreshTask: Task<Void, Never>?

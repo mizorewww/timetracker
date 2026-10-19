@@ -92,40 +92,13 @@ extension TimeTrackerStore {
                 items: fetchChecklistItems(),
                 visuals: fetchChecklistItemVisuals()
             )
-            rebuildChecklistIndexes()
-            rebuildChecklistVisualIndexes()
         } else {
-            let previousItemIDs = Set(
-                scopedTaskIDs.flatMap { checklistDomainStore.items(for: $0) }.map(\.id)
-            )
             let scopedItems = try fetchChecklistItems(taskIDs: scopedTaskIDs)
             try checklistDomainStore.refreshTaskScoped(
                 taskIDs: scopedTaskIDs,
                 items: scopedItems,
                 visuals: fetchChecklistItemVisuals(checklistItemIDs: Set(scopedItems.map(\.id)))
             )
-            let currentItemIDs = Set(
-                scopedTaskIDs.flatMap { checklistDomainStore.items(for: $0) }.map(\.id)
-            )
-
-            // The domain store already maintains scoped indexes. Update only
-            // the affected facade read-model buckets instead of regrouping
-            // every checklist item in the facade.
-            for taskID in scopedTaskIDs {
-                let taskItems = checklistDomainStore.items(for: taskID)
-                if taskItems.isEmpty {
-                    checklistByTaskID.removeValue(forKey: taskID)
-                } else {
-                    checklistByTaskID[taskID] = taskItems
-                }
-            }
-            for itemID in previousItemIDs.union(currentItemIDs) {
-                if let visual = checklistDomainStore.visual(for: itemID) {
-                    checklistVisualByItemID[itemID] = visual
-                } else {
-                    checklistVisualByItemID.removeValue(forKey: itemID)
-                }
-            }
         }
         cancelInvalidChecklistVisualSuggestionRequests()
     }

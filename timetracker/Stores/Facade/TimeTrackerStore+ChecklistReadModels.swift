@@ -2,18 +2,18 @@ import Foundation
 
 extension TimeTrackerStore {
     func checklistItems(for taskID: UUID) -> [ChecklistItem] {
-        checklistByTaskID[taskID] ?? []
+        checklistDomainStore.items(for: taskID)
     }
 
     func checklistVisual(for item: ChecklistItem) -> ChecklistItemVisual? {
-        checklistVisualByItemID[item.id]
+        checklistDomainStore.visual(for: item.id)
     }
 
     func checklistProgress(for taskID: UUID) -> ChecklistProgress {
         if let cached = rollupDomainStore.rollup(for: taskID)?.checklistProgress {
             return cached
         }
-        let items = checklistByTaskID[taskID] ?? []
+        let items = checklistItems(for: taskID)
         return ChecklistProgress(
             taskID: taskID,
             totalCount: items.count,
@@ -31,23 +31,5 @@ extension TimeTrackerStore {
 
     func forecastDisplayItem(for taskID: UUID) -> ForecastDisplayItem? {
         ForecastDisplayService.displayItem(for: taskID, tasks: tasks, rollups: rollupDomainStore.taskRollups)
-    }
-
-    func rebuildChecklistIndexes() {
-        checklistByTaskID = Dictionary(grouping: checklistItems.filter { $0.deletedAt == nil }, by: \.taskID)
-            .mapValues { items in
-                items.sorted { lhs, rhs in
-                    if lhs.sortOrder == rhs.sortOrder {
-                        return lhs.createdAt < rhs.createdAt
-                    }
-                    return lhs.sortOrder < rhs.sortOrder
-                }
-            }
-    }
-
-    func rebuildChecklistVisualIndexes() {
-        checklistVisualByItemID = checklistItemVisuals
-            .logicalWinnersByChecklistItemID()
-            .filter { $0.value.deletedAt == nil }
     }
 }

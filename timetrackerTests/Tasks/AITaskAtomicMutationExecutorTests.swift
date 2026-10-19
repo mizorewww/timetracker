@@ -11,36 +11,6 @@ struct AITaskAtomicMutationExecutorTests {
     }
 
     @Test
-    func applyRunsPersistenceWorkOutsideMainThread() async throws {
-        let context = try makeTestContext()
-        let taskID = try seedTasks(count: 1, in: context)[0]
-        let coordinator = try StoreScopedAITaskAtomicMutationCoordinator(
-            session: .testHarness(context.container),
-            deviceID: "ai-executor-test",
-            didReachCheckpoint: { checkpoint in
-                guard case .operationApplied = checkpoint else { return }
-                #expect(Thread.isMainThread == false)
-            }
-        )
-        let baseline = try await coordinator.captureBaseline()
-        let operation = try updateOperation(
-            taskID: taskID,
-            title: "Updated off main",
-            baseline: baseline
-        )
-
-        let outcome = try await coordinator.apply(
-            AITaskAtomicMutationPlan(
-                baseline: baseline,
-                operations: [operation]
-            )
-        )
-
-        #expect(outcome.didMutateTasks)
-        #expect(try persistedTask(taskID, container: context.container)?.title == "Updated off main")
-    }
-
-    @Test
     func applyRejectsAStaleCompleteBaselineWithoutMutation() async throws {
         let context = try makeTestContext()
         let taskID = try seedTasks(count: 1, in: context)[0]

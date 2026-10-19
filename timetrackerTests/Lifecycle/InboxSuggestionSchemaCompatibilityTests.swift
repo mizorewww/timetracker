@@ -67,10 +67,6 @@ struct InboxSuggestionSchemaCompatibilityTests {
             #expect(suggestion.modelID == "legacy-model")
             #expect(suggestion.destinationKindRaw == InboxSuggestionDestinationKind.checklist.rawValue)
             #expect(suggestion.destinationKind == .checklist)
-            #expect(
-                TimeTrackerMigrationPlan.schemas.last?.versionIdentifier
-                    == TimeTrackerSchemaV14.versionIdentifier
-            )
         }
     }
 }

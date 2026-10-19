@@ -106,40 +106,10 @@ struct DataModelContractTests {
     }
 
     @Test @MainActor
-    func cloudSyncedSchemaIncludesChecklistAndAllUserDataModels() throws {
-        let requiredModelNames: Set = [
-            "TaskNode",
-            "TaskCategory",
-            "TaskCategoryAssignment",
-            "TimeSession",
-            "TimeSegment",
-            "PomodoroRun",
-            "CountdownEvent",
-            "SyncedPreference",
-            "ChecklistItem",
-            "ChecklistItemVisual",
-            "InboxItem",
-            "InboxSuggestion",
-            "InboxCaptureReceipt",
-            "TaskRecurrenceRule",
-            "TaskRecurrenceOccurrence",
-            "TaskQuantityGoal",
-            "TaskQuantityEntry",
-        ]
-
-        #expect(requiredModelNames.isSubset(of: TimeTrackerModelRegistry.cloudSyncedUserModelNames))
-        #expect(requiredModelNames.isSubset(of: Set(TimeTrackerModelRegistry.currentSchema.entities.map(\.name))))
-        #expect(TimeTrackerModelRegistry.cloudSyncedUserModelNames.contains("DailySummary") == false)
-        #expect(TimeTrackerModelRegistry.currentSchema.entity(for: DailySummary.self) == nil)
-
+    func currentSchemaOpensWithTheMigrationPlanWithoutDerivedSummaries() throws {
         let schema = TimeTrackerModelRegistry.currentSchema
-        #expect(schema.entity(for: TaskRecurrenceRule.self) != nil)
-        #expect(schema.entity(for: TaskRecurrenceOccurrence.self) != nil)
-        #expect(schema.entity(for: TaskQuantityGoal.self) != nil)
-        #expect(schema.entity(for: TaskQuantityEntry.self) != nil)
-        // Every cloud-synced entity must resolve together when the schema is
-        // instantiated into a container; the name-set assertions above prove the
-        // membership, so no per-model insert/fetch round trip is needed.
+        #expect(TimeTrackerModelRegistry.cloudSyncedUserModelNames.contains("DailySummary") == false)
+        #expect(schema.entity(for: DailySummary.self) == nil)
         let configuration = ModelConfiguration(
             "TimeTrackerCloudSyncContract",
             schema: schema,

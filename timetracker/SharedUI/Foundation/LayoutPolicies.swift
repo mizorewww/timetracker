@@ -8,7 +8,7 @@ import SwiftUI
 /// behave the same way. HIG `layout.md` asks iPadOS apps to "support the full
 /// range of window sizes" and to "defer switching to compact view as long as
 /// possible", which is a statement about width, not hardware.
-nonisolated struct RootLayoutPolicy: Equatable, Sendable {
+nonisolated enum RootLayoutPolicy {
     enum Shell: Equatable, Sendable {
         /// Tab bar over a single navigation stack.
         case compact
@@ -16,46 +16,19 @@ nonisolated struct RootLayoutPolicy: Equatable, Sendable {
         case regular
     }
 
-    /// The only width information the root view needs to retain.
-    ///
-    /// Keeping the raw width in root state invalidates the complete app shell
-    /// throughout a live window resize even though the shell can only change
-    /// at one breakpoint.
-    nonisolated enum WidthBand: Equatable, Sendable {
-        case compact
-        case regular
+    /// The one narrow/wide breakpoint in the app (AD-139). Below it the split
+    /// view cannot keep both columns usable, so the compact shell takes over.
+    static let regularShellMinimumWidth: CGFloat = 720
 
-        init(width: CGFloat) {
-            self = width < RootLayoutPolicy.regularShellMinimumWidth ? .compact : .regular
-        }
+    static func shell(forWidth width: CGFloat) -> Shell {
+        width < regularShellMinimumWidth ? .compact : .regular
     }
 
-    /// Below this the split view cannot keep both columns usable, so the
-    /// compact shell takes over. Shared with `WidthLayoutPolicy` so the app
-    /// has exactly one shell breakpoint.
-    static let regularShellMinimumWidth: CGFloat = WidthLayoutPolicy.narrowMaximumWidth
-
-    /// `nil` until the first layout pass has measured the window.
-    let measuredWidthBand: WidthBand?
-    let horizontalSizeClass: UserInterfaceSizeClass?
-
-    init(
-        measuredWidth: CGFloat?,
+    /// `measured` is `nil` until the first layout pass has measured the window.
+    static func shell(
+        measured: Shell?,
         horizontalSizeClass: UserInterfaceSizeClass?
-    ) {
-        measuredWidthBand = measuredWidth.map(WidthBand.init(width:))
-        self.horizontalSizeClass = horizontalSizeClass
-    }
-
-    init(
-        measuredWidthBand: WidthBand?,
-        horizontalSizeClass: UserInterfaceSizeClass?
-    ) {
-        self.measuredWidthBand = measuredWidthBand
-        self.horizontalSizeClass = horizontalSizeClass
-    }
-
-    var shell: Shell {
+    ) -> Shell {
         // The system's own compactness signal wins whenever it says compact:
         // that covers iPhone landscape and iPad Slide Over, where raw width
         // would over-promote to a split view. macOS always reports `.regular`,
@@ -66,11 +39,7 @@ nonisolated struct RootLayoutPolicy: Equatable, Sendable {
         }
         // Before the first measurement, trust the size class rather than
         // flashing the wrong shell for one frame.
-        guard let measuredWidthBand else { return .regular }
-        return switch measuredWidthBand {
-        case .compact: .compact
-        case .regular: .regular
-        }
+        return measured ?? .regular
     }
 }
 
@@ -93,17 +62,6 @@ extension EnvironmentValues {
     /// so standalone hosts (previews, sheets, the regular shell's content)
     /// keep their clocks.
     @Entry var pageLiveClocksActive: Bool = true
-}
-
-nonisolated struct WidthLayoutPolicy {
-    /// The one narrow/wide breakpoint in the app.
-    static let narrowMaximumWidth: CGFloat = 720
-
-    let width: CGFloat
-
-    var isNarrow: Bool {
-        width < Self.narrowMaximumWidth
-    }
 }
 
 /// A visually lossless, bounded measurement for Today-page layout.
@@ -149,22 +107,20 @@ nonisolated struct HomeLayoutPolicy {
     static let maximumResponsiveViewportWidth: CGFloat =
         contentMaximumWidth + (regularPagePadding * 2)
     static let responsiveViewportBreakpoints: [CGFloat] = [
-        WidthLayoutPolicy.narrowMaximumWidth,
+        RootLayoutPolicy.regularShellMinimumWidth,
         currentStateTwoColumnMinimumWidth + (regularPagePadding * 2),
         twoColumnContentMinimumWidth + (regularPagePadding * 2),
         maximumResponsiveViewportWidth,
     ]
 
     private let width: CGFloat
-    private let widthPolicy: WidthLayoutPolicy
 
     init(width: CGFloat) {
         self.width = width
-        widthPolicy = WidthLayoutPolicy(width: width)
     }
 
     var isCompact: Bool {
-        widthPolicy.isNarrow
+        RootLayoutPolicy.shell(forWidth: width) == .compact
     }
 
     var contentSpacing: CGFloat {
@@ -239,55 +195,4 @@ nonisolated struct HomeLayoutPolicy {
             contentWidth - contentSpacing - currentStatePrimaryColumnWidth
         )
     }
-}
-
-enum TaskTreeDisclosureSlot: Equatable {
-    case control
-    case reserved
-    case none
-
-    init(depth: Int, hasChildren: Bool) {
-        if hasChildren {
-            self = .control
-        } else if depth > 0 {
-            self = .reserved
-        } else {
-            self = .none
-        }
-    }
-}
-
-struct PomodoroLayoutPolicy {
-    let shell: RootLayoutPolicy.Shell
-
-    var setupCardPadding: CGFloat {
-        shell == .compact ? 18 : 24
-    }
-
-    var setupSectionSpacing: CGFloat {
-        shell == .compact ? 20 : 24
-    }
-}
-
-struct SplitColumnLayoutPolicy {
-    var sidebar: ColumnWidth = .init(min: 220, ideal: 240, max: 300)
-    var detail: ColumnWidth = .init(min: 520, ideal: 760, max: nil)
-
-    /// One preset for every platform that shows the split shell.
-    ///
-    /// The previous `.iPad` and `.mac` presets differed by 20pt of sidebar and
-    /// 60pt of detail minimum, for no reason either one recorded. The more
-    /// permissive bound of each pair is kept, so the split view stays usable
-    /// all the way down to `RootLayoutPolicy.regularShellMinimumWidth` — below
-    /// which the compact shell takes over regardless.
-    static let standard = SplitColumnLayoutPolicy(
-        sidebar: ColumnWidth(min: 220, ideal: 250, max: 300),
-        detail: ColumnWidth(min: 420, ideal: 760, max: nil)
-    )
-}
-
-struct ColumnWidth: Equatable {
-    let min: CGFloat
-    let ideal: CGFloat
-    let max: CGFloat?
 }

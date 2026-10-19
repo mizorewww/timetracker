@@ -36,3 +36,19 @@ struct TaskTreeDisclosureControl: View {
         }
     }
 }
+
+enum TaskTreeDisclosureSlot: Equatable {
+    case control
+    case reserved
+    case none
+
+    init(depth: Int, hasChildren: Bool) {
+        if hasChildren {
+            self = .control
+        } else if depth > 0 {
+            self = .reserved
+        } else {
+            self = .none
+        }
+    }
+}

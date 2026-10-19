@@ -13,17 +13,15 @@ struct AppRootView: View {
     #if os(macOS)
     @Environment(\.openSettings) private var openSettings
     #endif
-    @State private var measuredWidthBand: RootLayoutPolicy.WidthBand?
-
-    private var layoutPolicy: RootLayoutPolicy {
-        RootLayoutPolicy(
-            measuredWidthBand: measuredWidthBand,
-            horizontalSizeClass: horizontalSizeClass
-        )
-    }
+    /// Only the shell is retained, not the raw width: a live window resize
+    /// would otherwise invalidate the whole app shell on every frame.
+    @State private var measuredShell: RootLayoutPolicy.Shell?
 
     var body: some View {
-        let shell = layoutPolicy.shell
+        let shell = RootLayoutPolicy.shell(
+            measured: measuredShell,
+            horizontalSizeClass: horizontalSizeClass
+        )
 
         Group {
             switch shell {
@@ -43,10 +41,10 @@ struct AppRootView: View {
         .focusedSceneValue(\.timeTrackerStore, store)
         .focusedSceneValue(\.appPresentationRouter, presentationRouter)
         #endif
-        .onGeometryChange(for: RootLayoutPolicy.WidthBand.self) { proxy in
-            RootLayoutPolicy.WidthBand(width: proxy.size.width)
-        } action: { widthBand in
-            measuredWidthBand = widthBand
+        .onGeometryChange(for: RootLayoutPolicy.Shell.self) { proxy in
+            RootLayoutPolicy.shell(forWidth: proxy.size.width)
+        } action: { shell in
+            measuredShell = shell
         }
     }
 
@@ -69,7 +67,6 @@ struct RegularShellRootView: View {
     let store: TimeTrackerStore
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
     @State private var preferredCompactColumn: NavigationSplitViewColumn = .detail
-    private let layout = SplitColumnLayoutPolicy.standard
 
     var body: some View {
         NavigationSplitView(
@@ -79,17 +76,12 @@ struct RegularShellRootView: View {
             SidebarView(store: store) {
                 preferredCompactColumn = .detail
             }
-            .navigationSplitViewColumnWidth(
-                min: layout.sidebar.min,
-                ideal: layout.sidebar.ideal,
-                max: layout.sidebar.max ?? layout.sidebar.ideal
-            )
+            .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 300)
         } detail: {
+            // 220 + 420 keeps both columns usable down to
+            // `RootLayoutPolicy.regularShellMinimumWidth`.
             DesktopContentView(store: store)
-                .navigationSplitViewColumnWidth(
-                    min: layout.detail.min,
-                    ideal: layout.detail.ideal
-                )
+                .navigationSplitViewColumnWidth(min: 420, ideal: 760)
         }
         .navigationSplitViewStyle(.balanced)
         // Kept verbatim: this is the identifier the existing XCUITests select on.

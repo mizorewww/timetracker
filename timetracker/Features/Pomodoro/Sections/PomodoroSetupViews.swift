@@ -23,9 +23,9 @@ struct PomodoroSetupCard: View {
     }
 
     var body: some View {
-        let layout = PomodoroLayoutPolicy(shell: layoutShell)
+        let sectionSpacing: CGFloat = layoutShell == .compact ? 20 : 24
         PomodoroPageLayout {
-            VStack(alignment: .leading, spacing: layout.setupSectionSpacing) {
+            VStack(alignment: .leading, spacing: sectionSpacing) {
                 setupHeader
                 if availableTasks.isEmpty {
                     PomodoroSetupEmptyState(store: store)
@@ -38,11 +38,11 @@ struct PomodoroSetupCard: View {
                         selectedPlanID: $selectedPlanID,
                         focusTaskID: $focusTaskID,
                         selectFocusTask: selectFocusTask,
-                        contentSpacing: layout.setupSectionSpacing
+                        contentSpacing: sectionSpacing
                     )
                 }
             }
-            .appNativeCard(padding: layout.setupCardPadding)
+            .appNativeCard(padding: layoutShell == .compact ? 18 : 24)
         } secondary: {
             PomodoroLedgerCard(store: store)
         }

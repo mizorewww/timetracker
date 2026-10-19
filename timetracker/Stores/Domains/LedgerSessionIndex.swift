@@ -25,19 +25,27 @@ struct LedgerSessionIndex {
         revision &+= 1
     }
 
-    mutating func replace(ids: Set<UUID>, with fetchedSessions: [TimeSession]) {
+    /// Returns the IDs whose membership, order, model, or task changed.
+    @discardableResult
+    mutating func replace(ids: Set<UUID>, with fetchedSessions: [TimeSession]) -> Set<UUID> {
         let fetchedByID = fetchedSessions.visibleDeduplicatedByID().reduce(
             into: [UUID: TimeSession]()
         ) { result, session in
             result[session.id] = session
         }
+        var changedIDs = Set<UUID>()
         for id in ids {
+            let previousRevision = revision
             update(
                 id: id,
                 previousStartedAt: startedAtByID[id],
                 session: fetchedByID[id]
             )
+            if revision != previousRevision {
+                changedIDs.insert(id)
+            }
         }
+        return changedIDs
     }
 
     func session(for id: UUID) -> TimeSession? {

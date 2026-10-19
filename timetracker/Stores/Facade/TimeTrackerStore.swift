@@ -238,9 +238,8 @@ final class TimeTrackerStore {
     var activeSegmentByTaskID: [UUID: TimeSegment] = [:]
     var sortedTodaySegments: [TimeSegment] = []
     @ObservationIgnored var readableLedgerSegmentIDs: Set<UUID> = []
-    /// Inputs `readableLedgerSegmentIDs` was last derived from.
-    @ObservationIgnored var ledgerRelationshipVisibilityKey:
-        (ledgerRevision: UInt64, existingTaskIDs: Set<UUID>)?
+    /// Task set `readableLedgerSegmentIDs` was last fully derived from.
+    @ObservationIgnored var ledgerVisibilityExistingTaskIDs: Set<UUID>?
     @ObservationIgnored var existingTaskIDs: Set<UUID> = []
     @ObservationIgnored var trackableTasksCache: (revision: UInt64, tasks: [TaskNode])?
     @ObservationIgnored var scheduledSyncRefreshTask: Task<Void, Never>?

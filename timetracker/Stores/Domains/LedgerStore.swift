@@ -1,5 +1,13 @@
 import Foundation
 
+/// Segment and session identities whose relationship visibility (AD-036) may
+/// have changed since the facade last derived it.
+struct LedgerRelationshipChanges {
+    var requiresFullRebuild = true
+    var segmentIDs = Set<UUID>()
+    var sessionIDs = Set<UUID>()
+}
+
 /// In-memory ledger read model: every visible segment keyed by ID plus a
 /// per-task bucket. Range reads scan the immutable value snapshots, which keeps
 /// open and future-ended records correct without any day-bucket bookkeeping.
@@ -12,29 +20,28 @@ struct LedgerStore {
         sessionIndex.sessions
     }
 
-    /// Changes whenever segment or session membership/values change, so
-    /// derived relationship visibility can skip unchanged history.
-    var relationshipRevision: UInt64 {
-        segmentRevision &+ sessionIndex.revision
-    }
-
     private(set) var segmentByID: [UUID: TimeSegment] = [:]
     /// Value copies of `segmentByID`: SwiftData edits models in place, so the
     /// snapshot is the "before" value for rollup deltas and the cheap
     /// field source for range scans.
     private(set) var segmentSnapshotByID: [UUID: LedgerSegmentSnapshot] = [:]
     private(set) var segmentIDsByTaskID: [UUID: Set<UUID>] = [:]
+    private var segmentIDsBySessionID: [UUID: Set<UUID>] = [:]
     private var pendingRollupChangeByID: [UUID: LedgerSegmentChange] = [:]
-    /// Advances whenever a visible segment is added, removed, replaced, or
-    /// changes value; time-only refreshes of running segments do not count.
-    private var segmentRevision: UInt64 = 0
+    private var relationshipChanges = LedgerRelationshipChanges()
     private(set) var hasLoadedHistory = false
     private var sessionIndex = LedgerSessionIndex()
+    /// Segments that are open or ended after `recentWindowStart` (the start of
+    /// the last visible day), so a visible refresh re-reads only this small
+    /// set instead of scanning the whole history for leavers.
+    private var recentSegmentIDs = Set<UUID>()
+    private var recentWindowStart = Date.distantPast
 
     mutating func refresh(repository: SwiftDataTimeTrackingRepository, now: Date = Date(), calendar: Calendar = .current) throws {
         activeSegments = try repository.activeSegments()
         let today = calendar.dateInterval(of: .day, for: now) ?? DateInterval(start: now, duration: 24 * 60 * 60)
         todaySegments = try repository.segments(from: today.start, to: today.end, now: now)
+        recentWindowStart = today.start
         try refreshHistory(repository: repository)
     }
 
@@ -43,15 +50,12 @@ struct LedgerStore {
         let today = calendar.dateInterval(of: .day, for: now) ?? DateInterval(start: now, duration: 24 * 60 * 60)
         let refreshedToday = try repository.segments(from: today.start, to: today.end, now: now)
         let visibleFetched = uniqueSegments(refreshedActive + refreshedToday)
+        moveRecentWindow(to: today.start)
         // A previously active segment can close outside today's interval (for
         // example, startup reconciliation just after midnight). Re-fetch every
         // impacted identity so the index receives that terminal version
         // instead of retaining the old active object or deleting it.
-        let impactedIDs = Set(
-            segmentSnapshotByID.values.lazy
-                .filter { $0.endedAt == nil || $0.overlaps(today, at: now) }
-                .map(\.id)
-        ).union(visibleFetched.map(\.id))
+        let impactedIDs = recentSegmentIDs.union(visibleFetched.map(\.id))
         let fetched = try uniqueSegments(
             visibleFetched + (repository.segments(ids: impactedIDs))
         )
@@ -61,10 +65,10 @@ struct LedgerStore {
 
         replaceSegments(ids: impactedIDs, with: fetched, now: now)
         if impactedSessionIDs.isEmpty == false {
-            try sessionIndex.replace(
+            try relationshipChanges.sessionIDs.formUnion(sessionIndex.replace(
                 ids: impactedSessionIDs,
                 with: repository.sessions(ids: impactedSessionIDs)
-            )
+            ))
         }
         activeSegments = refreshedActive
         todaySegments = refreshedToday
@@ -73,6 +77,7 @@ struct LedgerStore {
     private mutating func refreshHistory(repository: SwiftDataTimeTrackingRepository) throws {
         try rebuildSegmentIndexes(segments: repository.allSegments())
         try sessionIndex.rebuild(repository.sessions())
+        relationshipChanges = LedgerRelationshipChanges()
         hasLoadedHistory = true
         resetRollupChanges()
     }
@@ -110,7 +115,9 @@ struct LedgerStore {
 
         if impactedSessionIDs.isEmpty == false {
             let refreshedSessions = try repository.sessions(ids: impactedSessionIDs)
-            sessionIndex.replace(ids: impactedSessionIDs, with: refreshedSessions)
+            relationshipChanges.sessionIDs.formUnion(
+                sessionIndex.replace(ids: impactedSessionIDs, with: refreshedSessions)
+            )
         }
     }
 
@@ -131,13 +138,53 @@ struct LedgerStore {
         sessionIndex.sessions(for: ids)
     }
 
+    func segmentIDs(forSessionIDs sessionIDs: Set<UUID>) -> Set<UUID> {
+        sessionIDs.reduce(into: Set<UUID>()) { result, sessionID in
+            result.formUnion(segmentIDsBySessionID[sessionID] ?? [])
+        }
+    }
+
+    /// Returns the relationship changes since the previous call and starts a
+    /// new accumulation window.
+    mutating func takeRelationshipChanges() -> LedgerRelationshipChanges {
+        defer {
+            relationshipChanges = LedgerRelationshipChanges(requiresFullRebuild: false)
+        }
+        return relationshipChanges
+    }
+
+    private static func isRecent(_ snapshot: LedgerSegmentSnapshot, windowStart: Date) -> Bool {
+        snapshot.endedAt.map { $0 > windowStart } ?? true
+    }
+
+    private mutating func moveRecentWindow(to windowStart: Date) {
+        guard windowStart != recentWindowStart else { return }
+        let movedForward = windowStart > recentWindowStart
+        recentWindowStart = windowStart
+        // Moving forward only drops members; a backward clock change must
+        // rescan the index for segments the narrower window had excluded.
+        let candidates = movedForward
+            ? recentSegmentIDs.compactMap { segmentSnapshotByID[$0] }
+            : Array(segmentSnapshotByID.values)
+        recentSegmentIDs = Set(
+            candidates.filter { Self.isRecent($0, windowStart: windowStart) }.map(\.id)
+        )
+    }
+
     private mutating func rebuildSegmentIndexes(segments: [TimeSegment]) {
         // The repository already resolves LWW and hides tombstones.
         segmentByID = segments.reduce(into: [:]) { $0[$1.id] = $1 }
         segmentSnapshotByID = segmentByID.mapValues(LedgerSegmentSnapshot.init)
         segmentIDsByTaskID = Dictionary(grouping: segmentSnapshotByID.values, by: \.taskID)
             .mapValues { Set($0.map(\.id)) }
-        segmentRevision &+= 1
+        segmentIDsBySessionID = Dictionary(grouping: segmentSnapshotByID.values, by: \.sessionID)
+            .mapValues { Set($0.map(\.id)) }
+        let windowStart = recentWindowStart
+        recentSegmentIDs = Set(
+            segmentSnapshotByID.values
+                .filter { Self.isRecent($0, windowStart: windowStart) }
+                .map(\.id)
+        )
     }
 
     private mutating func replaceSegments(
@@ -159,7 +206,7 @@ struct LedgerStore {
                 recordRollupChange(id: id, before: before, after: after)
             }
             if before != after || segmentByID[id] !== afterModel {
-                segmentRevision &+= 1
+                relationshipChanges.segmentIDs.insert(id)
             }
 
             if let before, before.taskID != after?.taskID {
@@ -168,13 +215,25 @@ struct LedgerStore {
                     segmentIDsByTaskID.removeValue(forKey: before.taskID)
                 }
             }
+            if let before, before.sessionID != after?.sessionID {
+                segmentIDsBySessionID[before.sessionID]?.remove(id)
+                if segmentIDsBySessionID[before.sessionID]?.isEmpty == true {
+                    segmentIDsBySessionID.removeValue(forKey: before.sessionID)
+                }
+            }
             if let afterModel, let after {
                 segmentByID[id] = afterModel
                 segmentSnapshotByID[id] = after
                 segmentIDsByTaskID[after.taskID, default: []].insert(id)
+                segmentIDsBySessionID[after.sessionID, default: []].insert(id)
             } else {
                 segmentByID.removeValue(forKey: id)
                 segmentSnapshotByID.removeValue(forKey: id)
+            }
+            if let after, Self.isRecent(after, windowStart: recentWindowStart) {
+                recentSegmentIDs.insert(id)
+            } else {
+                recentSegmentIDs.remove(id)
             }
         }
 

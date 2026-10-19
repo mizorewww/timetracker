@@ -20,13 +20,13 @@ extension TimeTrackerStore {
         }
     }
 
-    var completedPomodoroCount: Int {
-        let today = Calendar.current.dateInterval(of: .day, for: Date())
-        return pomodoroRuns.filter { run in
+    func completedPomodoroCount(on day: Date, calendar: Calendar = .current) -> Int {
+        guard let interval = calendar.dateInterval(of: .day, for: day) else { return 0 }
+        return pomodoroRuns.count { run in
             run.state == .completed &&
                 run.deletedAt == nil &&
-                today?.contains(run.endedAt ?? run.updatedAt) == true
-        }.count
+                interval.contains(run.endedAt ?? run.updatedAt)
+        }
     }
 
     func activePomodoroRun(for taskID: UUID) -> PomodoroRun? {

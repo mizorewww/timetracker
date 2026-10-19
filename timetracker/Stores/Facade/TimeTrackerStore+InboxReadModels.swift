@@ -7,6 +7,11 @@ extension TimeTrackerStore {
             .sorted(by: inboxSort)
     }
 
+    /// The open-item badge count, without building the sorted list.
+    var openInboxItemCount: Int {
+        inboxItems.count { !$0.isCompleted && $0.deletedAt == nil }
+    }
+
     var completedInboxItems: [InboxItem] {
         inboxItems
             .filter { $0.isCompleted && $0.deletedAt == nil }

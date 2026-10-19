@@ -26,6 +26,8 @@ struct SidebarView: View {
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var expansionState = TaskExpansionState()
     @State private var categoryExpansionState = TaskCategoryExpansionState()
+    /// The day the Focus badge counts; advanced when the calendar day changes.
+    @State private var today = Date()
 
     init(store: TimeTrackerStore, onNavigate: @escaping () -> Void = {}) {
         self.store = store
@@ -62,6 +64,11 @@ struct SidebarView: View {
         .listStyle(.sidebar)
         .navigationTitle(AppStrings.localized("app.name"))
         .onAppear(perform: expandAncestorsForCurrentTask)
+        .task {
+            for await _ in NotificationCenter.default.notifications(named: .NSCalendarDayChanged) {
+                today = Date()
+            }
+        }
         .onChange(of: store.tasksRoute) { _, _ in expandAncestorsForCurrentTask() }
         .onChange(of: store.taskTreeReadIndexRevision) { _, _ in
             expandAncestorsForCurrentTask()
@@ -165,9 +172,9 @@ struct SidebarView: View {
     private func count(for destination: TimeTrackerStore.DesktopDestination) -> Int? {
         switch destination {
         case .today: store.activeSegments.count
-        case .inbox: store.openInboxItems.count
+        case .inbox: store.openInboxItemCount
         case .tasks: store.visibleTaskCount
-        case .pomodoro: store.completedPomodoroCount
+        case .pomodoro: store.completedPomodoroCount(on: today)
         case .analytics: nil
         }
     }

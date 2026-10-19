@@ -98,38 +98,6 @@ extension AppPresentationRouter {
     }
 
     @discardableResult
-    func replaceWithNewTask(
-        presentationID: UUID,
-        using store: TimeTrackerStore,
-        preservingDestination: TimeTrackerStore.DesktopDestination? = nil
-    ) -> Bool {
-        guard let content = newTaskContent(
-            using: store,
-            parentID: nil,
-            preservingDestination: preservingDestination,
-            categoryID: nil
-        ) else {
-            return false
-        }
-        return replace(presentationID: presentationID, with: content)
-    }
-
-    @discardableResult
-    func presentNewTaskCategory() -> Bool {
-        present(.taskCategoryEditor(TaskCategoryEditorDraft()))
-    }
-
-    @discardableResult
-    func presentEditTaskCategory(_ category: TaskCategory) -> Bool {
-        present(.taskCategoryEditor(TaskCategoryEditorDraft(category: category)))
-    }
-
-    @discardableResult
-    func presentTaskCategoryOrdering() -> Bool {
-        present(.taskCategoryOrdering)
-    }
-
-    @discardableResult
     func presentManualTime(taskID: UUID? = nil, using store: TimeTrackerStore) -> Bool {
         let availableTasks = store.trackableTasks
         let requestedTask = taskID.flatMap { store.taskByID[$0] }
@@ -155,25 +123,6 @@ extension AppPresentationRouter {
             return false
         }
         return present(.segmentEditor(draft))
-    }
-
-    @discardableResult
-    func presentStartTaskPicker() -> Bool {
-        present(.startTaskPicker)
-    }
-
-    @discardableResult
-    func presentPomodoroTaskPicker(
-        selectedTaskID: UUID?,
-        selectTask: @escaping (UUID) -> Void
-    ) -> Bool {
-        presentSingleTaskPicker(
-            selectedTaskID: selectedTaskID,
-            context: .pomodoro
-        ) { taskID in
-            selectTask(taskID)
-            return true
-        }
     }
 
     @discardableResult
@@ -205,21 +154,6 @@ extension AppPresentationRouter {
     }
 
     @discardableResult
-    func presentQuickStartEditor(using store: TimeTrackerStore) -> Bool {
-        present(.quickStartEditor(selectedIDs: store.preferences.quickStartTaskIDs))
-    }
-
-    @discardableResult
-    func presentSettings() -> Bool {
-        present(.settings)
-    }
-
-    @discardableResult
-    func presentAITaskPlanGenerator() -> Bool {
-        present(.aiTaskPlanGenerator)
-    }
-
-    @discardableResult
     func presentLLMConfiguration(using store: TimeTrackerStore) -> Bool {
         present(.llmConfiguration(LLMConfigurationDraft(
             endpoint: store.preferences.llmEndpoint,
@@ -242,11 +176,11 @@ extension AppPresentationRouter {
         ))
     }
 
-    private func newTaskContent(
+    func newTaskContent(
         using store: TimeTrackerStore,
-        parentID: UUID?,
-        preservingDestination: TimeTrackerStore.DesktopDestination?,
-        categoryID: UUID?
+        parentID: UUID? = nil,
+        preservingDestination: TimeTrackerStore.DesktopDestination? = nil,
+        categoryID: UUID? = nil
     ) -> AppPresentation.Content? {
         if let parentID,
            store.parentEligibleTaskIDs.contains(parentID) == false

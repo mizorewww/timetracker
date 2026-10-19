@@ -15,7 +15,7 @@ struct QuickStartSection: View {
                 Spacer()
                 HomeSectionInformationButton.quickStart
                 Button {
-                    presentationRouter.presentQuickStartEditor(using: store)
+                    presentationRouter.present(.quickStartEditor(selectedIDs: store.preferences.quickStartTaskIDs))
                 } label: {
                     Image(systemName: "slider.horizontal.3")
                 }

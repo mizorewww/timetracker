@@ -101,13 +101,13 @@ struct TasksView: View {
                 .accessibilityIdentifier("tasks.addRoot")
 
                 Button {
-                    presentationRouter.presentNewTaskCategory()
+                    presentationRouter.present(.taskCategoryEditor(TaskCategoryEditorDraft()))
                 } label: {
                     Label(AppStrings.localized("taskCategory.new"), systemImage: "square.grid.2x2")
                 }
 
                 Button {
-                    presentationRouter.presentTaskCategoryOrdering()
+                    presentationRouter.present(.taskCategoryOrdering)
                 } label: {
                     Label(
                         AppStrings.localized("taskCategory.sort"),
@@ -120,7 +120,7 @@ struct TasksView: View {
                 Divider()
 
                 Button {
-                    presentationRouter.presentAITaskPlanGenerator()
+                    presentationRouter.present(.aiTaskPlanGenerator)
                 } label: {
                     Label(
                         AppStrings.localized("aiTaskPlan.generateMenu"),
@@ -266,7 +266,7 @@ struct TasksView: View {
             return nil
         }
         return {
-            presentationRouter.presentEditTaskCategory(category)
+            presentationRouter.present(.taskCategoryEditor(TaskCategoryEditorDraft(category: category)))
         }
     }
 

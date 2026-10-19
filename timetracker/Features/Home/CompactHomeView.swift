@@ -17,7 +17,7 @@ struct CompactHomeView: View {
                 store: store,
                 segments: content.activeSegments,
                 openTask: openTask,
-                startTimer: { presentationRouter.presentStartTaskPicker() }
+                startTimer: { presentationRouter.present(.startTaskPicker) }
             )
 
             Section {
@@ -46,8 +46,8 @@ struct CompactHomeView: View {
             CompactQuickStartSection(
                 store: store,
                 tasks: content.quickStartTasks,
-                startTimer: { presentationRouter.presentStartTaskPicker() },
-                editQuickStart: { presentationRouter.presentQuickStartEditor(using: store) },
+                startTimer: { presentationRouter.present(.startTaskPicker) },
+                editQuickStart: { presentationRouter.present(.quickStartEditor(selectedIDs: store.preferences.quickStartTaskIDs)) },
                 openTask: openTask
             )
 

@@ -27,7 +27,7 @@ struct TimeTrackerCommands: Commands {
 
         CommandMenu(AppStrings.localized("menu.task")) {
             Button(AppStrings.localized("menu.chooseTaskToStart")) {
-                presentationRouter?.presentStartTaskPicker()
+                presentationRouter?.present(.startTaskPicker)
             }
             .timeTrackerShortcut(
                 .chooseTaskToStart,
@@ -83,14 +83,14 @@ struct TimeTrackerCommands: Commands {
             .disabled(canAddSubtask == false)
 
             Button(AppStrings.localized("taskCategory.new")) {
-                presentationRouter?.presentNewTaskCategory()
+                presentationRouter?.present(.taskCategoryEditor(TaskCategoryEditorDraft()))
             }
             .timeTrackerShortcut(.newTaskCategory, settings: shortcutSettings)
             .disabled(presentationRouter?.canPresent != true)
 
             Button(AppStrings.localized("taskCategory.sort")) {
                 guard let presentationRouter else { return }
-                presentationRouter.presentTaskCategoryOrdering()
+                presentationRouter.present(.taskCategoryOrdering)
             }
             .timeTrackerShortcut(
                 .sortTaskCategories,
@@ -102,7 +102,7 @@ struct TimeTrackerCommands: Commands {
             )
 
             Button(AppStrings.localized("aiTaskPlan.generateMenu")) {
-                presentationRouter?.presentAITaskPlanGenerator()
+                presentationRouter?.present(.aiTaskPlanGenerator)
             }
             .timeTrackerShortcut(.generateTaskPlan, settings: shortcutSettings)
             .disabled(

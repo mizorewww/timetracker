@@ -63,7 +63,6 @@ extension SettingsView {
                     : String(format: AppStrings.localized("dialog.optimize.removed"), removedCount)
             } catch {
                 feedbackRouter.present(
-                    context: .databaseMaintenance,
                     title: AppStrings.localized("settings.optimizeDatabase"),
                     message: String(
                         format: AppStrings.localized("dialog.optimize.failed"),

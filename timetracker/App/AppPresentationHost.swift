@@ -50,10 +50,9 @@ private struct AppPresentationSheet: View {
                     router.dismiss(presentationID: presentation.id)
                 },
                 onCreateTask: {
-                    router.replaceWithNewTask(
-                        presentationID: presentation.id,
-                        using: store
-                    )
+                    if let content = router.newTaskContent(using: store) {
+                        router.replace(presentationID: presentation.id, with: content)
+                    }
                 }
             )
         case let .singleTaskPicker(taskPicker):

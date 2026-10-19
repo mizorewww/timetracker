@@ -118,7 +118,7 @@ struct SettingsView: View {
             exportDocument = try JSONExportDocument(text: store.jsonExport())
             isExportPresented = true
         } catch {
-            presentSettingsError(context: .dataExport, error: error)
+            presentExportError(error)
         }
     }
 
@@ -129,17 +129,13 @@ struct SettingsView: View {
         case let .failure(error):
             guard (error as? CocoaError)?.code != .userCancelled else { return }
             dataOperationMessage = nil
-            presentSettingsError(context: .dataExport, error: error)
+            presentExportError(error)
         }
     }
 
-    func presentSettingsError(context: AppSceneFeedbackContext, error: Error) {
-        let titleKey = context == .databaseMaintenance
-            ? "settings.optimizeDatabase"
-            : "settings.exportJSON"
+    func presentExportError(_ error: Error) {
         feedbackRouter.present(
-            context: context,
-            title: AppStrings.localized(titleKey),
+            title: AppStrings.localized("settings.exportJSON"),
             message: error.localizedDescription
         )
     }

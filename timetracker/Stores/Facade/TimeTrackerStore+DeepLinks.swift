@@ -32,7 +32,7 @@ extension TimeTrackerStore {
         case .openSettings:
             return presentationRouter.present(.settings) ? .handled : .deferred
         case .startTimerPicker:
-            guard presentationRouter.presentStartTaskPicker() else { return .deferred }
+            guard presentationRouter.present(.startTaskPicker) else { return .deferred }
             closeTaskDetailNavigation()
             desktopDestination = .today
             return .handled

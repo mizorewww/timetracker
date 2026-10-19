@@ -110,12 +110,13 @@ struct PomodoroView: View {
     }
 
     private func presentFocusTaskPicker() {
-        presentationRouter.presentPomodoroTaskPicker(
+        presentationRouter.presentSingleTaskPicker(
             selectedTaskID: focusTaskID,
-            selectTask: { taskID in
-                focusTaskID = taskID
-            }
-        )
+            context: .pomodoro
+        ) { taskID in
+            focusTaskID = taskID
+            return true
+        }
     }
 }
 

@@ -15,7 +15,7 @@ struct DesktopMainView: View {
                 content: content,
                 layout: layout,
                 openTask: openTask,
-                startTimer: { presentationRouter.presentStartTaskPicker() }
+                startTimer: { presentationRouter.present(.startTaskPicker) }
             )
             .frame(width: layout.contentWidth, alignment: .leading)
             .padding(.vertical, layout.pagePadding)

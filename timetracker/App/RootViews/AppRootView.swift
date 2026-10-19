@@ -53,7 +53,7 @@ struct AppRootView: View {
         openSettings()
         return true
         #else
-        return presentationRouter.presentSettings()
+        return presentationRouter.present(.settings)
         #endif
     }
 }

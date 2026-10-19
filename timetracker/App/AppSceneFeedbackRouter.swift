@@ -1,27 +1,17 @@
 import Foundation
 import Observation
 
-nonisolated enum AppSceneFeedbackContext: Equatable, Sendable {
-    case general
-    case dataExport
-    case databaseMaintenance
-    case presentation
-}
-
 struct AppSceneFeedback: Identifiable, Equatable {
     let id: UUID
-    let context: AppSceneFeedbackContext
     let title: String
     let message: String
 
     init(
         id: UUID = UUID(),
-        context: AppSceneFeedbackContext = .general,
         title: String,
         message: String
     ) {
         self.id = id
-        self.context = context
         self.title = title
         self.message = message
     }
@@ -43,12 +33,10 @@ final class AppSceneFeedbackRouter {
 
     @discardableResult
     func present(
-        context: AppSceneFeedbackContext = .general,
         title: String,
         message: String
     ) -> UUID {
         let feedback = AppSceneFeedback(
-            context: context,
             title: title,
             message: message
         )

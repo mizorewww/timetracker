@@ -14,7 +14,8 @@ nonisolated enum AITaskWorkspaceOverlayError: Error, Equatable, Sendable {
     case depthExceeded
     case invalidEstimate(Int)
     case invalidSortOrder
-    case invalidDueDate
+    /// The icon or color is outside the catalog offered to the model.
+    case invalidVisual
 }
 
 nonisolated enum AITaskWorkspaceOperation: Equatable, Sendable {
@@ -105,6 +106,7 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
         sortOrder: Double? = nil
     ) throws -> AITaskWorkspaceCategory {
         try requireUnusedIdentity(id)
+        try requireCatalogVisual(iconName: iconName, colorHex: colorHex)
         let prepared = try TaskPersistencePolicy.prepareCategory(
             title: title,
             colorHex: colorHex,
@@ -118,12 +120,8 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
         let category = AITaskWorkspaceCategory(
             id: id,
             title: prepared.title,
-            iconName: ChecklistVisualSanitizer.sanitizedIcon(
-                prepared.iconName
-            ),
-            colorHex: ChecklistVisualSanitizer.sanitizedColor(
-                prepared.colorHex
-            ),
+            iconName: iconName,
+            colorHex: colorHex,
             includesInForecast: includesInForecast,
             sortOrder: resolvedSortOrder
         )
@@ -143,6 +141,7 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
         guard let before = category(id: id) else {
             throw AITaskWorkspaceOverlayError.categoryUnavailable(id)
         }
+        try requireCatalogVisual(iconName: iconName, colorHex: colorHex)
         let prepared = try TaskPersistencePolicy.prepareCategory(
             title: title,
             colorHex: colorHex,
@@ -153,12 +152,8 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
         }
         var proposed = before
         proposed.title = prepared.title
-        proposed.iconName = ChecklistVisualSanitizer.sanitizedIcon(
-            prepared.iconName
-        )
-        proposed.colorHex = ChecklistVisualSanitizer.sanitizedColor(
-            prepared.colorHex
-        )
+        proposed.iconName = iconName
+        proposed.colorHex = colorHex
         proposed.includesInForecast = includesInForecast
         guard proposed != before else { return before }
 
@@ -491,6 +486,14 @@ private nonisolated extension AITaskWorkspaceOverlay {
         }
     }
 
+    func requireCatalogVisual(iconName: String, colorHex: String) throws {
+        guard SymbolCatalog.symbolNameSet.contains(iconName),
+              TaskColorPalette.hexValues.contains(colorHex)
+        else {
+            throw AITaskWorkspaceOverlayError.invalidVisual
+        }
+    }
+
     func requireUnusedIdentity(_ id: UUID) throws {
         let isUsed = snapshot.categories.contains { $0.id == id } ||
             snapshot.tasks.contains { $0.id == id } ||
@@ -613,7 +616,7 @@ private nonisolated extension AITaskWorkspaceOverlay {
         title: String,
         notes: String,
         estimatedMinutes: Int?,
-        dueAt: Date?,
+        dueAt _: Date?,
         iconName: String,
         colorHex: String,
         quantityGoal: TaskQuantityGoalDraft?,
@@ -624,9 +627,7 @@ private nonisolated extension AITaskWorkspaceOverlay {
         {
             throw AITaskWorkspaceOverlayError.invalidEstimate(estimatedMinutes)
         }
-        if let dueAt, !dueAt.timeIntervalSinceReferenceDate.isFinite {
-            throw AITaskWorkspaceOverlayError.invalidDueDate
-        }
+        try requireCatalogVisual(iconName: iconName, colorHex: colorHex)
         let prepared = try TaskPersistencePolicy.prepareTask(
             title: title,
             colorHex: colorHex,
@@ -640,12 +641,8 @@ private nonisolated extension AITaskWorkspaceOverlay {
         return PreparedTaskValues(
             title: prepared.title,
             notes: prepared.notes ?? "",
-            iconName: ChecklistVisualSanitizer.sanitizedIcon(
-                prepared.iconName
-            ),
-            colorHex: ChecklistVisualSanitizer.sanitizedColor(
-                prepared.colorHex
-            ),
+            iconName: iconName,
+            colorHex: colorHex,
             quantityGoal: preparedProgress.quantityGoal.map {
                 TaskQuantityGoalDraft(
                     targetAmount: $0.targetAmount,
@@ -662,7 +659,8 @@ private nonisolated extension AITaskWorkspaceOverlay {
         iconName: String,
         colorHex: String
     ) throws -> PreparedChecklistDraft {
-        try ChecklistDraftPersistencePolicy.prepare([
+        try requireCatalogVisual(iconName: iconName, colorHex: colorHex)
+        return try ChecklistDraftPersistencePolicy.prepare([
             ChecklistEditorDraft(
                 title: title,
                 isCompleted: isCompleted,

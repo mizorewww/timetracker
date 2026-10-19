@@ -186,7 +186,7 @@ private extension LLMTaskWorkspacePlanningService {
     ]
 
     /// Every property is required (nullable ones as `null`) and no other key
-    /// is allowed, matching the strict argument decoding in `+Tools`.
+    /// is allowed; `+Tools` still decodes a looser object leniently.
     static func exactObject(_ properties: [String: JSONSchema], type: JSONSchemaInstanceType = .object) -> JSONSchema {
         JSONSchema(
             .type(type),

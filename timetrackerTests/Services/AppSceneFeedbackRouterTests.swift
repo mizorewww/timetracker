@@ -21,4 +21,17 @@ struct AppSceneFeedbackRouterTests {
 
         #expect(router.feedback(forHost: root)?.message == "Try again")
     }
+
+    @Test
+    func aHostSwappingItsViewStaysRegisteredWhicheverSideRunsFirst() {
+        let router = AppSceneFeedbackRouter()
+        let root = UUID()
+        router.registerHost(root)
+
+        router.registerHost(root)
+        router.unregisterHost(root)
+        router.present(title: "Failed", message: "Try again")
+
+        #expect(router.feedback(forHost: root)?.message == "Try again")
+    }
 }

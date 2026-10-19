@@ -12,10 +12,15 @@ private struct AppSceneFeedbackHostModifier: ViewModifier {
         content
             .alert(
                 feedback?.title ?? "",
-                isPresented: presentationBinding(feedbackID: feedback?.id),
+                isPresented: Binding {
+                    router.feedback(forHost: hostID) != nil
+                } set: { _ in
+                    // Only OK clears the feedback; an alert torn down with
+                    // its closing sheet reappears on the host below.
+                },
                 presenting: feedback
             ) { presentedFeedback in
-                Button(AppStrings.localized("common.ok")) {
+                Button(AppStrings.localized("common.ok"), role: .cancel) {
                     router.dismiss(feedbackID: presentedFeedback.id)
                 }
             } message: { presentedFeedback in
@@ -23,18 +28,6 @@ private struct AppSceneFeedbackHostModifier: ViewModifier {
             }
             .onAppear { router.registerHost(hostID) }
             .onDisappear { router.unregisterHost(hostID) }
-    }
-
-    private func presentationBinding(feedbackID: UUID?) -> Binding<Bool> {
-        Binding {
-            router.feedback(forHost: hostID) != nil
-        } set: { isPresented in
-            // A host covered by a new sheet hides its alert without
-            // dismissing the feedback, which the new topmost host shows.
-            guard !isPresented, let feedbackID,
-                  router.hostIDs.last == hostID else { return }
-            router.dismiss(feedbackID: feedbackID)
-        }
     }
 }
 

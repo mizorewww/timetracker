@@ -23,7 +23,7 @@
 
 **AD-004：系统表面只是投影。** Widget、Watch、Live Activity、App Intents 复用领域命令，不保存唯一事实；提交后按 `StoreDomainEvent` 异步投影，投影失败不得把已提交动作报告为失败。快照与命令都有数量/字节上限。
 
-**AD-005：秘密只在本机 Keychain。** API key 存 `LLMCredentialStore`（device-only、不同步），不进 SwiftData、UserDefaults、导出或日志；JSON 导出是只读快照，失败要 fail closed，不称为备份。
+**AD-005：秘密只在本机 Keychain。** API key 经 `LLMCredentialStoring`（实现为 `KeychainLLMCredentialStore`，device-only、不同步）存取，不进 SwiftData、UserDefaults、导出或日志；JSON 导出是只读快照，失败要 fail closed，不称为备份。
 
 **AD-132：AI 只能提案，不能直接写入。** 模型工具调用只修改内存 overlay；Apply 在 store lock 内重新捕获完整 baseline 做 CAS，任何差异或失败都零写入，任务移除只归档。reasoning、tool round 与原始响应只存在于当前会话。
 

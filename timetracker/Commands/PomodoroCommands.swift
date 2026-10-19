@@ -108,7 +108,7 @@ struct PomodoroCommandHandler {
             }
             let activeSegments = try timeRepository.activeSegments()
             let pomodoroRuns = try repository.runs()
-            let plan = TimerAdmissionPolicy().startPlan(
+            let plan = TimerAdmissionPolicy.startPlan(
                 taskID: run.taskID,
                 mode: allowParallelTimers ? .parallel : .exclusive,
                 sameTaskBehavior: .replaceAll,

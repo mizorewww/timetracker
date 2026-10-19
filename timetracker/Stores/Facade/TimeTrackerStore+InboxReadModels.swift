@@ -14,7 +14,7 @@ extension TimeTrackerStore {
     }
 
     func inboxSuggestion(for item: InboxItem) -> InboxSuggestion? {
-        inboxSuggestionStateService.displaySuggestion(
+        InboxSuggestionStateService.displaySuggestion(
             for: inboxItemReadModel(for: item),
             suggestion: inboxSuggestionByItemID[item.id]
         )
@@ -46,7 +46,7 @@ extension TimeTrackerStore {
     }
 
     func rebuildInboxSuggestionIndexes() {
-        inboxSuggestionByItemID = InboxSuggestionIdentityService().index(
+        inboxSuggestionByItemID = InboxSuggestionIdentityService.index(
             items: inboxItems,
             suggestions: inboxSuggestions
         )

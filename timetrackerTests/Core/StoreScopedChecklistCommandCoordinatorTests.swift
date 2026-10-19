@@ -154,7 +154,7 @@ struct StoreScopedChecklistCommandCoordinatorTests {
         let baseline = ChecklistVisualSuggestionBaseline(
             item: item,
             visual: visual,
-            normalizedTitle: ChecklistVisualSuggestionPolicy().normalizedTitle(item.title)
+            normalizedTitle: ChecklistVisualSuggestionPolicy.normalizedTitle(item.title)
         )
 
         let siblingContext = ModelContext(context.container)
@@ -209,7 +209,7 @@ struct StoreScopedChecklistCommandCoordinatorTests {
         let baseline = ChecklistVisualSuggestionBaseline(
             item: item,
             visual: visual,
-            normalizedTitle: ChecklistVisualSuggestionPolicy().normalizedTitle(item.title)
+            normalizedTitle: ChecklistVisualSuggestionPolicy.normalizedTitle(item.title)
         )
 
         let outcome = try writer.applyVisualSuggestion(

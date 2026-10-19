@@ -34,8 +34,7 @@ extension StoreScopedInboxCommandCoordinator {
         if candidates.contains(where: { $0 === item }) == false {
             candidates.append(item)
         }
-        let identityService = InboxSuggestionIdentityService()
-        let resolution = identityService
+        let resolution = InboxSuggestionIdentityService
             .logicalResolutions(from: candidates)
             .first { $0.winner.effectiveSuggestionContextID == contextID } ?? InboxItemMergeResolution(
                 winner: item,

@@ -203,9 +203,8 @@ extension TimeTrackerStore {
             }
         }
 
-        let aggregationService = TimeAggregationService()
         func wallSeconds(for intervals: [DateInterval]) -> Int {
-            aggregationService.mergeOverlappingIntervals(intervals).reduce(0) {
+            TimeAggregationService.mergeOverlappingIntervals(intervals).reduce(0) {
                 $0 + Int($1.duration)
             }
         }

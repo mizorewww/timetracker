@@ -147,7 +147,7 @@ extension StoreScopedInboxCommandCoordinator {
         deviceID: String
     ) throws {
         guard !orderedItemIDs.isEmpty else { return }
-        let items = try InboxSuggestionIdentityService().visibleLogicalItems(
+        let items = try InboxSuggestionIdentityService.visibleLogicalItems(
             from: context.fetch(FetchDescriptor<InboxItem>())
         )
         .filter { $0.isCompleted == false }

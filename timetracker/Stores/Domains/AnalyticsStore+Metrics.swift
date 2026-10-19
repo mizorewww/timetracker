@@ -44,7 +44,7 @@ extension AnalyticsStore {
 
         let durations = items.map(\.durationSeconds).filter { $0 > 0 }.sorted()
         let gross = durations.reduce(0, +)
-        let dailyTotals = TimeAggregationService().secondsByDay(
+        let dailyTotals = TimeAggregationService.secondsByDay(
             intervals: items.map(\.interval),
             calendar: calendar
         )
@@ -114,7 +114,7 @@ extension AnalyticsStore {
         case .gross:
             return items.reduce(0) { $0 + $1.durationSeconds }
         case .wallClock:
-            return TimeAggregationService().mergeOverlappingIntervals(items.map(\.interval)).reduce(0) {
+            return TimeAggregationService.mergeOverlappingIntervals(items.map(\.interval)).reduce(0) {
                 $0 + Int($1.end.timeIntervalSince($1.start))
             }
         }
@@ -143,7 +143,7 @@ extension AnalyticsStore {
     }
 
     func longestMergedDuration(items: [AnalyticsBoundedSegment]) -> Int {
-        TimeAggregationService().mergeOverlappingIntervals(items.map(\.interval)).map {
+        TimeAggregationService.mergeOverlappingIntervals(items.map(\.interval)).map {
             Int($0.end.timeIntervalSince($0.start))
         }.max() ?? 0
     }

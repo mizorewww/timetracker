@@ -2,7 +2,7 @@ import Foundation
 
 extension TaskEditorSession {
     var orderedChecklistIndices: [Int] {
-        ChecklistOrderingService().completionGrouped(
+        ChecklistOrderingService.completionGrouped(
             Array(draft.checklistItems.indices),
             isCompleted: { draft.checklistItems[$0].isCompleted }
         )
@@ -44,7 +44,7 @@ extension TaskEditorSession {
         let elements = orderedDrafts.map {
             ChecklistOrderingElement(id: $0.id, isCompleted: $0.isCompleted)
         }
-        guard let reorderedIDs = ChecklistOrderingService().reorderedIDs(
+        guard let reorderedIDs = ChecklistOrderingService.reorderedIDs(
             elements: elements,
             sourceOffsets: sourceOffsets,
             destination: destination

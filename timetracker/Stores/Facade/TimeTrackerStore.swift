@@ -226,16 +226,6 @@ final class TimeTrackerStore {
     var taskRepository: SwiftDataTaskRepository?
     var timeRepository: SwiftDataTimeTrackingRepository?
     var pomodoroRepository: SwiftDataPomodoroRepository?
-    let aggregationService = TimeAggregationService()
-    let taskTreeService = TaskTreeService()
-    let taskTrackingAvailabilityService = TaskTrackingAvailabilityService()
-    let ledgerSummaryService = LedgerSummaryService()
-    let inboxSuggestionStateService = InboxSuggestionStateService()
-    let forecastDisplayService = ForecastDisplayService()
-    let databaseMaintenanceService = DatabaseMaintenanceService()
-    let selectionCoordinator = StoreSelectionCoordinator()
-    let refreshPlanner = StoreRefreshPlanner()
-    let refreshCoordinator = StoreRefreshCoordinator()
     var taskDomainStore = TaskStore()
     var ledgerDomainStore = LedgerStore()
     var checklistDomainStore = ChecklistStore()

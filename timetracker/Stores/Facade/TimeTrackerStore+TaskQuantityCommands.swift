@@ -124,7 +124,7 @@ extension TimeTrackerStore {
                     finishStoreScopedMutation(events: outcome.events)
                 } else {
                     try refresh(
-                        plan: refreshPlanner.plan(
+                        plan: StoreRefreshPlanner.plan(
                             after: outcome.convergenceEvents
                         )
                     )

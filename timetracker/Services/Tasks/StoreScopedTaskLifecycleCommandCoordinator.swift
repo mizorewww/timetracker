@@ -48,7 +48,7 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
                 )
             }
 
-            let subtreeIDs = TaskTreeService()
+            let subtreeIDs = TaskTreeService
                 .descendantIDs(of: taskID, tasks: tasks)
                 .union([taskID])
             let timeRepository = SwiftDataTimeTrackingRepository(
@@ -97,7 +97,7 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
             }
             let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
             let repairPlan = TaskHierarchyRepairPlan(canonicalTasks: tasks)
-            guard TaskTrackingAvailabilityService().hasArchivedAncestor(
+            guard TaskTrackingAvailabilityService.hasArchivedAncestor(
                 of: task,
                 taskByID: taskByID,
                 taskIDsToDisplayAsRoots: repairPlan.taskIDsToDisplayAsRoots
@@ -119,7 +119,7 @@ struct StoreScopedTaskLifecycleCommandCoordinator {
         tasks: [TaskNode]
     ) -> Set<UUID> {
         let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
-        var related = TaskTreeService()
+        var related = TaskTreeService
             .descendantIDs(of: task.id, tasks: tasks)
             .union([task.id])
         var visited = Set<UUID>()
@@ -344,14 +344,14 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
 
         let parentIsChanging = existingTask?.parentID != draft.parentID
         if let existingTask, parentIsChanging,
-           let blocker = TaskTrackingAvailabilityService()
+           let blocker = TaskTrackingAvailabilityService
                .parentChangeBlocker(for: existingTask)
         {
             throw TaskLifecycleMutationError.parentChangeBlocked(blocker)
         }
         if let parentID = draft.parentID,
            parentIsChanging,
-           TaskTrackingAvailabilityService()
+           TaskTrackingAvailabilityService
                .trackableTaskIDs(tasks: tasks)
                .contains(parentID) == false
         {

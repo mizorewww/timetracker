@@ -1,8 +1,8 @@
 import Foundation
 
 @MainActor
-struct StoreRefreshCoordinator {
-    func refresh(_ store: TimeTrackerStore, plan: StoreRefreshPlan) throws {
+enum StoreRefreshCoordinator {
+    static func refresh(_ store: TimeTrackerStore, plan: StoreRefreshPlan) throws {
         guard store.taskRepository != nil, store.timeRepository != nil else { return }
 
         try PerformanceSignpost.interval("Store refresh") {
@@ -16,7 +16,7 @@ struct StoreRefreshCoordinator {
         }
     }
 
-    func refreshReadModels(_ store: TimeTrackerStore, plan: StoreRefreshPlan) throws {
+    static func refreshReadModels(_ store: TimeTrackerStore, plan: StoreRefreshPlan) throws {
         guard store.taskRepository != nil, store.timeRepository != nil else { return }
         try PerformanceSignpost.interval("Store recovery read-model refresh") {
             try refreshPrimaryDomains(
@@ -28,7 +28,7 @@ struct StoreRefreshCoordinator {
         }
     }
 
-    private func refreshPrimaryDomains(
+    private static func refreshPrimaryDomains(
         on store: TimeTrackerStore,
         plan: StoreRefreshPlan,
         schedulesPomodoroReconciliation: Bool
@@ -72,7 +72,7 @@ struct StoreRefreshCoordinator {
         }
     }
 
-    private func refreshDerivedDomains(on store: TimeTrackerStore, plan: StoreRefreshPlan) {
+    private static func refreshDerivedDomains(on store: TimeTrackerStore, plan: StoreRefreshPlan) {
         if plan.refreshRollups {
             PerformanceSignpost.interval("Rollup refresh") {
                 store.refreshRollupDomain(plan: plan)
@@ -85,7 +85,7 @@ struct StoreRefreshCoordinator {
         }
     }
 
-    private func applyScenePostRefreshEffects(
+    private static func applyScenePostRefreshEffects(
         on store: TimeTrackerStore,
         plan: StoreRefreshPlan
     ) {

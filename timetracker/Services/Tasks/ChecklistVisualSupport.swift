@@ -27,8 +27,8 @@ enum ChecklistVisualSanitizer {
     }
 }
 
-struct ChecklistVisualSuggestionPolicy {
-    func shouldSuggest(item: ChecklistItem, visual: ChecklistItemVisual?) -> Bool {
+enum ChecklistVisualSuggestionPolicy {
+    static func shouldSuggest(item: ChecklistItem, visual: ChecklistItemVisual?) -> Bool {
         let title = normalizedTitle(item.title)
         guard item.deletedAt == nil,
               item.isCompleted == false,
@@ -56,7 +56,7 @@ struct ChecklistVisualSuggestionPolicy {
         )
     }
 
-    func normalizedTitle(_ title: String) -> String {
+    static func normalizedTitle(_ title: String) -> String {
         title.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

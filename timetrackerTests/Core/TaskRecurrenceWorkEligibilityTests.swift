@@ -126,10 +126,8 @@ struct TaskRecurrenceWorkEligibilityTests {
         )
         let tasks = try repository.allNodes()
         let rules = try repository.taskRecurrenceRules()
-        let service = TaskTrackingAvailabilityService()
-
-        let hierarchyEligibleIDs = service.trackableTaskIDs(tasks: tasks)
-        let directWorkIDs = try service.directWorkTaskIDs(
+        let hierarchyEligibleIDs = TaskTrackingAvailabilityService.trackableTaskIDs(tasks: tasks)
+        let directWorkIDs = try TaskTrackingAvailabilityService.directWorkTaskIDs(
             tasks: tasks,
             recurrenceRules: rules,
             recurrenceOccurrences:
@@ -164,9 +162,8 @@ struct TaskRecurrenceWorkEligibilityTests {
         )
         rule.isEnabled = false
 
-        let service = TaskTrackingAvailabilityService()
         #expect(
-            service.directWorkTaskIDs(
+            TaskTrackingAvailabilityService.directWorkTaskIDs(
                 tasks: tasks,
                 recurrenceRules: [rule],
                 recurrenceOccurrences: []
@@ -175,7 +172,7 @@ struct TaskRecurrenceWorkEligibilityTests {
 
         rule.deletedAt = fixture.now
         #expect(
-            service.directWorkTaskIDs(
+            TaskTrackingAvailabilityService.directWorkTaskIDs(
                 tasks: tasks,
                 recurrenceRules: [rule],
                 recurrenceOccurrences: []

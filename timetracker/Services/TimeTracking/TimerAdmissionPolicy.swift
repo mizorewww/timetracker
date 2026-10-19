@@ -3,8 +3,8 @@ import Foundation
 /// Produces deterministic mutation plans from an already-fetched active set.
 /// Persistence, locking, and side effects belong to the coordinator that applies
 /// these plans.
-nonisolated struct TimerAdmissionPolicy {
-    func startPlan(
+nonisolated enum TimerAdmissionPolicy {
+    static func startPlan(
         taskID: UUID,
         mode: TimerAdmissionMode,
         sameTaskBehavior: TimerSameTaskStartBehavior = .reuseOldest,
@@ -27,7 +27,7 @@ nonisolated struct TimerAdmissionPolicy {
         )
     }
 
-    func stopPlan(
+    static func stopPlan(
         target: TimerStopTarget,
         activeSegments: [TimerActiveSegmentSnapshot]
     ) -> TimerStopPlan {
@@ -45,7 +45,7 @@ nonisolated struct TimerAdmissionPolicy {
     /// Keeps one logical row per segment ID and orders it oldest first. This
     /// makes the oldest matching task segment the reusable survivor. UUID
     /// ordering is the stable tie-break when start timestamps match.
-    private func canonicalSegments(
+    private static func canonicalSegments(
         _ segments: [TimerActiveSegmentSnapshot]
     ) -> [TimerActiveSegmentSnapshot] {
         var seenSegmentIDs: Set<UUID> = []
@@ -54,7 +54,7 @@ nonisolated struct TimerAdmissionPolicy {
             .filter { seenSegmentIDs.insert($0.segmentID).inserted }
     }
 
-    private func segmentOrder(
+    private static func segmentOrder(
         _ lhs: TimerActiveSegmentSnapshot,
         _ rhs: TimerActiveSegmentSnapshot
     ) -> Bool {
@@ -70,7 +70,7 @@ nonisolated struct TimerAdmissionPolicy {
         return uuidOrder(lhs.sessionID, rhs.sessionID)
     }
 
-    private func uuidOrder(_ lhs: UUID, _ rhs: UUID) -> Bool {
+    private static func uuidOrder(_ lhs: UUID, _ rhs: UUID) -> Bool {
         lhs.uuidString < rhs.uuidString
     }
 }

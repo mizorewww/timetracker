@@ -105,21 +105,16 @@ extension TimeTrackerStore {
 
     private func checklistVisualSuggestionRequest(for item: ChecklistItem) -> ChecklistVisualSuggestionRequest? {
         guard let task = taskByID[item.taskID],
-              isTaskEligibleAsParent(task)
-        else {
-            return nil
-        }
-        let policy = ChecklistVisualSuggestionPolicy()
-        guard policy.shouldSuggest(item: item, visual: checklistVisual(for: item)) else { return nil }
+              isTaskEligibleAsParent(task), ChecklistVisualSuggestionPolicy.shouldSuggest(item: item, visual: checklistVisual(for: item)) else { return nil }
 
         return ChecklistVisualSuggestionRequest(
             itemID: item.id,
             taskID: item.taskID,
-            title: policy.normalizedTitle(item.title),
+            title: ChecklistVisualSuggestionPolicy.normalizedTitle(item.title),
             baseline: ChecklistVisualSuggestionBaseline(
                 item: item,
                 visual: checklistVisual(for: item),
-                normalizedTitle: policy.normalizedTitle(item.title)
+                normalizedTitle: ChecklistVisualSuggestionPolicy.normalizedTitle(item.title)
             ),
             taskTitle: task.title,
             taskPath: path(for: task),
@@ -191,13 +186,12 @@ extension TimeTrackerStore {
     }
 
     private func checklistItemsNeedingVisualSuggestion() -> [ChecklistItem] {
-        let policy = ChecklistVisualSuggestionPolicy()
         let now = Date()
         return checklistItems.filter { item in
             guard !checklistVisualSuggestionLifecycle.inFlightIDs.contains(item.id),
                   checklistVisualSuggestionLifecycle.debounceTasksByItemID[item.id] == nil,
                   taskByID[item.taskID] != nil,
-                  policy.shouldSuggest(item: item, visual: checklistVisual(for: item)),
+                  ChecklistVisualSuggestionPolicy.shouldSuggest(item: item, visual: checklistVisual(for: item)),
                   let request = checklistVisualSuggestionRequest(for: item)
             else {
                 return false

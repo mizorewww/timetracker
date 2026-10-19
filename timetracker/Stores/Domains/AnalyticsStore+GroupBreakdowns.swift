@@ -138,7 +138,7 @@ extension AnalyticsStore {
         items: [AnalyticsBoundedSegment]
     ) -> AnalyticsGroupBreakdownPoint {
         let gross = items.reduce(0) { $0 + $1.durationSeconds }
-        let wall = TimeAggregationService().mergeOverlappingIntervals(items.map(\.interval)).reduce(0) {
+        let wall = TimeAggregationService.mergeOverlappingIntervals(items.map(\.interval)).reduce(0) {
             $0 + Int($1.end.timeIntervalSince($1.start))
         }
         return AnalyticsGroupBreakdownPoint(

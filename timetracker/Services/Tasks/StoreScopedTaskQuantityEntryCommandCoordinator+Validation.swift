@@ -77,7 +77,7 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
             throw TaskQuantityEntryMutationError.quantityGoalUnavailable
         }
         guard goal.taskID == taskID,
-              TaskQuantityProgressService().goalIsCanonical(goal)
+              TaskQuantityProgressService.goalIsCanonical(goal)
         else {
             throw TaskQuantityEntryMutationError.incompleteQuantityGraph
         }

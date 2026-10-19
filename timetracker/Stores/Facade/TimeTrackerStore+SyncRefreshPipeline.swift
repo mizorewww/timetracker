@@ -8,7 +8,7 @@ extension TimeTrackerStore {
     /// nothing.
     private func remoteChangeRefreshPlan() -> StoreRefreshPlan {
         guard let modelContext else {
-            return refreshPlanner.plan(after: [.remoteImportCompleted])
+            return StoreRefreshPlanner.plan(after: [.remoteImportCompleted])
         }
         return StoreRefreshPlan(scopes: remoteChangeHistory.scopesSinceLastCatchUp(in: modelContext))
     }
@@ -38,7 +38,7 @@ extension TimeTrackerStore {
                     if hasCompletedStartupConfiguration {
                         try refresh(plan: plan)
                     } else {
-                        try refreshCoordinator.refreshReadModels(self, plan: plan)
+                        try StoreRefreshCoordinator.refreshReadModels(self, plan: plan)
                     }
                 } catch {
                     processingFailureMessage = error.localizedDescription

@@ -2,12 +2,12 @@ import Foundation
 import SwiftData
 
 @MainActor
-struct DatabaseMaintenanceService {
+enum DatabaseMaintenanceService {
     nonisolated static let defaultTombstoneRetention: TimeInterval = 90 * 24 * 60 * 60
     nonisolated static let defaultFetchBatchSize = 512
 
     @discardableResult
-    func optimizeDatabase(
+    static func optimizeDatabase(
         context: ModelContext,
         now: Date = Date(),
         tombstoneRetention: TimeInterval = Self.defaultTombstoneRetention,
@@ -186,7 +186,7 @@ struct DatabaseMaintenanceService {
         return removedCount
     }
 
-    private func purgeCanonicalModels<Model: PersistentModel & PersistentUUIDModel>(
+    private static func purgeCanonicalModels<Model: PersistentModel & PersistentUUIDModel>(
         context: ModelContext,
         descriptor: FetchDescriptor<Model>,
         cutoff: Date,
@@ -203,7 +203,7 @@ struct DatabaseMaintenanceService {
         return (expiredIDs, count)
     }
 
-    private func deleteMatching<Model: PersistentModel>(
+    private static func deleteMatching<Model: PersistentModel>(
         context: ModelContext,
         descriptor: FetchDescriptor<Model>,
         batchSize: Int,
@@ -222,7 +222,7 @@ struct DatabaseMaintenanceService {
         return count
     }
 
-    private func expiredCanonicalIDs<Model: PersistentUUIDModel>(
+    private static func expiredCanonicalIDs<Model: PersistentUUIDModel>(
         in models: [Model],
         cutoff: Date
     ) -> Set<UUID> {
@@ -234,7 +234,7 @@ struct DatabaseMaintenanceService {
         )
     }
 
-    private func isExpired(_ deletedAt: Date?, cutoff: Date) -> Bool {
+    private static func isExpired(_ deletedAt: Date?, cutoff: Date) -> Bool {
         guard let deletedAt else { return false }
         return deletedAt <= cutoff
     }

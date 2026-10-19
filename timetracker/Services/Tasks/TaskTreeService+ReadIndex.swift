@@ -1,7 +1,7 @@
 import Foundation
 
 extension TaskTreeService {
-    func readIndex(
+    static func readIndex(
         indexes: TaskTreeIndexes,
         visibleTaskIDs: Set<UUID>,
         categories: [TaskCategory],
@@ -56,7 +56,7 @@ extension TaskTreeService {
         )
     }
 
-    func categorySections(
+    static func categorySections(
         rootTasks: [TaskNode],
         categories: [TaskCategory],
         categoryIDByRootTaskID: [UUID: UUID]

@@ -29,10 +29,9 @@ extension TimeTrackerStore {
         let activityByTaskID = taskUsageActivityByTaskID(
             for: availableTasks
         )
-        let rankingService = TaskUsageRankingService()
-        return rankingService.frequentRecentTasks(
+        return TaskUsageRankingService.frequentRecentTasks(
             availableTasks: availableTasks,
-            rankedTasks: rankingService.rankedTasks(
+            rankedTasks: TaskUsageRankingService.rankedTasks(
                 availableTasks: availableTasks,
                 activityByTaskID: activityByTaskID
             ),
@@ -64,7 +63,7 @@ extension TimeTrackerStore {
     }
 
     func hasArchivedAncestor(for task: TaskNode) -> Bool {
-        taskTrackingAvailabilityService.hasArchivedAncestor(
+        TaskTrackingAvailabilityService.hasArchivedAncestor(
             of: task,
             taskByID: taskByID,
             taskIDsToDisplayAsRoots: taskTreeIndexes.taskIDsToDisplayAsRoots
@@ -115,11 +114,11 @@ extension TimeTrackerStore {
     }
 
     func validParentTasks(for taskID: UUID?) -> [TaskNode] {
-        taskTreeService.validParentTasks(for: taskID, tasks: tasks)
+        TaskTreeService.validParentTasks(for: taskID, tasks: tasks)
     }
 
     func parentChangeBlocker(for task: TaskNode) -> TaskParentChangeBlocker? {
-        taskTrackingAvailabilityService.parentChangeBlocker(for: task)
+        TaskTrackingAvailabilityService.parentChangeBlocker(for: task)
     }
 
     func preferredTaskIDForSelection() -> UUID? {
@@ -245,16 +244,16 @@ extension TimeTrackerStore {
     /// Rebuilds every facade task lookup, then the tree and forecast indexes
     /// that depend on both tasks and categories.
     func rebuildTaskIndexes() {
-        let indexes = taskTreeService.indexes(tasks: tasks)
+        let indexes = TaskTreeService.indexes(tasks: tasks)
         taskTreeIndexes = indexes
         taskByID = indexes.taskByID
         childrenByParentID = indexes.childrenByParentID
         taskPathByID = indexes.taskPathByID
         taskParentPathByID = indexes.taskParentPathByID
-        let eligibility = taskTrackingAvailabilityService.eligibility(tasks: tasks)
+        let eligibility = TaskTrackingAvailabilityService.eligibility(tasks: tasks)
         visibleTaskIDs = eligibility.visibleTaskIDs
         parentEligibleTaskIDs = eligibility.trackableTaskIDs
-        trackableTaskIDs = taskTrackingAvailabilityService.directWorkTaskIDs(
+        trackableTaskIDs = TaskTrackingAvailabilityService.directWorkTaskIDs(
             tasks: tasks,
             recurrenceRules: taskRecurrenceRules,
             recurrenceOccurrences: taskRecurrenceOccurrences
@@ -290,7 +289,7 @@ extension TimeTrackerStore {
     }
 
     func taskAndDescendantIDs(for taskID: UUID, visited: Set<UUID> = []) -> Set<UUID> {
-        taskTreeService.taskAndDescendantIDs(for: taskID, childrenByParentID: childrenByParentID, visited: visited)
+        TaskTreeService.taskAndDescendantIDs(for: taskID, childrenByParentID: childrenByParentID, visited: visited)
     }
 
     func forecastEligibleTaskIDs() -> Set<UUID> {
@@ -306,7 +305,7 @@ extension TimeTrackerStore {
     }
 
     private func rebuildTaskTreeReadIndex() {
-        let nextIndex = taskTreeService.readIndex(
+        let nextIndex = TaskTreeService.readIndex(
             indexes: taskTreeIndexes,
             visibleTaskIDs: visibleTaskIDs,
             categories: taskCategories,

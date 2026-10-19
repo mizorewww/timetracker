@@ -175,7 +175,7 @@ extension StoreScopedPomodoroCommandCoordinator {
         } else {
             []
         }
-        let segmentSeconds = TimeAggregationService().grossSeconds(segments, now: now)
+        let segmentSeconds = TimeAggregationService.grossSeconds(segments, now: now)
         let fallbackSeconds = run.startedAt.map {
             max(0, Int(now.timeIntervalSince($0)))
         } ?? 0

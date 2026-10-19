@@ -83,26 +83,26 @@ nonisolated struct InboxItemReadModel {
     }
 }
 
-nonisolated struct InboxSuggestionIdentityService {
-    func visibleLogicalItems<S: Sequence>(from items: S) -> [InboxItem]
+nonisolated enum InboxSuggestionIdentityService {
+    static func visibleLogicalItems<S: Sequence>(from items: S) -> [InboxItem]
         where S.Element == InboxItem
     {
         visibleLogicalReadModels(from: items).map(\.item)
     }
 
-    func visibleLogicalReadModels<S: Sequence>(from items: S) -> [InboxItemReadModel]
+    static func visibleLogicalReadModels<S: Sequence>(from items: S) -> [InboxItemReadModel]
         where S.Element == InboxItem
     {
         visibleLogicalResolutions(from: items).map(\.readModel)
     }
 
-    func visibleLogicalResolutions<S: Sequence>(from items: S) -> [InboxItemMergeResolution]
+    static func visibleLogicalResolutions<S: Sequence>(from items: S) -> [InboxItemMergeResolution]
         where S.Element == InboxItem
     {
         logicalResolutions(from: items).filter { $0.winner.deletedAt == nil }
     }
 
-    func logicalResolutions<S: Sequence>(from items: S) -> [InboxItemMergeResolution]
+    static func logicalResolutions<S: Sequence>(from items: S) -> [InboxItemMergeResolution]
         where S.Element == InboxItem
     {
         let physicalResolutions = physicalResolutions(from: items)
@@ -131,7 +131,7 @@ nonisolated struct InboxSuggestionIdentityService {
 
     /// Resolves only duplicate physical identifiers while preserving dismissal
     /// facts for historical siblings that share a logical context.
-    func physicalResolutions<S: Sequence>(from items: S) -> [InboxItemMergeResolution]
+    static func physicalResolutions<S: Sequence>(from items: S) -> [InboxItemMergeResolution]
         where S.Element == InboxItem
     {
         let source = Array(items)
@@ -159,7 +159,7 @@ nonisolated struct InboxSuggestionIdentityService {
         }
     }
 
-    func index(
+    static func index(
         items: [InboxItem],
         suggestions: [InboxSuggestion]
     ) -> [UUID: InboxSuggestion] {
@@ -185,7 +185,7 @@ nonisolated struct InboxSuggestionIdentityService {
         }
     }
 
-    private func isPreferred(_ candidate: InboxItem, over existing: InboxItem) -> Bool {
+    private static func isPreferred(_ candidate: InboxItem, over existing: InboxItem) -> Bool {
         // Deletion and an explicit restore use last-write-wins. A tombstone wins a tie,
         // preventing an older active physical copy from resurfacing after sync.
         if (candidate.deletedAt == nil) != (existing.deletedAt == nil) {
@@ -209,7 +209,7 @@ nonisolated struct InboxSuggestionIdentityService {
         return candidate.id.uuidString > existing.id.uuidString
     }
 
-    private func keepNewest<Key: Hashable>(
+    private static func keepNewest<Key: Hashable>(
         _ suggestion: InboxSuggestion,
         in index: inout [Key: InboxSuggestion],
         key: Key

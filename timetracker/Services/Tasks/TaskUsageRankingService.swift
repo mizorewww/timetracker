@@ -4,8 +4,8 @@ import Foundation
 ///
 /// Callers remain responsible for filtering `availableTasks` through the
 /// canonical tracking-availability policy before invoking this service.
-nonisolated struct TaskUsageRankingService {
-    func rankedTasks(
+nonisolated enum TaskUsageRankingService {
+    static func rankedTasks(
         availableTasks: [TaskNode],
         activityByTaskID: [UUID: TaskLedgerActivitySummary],
         excluding excludedIDs: Set<UUID> = []
@@ -32,7 +32,7 @@ nonisolated struct TaskUsageRankingService {
             }
     }
 
-    func frequentRecentTasks(
+    static func frequentRecentTasks(
         availableTasks: [TaskNode],
         rankedTasks: [TaskNode],
         activityByTaskID: [UUID: TaskLedgerActivitySummary],

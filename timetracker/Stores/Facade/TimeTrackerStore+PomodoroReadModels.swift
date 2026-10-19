@@ -38,7 +38,7 @@ extension TimeTrackerStore {
         let focus = visibleSegments(overlapping: interval, now: now)
             .filter { $0.source == .pomodoro }
         guard !focus.isEmpty else { return 0 }
-        let seconds = ledgerSummaryService.secondsInInterval(
+        let seconds = LedgerSummaryService.secondsInInterval(
             taskIDs: Set(focus.map(\.taskID)),
             segments: focus,
             interval: interval,

@@ -51,7 +51,7 @@ nonisolated struct TaskRecurrencePersistenceState {
             }
         )
         claimedQuantityGoalIDs = Set(goals.map(\.id))
-        templateEligibleTaskIDs = TaskTrackingAvailabilityService()
+        templateEligibleTaskIDs = TaskTrackingAvailabilityService
             .trackableTaskIDs(tasks: Array(taskByID.values))
             .subtracting(Set(occurrences.map(\.generatedTaskID)))
         activeWorkTaskIDs = Set(

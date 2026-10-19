@@ -142,7 +142,7 @@ extension TimeTrackerStore {
     }
 
     private func shouldAutoSuggestInboxItem(_ item: InboxItem) -> Bool {
-        inboxSuggestionStateService.shouldAutoSuggest(
+        InboxSuggestionStateService.shouldAutoSuggest(
             readModel: inboxItemReadModel(for: item),
             suggestion: inboxSuggestionByItemID[item.id],
             isInFlight: inboxSuggestionLifecycle.inFlightIDs.contains(item.id)

@@ -74,7 +74,7 @@ extension TimeTrackerStore {
               matchesCurrentLLMPrompt(request.instructions, kind: .inboxRouting),
               request.showsErrors || preferences.llmAutomaticSuggestionsEnabled,
               let item = inboxItems.first(where: { $0.id == request.itemID }),
-              inboxSuggestionStateService.canStoreGeneratedSuggestion(
+              InboxSuggestionStateService.canStoreGeneratedSuggestion(
                   readModel: inboxItemReadModel(for: item),
                   requestedTitle: request.requestedTitle,
                   requestedIdentity: request.requestedIdentity,

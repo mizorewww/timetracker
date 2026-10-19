@@ -7,7 +7,7 @@ extension AnalyticsStore {
     ) -> AnalyticsOverview {
         let gross = items.reduce(0) { $0 + $1.durationSeconds }
         let intervals = items.map(\.interval)
-        let wall = TimeAggregationService().mergeOverlappingIntervals(intervals).reduce(0) {
+        let wall = TimeAggregationService.mergeOverlappingIntervals(intervals).reduce(0) {
             $0 + Int($1.end.timeIntervalSince($1.start))
         }
         let focusItems = items.filter { $0.segment.source == .pomodoro }
@@ -89,14 +89,13 @@ extension AnalyticsStore {
         evaluatedAt cutoff: Date,
         calendar: Calendar
     ) -> [DailyAnalyticsPoint] {
-        let summaryService = DailySummaryService()
-        let summaries = summaryService.summaries(
+        let summaries = DailySummaryService.summaries(
             segments: segments,
             interval: interval,
             now: cutoff,
             calendar: calendar
         )
-        return summaryService.visibleSummaries(
+        return DailySummaryService.visibleSummaries(
             summaries,
             interval: interval,
             evaluatedAt: cutoff

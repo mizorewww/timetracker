@@ -183,7 +183,7 @@ struct StoreScopedTimerCommandCoordinator {
             )
             let allowParallelTimers = try TimerAdmissionPreferenceResolver
                 .allowParallelTimers(in: context)
-            let plan = TimerAdmissionPolicy().startPlan(
+            let plan = TimerAdmissionPolicy.startPlan(
                 taskID: taskID,
                 mode: allowParallelTimers ? .parallel : .exclusive,
                 sameTaskBehavior: sameTaskBehavior,
@@ -287,12 +287,12 @@ struct StoreScopedTimerCommandCoordinator {
             let stopPlan: TimerStopPlan
 
             if let segmentID {
-                stopPlan = TimerAdmissionPolicy().stopPlan(
+                stopPlan = TimerAdmissionPolicy.stopPlan(
                     target: .segment(segmentID),
                     activeSegments: admissionSegments
                 )
             } else if let taskID {
-                let candidatePlan = TimerAdmissionPolicy().stopPlan(
+                let candidatePlan = TimerAdmissionPolicy.stopPlan(
                     target: .task(taskID),
                     activeSegments: admissionSegments
                 )
@@ -306,7 +306,7 @@ struct StoreScopedTimerCommandCoordinator {
                 else {
                     return Self.noOpOutcome
                 }
-                stopPlan = TimerAdmissionPolicy().stopPlan(
+                stopPlan = TimerAdmissionPolicy.stopPlan(
                     target: .segment(onlySegment.segmentID),
                     activeSegments: admissionSegments
                 )

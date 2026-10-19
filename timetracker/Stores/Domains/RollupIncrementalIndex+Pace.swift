@@ -130,7 +130,7 @@ extension RollupIncrementalIndex {
         ) else {
             return [:]
         }
-        return TimeAggregationService().secondsByDay(
+        return TimeAggregationService.secondsByDay(
             intervals: [interval],
             calendar: calendar
         )

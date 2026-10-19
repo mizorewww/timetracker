@@ -5,13 +5,12 @@ nonisolated extension SwiftDataTaskRepository {
         guard let node = nodes.first(where: { $0.id == nodeID }) else { return false }
         let isChangingParent = node.parentID != newParentID
         guard isChangingParent else { return true }
-        let availabilityService = TaskTrackingAvailabilityService()
-        if availabilityService.parentChangeBlocker(for: node) != nil {
+        if TaskTrackingAvailabilityService.parentChangeBlocker(for: node) != nil {
             return false
         }
         guard let newParentID else { return true }
         guard nodeID != newParentID, nodes.contains(where: { $0.id == newParentID }) else { return false }
-        if availabilityService.trackableTaskIDs(tasks: nodes).contains(newParentID) == false {
+        if TaskTrackingAvailabilityService.trackableTaskIDs(tasks: nodes).contains(newParentID) == false {
             return false
         }
         return !descendantIDs(of: nodeID, nodes: nodes).contains(newParentID)
@@ -39,7 +38,7 @@ nonisolated extension SwiftDataTaskRepository {
         nodes: [TaskNode]
     ) throws {
         if let parentID {
-            guard let parent = nodes.first(where: { $0.id == parentID }), TaskTrackingAvailabilityService()
+            guard let parent = nodes.first(where: { $0.id == parentID }), TaskTrackingAvailabilityService
                 .trackableTaskIDs(tasks: nodes)
                 .contains(parentID)
             else {

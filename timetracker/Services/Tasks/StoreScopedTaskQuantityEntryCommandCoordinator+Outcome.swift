@@ -46,7 +46,7 @@ extension StoreScopedTaskQuantityEntryCommandCoordinator {
             didMutate: didMutate,
             affectedAncestorTaskIDs:
             state.affectedAncestorTaskIDs(for: taskID),
-            progressSnapshot: TaskQuantityProgressService().snapshot(
+            progressSnapshot: TaskQuantityProgressService.snapshot(
                 taskID: taskID,
                 goals: state.quantityGoals,
                 entries: entries ?? state.quantityEntries,

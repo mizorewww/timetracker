@@ -1,9 +1,7 @@
 import Foundation
 
-nonisolated struct LedgerSummaryService {
-    private let aggregationService = TimeAggregationService()
-
-    func totalSeconds(
+nonisolated enum LedgerSummaryService {
+    static func totalSeconds(
         taskIDs: Set<UUID>,
         segments: [TimeSegment],
         mode: AggregationMode = .gross,
@@ -12,10 +10,10 @@ nonisolated struct LedgerSummaryService {
         let filtered = segments
             .visibleDeduplicatedByID()
             .filter { taskIDs.contains($0.taskID) }
-        return aggregationService.totalSeconds(segments: filtered, mode: mode, now: now)
+        return TimeAggregationService.totalSeconds(segments: filtered, mode: mode, now: now)
     }
 
-    func secondsInInterval(
+    static func secondsInInterval(
         taskIDs: Set<UUID>,
         segments: [TimeSegment],
         interval: DateInterval,
@@ -36,7 +34,7 @@ nonisolated struct LedgerSummaryService {
         case .gross:
             return intervals.reduce(0) { $0 + Int($1.end.timeIntervalSince($1.start)) }
         case .wallClock:
-            return aggregationService.mergeOverlappingIntervals(intervals).reduce(0) {
+            return TimeAggregationService.mergeOverlappingIntervals(intervals).reduce(0) {
                 $0 + Int($1.end.timeIntervalSince($1.start))
             }
         }

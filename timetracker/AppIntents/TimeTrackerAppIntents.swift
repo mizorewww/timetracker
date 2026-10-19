@@ -154,7 +154,7 @@ struct ActiveTimerEntityQuery: EntityQuery {
         let taskByID = tasks.reduce(into: [UUID: TaskNode]()) { result, task in
             result[task.id] = task
         }
-        let parentPathByID = TaskTreeService().indexes(tasks: tasks).taskParentPathByID
+        let parentPathByID = TaskTreeService.indexes(tasks: tasks).taskParentPathByID
 
         return activeSegments.compactMap { segment in
             guard let task = taskByID[segment.taskID] else { return nil }

@@ -27,14 +27,14 @@ nonisolated struct TrackableTaskCatalog {
                 .fetch(FetchDescriptor<TaskRecurrenceOccurrence>())
                 .visibleDeduplicatedByID()
         )
-        let trackableTaskIDs = TaskTrackingAvailabilityService()
+        let trackableTaskIDs = TaskTrackingAvailabilityService
             .directWorkTaskIDs(
                 tasks: tasks,
                 recurrenceRules: recurrence.rules,
                 recurrenceOccurrences: recurrence.occurrences
             )
             .subtracting(recurrence.incompleteTaskIDs)
-        tree = TaskTreeService().indexes(tasks: tasks)
+        tree = TaskTreeService.indexes(tasks: tasks)
         trackableTasks = tasks.filter { trackableTaskIDs.contains($0.id) }
     }
 

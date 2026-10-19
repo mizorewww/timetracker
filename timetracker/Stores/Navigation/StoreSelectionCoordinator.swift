@@ -1,12 +1,12 @@
 import Foundation
 
-struct StoreSelectionCoordinator {
-    func selectedTask(selectedTaskID: UUID?, taskByID: [UUID: TaskNode]) -> TaskNode? {
+enum StoreSelectionCoordinator {
+    static func selectedTask(selectedTaskID: UUID?, taskByID: [UUID: TaskNode]) -> TaskNode? {
         guard let selectedTaskID else { return nil }
         return taskByID[selectedTaskID]
     }
 
-    func ancestorTaskIDs(for taskID: UUID, taskByID: [UUID: TaskNode]) -> [UUID] {
+    static func ancestorTaskIDs(for taskID: UUID, taskByID: [UUID: TaskNode]) -> [UUID] {
         var result: [UUID] = []
         var cursor = taskByID[taskID]
         var visited: Set<UUID> = []
@@ -20,7 +20,7 @@ struct StoreSelectionCoordinator {
         return result
     }
 
-    func affectedAncestorIDs(
+    static func affectedAncestorIDs(
         for taskID: UUID?,
         parentID: UUID? = nil,
         taskByID: [UUID: TaskNode]

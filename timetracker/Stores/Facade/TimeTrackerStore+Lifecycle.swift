@@ -138,7 +138,7 @@ extension TimeTrackerStore {
                 .pomodoroChanged(runID: nil, sessionID: nil, taskID: nil),
             ]
             do {
-                try refresh(plan: refreshPlanner.plan(after: refreshEvents))
+                try refresh(plan: StoreRefreshPlanner.plan(after: refreshEvents))
             } catch {
                 errorMessage = savedRefreshFailedMessage(error)
             }
@@ -174,7 +174,7 @@ extension TimeTrackerStore {
                 scopes.insert(.tasks)
             }
             let plan = StoreRefreshPlan(scopes: scopes)
-            try refreshCoordinator.refreshReadModels(self, plan: plan)
+            try StoreRefreshCoordinator.refreshReadModels(self, plan: plan)
             if plan.validateSelection {
                 validateSelectedTask()
             }
@@ -205,10 +205,10 @@ extension TimeTrackerStore {
     ) {
         var postCommitError: Error?
         let plan = PerformanceSignpost.interval("Store refresh planning") {
-            refreshPlanner.plan(after: events)
+            StoreRefreshPlanner.plan(after: events)
         }
         do {
-            try refreshCoordinator.refresh(
+            try StoreRefreshCoordinator.refresh(
                 self,
                 plan: plan
             )

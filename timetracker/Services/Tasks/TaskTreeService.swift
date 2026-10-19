@@ -1,9 +1,9 @@
 import Foundation
 
-nonisolated struct TaskTreeService {
+nonisolated enum TaskTreeService {
     static let maximumDisplayedPathComponents = 6
 
-    func indexes(tasks: [TaskNode]) -> TaskTreeIndexes {
+    static func indexes(tasks: [TaskNode]) -> TaskTreeIndexes {
         let tasks = tasks.deduplicatedByID()
         let taskByID = tasks.reduce(into: [UUID: TaskNode]()) { result, task in
             result[task.id] = task
@@ -72,7 +72,7 @@ nonisolated struct TaskTreeService {
         )
     }
 
-    func taskAndDescendantIDs(
+    static func taskAndDescendantIDs(
         for taskID: UUID,
         childrenByParentID: [UUID?: [TaskNode]],
         visited: Set<UUID> = []
@@ -89,7 +89,7 @@ nonisolated struct TaskTreeService {
         return result
     }
 
-    func descendantIDs(of taskID: UUID, tasks: [TaskNode]) -> Set<UUID> {
+    static func descendantIDs(of taskID: UUID, tasks: [TaskNode]) -> Set<UUID> {
         let visibleTasks = tasks.deduplicatedByID().filter { $0.deletedAt == nil }
         let childIDsByParentID = Dictionary(grouping: visibleTasks, by: \.parentID)
             .mapValues { $0.map(\.id) }
@@ -102,15 +102,14 @@ nonisolated struct TaskTreeService {
         return descendants
     }
 
-    func canMove(taskID: UUID, to newParentID: UUID?, tasks: [TaskNode]) -> Bool {
+    static func canMove(taskID: UUID, to newParentID: UUID?, tasks: [TaskNode]) -> Bool {
         let canonicalTasks = tasks.deduplicatedByID()
-        let availabilityService = TaskTrackingAvailabilityService()
-        let eligibility = availabilityService.eligibility(tasks: canonicalTasks)
+        let eligibility = TaskTrackingAvailabilityService.eligibility(tasks: canonicalTasks)
         guard eligibility.visibleTaskIDs.contains(taskID),
               let task = canonicalTasks.first(where: { $0.id == taskID }) else { return false }
         let isChangingParent = task.parentID != newParentID
         guard isChangingParent else { return true }
-        if availabilityService.parentChangeBlocker(for: task) != nil {
+        if TaskTrackingAvailabilityService.parentChangeBlocker(for: task) != nil {
             return false
         }
         guard let newParentID else { return true }
@@ -122,9 +121,9 @@ nonisolated struct TaskTreeService {
         return !descendantIDs(of: taskID, tasks: canonicalTasks).contains(newParentID)
     }
 
-    func validParentTasks(for taskID: UUID?, tasks: [TaskNode]) -> [TaskNode] {
+    static func validParentTasks(for taskID: UUID?, tasks: [TaskNode]) -> [TaskNode] {
         let canonicalTasks = tasks.deduplicatedByID()
-        let eligibility = TaskTrackingAvailabilityService().eligibility(tasks: canonicalTasks)
+        let eligibility = TaskTrackingAvailabilityService.eligibility(tasks: canonicalTasks)
         let eligibleParents = canonicalTasks.filter {
             eligibility.visibleTaskIDs.contains($0.id) &&
                 eligibility.trackableTaskIDs.contains($0.id)

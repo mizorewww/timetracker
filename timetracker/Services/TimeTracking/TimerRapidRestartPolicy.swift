@@ -5,12 +5,12 @@ import Foundation
 /// Manual, imported, and Pomodoro records retain their explicit boundaries.
 /// The persistence owner separately verifies canonical session relationships
 /// and that no other visible work occupies the gap.
-nonisolated struct TimerRapidRestartPolicy {
+nonisolated enum TimerRapidRestartPolicy {
     static let maximumGap: TimeInterval = 60
     private static let replacementIdentityDomain =
         "timetracker.timer-rapid-restart.v1"
 
-    func shouldCoalesce(
+    static func shouldCoalesce(
         previousTaskID: UUID,
         previousSource: TimeSessionSource,
         previousStartedAt: Date,
@@ -32,7 +32,7 @@ nonisolated struct TimerRapidRestartPolicy {
         return gap >= 0 && gap < Self.maximumGap
     }
 
-    func supportsCoalescing(_ source: TimeSessionSource) -> Bool {
+    static func supportsCoalescing(_ source: TimeSessionSource) -> Bool {
         switch source {
         case .timer, .shortcut, .watch, .widget, .liveActivity:
             true
@@ -48,9 +48,9 @@ nonisolated struct TimerRapidRestartPolicy {
     ///
     /// This is a persistence identity contract. Changing the domain or byte
     /// layout would make different app versions derive different records.
-    func replacementSegmentID(predecessorSegmentID: UUID) -> UUID {
+    static func replacementSegmentID(predecessorSegmentID: UUID) -> UUID {
         DeterministicUUID.version8(
-            domain: Self.replacementIdentityDomain,
+            domain: replacementIdentityDomain,
             components: [
                 predecessorSegmentID.uuidString.lowercased(),
             ]

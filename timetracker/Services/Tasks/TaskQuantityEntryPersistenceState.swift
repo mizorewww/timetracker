@@ -34,7 +34,7 @@ struct TaskQuantityEntryPersistenceState {
         taskByID = canonicalTasks.reduce(into: [:]) {
             $0[$1.id] = $1
         }
-        directWorkTaskIDs = TaskTrackingAvailabilityService()
+        directWorkTaskIDs = TaskTrackingAvailabilityService
             .directWorkTaskIDs(
                 tasks: canonicalTasks,
                 recurrenceRules: visibleRules,
@@ -49,7 +49,7 @@ struct TaskQuantityEntryPersistenceState {
 
     func affectedAncestorTaskIDs(for taskID: UUID) -> Set<UUID> {
         Set(
-            StoreSelectionCoordinator().ancestorTaskIDs(
+            StoreSelectionCoordinator.ancestorTaskIDs(
                 for: taskID,
                 taskByID: taskByID
             )

@@ -43,8 +43,8 @@ extension TimeTrackerStore {
         guard events.isEmpty == false else { return }
 
         do {
-            let plan = refreshPlanner.plan(after: events)
-            try refreshCoordinator.refreshReadModels(self, plan: plan)
+            let plan = StoreRefreshPlanner.plan(after: events)
+            try StoreRefreshCoordinator.refreshReadModels(self, plan: plan)
             if plan.validateSelection {
                 validateSelectedTask()
             }

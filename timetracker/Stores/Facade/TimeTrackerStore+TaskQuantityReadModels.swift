@@ -9,7 +9,7 @@ extension TimeTrackerStore {
         else {
             return .incomplete
         }
-        if let snapshot = TaskQuantityProgressService().snapshot(
+        if let snapshot = TaskQuantityProgressService.snapshot(
             taskID: taskID,
             goals: taskQuantityGoals,
             entries: taskQuantityEntries,
@@ -55,7 +55,7 @@ extension TimeTrackerStore {
         -> [UUID: TaskQuantityProgressSnapshot]
     {
         _ = taskReadModelRevision
-        return TaskQuantityProgressService().snapshotIndex(
+        return TaskQuantityProgressService.snapshotIndex(
             taskIDs: visibleTaskIDs,
             goals: taskQuantityGoals,
             entries: taskQuantityEntries,
@@ -72,7 +72,7 @@ extension TimeTrackerStore {
         else {
             return .incomplete
         }
-        guard let validated = TaskQuantityProgressService()
+        guard let validated = TaskQuantityProgressService
             .validatedSnapshot(
                 taskID: taskID,
                 goals: taskQuantityGoals,

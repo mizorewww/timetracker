@@ -17,8 +17,7 @@ extension SwiftDataTimeTrackingRepository {
         source: TimeSessionSource,
         hasActiveSegmentForTask: Bool
     ) throws -> TimerRapidRestartMutation? {
-        let policy = TimerRapidRestartPolicy()
-        guard policy.supportsCoalescing(source),
+        guard TimerRapidRestartPolicy.supportsCoalescing(source),
               hasActiveSegmentForTask == false
         else {
             return nil
@@ -41,7 +40,7 @@ extension SwiftDataTimeTrackingRepository {
             .sorted(by: rapidRestartCandidateOrder)
         guard let predecessor = candidates.first,
               let predecessorSource = TimeSessionSource(rawValue: predecessor.sourceRaw),
-              policy.shouldCoalesce(
+              TimerRapidRestartPolicy.shouldCoalesce(
                   previousTaskID: predecessor.taskID,
                   previousSource: predecessorSource,
                   previousStartedAt: predecessor.startedAt,
@@ -54,7 +53,7 @@ extension SwiftDataTimeTrackingRepository {
         else {
             return nil
         }
-        let replacementID = policy.replacementSegmentID(
+        let replacementID = TimerRapidRestartPolicy.replacementSegmentID(
             predecessorSegmentID: predecessor.id
         )
         let targetReplacementID = replacementID

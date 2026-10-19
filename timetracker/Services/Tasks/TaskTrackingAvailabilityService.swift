@@ -15,8 +15,8 @@ nonisolated enum TaskParentChangeBlocker: Equatable {
 ///
 /// Archived or deleted branches are hidden and cannot receive new work. Legacy
 /// planned/active/completed raw values are inert compatibility bytes.
-nonisolated struct TaskTrackingAvailabilityService {
-    func eligibility(tasks: [TaskNode]) -> TaskWorkEligibility {
+nonisolated enum TaskTrackingAvailabilityService {
+    static func eligibility(tasks: [TaskNode]) -> TaskWorkEligibility {
         let canonicalTasks = tasks.deduplicatedByID()
         let allTaskIDs = Set(canonicalTasks.map(\.id))
         let childIDsByParentID = Dictionary(grouping: canonicalTasks, by: \TaskNode.parentID)
@@ -37,18 +37,18 @@ nonisolated struct TaskTrackingAvailabilityService {
         )
     }
 
-    func visibleTaskIDs(tasks: [TaskNode]) -> Set<UUID> {
+    static func visibleTaskIDs(tasks: [TaskNode]) -> Set<UUID> {
         eligibility(tasks: tasks).visibleTaskIDs
     }
 
-    func trackableTaskIDs(tasks: [TaskNode]) -> Set<UUID> {
+    static func trackableTaskIDs(tasks: [TaskNode]) -> Set<UUID> {
         eligibility(tasks: tasks).trackableTaskIDs
     }
 
     /// Tasks that can receive newly recorded time. A recurrence template is a
     /// hierarchy container and blueprint; only its generated occurrences are
     /// concrete work for Timer, Pomodoro, manual time, and system surfaces.
-    func directWorkTaskIDs(
+    static func directWorkTaskIDs(
         tasks: [TaskNode],
         recurrenceRules: [TaskRecurrenceRule],
         recurrenceOccurrences: [TaskRecurrenceOccurrence]
@@ -70,7 +70,7 @@ nonisolated struct TaskTrackingAvailabilityService {
 
     /// A task can leave an unavailable ancestor branch as long as its own
     /// lifecycle still accepts edits.
-    func parentChangeBlocker(for task: TaskNode) -> TaskParentChangeBlocker? {
+    static func parentChangeBlocker(for task: TaskNode) -> TaskParentChangeBlocker? {
         if task.deletedAt != nil {
             return .unavailable
         }
@@ -80,7 +80,7 @@ nonisolated struct TaskTrackingAvailabilityService {
         return nil
     }
 
-    func hasArchivedAncestor(
+    static func hasArchivedAncestor(
         of task: TaskNode,
         taskByID: [UUID: TaskNode],
         taskIDsToDisplayAsRoots: Set<UUID>
@@ -100,7 +100,7 @@ nonisolated struct TaskTrackingAvailabilityService {
         return false
     }
 
-    private func descendantClosure(
+    private static func descendantClosure(
         startingWith seedIDs: Set<UUID>,
         childIDsByParentID: [UUID?: [UUID]]
     ) -> Set<UUID> {

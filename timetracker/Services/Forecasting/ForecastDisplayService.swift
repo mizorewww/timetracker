@@ -9,8 +9,8 @@ struct ForecastDisplayItem: Identifiable, Equatable {
     }
 }
 
-struct ForecastDisplayService {
-    func displayItems(tasks: [TaskNode], rollups: [UUID: TaskRollup], limit: Int? = nil) -> [ForecastDisplayItem] {
+enum ForecastDisplayService {
+    static func displayItems(tasks: [TaskNode], rollups: [UUID: TaskRollup], limit: Int? = nil) -> [ForecastDisplayItem] {
         let tasks = tasks.deduplicatedByID()
         let taskByID = tasks.latestByID()
         let childrenByParent = Dictionary(grouping: visibleTasks(tasks), by: \.parentID)
@@ -73,7 +73,7 @@ struct ForecastDisplayService {
         return Array(sorted.prefix(limit))
     }
 
-    func displayItem(for taskID: UUID, tasks: [TaskNode], rollups: [UUID: TaskRollup]) -> ForecastDisplayItem? {
+    static func displayItem(for taskID: UUID, tasks: [TaskNode], rollups: [UUID: TaskRollup]) -> ForecastDisplayItem? {
         let taskByID = tasks.latestByID()
         guard isHierarchyVisible(taskID, taskByID: taskByID),
               let rollup = rollups[taskID]
@@ -101,15 +101,15 @@ struct ForecastDisplayService {
         return nil
     }
 
-    private func visibleTasks(_ tasks: [TaskNode]) -> [TaskNode] {
+    private static func visibleTasks(_ tasks: [TaskNode]) -> [TaskNode] {
         tasks.filter(isVisible)
     }
 
-    private func isVisible(_ task: TaskNode) -> Bool {
+    private static func isVisible(_ task: TaskNode) -> Bool {
         task.deletedAt == nil && !task.isArchivedForLifecycle
     }
 
-    private func isHierarchyVisible(_ taskID: UUID, taskByID: [UUID: TaskNode]) -> Bool {
+    private static func isHierarchyVisible(_ taskID: UUID, taskByID: [UUID: TaskNode]) -> Bool {
         var currentID: UUID? = taskID
         var visited = Set<UUID>()
         while let candidateID = currentID {
@@ -124,7 +124,7 @@ struct ForecastDisplayService {
         return true
     }
 
-    private func taskSort(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {
+    private static func taskSort(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {
         if lhs.sortOrder == rhs.sortOrder {
             return lhs.createdAt < rhs.createdAt
         }

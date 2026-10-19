@@ -51,7 +51,7 @@ extension TodayActivityHeatmapSnapshotService {
         }
         return ActivityHeatmapValues(
             metric: .trackedDuration,
-            valuesByDay: TimeAggregationService().secondsByDay(
+            valuesByDay: TimeAggregationService.secondsByDay(
                 intervals: intervals,
                 calendar: calendar
             ),

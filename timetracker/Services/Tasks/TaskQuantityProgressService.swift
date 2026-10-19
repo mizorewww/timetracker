@@ -1,13 +1,13 @@
 import Foundation
 
 @MainActor
-struct TaskQuantityProgressService {
+enum TaskQuantityProgressService {
     struct ValidatedSnapshot {
         let progress: TaskQuantityProgressSnapshot
         let entries: [TaskQuantityEntrySnapshot]
     }
 
-    func snapshot(
+    static func snapshot(
         taskID: UUID,
         goals: [TaskQuantityGoal],
         entries: [TaskQuantityEntry],
@@ -21,7 +21,7 @@ struct TaskQuantityProgressService {
         )?.progress
     }
 
-    func validatedSnapshot(
+    static func validatedSnapshot(
         taskID: UUID,
         goals: [TaskQuantityGoal],
         entries: [TaskQuantityEntry],
@@ -98,7 +98,7 @@ struct TaskQuantityProgressService {
         )
     }
 
-    func snapshotIndex(
+    static func snapshotIndex(
         taskIDs: Set<UUID>,
         goals: [TaskQuantityGoal],
         entries: [TaskQuantityEntry],
@@ -147,7 +147,7 @@ struct TaskQuantityProgressService {
         }
     }
 
-    func goalIsCanonical(_ goal: TaskQuantityGoal) -> Bool {
+    static func goalIsCanonical(_ goal: TaskQuantityGoal) -> Bool {
         guard TaskQuantityPolicy.valueRange.contains(goal.targetAmount),
               PersistentDatePolicy.contains(goal.createdAt),
               PersistentDatePolicy.contains(goal.updatedAt)

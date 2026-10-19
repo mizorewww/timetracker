@@ -38,7 +38,7 @@ nonisolated struct UserDataSnapshot: Encodable, Equatable, Sendable {
                 .sortedByID(),
             checklistItems: records(ChecklistItem.self, context, ChecklistItemRecord.init),
             checklistItemVisuals: records(ChecklistItemVisual.self, context, ChecklistItemVisualRecord.init),
-            inboxItems: InboxSuggestionIdentityService().physicalResolutions(
+            inboxItems: InboxSuggestionIdentityService.physicalResolutions(
                 from: context.fetch(FetchDescriptor<InboxItem>())
             ).map {
                 InboxItemRecord(

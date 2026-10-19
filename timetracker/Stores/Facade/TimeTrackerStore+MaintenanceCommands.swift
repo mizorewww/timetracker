@@ -50,7 +50,7 @@ extension TimeTrackerStore {
             removedCount == 0 ? [] : [.fullSync]
         }) {
             guard let modelContext else { throw StoreError.notConfigured }
-            return try databaseMaintenanceService.optimizeDatabase(context: modelContext)
+            return try DatabaseMaintenanceService.optimizeDatabase(context: modelContext)
         }
     }
 

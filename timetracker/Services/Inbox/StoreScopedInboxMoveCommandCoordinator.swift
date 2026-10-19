@@ -175,7 +175,7 @@ extension StoreScopedInboxCommandCoordinator {
                 dueAt: nil
             )
             var affectedAncestorIDs = Set(
-                StoreSelectionCoordinator().ancestorTaskIDs(
+                StoreSelectionCoordinator.ancestorTaskIDs(
                     for: parentTaskID,
                     taskByID: tasks.byID
                 )
@@ -243,7 +243,7 @@ extension StoreScopedInboxCommandCoordinator {
                 )
             )
             let ancestorIDs = Set(
-                StoreSelectionCoordinator().ancestorTaskIDs(
+                StoreSelectionCoordinator.ancestorTaskIDs(
                     for: taskID,
                     taskByID: tasks.byID
                 )

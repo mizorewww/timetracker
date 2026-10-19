@@ -1,7 +1,7 @@
 import Foundation
 
-nonisolated struct TimeAggregationService {
-    func totalSeconds(segments: [TimeSegment], mode: AggregationMode, now: Date = Date()) -> Int {
+nonisolated enum TimeAggregationService {
+    static func totalSeconds(segments: [TimeSegment], mode: AggregationMode, now: Date = Date()) -> Int {
         switch mode {
         case .gross:
             grossSeconds(segments, now: now)
@@ -10,7 +10,7 @@ nonisolated struct TimeAggregationService {
         }
     }
 
-    func grossSeconds(_ segments: [TimeSegment], now: Date = Date()) -> Int {
+    static func grossSeconds(_ segments: [TimeSegment], now: Date = Date()) -> Int {
         segments.reduce(0) { result, segment in
             guard segment.deletedAt == nil else { return result }
             return result + TrackedTimePolicy.elapsedSeconds(
@@ -21,7 +21,7 @@ nonisolated struct TimeAggregationService {
         }
     }
 
-    func wallClockSeconds(_ segments: [TimeSegment], now: Date = Date()) -> Int {
+    static func wallClockSeconds(_ segments: [TimeSegment], now: Date = Date()) -> Int {
         let intervals = segments.compactMap { segment -> DateInterval? in
             guard segment.deletedAt == nil else { return nil }
             return TrackedTimePolicy.interval(
@@ -36,7 +36,7 @@ nonisolated struct TimeAggregationService {
         }
     }
 
-    func mergeOverlappingIntervals(_ intervals: [DateInterval]) -> [DateInterval] {
+    static func mergeOverlappingIntervals(_ intervals: [DateInterval]) -> [DateInterval] {
         let sorted = intervals.sorted { $0.start < $1.start }
         var merged: [DateInterval] = []
 
@@ -59,7 +59,7 @@ nonisolated struct TimeAggregationService {
 
     /// Splits elapsed seconds at calendar-day boundaries. Calendar arithmetic is
     /// used instead of fixed 24-hour steps so DST transitions remain correct.
-    func secondsByDay(
+    static func secondsByDay(
         intervals: [DateInterval],
         calendar: Calendar = .current
     ) -> [Date: Int] {

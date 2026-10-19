@@ -56,7 +56,7 @@ extension TimeTrackerStore {
 
     func fetchInboxItemReadModels() throws -> [InboxItemReadModel] {
         guard let modelContext else { return [] }
-        return try InboxSuggestionIdentityService().visibleLogicalReadModels(
+        return try InboxSuggestionIdentityService.visibleLogicalReadModels(
             from: modelContext.fetch(FetchDescriptor<InboxItem>())
         )
     }

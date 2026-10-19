@@ -28,7 +28,7 @@ extension AnalyticsStore {
                 colorHex: task?.colorHex,
                 iconName: task?.iconName,
                 grossSeconds: gross,
-                wallSeconds: TimeAggregationService()
+                wallSeconds: TimeAggregationService
                     .mergeOverlappingIntervals(taskItems.map(\.interval))
                     .reduce(0) {
                         $0 + Int($1.end.timeIntervalSince($1.start))

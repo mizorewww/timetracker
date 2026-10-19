@@ -73,7 +73,7 @@ extension TimeTrackerStore {
 
     func secondsForTaskTotalRollup(_ task: TaskNode, mode: AggregationMode = .gross, now: Date = Date()) -> Int {
         let ids = taskAndDescendantIDs(for: task.id)
-        return ledgerSummaryService.totalSeconds(taskIDs: ids, segments: allSegments, mode: mode, now: now)
+        return LedgerSummaryService.totalSeconds(taskIDs: ids, segments: allSegments, mode: mode, now: now)
     }
 
     func visibleSegments(overlapping interval: DateInterval, now: Date) -> [TimeSegment] {

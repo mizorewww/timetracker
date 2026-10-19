@@ -164,14 +164,14 @@ struct StoreScopedInboxCommandCoordinator {
     }
 
     func openItems(context: ModelContext) throws -> [InboxItem] {
-        try InboxSuggestionIdentityService().visibleLogicalItems(
+        try InboxSuggestionIdentityService.visibleLogicalItems(
             from: context.fetch(FetchDescriptor<InboxItem>())
         )
         .filter { $0.isCompleted == false }
     }
 
     func visibleItem(id: UUID, context: ModelContext) throws -> InboxItem? {
-        try InboxSuggestionIdentityService().visibleLogicalItems(
+        try InboxSuggestionIdentityService.visibleLogicalItems(
             from: context.fetch(FetchDescriptor<InboxItem>())
         )
         .first { $0.id == id }

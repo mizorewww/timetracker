@@ -68,12 +68,12 @@ extension StoreScopedInboxCommandCoordinator {
 
             let item = resolution.winner
             let suggestions = try suggestions(for: item, context: context)
-            let suggestion = InboxSuggestionIdentityService().index(
+            let suggestion = InboxSuggestionIdentityService.index(
                 items: [item],
                 suggestions: suggestions
             )[item.id]
             guard item.suggestionIdentity == requestedIdentity,
-                  InboxSuggestionStateService().canStoreGeneratedSuggestion(
+                  InboxSuggestionStateService.canStoreGeneratedSuggestion(
                       readModel: resolution.readModel,
                       requestedTitle: requestedTitle,
                       requestedIdentity: requestedIdentity,
@@ -120,14 +120,14 @@ extension StoreScopedInboxCommandCoordinator {
                 throw StoreScopedInboxMutationError.inboxChanged
             }
             let suggestions = try suggestions(for: item, context: context)
-            guard let suggestion = InboxSuggestionIdentityService().index(
+            guard let suggestion = InboxSuggestionIdentityService.index(
                 items: [item],
                 suggestions: suggestions
             )[item.id],
                 suggestion.id == baseline.suggestionID,
                 suggestion.clientMutationID == baseline.suggestionMutationID,
                 let destination = suggestion.manualRouteDestination,
-                InboxSuggestionStateService().displaySuggestion(
+                InboxSuggestionStateService.displaySuggestion(
                     for: resolution.readModel,
                     suggestion: suggestion
                 ) != nil
@@ -181,7 +181,7 @@ extension StoreScopedInboxCommandCoordinator {
                 $0.id == contextID || $0.suggestionContextID == contextID
             }
         )
-        return try InboxSuggestionIdentityService()
+        return try InboxSuggestionIdentityService
             .visibleLogicalResolutions(from: context.fetch(descriptor))
             .first { $0.winner.effectiveSuggestionContextID == contextID }
     }
@@ -217,7 +217,7 @@ extension StoreScopedInboxCommandCoordinator {
             deviceID: deviceID
         ).allNodes()
         return (
-            TaskTrackingAvailabilityService().trackableTaskIDs(tasks: tasks),
+            TaskTrackingAvailabilityService.trackableTaskIDs(tasks: tasks),
             tasks.reduce(into: [:]) { $0[$1.id] = $1 }
         )
     }

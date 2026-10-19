@@ -34,7 +34,7 @@ extension StoreScopedChecklistCommandCoordinator {
                   let item = try visibleItems(taskID: baseline.taskID, context: context)
                       .first(where: { $0.id == baseline.itemID }),
                   item.clientMutationID == baseline.itemMutationID,
-                  ChecklistVisualSuggestionPolicy().normalizedTitle(item.title) == baseline.normalizedTitle,
+                  ChecklistVisualSuggestionPolicy.normalizedTitle(item.title) == baseline.normalizedTitle,
                   item.isCompleted == false
             else {
                 return (nil, false)
@@ -42,13 +42,13 @@ extension StoreScopedChecklistCommandCoordinator {
 
             let visual = try canonicalVisual(for: item.id, context: context)
             guard visualMatches(baseline: baseline, current: visual),
-                  ChecklistVisualSuggestionPolicy().shouldSuggest(item: item, visual: visual)
+                  ChecklistVisualSuggestionPolicy.shouldSuggest(item: item, visual: visual)
             else {
                 return (nil, false)
             }
 
             let now = nowProvider()
-            let titleSnapshot = ChecklistVisualSuggestionPolicy().normalizedTitle(item.title)
+            let titleSnapshot = ChecklistVisualSuggestionPolicy.normalizedTitle(item.title)
             let iconName = ChecklistVisualSanitizer.sanitizedIcon(result.iconName)
             let colorHex = ChecklistVisualSanitizer.sanitizedColor(result.colorHex)
             if let visual {

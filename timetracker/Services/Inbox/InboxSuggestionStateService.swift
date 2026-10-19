@@ -9,8 +9,8 @@ enum InboxSuggestionStateKind: Equatable {
     case stale
 }
 
-struct InboxSuggestionStateService {
-    func state(
+enum InboxSuggestionStateService {
+    static func state(
         for readModel: InboxItemReadModel,
         suggestion: InboxSuggestion?,
         isInFlight: Bool
@@ -23,7 +23,7 @@ struct InboxSuggestionStateService {
         )
     }
 
-    func state(
+    static func state(
         for item: InboxItem,
         suggestion: InboxSuggestion?,
         isInFlight: Bool
@@ -36,7 +36,7 @@ struct InboxSuggestionStateService {
         )
     }
 
-    private func state(
+    private static func state(
         for item: InboxItem,
         suggestion: InboxSuggestion?,
         isInFlight: Bool,
@@ -65,21 +65,21 @@ struct InboxSuggestionStateService {
         return suggestionMatchesItem(suggestion, item: item) ? .ready : .stale
     }
 
-    func displaySuggestion(
+    static func displaySuggestion(
         for item: InboxItem,
         suggestion: InboxSuggestion?
     ) -> InboxSuggestion? {
         state(for: item, suggestion: suggestion, isInFlight: false) == .ready ? suggestion : nil
     }
 
-    func displaySuggestion(
+    static func displaySuggestion(
         for readModel: InboxItemReadModel,
         suggestion: InboxSuggestion?
     ) -> InboxSuggestion? {
         state(for: readModel, suggestion: suggestion, isInFlight: false) == .ready ? suggestion : nil
     }
 
-    func shouldAutoSuggest(
+    static func shouldAutoSuggest(
         item: InboxItem,
         suggestion: InboxSuggestion?,
         isInFlight: Bool
@@ -92,7 +92,7 @@ struct InboxSuggestionStateService {
         }
     }
 
-    func shouldAutoSuggest(
+    static func shouldAutoSuggest(
         readModel: InboxItemReadModel,
         suggestion: InboxSuggestion?,
         isInFlight: Bool
@@ -105,7 +105,7 @@ struct InboxSuggestionStateService {
         }
     }
 
-    func canStoreGeneratedSuggestion(
+    static func canStoreGeneratedSuggestion(
         item: InboxItem,
         requestedTitle: String,
         requestedIdentity: InboxSuggestionIdentity,
@@ -125,7 +125,7 @@ struct InboxSuggestionStateService {
         }
     }
 
-    func canStoreGeneratedSuggestion(
+    static func canStoreGeneratedSuggestion(
         readModel: InboxItemReadModel,
         requestedTitle: String,
         requestedIdentity: InboxSuggestionIdentity,
@@ -146,12 +146,12 @@ struct InboxSuggestionStateService {
         }
     }
 
-    private func suggestionMatchesItem(_ suggestion: InboxSuggestion, item: InboxItem) -> Bool {
+    private static func suggestionMatchesItem(_ suggestion: InboxSuggestion, item: InboxItem) -> Bool {
         suggestion.belongs(to: item) &&
             normalizedTitle(suggestion.titleSnapshot) == normalizedTitle(item.title)
     }
 
-    private func normalizedTitle(_ title: String) -> String {
+    private static func normalizedTitle(_ title: String) -> String {
         title.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

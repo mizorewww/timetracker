@@ -102,8 +102,7 @@ actor CommittedMutationSystemSurfaceMaterializer {
             segments: readableSegments
         )
         let availableTasks = catalog.trackableTasks
-        let rankingService = TaskUsageRankingService()
-        let rankedTasks = rankingService.rankedTasks(
+        let rankedTasks = TaskUsageRankingService.rankedTasks(
             availableTasks: availableTasks,
             activityByTaskID: activityByTaskID
         )
@@ -111,7 +110,7 @@ actor CommittedMutationSystemSurfaceMaterializer {
             .filter { $0.endedAt == nil }
             .sorted(by: segmentStartOrder)
         let activeTaskIDs = Set(activeSegments.map(\.taskID))
-        let recentTasks = rankingService.frequentRecentTasks(
+        let recentTasks = TaskUsageRankingService.frequentRecentTasks(
             availableTasks: availableTasks,
             rankedTasks: rankedTasks,
             activityByTaskID: activityByTaskID,
@@ -241,16 +240,15 @@ actor CommittedMutationSystemSurfaceMaterializer {
             )
         }
         let taskIDs = Set(visibleSegments.map(\.taskID))
-        let summary = LedgerSummaryService()
         return (
-            summary.secondsInInterval(
+            LedgerSummaryService.secondsInInterval(
                 taskIDs: taskIDs,
                 segments: visibleSegments,
                 interval: interval,
                 mode: .gross,
                 now: now
             ),
-            summary.secondsInInterval(
+            LedgerSummaryService.secondsInInterval(
                 taskIDs: taskIDs,
                 segments: visibleSegments,
                 interval: interval,
@@ -310,7 +308,7 @@ actor CommittedMutationSystemSurfaceMaterializer {
         let pinnedTasks = quickStartTaskIDs.compactMap {
             availableTaskByID[$0]
         }
-        let fillTasks = TaskUsageRankingService().frequentRecentTasks(
+        let fillTasks = TaskUsageRankingService.frequentRecentTasks(
             availableTasks: availableTasks,
             rankedTasks: rankedTasks,
             activityByTaskID: activityByTaskID,

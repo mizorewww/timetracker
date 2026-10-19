@@ -10,13 +10,11 @@ struct DailySummarySnapshot: Equatable, Identifiable {
     let wallClockSeconds: Int
 }
 
-struct DailySummaryService {
-    private let aggregationService = TimeAggregationService()
-
+enum DailySummaryService {
     /// Keeps the current partial day while omitting days that have not begun
     /// at the selected evaluation cutoff. Call this after cache lookup so the
     /// cache can retain stable buckets for the complete calendar period.
-    func visibleSummaries(
+    static func visibleSummaries(
         _ summaries: [DailySummarySnapshot],
         interval: DateInterval,
         evaluatedAt cutoff: Date
@@ -25,7 +23,7 @@ struct DailySummaryService {
         return summaries.filter { $0.date < visibleEnd }
     }
 
-    func summaries(
+    static func summaries(
         segments: [TimeSegment],
         interval: DateInterval,
         now: Date = Date(),
@@ -40,7 +38,7 @@ struct DailySummaryService {
         }
     }
 
-    private func summary(
+    private static func summary(
         segments: [TimeSegment],
         day: DateInterval,
         now: Date
@@ -49,7 +47,7 @@ struct DailySummaryService {
         let gross = clipped.reduce(0) { result, item in
             result + Int(item.interval.end.timeIntervalSince(item.interval.start))
         }
-        let wall = aggregationService.mergeOverlappingIntervals(clipped.map(\.interval)).reduce(0) { result, interval in
+        let wall = TimeAggregationService.mergeOverlappingIntervals(clipped.map(\.interval)).reduce(0) { result, interval in
             result + Int(interval.end.timeIntervalSince(interval.start))
         }
 
@@ -60,7 +58,7 @@ struct DailySummaryService {
         )
     }
 
-    private func clippedInterval(
+    private static func clippedInterval(
         for segment: TimeSegment,
         in interval: DateInterval,
         now: Date
@@ -76,7 +74,7 @@ struct DailySummaryService {
         return (segment, clipped)
     }
 
-    private func dayIntervals(in interval: DateInterval, calendar: Calendar) -> [DateInterval] {
+    private static func dayIntervals(in interval: DateInterval, calendar: Calendar) -> [DateInterval] {
         var result: [DateInterval] = []
         var cursor = calendar.startOfDay(for: interval.start)
         while cursor < interval.end {

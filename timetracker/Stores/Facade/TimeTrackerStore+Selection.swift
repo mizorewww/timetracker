@@ -2,7 +2,7 @@ import Foundation
 
 extension TimeTrackerStore {
     var selectedTask: TaskNode? {
-        selectionCoordinator.selectedTask(selectedTaskID: selectedTaskID, taskByID: taskByID)
+        StoreSelectionCoordinator.selectedTask(selectedTaskID: selectedTaskID, taskByID: taskByID)
     }
 
     func selectTask(_ taskID: UUID, revealInToday: Bool = true) {
@@ -71,10 +71,10 @@ extension TimeTrackerStore {
     }
 
     func ancestorTaskIDs(for taskID: UUID) -> [UUID] {
-        selectionCoordinator.ancestorTaskIDs(for: taskID, taskByID: taskByID)
+        StoreSelectionCoordinator.ancestorTaskIDs(for: taskID, taskByID: taskByID)
     }
 
     func affectedAncestorIDs(for taskID: UUID?, parentID: UUID? = nil) -> Set<UUID> {
-        selectionCoordinator.affectedAncestorIDs(for: taskID, parentID: parentID, taskByID: taskByID)
+        StoreSelectionCoordinator.affectedAncestorIDs(for: taskID, parentID: parentID, taskByID: taskByID)
     }
 }

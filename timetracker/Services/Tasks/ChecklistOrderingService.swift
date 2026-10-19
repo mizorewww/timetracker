@@ -5,8 +5,8 @@ struct ChecklistOrderingElement<ID: Hashable>: Equatable {
     let isCompleted: Bool
 }
 
-struct ChecklistOrderingService {
-    func completionGrouped<Element>(
+enum ChecklistOrderingService {
+    static func completionGrouped<Element>(
         _ elements: [Element],
         isCompleted: (Element) -> Bool
     ) -> [Element] {
@@ -25,7 +25,7 @@ struct ChecklistOrderingService {
         return incomplete + completed
     }
 
-    func reorderedIDs<ID: Hashable>(
+    static func reorderedIDs<ID: Hashable>(
         elements: [ChecklistOrderingElement<ID>],
         sourceOffsets: IndexSet,
         destination: Int
@@ -50,7 +50,7 @@ struct ChecklistOrderingService {
         return moved(elements.map(\.id), fromOffsets: sourceOffsets, toOffset: destination)
     }
 
-    func canMove<ID: Hashable>(
+    static func canMove<ID: Hashable>(
         elements: [ChecklistOrderingElement<ID>],
         sourceOffsets: IndexSet,
         destination: Int
@@ -58,7 +58,7 @@ struct ChecklistOrderingService {
         reorderedIDs(elements: elements, sourceOffsets: sourceOffsets, destination: destination) != nil
     }
 
-    private func moved<T>(_ values: [T], fromOffsets sourceOffsets: IndexSet, toOffset destination: Int) -> [T] {
+    private static func moved<T>(_ values: [T], fromOffsets sourceOffsets: IndexSet, toOffset destination: Int) -> [T] {
         var copy = values
         let moving = sourceOffsets.sorted().map { copy[$0] }
 

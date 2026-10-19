@@ -8,8 +8,6 @@ import Testing
 @MainActor
 struct LedgerMathTests {
     private let base = Date(timeIntervalSinceReferenceDate: 800_000_000)
-    private let service = TimeAggregationService()
-
     private func segment(
         from start: TimeInterval,
         to end: TimeInterval?,
@@ -38,8 +36,8 @@ struct LedgerMathTests {
             segment(from: 7200, to: 7800),
         ]
 
-        let gross = service.grossSeconds(segments, now: now)
-        let wall = service.wallClockSeconds(segments, now: now)
+        let gross = TimeAggregationService.grossSeconds(segments, now: now)
+        let wall = TimeAggregationService.wallClockSeconds(segments, now: now)
 
         #expect(gross == 3600 + 3600 + 600)
         #expect(wall == 5400 + 600)
@@ -58,8 +56,8 @@ struct LedgerMathTests {
             segment(from: 2000, to: 3000),
         ]
 
-        #expect(service.grossSeconds(segments, now: now) == 600 + 100)
-        #expect(service.wallClockSeconds(segments, now: now) == 600)
+        #expect(TimeAggregationService.grossSeconds(segments, now: now) == 600 + 100)
+        #expect(TimeAggregationService.wallClockSeconds(segments, now: now) == 600)
     }
 
     @Test(arguments: ["UTC", "America/New_York"])
@@ -72,7 +70,7 @@ struct LedgerMathTests {
             end: midnight.addingTimeInterval(2700)
         )
 
-        let totals = service.secondsByDay(intervals: [interval], calendar: calendar)
+        let totals = TimeAggregationService.secondsByDay(intervals: [interval], calendar: calendar)
 
         #expect(totals[midnight.addingTimeInterval(-86400)] == 1800)
         #expect(totals[midnight] == 2700)
@@ -85,7 +83,7 @@ struct LedgerMathTests {
         let springForward = try #require(calendar.date(from: DateComponents(year: 2026, month: 3, day: 8)))
         let nextDay = try #require(calendar.date(byAdding: .day, value: 1, to: springForward))
 
-        let totals = service.secondsByDay(
+        let totals = TimeAggregationService.secondsByDay(
             intervals: [DateInterval(start: springForward, end: nextDay)],
             calendar: calendar
         )
@@ -110,7 +108,7 @@ struct LedgerMathTests {
             readContext.fetch(FetchDescriptor<TimeSegment>(predicate: #Predicate { $0.id == firstID })).first
         )
         #expect(active.count == 1)
-        #expect(restarted.subjectSegmentID == TimerRapidRestartPolicy().replacementSegmentID(predecessorSegmentID: firstID))
+        #expect(restarted.subjectSegmentID == TimerRapidRestartPolicy.replacementSegmentID(predecessorSegmentID: firstID))
         #expect(active.first?.startedAt == original.startedAt)
         #expect(active.first?.sessionID == original.sessionID)
         #expect(original.deletedAt != nil)
@@ -118,30 +116,29 @@ struct LedgerMathTests {
 
     @Test
     func manualRecordsAndLongGapsAreNeverCoalesced() {
-        let policy = TimerRapidRestartPolicy()
         let taskID = UUID()
         let start = base
         let end = base.addingTimeInterval(600)
 
-        #expect(policy.shouldCoalesce(
+        #expect(TimerRapidRestartPolicy.shouldCoalesce(
             previousTaskID: taskID, previousSource: .timer,
             previousStartedAt: start, previousEndedAt: end,
             nextTaskID: taskID, nextSource: .timer,
             nextStartedAt: end.addingTimeInterval(59)
         ))
-        #expect(policy.shouldCoalesce(
+        #expect(TimerRapidRestartPolicy.shouldCoalesce(
             previousTaskID: taskID, previousSource: .timer,
             previousStartedAt: start, previousEndedAt: end,
             nextTaskID: taskID, nextSource: .timer,
             nextStartedAt: end.addingTimeInterval(60)
         ) == false)
-        #expect(policy.shouldCoalesce(
+        #expect(TimerRapidRestartPolicy.shouldCoalesce(
             previousTaskID: taskID, previousSource: .manual,
             previousStartedAt: start, previousEndedAt: end,
             nextTaskID: taskID, nextSource: .timer,
             nextStartedAt: end.addingTimeInterval(1)
         ) == false)
-        #expect(policy.shouldCoalesce(
+        #expect(TimerRapidRestartPolicy.shouldCoalesce(
             previousTaskID: taskID, previousSource: .timer,
             previousStartedAt: start, previousEndedAt: end,
             nextTaskID: UUID(), nextSource: .timer,

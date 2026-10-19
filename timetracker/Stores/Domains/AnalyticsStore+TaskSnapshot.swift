@@ -41,14 +41,13 @@ extension AnalyticsStore {
             taskIDs: taskIDs,
             now: now
         )
-        let dailySummaryService = DailySummaryService()
-        let summaries = dailySummaryService.summaries(
+        let summaries = DailySummaryService.summaries(
             segments: filtered,
             interval: interval,
             now: now,
             calendar: calendar
         )
-        let daily = dailySummaryService.visibleSummaries(
+        let daily = DailySummaryService.visibleSummaries(
             summaries,
             interval: interval,
             evaluatedAt: now

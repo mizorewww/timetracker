@@ -179,7 +179,7 @@ struct DataModelContractTests {
             #expect(dismissedItem.suggestionRevisionID == fixture.dismissedItemID)
             #expect(dismissedItem.dismissedSuggestionRevisionID == fixture.dismissedItemID)
             #expect(
-                InboxSuggestionStateService().state(
+                InboxSuggestionStateService.state(
                     for: dismissedItem,
                     suggestion: nil,
                     isInFlight: false

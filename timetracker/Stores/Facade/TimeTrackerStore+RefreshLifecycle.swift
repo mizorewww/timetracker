@@ -47,11 +47,11 @@ extension TimeTrackerStore {
     }
 
     func refresh() throws {
-        try refresh(plan: refreshPlanner.plan(after: [.fullSync]))
+        try refresh(plan: StoreRefreshPlanner.plan(after: [.fullSync]))
     }
 
     func refresh(plan: StoreRefreshPlan) throws {
-        try refreshCoordinator.refresh(self, plan: plan)
+        try StoreRefreshCoordinator.refresh(self, plan: plan)
     }
 
     func validateSelectedTask() {

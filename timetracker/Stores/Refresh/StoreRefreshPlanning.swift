@@ -165,8 +165,8 @@ nonisolated struct StoreRefreshPlan: Equatable, Sendable {
     }
 }
 
-nonisolated struct StoreRefreshPlanner: Sendable {
-    func plan(after events: Set<StoreDomainEvent>) -> StoreRefreshPlan {
+nonisolated enum StoreRefreshPlanner: Sendable {
+    static func plan(after events: Set<StoreDomainEvent>) -> StoreRefreshPlan {
         var impact = StoreRefreshImpact(scopes: [])
         var directTaskIDs = Set<UUID>()
         for event in events {

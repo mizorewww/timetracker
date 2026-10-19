@@ -26,11 +26,11 @@ extension TimeTrackerStore {
     }
 
     func forecastDisplayItems(limit: Int? = nil) -> [ForecastDisplayItem] {
-        forecastDisplayService.displayItems(tasks: tasks, rollups: rollupDomainStore.taskRollups, limit: limit)
+        ForecastDisplayService.displayItems(tasks: tasks, rollups: rollupDomainStore.taskRollups, limit: limit)
     }
 
     func forecastDisplayItem(for taskID: UUID) -> ForecastDisplayItem? {
-        forecastDisplayService.displayItem(for: taskID, tasks: tasks, rollups: rollupDomainStore.taskRollups)
+        ForecastDisplayService.displayItem(for: taskID, tasks: tasks, rollups: rollupDomainStore.taskRollups)
     }
 
     func rebuildChecklistIndexes() {

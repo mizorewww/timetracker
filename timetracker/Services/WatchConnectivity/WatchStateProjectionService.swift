@@ -1,50 +1,18 @@
 import Foundation
 
-private nonisolated struct WatchRankedTaskProjection {
-    let rank: Int
-    let snapshot: WatchRecentTaskSnapshot
-    let textByteCount: Int
-}
-
-/// Builds the bounded, backward-compatible Watch transport value from already
-/// loaded facts. It owns the single source of truth for selection priority,
-/// byte budgeting, rank metadata, and legacy wire order.
+/// Builds the bounded Watch transport value from already loaded facts. The
+/// wire array is in usage order; `quickStartRank` orders the Quick Start page.
+/// Selection priority under the byte budget is active timers, then Quick Start
+/// tasks, then the remaining tasks by usage.
 nonisolated struct WatchStateProjectionService {
     func snapshot(
         widgetSnapshot: WidgetSnapshot,
         rankedTasks: [TaskNode],
-        legacyOrderedTasks: [TaskNode],
-        taskParentPathByID: [UUID: String],
-        quickStartTaskIDs: [UUID]
+        quickStartTasks: [TaskNode],
+        taskParentPathByID: [UUID: String]
     ) -> WatchStateSnapshot {
-        let availableTaskIDs = Set(rankedTasks.map(\.id))
-        var quickStartRankByTaskID: [UUID: Int] = [:]
-        for taskID in quickStartTaskIDs
-            where availableTaskIDs.contains(taskID)
-        {
-            guard quickStartRankByTaskID[taskID] == nil,
-                  quickStartRankByTaskID.count <
-                  WatchTransportLimits.maximumQuickStartTasks
-            else {
-                continue
-            }
-            quickStartRankByTaskID[taskID] =
-                quickStartRankByTaskID.count
-        }
-
-        let activeTimers = widgetSnapshot.activeTimers.map {
-            WatchActiveTimerSnapshot(
-                id: $0.id,
-                taskID: $0.taskID,
-                title: $0.title,
-                path: $0.path,
-                startedAt: $0.startedAt,
-                colorHex: $0.colorHex,
-                iconName: $0.iconName
-            )
-        }
-        var remainingTextBytes =
-            WatchTransportLimits.maximumSnapshotTextBytes
+        let activeTimers = widgetSnapshot.activeTimers
+        var remainingTextBytes = WatchTransportLimits.maximumSnapshotTextBytes
         for timer in activeTimers {
             remainingTextBytes -= SystemSurfaceTextBounds.textByteCount(
                 title: timer.title,
@@ -54,137 +22,57 @@ nonisolated struct WatchStateProjectionService {
             )
         }
 
-        let projections = rankedTasks.enumerated().map {
-            rank,
-            task in
+        let usageRankByTaskID = Dictionary(
+            rankedTasks.enumerated().map { ($0.element.id, $0.offset) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let taskByID = Dictionary(
+            rankedTasks.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let activeTaskIDs = Set(activeTimers.map(\.taskID))
+        let candidates = rankedTasks.filter { activeTaskIDs.contains($0.id) }
+            + quickStartTasks.compactMap { taskByID[$0.id] }
+            + rankedTasks
+
+        var selected: [UUID: WatchRecentTaskSnapshot] = [:]
+        for task in candidates {
+            guard selected.count < WatchTransportLimits.maximumRecentTasks,
+                  selected[task.id] == nil
+            else {
+                continue
+            }
             let snapshot = WatchRecentTaskSnapshot(
                 taskID: task.id,
                 title: SystemSurfaceTextBounds.boundedUTF8Prefix(
                     task.title,
-                    maximumUTF8Bytes:
-                    WatchTransportLimits.maximumProjectedTitleBytes
+                    maximumUTF8Bytes: WatchTransportLimits.maximumProjectedTitleBytes
                 ),
                 path: SystemSurfaceTextBounds.boundedUTF8Prefix(
                     taskParentPathByID[task.id] ?? "",
-                    maximumUTF8Bytes:
-                    WatchTransportLimits.maximumProjectedPathBytes
+                    maximumUTF8Bytes: WatchTransportLimits.maximumProjectedPathBytes
                 ),
-                colorHex:
-                WatchTransportLimits.boundedProjectedStyleValue(
-                    task.colorHex
-                ),
-                iconName:
-                WatchTransportLimits.boundedProjectedStyleValue(
-                    task.iconName
-                ),
-                quickStartRank: quickStartRankByTaskID[task.id],
-                allTasksRank: nil
+                colorHex: WatchTransportLimits.boundedProjectedStyleValue(task.colorHex),
+                iconName: WatchTransportLimits.boundedProjectedStyleValue(task.iconName)
             )
-            return WatchRankedTaskProjection(
-                rank: rank,
-                snapshot: snapshot,
-                textByteCount: SystemSurfaceTextBounds.textByteCount(
-                    title: snapshot.title,
-                    path: snapshot.path,
-                    colorHex: snapshot.colorHex,
-                    iconName: snapshot.iconName
-                )
+            let textByteCount = SystemSurfaceTextBounds.textByteCount(
+                title: snapshot.title,
+                path: snapshot.path,
+                colorHex: snapshot.colorHex,
+                iconName: snapshot.iconName
             )
-        }
-        let projectionByTaskID = Dictionary(
-            uniqueKeysWithValues: projections.map {
-                ($0.snapshot.taskID, $0)
-            }
-        )
-        let quickStartProjections = quickStartRankByTaskID
-            .sorted { $0.value < $1.value }
-            .compactMap { projectionByTaskID[$0.key] }
-        let legacyOrderedProjections = legacyOrderedTasks.compactMap {
-            projectionByTaskID[$0.id]
-        }
-        let activeTaskIDs = Set(activeTimers.map(\.taskID))
-        let activeTaskProjections = activeTaskIDs.compactMap {
-            projectionByTaskID[$0]
-        }.sorted {
-            $0.rank < $1.rank
-        }
-        let legacyQuickStartProjections = Array(
-            legacyOrderedProjections
-                .filter {
-                    activeTaskIDs.contains($0.snapshot.taskID) == false
-                }
-                .prefix(
-                    WatchTransportLimits.legacyQuickStartTaskLimit
-                )
-        )
-        var selectedProjections: [WatchRankedTaskProjection] = []
-        var selectedTaskIDs = Set<UUID>()
-
-        func include(_ projection: WatchRankedTaskProjection) {
-            guard selectedProjections.count <
-                WatchTransportLimits.maximumRecentTasks,
-                selectedTaskIDs.contains(
-                    projection.snapshot.taskID
-                ) == false,
-                projection.textByteCount <= remainingTextBytes
-            else {
-                return
-            }
-            selectedTaskIDs.insert(projection.snapshot.taskID)
-            selectedProjections.append(projection)
-            remainingTextBytes -= projection.textByteCount
+            guard textByteCount <= remainingTextBytes else { continue }
+            selected[task.id] = snapshot
+            remainingTextBytes -= textByteCount
         }
 
-        activeTaskProjections.forEach(include)
-        quickStartProjections.forEach(include)
-        legacyQuickStartProjections.forEach(include)
-        projections.forEach(include)
-        let selectedProjectionByTaskID = Dictionary(
-            uniqueKeysWithValues: selectedProjections.map {
-                ($0.snapshot.taskID, $0)
-            }
-        )
-        let legacySelectedProjections =
-            legacyOrderedProjections.compactMap {
-                selectedProjectionByTaskID[$0.snapshot.taskID]
-            }
-        let legacySelectedTaskIDs = Set(
-            legacySelectedProjections.map(\.snapshot.taskID)
-        )
-        let wireOrderedProjections = legacySelectedProjections +
-            selectedProjections.filter {
-                legacySelectedTaskIDs.contains(
-                    $0.snapshot.taskID
-                ) == false
-            }
-        let allTasksRankByTaskID = Dictionary(
-            uniqueKeysWithValues: selectedProjections
-                .sorted { $0.rank < $1.rank }
-                .enumerated()
-                .map {
-                    ($0.element.snapshot.taskID, $0.offset)
-                }
-        )
-        let quickStartRankBySelectedTaskID = Dictionary(
-            uniqueKeysWithValues: selectedProjections
-                .filter { $0.snapshot.quickStartRank != nil }
-                .sorted {
-                    ($0.snapshot.quickStartRank ?? .max) <
-                        ($1.snapshot.quickStartRank ?? .max)
-                }
-                .enumerated()
-                .map {
-                    ($0.element.snapshot.taskID, $0.offset)
-                }
-        )
-        let recentTasks = wireOrderedProjections.map {
-            projection in
-            var snapshot = projection.snapshot
-            snapshot.quickStartRank =
-                quickStartRankBySelectedTaskID[snapshot.taskID]
-            snapshot.allTasksRank =
-                allTasksRankByTaskID[snapshot.taskID]
-            return snapshot
+        var quickStartRank = 0
+        for task in quickStartTasks
+            where selected[task.id] != nil && selected[task.id]?.quickStartRank == nil
+        {
+            guard quickStartRank < WatchTransportLimits.maximumQuickStartTasks else { break }
+            selected[task.id]?.quickStartRank = quickStartRank
+            quickStartRank += 1
         }
 
         return WatchStateSnapshot(
@@ -192,7 +80,10 @@ nonisolated struct WatchStateProjectionService {
             todayGrossSeconds: widgetSnapshot.todayGrossSeconds,
             todayWallSeconds: widgetSnapshot.todayWallSeconds,
             activeTimers: activeTimers,
-            recentTasks: recentTasks
+            recentTasks: selected.values.sorted {
+                (usageRankByTaskID[$0.taskID] ?? .max) <
+                    (usageRankByTaskID[$1.taskID] ?? .max)
+            }
         )
     }
 }

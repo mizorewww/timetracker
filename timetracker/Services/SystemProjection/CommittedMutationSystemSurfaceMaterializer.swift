@@ -385,20 +385,25 @@ actor CommittedMutationSystemSurfaceMaterializer {
         quickStartTaskIDs: [UUID],
         widgetSnapshot: WidgetSnapshot
     ) -> WatchStateSnapshot {
-        let legacyOrderedTasks =
-            TaskUsageRankingService().legacyWatchTaskOrder(
-                availableTasks: availableTasks,
-                rankedTasks: rankedTasks,
-                activityByTaskID: activityByTaskID,
-                quickStartTaskIDs: quickStartTaskIDs,
-                taskPathByID: tree.taskPathByID
-            )
+        let availableTaskByID = Dictionary(
+            availableTasks.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let pinnedTasks = quickStartTaskIDs.compactMap {
+            availableTaskByID[$0]
+        }
+        let fillTasks = TaskUsageRankingService().frequentRecentTasks(
+            availableTasks: availableTasks,
+            rankedTasks: rankedTasks,
+            activityByTaskID: activityByTaskID,
+            excluding: Set(pinnedTasks.map(\.id)),
+            limit: WatchTransportLimits.maximumQuickStartTasks - pinnedTasks.count
+        )
         return WatchStateProjectionService().snapshot(
             widgetSnapshot: widgetSnapshot,
             rankedTasks: rankedTasks,
-            legacyOrderedTasks: legacyOrderedTasks,
-            taskParentPathByID: tree.taskParentPathByID,
-            quickStartTaskIDs: quickStartTaskIDs
+            quickStartTasks: pinnedTasks + fillTasks,
+            taskParentPathByID: tree.taskParentPathByID
         )
     }
 

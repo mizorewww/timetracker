@@ -17,7 +17,6 @@ nonisolated enum WatchTransportLimits {
     static let maximumActiveTimers = 64
     static let maximumRecentTasks = 256
     static let maximumQuickStartTasks = 24
-    static let legacyQuickStartTaskLimit = 4
     static let maximumSummarySeconds = 10 * 366 * 24 * 60 * 60
     static let maximumActiveTimerAge: TimeInterval = 10 * 366 * 24 * 60 * 60
     static let maximumPendingCommands = 64
@@ -128,9 +127,8 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
                       maximumTitleBytes: WatchTransportLimits.maximumTitleBytes,
                       maximumPathBytes: WatchTransportLimits.maximumPathBytes,
                       maximumStyleValueBytes: WatchTransportLimits.maximumStyleValueBytes
-                  ) && $0.hasValidRanks(
-                      maximumQuickStartTasks: WatchTransportLimits.maximumQuickStartTasks,
-                      maximumRecentTasks: WatchTransportLimits.maximumRecentTasks
+                  ) && $0.hasValidQuickStartRank(
+                      maximumQuickStartTasks: WatchTransportLimits.maximumQuickStartTasks
                   )
               }),
               Set(activeTimers.map(\.id)).count == activeTimers.count,
@@ -139,10 +137,6 @@ nonisolated struct WatchStateSnapshot: Codable, Equatable, Sendable {
             return false
         }
         return true
-    }
-
-    var allTasksByUsage: [WatchRecentTaskSnapshot] {
-        WatchRecentTaskSnapshot.orderedByUsage(recentTasks)
     }
 }
 

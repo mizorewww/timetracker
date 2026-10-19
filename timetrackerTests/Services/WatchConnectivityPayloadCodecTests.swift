@@ -48,8 +48,7 @@ struct WatchConnectivityPayloadCodecTests {
             path: "Root / Recent",
             colorHex: "7C3AED",
             iconName: "checkmark",
-            quickStartRank: 0,
-            allTasksRank: 0
+            quickStartRank: 0
         )
         let state = WatchStateSnapshot(
             generatedAt: now,

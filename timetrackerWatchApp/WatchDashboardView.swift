@@ -18,8 +18,7 @@ enum WatchDashboardPage: Hashable {
 }
 
 struct WatchDashboardView: View {
-    private static let quickStartTaskLimit =
-        WatchTransportLimits.legacyQuickStartTaskLimit
+    private static let quickStartTaskLimit = 4
 
     @State private var selectedPage: WatchDashboardPage = .activeTimers
     @State private var hasSelectedInitialPage = false
@@ -78,7 +77,7 @@ struct WatchDashboardView: View {
 
                 WatchTaskListView(
                     kind: .allTasks,
-                    tasks: snapshot.allTasksByUsage,
+                    tasks: snapshot.recentTasks,
                     activeTaskIDs: activeTaskIDs,
                     hasReceivedSnapshot: hasReceivedSnapshot,
                     commandIndex: commandIndex,

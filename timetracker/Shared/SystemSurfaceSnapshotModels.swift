@@ -73,8 +73,8 @@ nonisolated struct SystemSurfaceRecentTaskSnapshot: Codable, Equatable, Identifi
     var path: String
     var colorHex: String?
     var iconName: String?
+    /// Position on the Watch Quick Start page; `nil` for tasks not offered there.
     var quickStartRank: Int? = nil
-    var allTasksRank: Int? = nil
 
     nonisolated var id: UUID {
         taskID
@@ -103,36 +103,9 @@ nonisolated struct SystemSurfaceRecentTaskSnapshot: Codable, Equatable, Identifi
             )
     }
 
-    nonisolated func hasValidRanks(
-        maximumQuickStartTasks: Int,
-        maximumRecentTasks: Int
-    ) -> Bool {
+    nonisolated func hasValidQuickStartRank(maximumQuickStartTasks: Int) -> Bool {
         quickStartRank.map {
             (0 ..< maximumQuickStartTasks).contains($0)
-        } != false &&
-            allTasksRank.map {
-                (0 ..< maximumRecentTasks).contains($0)
-            } != false
-    }
-
-    /// New watch builds restore the usage order from optional metadata while
-    /// the wire array remains pinned-first for older watch builds.
-    nonisolated static func orderedByUsage(
-        _ tasks: [SystemSurfaceRecentTaskSnapshot]
-    ) -> [SystemSurfaceRecentTaskSnapshot] {
-        Array(tasks.enumerated())
-            .sorted { lhs, rhs in
-                switch (lhs.element.allTasksRank, rhs.element.allTasksRank) {
-                case let (lhsRank?, rhsRank?) where lhsRank != rhsRank:
-                    lhsRank < rhsRank
-                case (_?, nil):
-                    true
-                case (nil, _?):
-                    false
-                default:
-                    lhs.offset < rhs.offset
-                }
-            }
-            .map(\.element)
+        } != false
     }
 }

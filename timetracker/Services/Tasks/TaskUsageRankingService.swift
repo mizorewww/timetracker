@@ -64,45 +64,4 @@ nonisolated struct TaskUsageRankingService {
             (historicallyUsedTasks + fallbackTasks).prefix(limit)
         )
     }
-
-    /// Preserves the pinned-first array order consumed by older Watch builds.
-    func legacyWatchTaskOrder(
-        availableTasks: [TaskNode],
-        rankedTasks: [TaskNode],
-        activityByTaskID: [UUID: TaskLedgerActivitySummary],
-        quickStartTaskIDs: [UUID],
-        taskPathByID: [UUID: String]
-    ) -> [TaskNode] {
-        let pinnedTasks = quickStartTaskIDs.compactMap { taskID in
-            availableTasks.first { $0.id == taskID }
-        }
-        let pinnedIDs = Set(pinnedTasks.map(\.id))
-        let recentFillTasks = frequentRecentTasks(
-            availableTasks: availableTasks,
-            rankedTasks: rankedTasks,
-            activityByTaskID: activityByTaskID,
-            excluding: pinnedIDs,
-            limit: availableTasks.count
-        )
-        let rankedIDs = Set(
-            (pinnedTasks + recentFillTasks).map(\.id)
-        )
-        let remainingTasks = availableTasks
-            .filter { rankedIDs.contains($0.id) == false }
-            .sorted { lhs, rhs in
-                let lhsPath = taskPathByID[lhs.id] ?? lhs.title
-                let rhsPath = taskPathByID[rhs.id] ?? rhs.title
-                let comparison =
-                    lhsPath.localizedStandardCompare(rhsPath)
-                if comparison != .orderedSame {
-                    return comparison == .orderedAscending
-                }
-                if lhs.updatedAt != rhs.updatedAt {
-                    return lhs.updatedAt > rhs.updatedAt
-                }
-                return lhs.id.uuidString < rhs.id.uuidString
-            }
-
-        return pinnedTasks + recentFillTasks + remainingTasks
-    }
 }

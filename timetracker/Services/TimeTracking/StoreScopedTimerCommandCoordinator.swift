@@ -246,6 +246,27 @@ struct StoreScopedTimerCommandCoordinator {
         }
     }
 
+    /// Stops every currently running segment one committed mutation at a
+    /// time, so partial success still leaves the store consistent.
+    func stopAll() throws -> StopAllTimersOutcome {
+        let activeSegments = try SwiftDataTimeTrackingRepository(
+            context: ModelContext(session.container)
+        ).activeSegments()
+        var stoppedSegmentIDs: [UUID] = []
+        var events: Set<StoreDomainEvent> = []
+        for segment in activeSegments {
+            let outcome = try stop(segmentID: segment.id)
+            if outcome.subjectSegmentID == segment.id {
+                stoppedSegmentIDs.append(segment.id)
+                events.formUnion(outcome.events)
+            }
+        }
+        return StopAllTimersOutcome(
+            stoppedSegmentIDs: stoppedSegmentIDs,
+            events: events
+        )
+    }
+
     func stop(
         segmentID: UUID? = nil,
         taskID: UUID? = nil

@@ -12,10 +12,9 @@ struct AddInboxItemIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        let outcome = try SystemActionCommandHandler().addInboxItem(
-            title: titleText,
-            container: SystemActionContextProvider.container
-        )
+        let outcome = try StoreScopedInboxCommandCoordinator(
+            session: StoreMutationSession(container: SystemActionContextProvider.container)
+        ).add(command: InboxCaptureCommand(title: titleText))
         if outcome.didMutate {
             SystemActionPostCommitEffects().apply(
                 container: SystemActionContextProvider.container,
@@ -37,11 +36,9 @@ struct StartTimerIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult {
         let taskID = try task.uuid()
-        let outcome = try SystemActionCommandHandler().startTimerMutation(
-            taskID: taskID,
-            source: .shortcut,
-            container: SystemActionContextProvider.container
-        )
+        let outcome = try StoreScopedTimerCommandCoordinator(
+            session: StoreMutationSession(container: SystemActionContextProvider.container)
+        ).start(taskID: taskID, source: .shortcut)
         let events = outcome.events
         if events.isEmpty == false {
             SystemActionPostCommitEffects().apply(
@@ -68,10 +65,9 @@ struct StopTimerIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult {
         let targetID = try timer.uuid()
-        let outcome = try SystemActionCommandHandler().stopTimerMutation(
-            segmentID: targetID,
-            container: SystemActionContextProvider.container
-        )
+        let outcome = try StoreScopedTimerCommandCoordinator(
+            session: StoreMutationSession(container: SystemActionContextProvider.container)
+        ).stop(segmentID: targetID)
         let events = outcome.events
         if outcome.subjectSegmentID == targetID, events.isEmpty == false {
             SystemActionPostCommitEffects().apply(
@@ -102,9 +98,9 @@ struct StopAllTimersIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        let outcome = try SystemActionCommandHandler().stopAllTimersMutation(
-            container: SystemActionContextProvider.container
-        )
+        let outcome = try StoreScopedTimerCommandCoordinator(
+            session: StoreMutationSession(container: SystemActionContextProvider.container)
+        ).stopAll()
         if outcome.didMutate {
             SystemActionPostCommitEffects().apply(
                 container: SystemActionContextProvider.container,

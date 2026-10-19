@@ -98,12 +98,11 @@ struct LedgerMathTests {
         let context = try makeTestContext()
         let task = try SwiftDataTaskRepository(context: context, deviceID: "test")
             .createTask(title: "Rapid restart", parentID: nil)
-        let handler = makeTestSystemActionCommandHandler()
 
-        let started = try handler.startTimerMutation(taskID: task.id, container: context.container)
+        let started = try StoreScopedTimerCommandCoordinator(session: .testHarness(context.container)).start(taskID: task.id)
         let firstID = try #require(started.subjectSegmentID)
-        _ = try handler.stopTimerMutation(segmentID: firstID, container: context.container)
-        let restarted = try handler.startTimerMutation(taskID: task.id, container: context.container)
+        _ = try StoreScopedTimerCommandCoordinator(session: .testHarness(context.container)).stop(segmentID: firstID)
+        let restarted = try StoreScopedTimerCommandCoordinator(session: .testHarness(context.container)).start(taskID: task.id)
 
         let readContext = ModelContext(context.container)
         let active = try SwiftDataTimeTrackingRepository(context: readContext).activeSegments()

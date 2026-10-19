@@ -36,11 +36,6 @@ extension StoreMutationSession {
 }
 
 @MainActor
-func makeTestSystemActionCommandHandler() -> SystemActionCommandHandler {
-    SystemActionCommandHandler(writeAuthorization: .isolatedTestHarness)
-}
-
-@MainActor
 func setTestAllowParallelTimers(
     _ isEnabled: Bool,
     context: ModelContext

@@ -41,12 +41,9 @@ struct WatchCommandProcessor {
         }
         let outcome: StoreScopedTimerCommandOutcome
         do {
-            outcome = try SystemActionCommandHandler(
-                writeAuthorization: writeAuthorization
-            ).startTimerMutation(
+            outcome = try timerCoordinator(context: context).start(
                 taskID: taskID,
-                source: .watch,
-                container: context.container
+                source: .watch
             )
         } catch SystemActionCommandError.taskNotFound {
             return WatchCommandMutationOutcome(
@@ -70,12 +67,7 @@ struct WatchCommandProcessor {
         guard let segmentID = command.segmentID else {
             return WatchCommandMutationOutcome(result: .invalid, events: [])
         }
-        let outcome = try SystemActionCommandHandler(
-            writeAuthorization: writeAuthorization
-        ).stopTimerMutation(
-            segmentID: segmentID,
-            container: context.container
-        )
+        let outcome = try timerCoordinator(context: context).stop(segmentID: segmentID)
         guard outcome.subjectSegmentID == segmentID else {
             return WatchCommandMutationOutcome(
                 result: .missingSegment(segmentID),
@@ -85,6 +77,15 @@ struct WatchCommandProcessor {
         return WatchCommandMutationOutcome(
             result: .stopped(segmentID),
             events: outcome.events
+        )
+    }
+
+    private func timerCoordinator(context: ModelContext) -> StoreScopedTimerCommandCoordinator {
+        StoreScopedTimerCommandCoordinator(
+            session: StoreMutationSession(
+                container: context.container,
+                writeAuthorization: writeAuthorization
+            )
         )
     }
 }

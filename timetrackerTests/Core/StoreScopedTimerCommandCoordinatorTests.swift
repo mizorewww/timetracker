@@ -21,16 +21,9 @@ struct StoreScopedTimerCommandCoordinatorTests {
         )
         let firstCaller = ModelContext(container)
         let secondCaller = ModelContext(container)
-        let handler = makeTestSystemActionCommandHandler()
 
-        let first = try handler.startTimerMutation(
-            taskID: task.id,
-            container: firstCaller.container
-        )
-        let second = try handler.startTimerMutation(
-            taskID: task.id,
-            container: secondCaller.container
-        )
+        let first = try StoreScopedTimerCommandCoordinator(session: .testHarness(firstCaller.container)).start(taskID: task.id)
+        let second = try StoreScopedTimerCommandCoordinator(session: .testHarness(secondCaller.container)).start(taskID: task.id)
 
         #expect(first.subjectSegmentID != nil)
         #expect(second.subjectSegmentID == first.subjectSegmentID)
@@ -63,10 +56,7 @@ struct StoreScopedTimerCommandCoordinatorTests {
         newer.startedAt = Date(timeIntervalSinceReferenceDate: 200)
         try context.save()
 
-        let outcome = try makeTestSystemActionCommandHandler().startTimerMutation(
-            taskID: task.id,
-            container: container
-        )
+        let outcome = try StoreScopedTimerCommandCoordinator(session: .testHarness(container)).start(taskID: task.id)
 
         #expect(outcome.subjectSegmentID == older.id)
         #expect(outcome.createdSegment == nil)
@@ -114,10 +104,7 @@ struct StoreScopedTimerCommandCoordinatorTests {
             context: context
         )
 
-        let outcome = try makeTestSystemActionCommandHandler().startTimerMutation(
-            taskID: selectedTask.id,
-            container: container
-        )
+        let outcome = try StoreScopedTimerCommandCoordinator(session: .testHarness(container)).start(taskID: selectedTask.id)
 
         #expect(outcome.subjectSegmentID == selected.id)
         #expect(outcome.stoppedSegments.map(\.segmentID) == [other.id])
@@ -145,10 +132,8 @@ struct StoreScopedTimerCommandCoordinatorTests {
             deviceID: "test"
         ).startTask(taskID: task.id, source: .timer)
 
-        let outcome = try makeTestSystemActionCommandHandler().stopTimerMutation(
-            segmentID: UUID(),
-            container: container
-        )
+        let outcome = try StoreScopedTimerCommandCoordinator(session: .testHarness(container))
+            .stop(segmentID: UUID())
 
         #expect(outcome.subjectSegmentID == nil)
         #expect(outcome.didMutate == false)

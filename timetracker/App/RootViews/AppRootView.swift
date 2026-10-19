@@ -14,7 +14,6 @@ struct AppRootView: View {
     @Environment(\.openSettings) private var openSettings
     #endif
     @State private var measuredWidthBand: RootLayoutPolicy.WidthBand?
-    @State private var lastContentDestination: TimeTrackerStore.DesktopDestination = .today
 
     private var layoutPolicy: RootLayoutPolicy {
         RootLayoutPolicy(
@@ -49,28 +48,6 @@ struct AppRootView: View {
         } action: { widthBand in
             measuredWidthBand = widthBand
         }
-        .onAppear {
-            routeSettingsDestination(store.desktopDestination)
-        }
-        .onChange(of: store.desktopDestination) { _, destination in
-            routeSettingsDestination(destination)
-        }
-        .onChange(of: presentationRouter.sheet?.id) { _, presentationID in
-            guard presentationID == nil,
-                  store.desktopDestination == .settings else { return }
-            routeSettingsDestination(.settings)
-        }
-    }
-
-    private func routeSettingsDestination(
-        _ destination: TimeTrackerStore.DesktopDestination
-    ) {
-        guard destination == .settings else {
-            lastContentDestination = destination
-            return
-        }
-        guard presentSettings() else { return }
-        store.desktopDestination = lastContentDestination
     }
 
     private func presentSettings() -> Bool {

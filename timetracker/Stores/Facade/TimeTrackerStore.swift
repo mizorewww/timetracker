@@ -196,7 +196,6 @@ final class TimeTrackerStore {
         case tasks = "Tasks"
         case pomodoro = "Pomodoro"
         case analytics = "Analytics"
-        case settings = "Settings"
 
         var id: String {
             rawValue
@@ -209,7 +208,6 @@ final class TimeTrackerStore {
             case .tasks: AppStrings.tasks
             case .pomodoro: AppStrings.focus
             case .analytics: AppStrings.analytics
-            case .settings: AppStrings.settings
             }
         }
 
@@ -220,7 +218,6 @@ final class TimeTrackerStore {
             case .tasks: "checklist"
             case .pomodoro: "timer"
             case .analytics: "chart.bar"
-            case .settings: "gearshape"
             }
         }
     }

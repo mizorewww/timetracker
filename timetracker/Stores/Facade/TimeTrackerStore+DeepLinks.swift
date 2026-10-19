@@ -19,7 +19,7 @@ extension TimeTrackerStore {
             switch action {
             case .startTimer, .stopTimer:
                 break
-            case .open, .startTimerPicker, .newTask, .openTask:
+            case .open, .openSettings, .startTimerPicker, .newTask, .openTask:
                 return .deferred
             }
         }
@@ -29,6 +29,8 @@ extension TimeTrackerStore {
             closeTaskDetailNavigation()
             desktopDestination = destination
             return .handled
+        case .openSettings:
+            return presentationRouter.present(.settings) ? .handled : .deferred
         case .startTimerPicker:
             guard presentationRouter.presentStartTaskPicker() else { return .deferred }
             closeTaskDetailNavigation()

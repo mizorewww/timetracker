@@ -2,6 +2,7 @@ import Foundation
 
 enum AppDeepLinkAction: Equatable {
     case open(TimeTrackerStore.DesktopDestination)
+    case openSettings
     case startTimerPicker
     case startTimer(UUID, source: TimeSessionSource)
     case stopTimer(AppDeepLinkStopTarget?)
@@ -33,8 +34,11 @@ struct AppDeepLinkRouter {
 
         switch host {
         case "open":
-            guard path.count == 1, let rawDestination = path.first, hasNoQueryItems(url), let destination = destination(for: rawDestination) else { return nil }
-            return .open(destination)
+            guard path.count == 1, let rawDestination = path.first, hasNoQueryItems(url) else { return nil }
+            if rawDestination == "settings" {
+                return .openSettings
+            }
+            return destination(for: rawDestination).map(AppDeepLinkAction.open)
         case "timer":
             guard path.count == 1, let operation = path.first else { return nil }
             switch operation {
@@ -85,8 +89,6 @@ struct AppDeepLinkRouter {
             .pomodoro
         case "analytics":
             .analytics
-        case "settings":
-            .settings
         default:
             nil
         }

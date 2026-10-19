@@ -52,7 +52,7 @@ struct AppSceneDeepLinkCoordinator {
                     return nil
                 }
                 return .deepLink(url)
-            case .open, .startTimerPicker, .newTask:
+            case .open, .openSettings, .startTimerPicker, .newTask:
                 return .deepLink(url)
             }
         }

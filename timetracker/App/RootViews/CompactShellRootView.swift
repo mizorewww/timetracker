@@ -86,8 +86,7 @@ struct CompactShellRootView: View {
         Binding(
             get: { store.desktopDestination },
             set: { destination in
-                guard destination != .settings,
-                      destination != store.desktopDestination else { return }
+                guard destination != store.desktopDestination else { return }
                 let requestID = store.taskDetailNavigationGuard.requestNavigation(
                     presentingConfirmationInSource: false,
                     dismissPresentedConfirmation: dismissTabNavigationConfirmation

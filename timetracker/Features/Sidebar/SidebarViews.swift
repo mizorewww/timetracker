@@ -34,6 +34,7 @@ enum SidebarSelection: Hashable {
 struct SidebarView: View {
     let store: TimeTrackerStore
     let onNavigate: () -> Void
+    @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var expansionState = TaskExpansionState()
     @State private var categoryExpansionState = TaskCategoryExpansionState()
 
@@ -42,22 +43,23 @@ struct SidebarView: View {
         self.onNavigate = onNavigate
     }
 
-    private var destinations: [TimeTrackerStore.DesktopDestination] {
-        #if os(macOS)
-        TimeTrackerStore.DesktopDestination.allCases.filter { $0 != .settings }
-        #else
-        TimeTrackerStore.DesktopDestination.allCases
-        #endif
-    }
-
     var body: some View {
         List(selection: selectionBinding) {
             Section {
-                ForEach(destinations) { destination in
+                ForEach(TimeTrackerStore.DesktopDestination.allCases) { destination in
                     SidebarDestinationLabel(destination: destination, count: count(for: destination))
                         .tag(SidebarSelection.destination(destination))
                         .accessibilityIdentifier("sidebar.\(destination.rawValue)")
                 }
+                #if !os(macOS)
+                // macOS opens its Settings scene from the app menu instead.
+                Button {
+                    presentationRouter.present(.settings)
+                } label: {
+                    Label(AppStrings.settings, systemImage: "gearshape")
+                }
+                .accessibilityIdentifier("sidebar.Settings")
+                #endif
             }
 
             ForEach(
@@ -177,7 +179,7 @@ struct SidebarView: View {
         case .inbox: store.openInboxItems.count
         case .tasks: store.visibleTaskCount
         case .pomodoro: store.completedPomodoroCount
-        case .analytics, .settings: nil
+        case .analytics: nil
         }
     }
 }

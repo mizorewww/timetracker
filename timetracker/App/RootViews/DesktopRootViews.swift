@@ -41,8 +41,6 @@ struct DesktopContentView: View {
             PomodoroView(store: store)
         case .analytics:
             AnalyticsView(store: store)
-        case .settings:
-            SettingsView(store: store)
         }
     }
 }

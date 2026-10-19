@@ -1,12 +1,12 @@
 import Foundation
 import SwiftData
 
-extension InboxCommandHandler {
+extension StoreScopedInboxCommandCoordinator {
     func discardSuggestion(
         _ item: InboxItem,
         context: ModelContext,
         now: Date = Date(),
-        deviceID: String = DeviceIdentity.current
+        deviceID: String
     ) throws {
         let logicalMutation = try preparedLogicalMutation(for: item, context: context)
         let winner = logicalMutation.winner.item
@@ -40,7 +40,7 @@ extension InboxCommandHandler {
         result: LLMInboxSuggestionResult,
         context: ModelContext,
         now: Date = Date(),
-        deviceID: String = DeviceIdentity.current
+        deviceID: String
     ) throws {
         let logicalMutation = try preparedLogicalMutation(for: item, context: context)
         let winner = logicalMutation.winner.item
@@ -125,7 +125,7 @@ extension InboxCommandHandler {
         draft: InboxSuggestionEditorDraft,
         context: ModelContext,
         now: Date = Date(),
-        deviceID: String = DeviceIdentity.current
+        deviceID: String
     ) throws {
         guard let taskID = draft.taskID else { return }
         let result = LLMInboxSuggestionResult(
@@ -136,94 +136,5 @@ extension InboxCommandHandler {
             modelID: "manual"
         )
         try upsertSuggestion(item: item, result: result, context: context, now: now, deviceID: deviceID)
-    }
-
-    @discardableResult
-    func applySuggestion(
-        item: InboxItem,
-        suggestion: InboxSuggestion,
-        existingChecklistItems: [ChecklistItem],
-        context: ModelContext,
-        now: Date = Date(),
-        deviceID: String = DeviceIdentity.current
-    ) throws -> ChecklistItem {
-        let logicalMutation = try preparedLogicalMutation(for: item, context: context)
-        let winner = logicalMutation.winner.item
-        guard winner.deletedAt == nil,
-              winner.suggestionIdentity == item.suggestionIdentity,
-              logicalMutation.mergedDismissedSuggestionRevisionID == nil,
-              InboxSuggestionStateService().displaySuggestion(
-                  for: winner,
-                  suggestion: suggestion
-              ) != nil
-        else {
-            throw InboxCommandIdentityError.staleSuggestion
-        }
-        let fetchedSuggestions = try suggestions(for: winner, context: context)
-        guard let canonicalSuggestion = InboxSuggestionIdentityService().index(
-            items: [winner],
-            suggestions: fetchedSuggestions
-        )[winner.id],
-            canonicalSuggestion.id == suggestion.id,
-            canonicalSuggestion.destinationKind == .checklist,
-            InboxSuggestionStateService().displaySuggestion(
-                for: winner,
-                suggestion: canonicalSuggestion
-            ) != nil
-        else {
-            throw InboxCommandIdentityError.staleSuggestion
-        }
-        let preparedItem = try InboxPersistencePolicy.prepareItem(
-            title: winner.title,
-            notes: winner.notes,
-            suggestionReason: winner.suggestionReason
-        )
-        let preparedSuggestion = try InboxPersistencePolicy.prepareSuggestion(
-            reason: canonicalSuggestion.reason,
-            iconName: canonicalSuggestion.iconName,
-            colorHex: canonicalSuggestion.colorHex,
-            modelID: canonicalSuggestion.modelID,
-            titleSnapshot: canonicalSuggestion.titleSnapshot
-        )
-        let otherSuggestionMutations = try fetchedSuggestions
-            .deduplicatedByID()
-            .filter { $0.id != canonicalSuggestion.id }
-            .map(prepareSuggestionMutation)
-        let nextSortOrder = SortOrderPolicy.after(existingChecklistItems.map(\.sortOrder).max())
-        return try context.performAtomicMutation {
-            winner.materializeSuggestionIdentity()
-            logicalMutation.materializeDismissal()
-            preparedItem.apply(to: winner)
-            preparedSuggestion.apply(to: canonicalSuggestion)
-            canonicalSuggestion.inboxItemContextID = winner.effectiveSuggestionContextID
-            canonicalSuggestion.inboxItemRevisionID = winner.effectiveSuggestionRevisionID
-
-            let checklistItem = ChecklistItem(
-                taskID: canonicalSuggestion.taskID,
-                title: preparedItem.title,
-                isCompleted: false,
-                sortOrder: nextSortOrder,
-                deviceID: deviceID
-            )
-            context.insert(checklistItem)
-            context.insert(
-                ChecklistItemVisual(
-                    checklistItemID: checklistItem.id,
-                    iconName: preparedSuggestion.iconName,
-                    colorHex: preparedSuggestion.colorHex,
-                    suggestionTitleSnapshot: preparedItem.title,
-                    suggestionModelID: preparedSuggestion.modelID,
-                    suggestionGeneratedAt: now,
-                    deviceID: deviceID
-                )
-            )
-
-            winner.deletedAt = now
-            winner.markMutated(at: now, deviceID: deviceID)
-            softDelete(canonicalSuggestion, now: now, deviceID: deviceID)
-            tombstone(otherSuggestionMutations, now: now, deviceID: deviceID)
-            tombstone(logicalMutation.activeSiblings, now: now, deviceID: deviceID)
-            return checklistItem
-        }
     }
 }

@@ -235,7 +235,6 @@ final class TimeTrackerStore {
     let databaseMaintenanceService = DatabaseMaintenanceService()
     let selectionCoordinator = StoreSelectionCoordinator()
     let refreshPlanner = StoreRefreshPlanner()
-    let inboxCommandHandler = InboxCommandHandler()
     let refreshCoordinator = StoreRefreshCoordinator()
     var taskDomainStore = TaskStore()
     var ledgerDomainStore = LedgerStore()

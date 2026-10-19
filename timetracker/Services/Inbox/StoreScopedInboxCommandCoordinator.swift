@@ -111,7 +111,7 @@ struct StoreScopedInboxCommandCoordinator {
                     didMutate: false
                 )
             }
-            try InboxCommandHandler().reorderOpenItems(
+            try reorderOpenItems(
                 orderedItemIDs: orderedItemIDs,
                 context: context,
                 now: nowProvider(),
@@ -126,7 +126,7 @@ struct StoreScopedInboxCommandCoordinator {
 
     func toggle(baseline: InboxItemMutationBaseline) throws -> InboxMutationOutcome {
         try mutateItem(baseline: baseline) { item, context in
-            try InboxCommandHandler().toggle(
+            try toggle(
                 item,
                 context: context,
                 now: nowProvider(),
@@ -140,7 +140,7 @@ struct StoreScopedInboxCommandCoordinator {
         title: String
     ) throws -> InboxMutationOutcome {
         try mutateItem(baseline: baseline) { item, context in
-            try InboxCommandHandler().updateTitle(
+            try updateTitle(
                 item,
                 title: title,
                 context: context,
@@ -152,7 +152,7 @@ struct StoreScopedInboxCommandCoordinator {
 
     func delete(baseline: InboxItemMutationBaseline) throws -> InboxMutationOutcome {
         try mutateItem(baseline: baseline) { item, context in
-            try InboxCommandHandler().softDelete(
+            try softDelete(
                 item,
                 context: context,
                 now: nowProvider(),
@@ -163,7 +163,7 @@ struct StoreScopedInboxCommandCoordinator {
 
     func discardSuggestion(baseline: InboxItemMutationBaseline) throws -> InboxMutationOutcome {
         try mutateItem(baseline: baseline) { item, context in
-            try InboxCommandHandler().discardSuggestion(
+            try discardSuggestion(
                 item,
                 context: context,
                 now: nowProvider(),

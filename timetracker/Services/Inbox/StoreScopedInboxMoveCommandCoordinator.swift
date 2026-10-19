@@ -128,7 +128,7 @@ extension StoreScopedInboxCommandCoordinator {
                 content: .manual(item: preparedItem),
                 context: context
             )
-            try InboxCommandHandler().softDelete(
+            try softDelete(
                 item,
                 context: context,
                 now: appliedAt,

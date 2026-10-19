@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-extension InboxCommandHandler {
+extension StoreScopedInboxCommandCoordinator {
     func update(
         _ suggestion: InboxSuggestion,
         item: InboxItem,

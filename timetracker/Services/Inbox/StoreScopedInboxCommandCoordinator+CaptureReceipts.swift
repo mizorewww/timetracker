@@ -31,7 +31,7 @@ extension StoreScopedInboxCommandCoordinator {
             }
 
             let items = try openItems(context: context)
-            guard let item = try InboxCommandHandler().add(
+            guard let item = try add(
                 title: command.title,
                 existingItems: items,
                 context: context,

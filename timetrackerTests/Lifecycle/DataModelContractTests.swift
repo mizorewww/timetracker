@@ -214,24 +214,26 @@ struct DataModelContractTests {
         context.insert(suggestion)
         try context.save()
 
-        _ = try InboxCommandHandler().applySuggestion(
-            item: inboxItem,
-            suggestion: suggestion,
-            existingChecklistItems: [],
-            context: context,
+        _ = try StoreScopedInboxCommandCoordinator(
+            session: .testHarness(context.container),
             deviceID: "test"
+        ).applySuggestion(
+            baseline: InboxSuggestionApplyBaseline(item: inboxItem, suggestion: suggestion)
         )
 
-        let checklistItems = try context.fetch(FetchDescriptor<ChecklistItem>())
-        let visuals = try context.fetch(FetchDescriptor<ChecklistItemVisual>())
+        let freshContext = ModelContext(context.container)
+        let checklistItems = try freshContext.fetch(FetchDescriptor<ChecklistItem>())
+        let visuals = try freshContext.fetch(FetchDescriptor<ChecklistItemVisual>())
+        let inboxItems = try freshContext.fetch(FetchDescriptor<InboxItem>())
+        let suggestions = try freshContext.fetch(FetchDescriptor<InboxSuggestion>())
         #expect(checklistItems.map(\.title) == ["Polish empty state"])
         #expect(checklistItems.first?.taskID == task.id)
         #expect(visuals.map(\.iconName) == ["paintbrush"])
         #expect(visuals.map(\.colorHex) == ["1677FF"])
         #expect(visuals.map(\.suggestionTitleSnapshot) == ["Polish empty state"])
         #expect(visuals.map(\.suggestionModelID) == ["gpt-test"])
-        #expect(inboxItem.deletedAt != nil)
-        #expect(suggestion.deletedAt != nil)
+        #expect(inboxItems.allSatisfy { $0.deletedAt != nil })
+        #expect(suggestions.allSatisfy { $0.deletedAt != nil })
     }
 
     @Test @MainActor

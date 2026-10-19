@@ -1,14 +1,6 @@
 import Foundation
 import SwiftData
 
-enum InboxCommandIdentityError: LocalizedError {
-    case staleSuggestion
-
-    var errorDescription: String? {
-        AppStrings.localized("inbox.error.changed")
-    }
-}
-
 struct PreparedInboxItemMutation {
     let item: InboxItem
     let text: PreparedInboxItemText
@@ -24,7 +16,7 @@ struct PreparedInboxLogicalMutation {
     }
 }
 
-extension InboxCommandHandler {
+extension StoreScopedInboxCommandCoordinator {
     func preparedLogicalMutation(
         for item: InboxItem,
         context: ModelContext

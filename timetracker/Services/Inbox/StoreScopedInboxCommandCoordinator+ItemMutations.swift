@@ -1,15 +1,14 @@
 import Foundation
 import SwiftData
 
-@MainActor
-struct InboxCommandHandler {
+extension StoreScopedInboxCommandCoordinator {
     @discardableResult
     func add(
         title: String,
         notes: String? = nil,
         existingItems: [InboxItem],
         context: ModelContext,
-        deviceID: String = DeviceIdentity.current
+        deviceID: String
     ) throws -> InboxItem? {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else { return nil }
@@ -38,7 +37,7 @@ struct InboxCommandHandler {
         _ item: InboxItem,
         context: ModelContext,
         now: Date = Date(),
-        deviceID: String = DeviceIdentity.current
+        deviceID: String
     ) throws {
         let logicalMutation = try preparedLogicalMutation(for: item, context: context)
         let winner = logicalMutation.winner.item
@@ -63,7 +62,7 @@ struct InboxCommandHandler {
         title: String,
         context: ModelContext,
         now: Date = Date(),
-        deviceID: String = DeviceIdentity.current
+        deviceID: String
     ) throws {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else {
@@ -102,7 +101,7 @@ struct InboxCommandHandler {
         _ item: InboxItem,
         context: ModelContext,
         now: Date = Date(),
-        deviceID: String = DeviceIdentity.current
+        deviceID: String
     ) throws {
         let logicalMutation = try preparedLogicalMutation(for: item, context: context)
         let winner = logicalMutation.winner.item
@@ -120,7 +119,7 @@ struct InboxCommandHandler {
         }
     }
 
-    func reorderedOpenItemIDs(
+    static func reorderedOpenItemIDs(
         items: [InboxItem],
         sourceOffsets: IndexSet,
         destination: Int
@@ -145,7 +144,7 @@ struct InboxCommandHandler {
         orderedItemIDs: [UUID],
         context: ModelContext,
         now: Date = Date(),
-        deviceID: String = DeviceIdentity.current
+        deviceID: String
     ) throws {
         guard !orderedItemIDs.isEmpty else { return }
         let items = try InboxSuggestionIdentityService().visibleLogicalItems(

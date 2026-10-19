@@ -35,7 +35,7 @@ extension StoreScopedInboxCommandCoordinator {
             try requireTrackableTask(taskID, context: context)
 
             let mutationIDBeforeSave = item.clientMutationID
-            try InboxCommandHandler().saveSuggestionDraft(
+            try saveSuggestionDraft(
                 item: item,
                 draft: draft,
                 context: context,
@@ -67,8 +67,7 @@ extension StoreScopedInboxCommandCoordinator {
             }
 
             let item = resolution.winner
-            let handler = InboxCommandHandler()
-            let suggestions = try handler.suggestions(for: item, context: context)
+            let suggestions = try suggestions(for: item, context: context)
             let suggestion = InboxSuggestionIdentityService().index(
                 items: [item],
                 suggestions: suggestions
@@ -88,7 +87,7 @@ extension StoreScopedInboxCommandCoordinator {
             }
 
             let mutationIDBeforeSave = item.clientMutationID
-            try handler.upsertSuggestion(
+            try upsertSuggestion(
                 item: item,
                 result: result,
                 context: context,
@@ -120,9 +119,7 @@ extension StoreScopedInboxCommandCoordinator {
             else {
                 throw StoreScopedInboxMutationError.inboxChanged
             }
-
-            let handler = InboxCommandHandler()
-            let suggestions = try handler.suggestions(for: item, context: context)
+            let suggestions = try suggestions(for: item, context: context)
             guard let suggestion = InboxSuggestionIdentityService().index(
                 items: [item],
                 suggestions: suggestions
@@ -161,7 +158,7 @@ extension StoreScopedInboxCommandCoordinator {
                 ),
                 context: context
             )
-            try handler.softDelete(
+            try softDelete(
                 item,
                 context: context,
                 now: appliedAt,

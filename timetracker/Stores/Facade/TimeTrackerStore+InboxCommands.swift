@@ -55,7 +55,7 @@ extension TimeTrackerStore {
     @discardableResult
     func reorderInboxItems(sourceOffsets: IndexSet, destination: Int) -> Bool {
         let currentItems = openInboxItems
-        let orderedIDs = inboxCommandHandler.reorderedOpenItemIDs(
+        let orderedIDs = StoreScopedInboxCommandCoordinator.reorderedOpenItemIDs(
             items: currentItems,
             sourceOffsets: sourceOffsets,
             destination: destination

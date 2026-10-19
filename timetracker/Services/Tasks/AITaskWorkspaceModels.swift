@@ -1,4 +1,3 @@
-import CryptoKit
 import Foundation
 
 nonisolated struct AITaskWorkspaceCategory:
@@ -62,16 +61,6 @@ nonisolated struct AITaskWorkspaceSnapshot: Encodable, Equatable, Sendable {
     let categories: [AITaskWorkspaceCategory]
     let tasks: [AITaskWorkspaceTask]
     let checklistItems: [AITaskWorkspaceChecklistItem]
-    var contextFingerprint: String {
-        get throws {
-            try Self.contextFingerprint(
-                schemaVersion: schemaVersion,
-                categories: categories,
-                tasks: tasks,
-                checklistItems: checklistItems
-            )
-        }
-    }
 
     init(
         schemaVersion: Int = currentSchemaVersion,
@@ -85,26 +74,6 @@ nonisolated struct AITaskWorkspaceSnapshot: Encodable, Equatable, Sendable {
         self.checklistItems = Self.canonicalChecklistItems(
             checklistItems,
             tasks: self.tasks
-        )
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case schemaVersion
-        case categories
-        case tasks
-        case checklistItems
-        case contextFingerprint
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(schemaVersion, forKey: .schemaVersion)
-        try container.encode(categories, forKey: .categories)
-        try container.encode(tasks, forKey: .tasks)
-        try container.encode(checklistItems, forKey: .checklistItems)
-        try container.encode(
-            contextFingerprint,
-            forKey: .contextFingerprint
         )
     }
 }
@@ -292,36 +261,7 @@ nonisolated struct AITaskWorkspaceCapture: Equatable, Sendable {
 }
 
 private nonisolated extension AITaskWorkspaceSnapshot {
-    struct FingerprintFacts: Encodable {
-        let schemaVersion: Int
-        let categories: [AITaskWorkspaceCategory]
-        let tasks: [AITaskWorkspaceTask]
-        let checklistItems: [AITaskWorkspaceChecklistItem]
-    }
-
     static let comparisonLocale = Locale(identifier: "en_US_POSIX")
-
-    static func contextFingerprint(
-        schemaVersion: Int,
-        categories: [AITaskWorkspaceCategory],
-        tasks: [AITaskWorkspaceTask],
-        checklistItems: [AITaskWorkspaceChecklistItem]
-    ) throws -> String {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        encoder.dateEncodingStrategy = .iso8601
-        let data = try encoder.encode(
-            FingerprintFacts(
-                schemaVersion: schemaVersion,
-                categories: categories,
-                tasks: tasks,
-                checklistItems: checklistItems
-            )
-        )
-        return SHA256.hash(data: data)
-            .map { String(format: "%02x", $0) }
-            .joined()
-    }
 
     static func canonicalCategories(
         _ categories: [AITaskWorkspaceCategory]

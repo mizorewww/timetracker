@@ -64,21 +64,22 @@ nonisolated enum LLMTaskWorkspacePlanningError:
 /// Runs an OpenAI-compatible function-calling conversation against a complete,
 /// immutable workspace projection. Tool calls mutate only an in-memory overlay;
 /// this service has no SwiftData dependency and cannot persist model output.
-@MainActor
-struct LLMTaskWorkspacePlanningService {
+/// The loop runs off the main actor; only progress reports hop back to it.
+nonisolated struct LLMTaskWorkspacePlanningService: Sendable {
     /// Upper bound on model round trips before `finalize_plan`; every round
     /// resends the whole conversation, so an unbounded loop is unbounded cost.
     static let maximumToolRounds = 32
 
     var send: LLMChatSender = LLMClient.chat
 
+    @concurrent
     func generate(
         request: String,
         instructions: String,
         workspace: AITaskWorkspaceSnapshot,
         configuration: LLMRequestConfiguration,
-        makeID: @MainActor () -> UUID = UUID.init,
-        onProgress: @escaping @MainActor (LLMGenerationProgress) -> Void = {
+        makeID: @Sendable () -> UUID = UUID.init,
+        onProgress: @escaping @MainActor @Sendable (LLMGenerationProgress) -> Void = {
             _ in
         }
     ) async throws -> LLMTaskWorkspacePlan {
@@ -139,7 +140,7 @@ struct LLMTaskWorkspacePlanningService {
                 reportedCompletionTokens += completionTokens
                 hasReportedCompletionTokens = true
             }
-            onProgress(
+            await onProgress(
                 LLMGenerationProgress(
                     contentCharacterCount: contentCharacterCount,
                     reasoningCharacterCount: reasoningCharacterCount,
@@ -217,7 +218,7 @@ struct LLMTaskWorkspacePlanningService {
     }
 }
 
-extension LLMTaskWorkspacePlanningService {
+nonisolated extension LLMTaskWorkspacePlanningService {
     static let systemContract = """
     You plan changes to a Time Tracker workspace by calling the supplied \
     functions. The user message contains the complete current Category, Task, \
@@ -265,7 +266,7 @@ extension LLMTaskWorkspacePlanningService {
     }
 }
 
-private extension LLMTaskWorkspacePlanningService {
+private nonisolated extension LLMTaskWorkspacePlanningService {
     struct PreparedInputs {
         let request: String
         let instructions: String

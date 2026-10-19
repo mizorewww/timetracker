@@ -1,5 +1,6 @@
 import Foundation
 import OpenAI
+import Synchronization
 import Testing
 @testable import timetracker
 
@@ -7,9 +8,12 @@ import Testing
 struct LLMTaskWorkspacePlanningLoopTests {
     @Test
     func modelThatNeverFinalizesStopsAtTheRoundLimit() async throws {
-        var requestCount = 0
+        let requests = Mutex(0)
         let service = LLMTaskWorkspacePlanningService { _, _ in
-            requestCount += 1
+            let requestCount = requests.withLock { count in
+                count += 1
+                return count
+            }
             let body = """
             {"id":"r\(requestCount)","object":"chat.completion","created":0,"model":"model",\
             "choices":[{"index":0,"finish_reason":"tool_calls","message":{"role":"assistant","content":null,\
@@ -36,6 +40,6 @@ struct LLMTaskWorkspacePlanningLoopTests {
                 )
             )
         }
-        #expect(requestCount == LLMTaskWorkspacePlanningService.maximumToolRounds)
+        #expect(requests.withLock { $0 } == LLMTaskWorkspacePlanningService.maximumToolRounds)
     }
 }

@@ -3,7 +3,7 @@ import OpenAI
 
 /// Sends one chat completion for the user's configured connection. Services
 /// hold one of these so tests can answer without a network.
-typealias LLMChatSender = (ChatQuery, LLMRequestConfiguration) async throws -> ChatResult
+typealias LLMChatSender = @Sendable (ChatQuery, LLMRequestConfiguration) async throws -> ChatResult
 
 /// The user-configured OpenAI-compatible endpoint, reached through MacPaw's
 /// `OpenAI` client. Requests carry the API key, so the endpoint must be HTTPS

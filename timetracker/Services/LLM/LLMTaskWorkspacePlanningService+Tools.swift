@@ -122,11 +122,11 @@ private nonisolated struct AITaskWorkspaceUpdateChecklistArguments: Decodable {
     let colorHex: String
 }
 
-extension LLMTaskWorkspacePlanningService {
+nonisolated extension LLMTaskWorkspacePlanningService {
     static func execute(
         _ call: ChatQuery.ChatCompletionMessageParam.AssistantMessageParam.ToolCallParam,
         overlay: inout AITaskWorkspaceOverlay,
-        makeID: @MainActor () -> UUID
+        makeID: () -> UUID
     ) throws -> String {
         guard let tool = AITaskWorkspaceToolName(rawValue: call.function.name) else {
             throw LLMTaskWorkspacePlanningError.unknownTool(call.function.name)
@@ -260,7 +260,7 @@ extension LLMTaskWorkspacePlanningService {
     }
 }
 
-extension LLMTaskWorkspacePlanningService {
+nonisolated extension LLMTaskWorkspacePlanningService {
     private static func decodeArguments<Value: Decodable>(
         _ arguments: String,
         toolName: String

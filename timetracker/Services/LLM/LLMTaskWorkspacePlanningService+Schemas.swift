@@ -1,7 +1,7 @@
 import Foundation
 import OpenAI
 
-extension LLMTaskWorkspacePlanningService {
+nonisolated extension LLMTaskWorkspacePlanningService {
     static let toolDefinitions: [ChatQuery.ChatCompletionToolParam] = [
         definition(
             .listWorkspace,
@@ -153,7 +153,7 @@ extension LLMTaskWorkspacePlanningService {
     }
 }
 
-private extension LLMTaskWorkspacePlanningService {
+private nonisolated extension LLMTaskWorkspacePlanningService {
     static let stringSchema = JSONSchema(.type(.string))
     static let boolSchema = JSONSchema(.type(.boolean))
     static let uuidSchema = JSONSchema(.type(.string), .format("uuid"))

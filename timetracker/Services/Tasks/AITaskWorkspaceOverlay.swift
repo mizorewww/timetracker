@@ -479,21 +479,15 @@ private nonisolated extension AITaskWorkspaceOverlay {
     }
 
     func nextTaskSortOrder(parentID: UUID?) -> Double {
-        (
-            snapshot.tasks
-                .filter { $0.parentID == parentID }
-                .map(\.sortOrder)
-                .max() ?? 0
-        ) + 10
+        SortOrderPolicy.after(
+            snapshot.tasks.filter { $0.parentID == parentID }.map(\.sortOrder).max()
+        )
     }
 
     func nextChecklistSortOrder(taskID: UUID) -> Double {
-        (
-            snapshot.checklistItems
-                .filter { $0.taskID == taskID }
-                .map(\.sortOrder)
-                .max() ?? 0
-        ) + 10
+        SortOrderPolicy.after(
+            snapshot.checklistItems.filter { $0.taskID == taskID }.map(\.sortOrder).max()
+        )
     }
 
     func categories(named title: String) -> [AITaskWorkspaceCategory] {

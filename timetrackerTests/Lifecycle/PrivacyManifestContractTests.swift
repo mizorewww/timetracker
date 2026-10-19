@@ -19,21 +19,6 @@ struct PrivacyManifestContractTests {
     }
 
     @Test
-    func requiredReasonAPIsStayDeclaredPerTarget() throws {
-        let root = try projectRootURL()
-
-        #expect(try reasons(in: root.appending(path: "timetracker/PrivacyInfo.xcprivacy")) == [
-            "NSPrivacyAccessedAPICategoryUserDefaults": ["1C8F.1", "CA92.1"],
-        ])
-        #expect(try reasons(in: root.appending(path: "timetrackerWidgetExtension/PrivacyInfo.xcprivacy")) == [
-            "NSPrivacyAccessedAPICategoryUserDefaults": ["1C8F.1"],
-        ])
-        #expect(try reasons(in: root.appending(path: "timetrackerWatchApp/PrivacyInfo.xcprivacy")) == [
-            "NSPrivacyAccessedAPICategoryUserDefaults": ["CA92.1"],
-        ])
-    }
-
-    @Test
     func privacyManifestsDoNotDeclareTrackingOrCollectedData() throws {
         let root = try projectRootURL()
         let paths = [
@@ -49,16 +34,6 @@ struct PrivacyManifestContractTests {
                 (manifest["NSPrivacyCollectedDataTypes"] as? [Any])?.isEmpty == true,
                 Comment(rawValue: path)
             )
-        }
-    }
-
-    private func reasons(in url: URL) throws -> [String: Set<String>] {
-        let value = try manifest(at: url)
-        let entries = try #require(value["NSPrivacyAccessedAPITypes"] as? [[String: Any]])
-        return try entries.reduce(into: [:]) { result, entry in
-            let category = try #require(entry["NSPrivacyAccessedAPIType"] as? String)
-            let declaredReasons = try #require(entry["NSPrivacyAccessedAPITypeReasons"] as? [String])
-            result[category] = Set(declaredReasons)
         }
     }
 

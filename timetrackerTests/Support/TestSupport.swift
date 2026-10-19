@@ -56,3 +56,54 @@ func projectRootURL() throws -> URL {
     struct ProjectRootError: Error {}
     throw ProjectRootError()
 }
+
+/// Creates and seeds a disk store, then closes it so tests can reopen it
+/// read-only to exercise save-failure paths.
+@MainActor
+func initializeWritableStore(
+    at url: URL,
+    schema: Schema,
+    seed: (ModelContext) throws -> Void
+) throws {
+    let configuration = ModelConfiguration(
+        "WritableTestStore-\(UUID().uuidString)",
+        schema: schema,
+        url: url,
+        cloudKitDatabase: .none
+    )
+    let container = try ModelContainer(
+        for: schema,
+        migrationPlan: TimeTrackerMigrationPlan.self,
+        configurations: [configuration]
+    )
+    let context = ModelContext(container)
+    try seed(context)
+    try context.save()
+}
+
+@MainActor
+func makeReadOnlyContainer(at url: URL, schema: Schema) throws -> ModelContainer {
+    let configuration = ModelConfiguration(
+        "ReadOnlyTestStore-\(UUID().uuidString)",
+        schema: schema,
+        url: url,
+        allowsSave: false,
+        cloudKitDatabase: .none
+    )
+    return try ModelContainer(
+        for: schema,
+        migrationPlan: TimeTrackerMigrationPlan.self,
+        configurations: [configuration]
+    )
+}
+
+/// SwiftData may close SQLite sidecars asynchronously, so disk stores live in
+/// unique sandbox temp directories left for operating-system cleanup.
+func makeStoreDirectory() throws -> URL {
+    let url = FileManager.default.temporaryDirectory.appending(
+        path: "TimeTrackerTestStore-\(UUID().uuidString)",
+        directoryHint: .isDirectory
+    )
+    try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+    return url
+}

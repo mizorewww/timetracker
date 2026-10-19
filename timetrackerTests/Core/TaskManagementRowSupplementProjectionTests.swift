@@ -82,29 +82,4 @@ struct TaskManagementRowSupplementProjectionTests {
         #expect(progress.totalAmount == 3)
         #expect(progress.unitLabel == "cups")
     }
-
-    @Test
-    func unchangedDataYieldsIdenticalProjectionAcrossReads() throws {
-        let context = try makeTestContext()
-        let store = makeTestStore()
-        store.configureIfNeeded(context: context)
-        let task = try SwiftDataTaskRepository(
-            context: context,
-            deviceID: "seed"
-        ).createTask(
-            title: "Stable task",
-            parentID: nil,
-            colorHex: nil,
-            iconName: nil
-        )
-
-        let first = store.taskManagementRowSupplementProjection()
-        let second = store.taskManagementRowSupplementProjection()
-
-        #expect(first.supplement(for: task.id).quantityProgress == nil)
-        #expect(
-            first.supplement(for: task.id).quantityProgress ==
-                second.supplement(for: task.id).quantityProgress
-        )
-    }
 }

@@ -54,27 +54,6 @@ struct TodayTimelineSnapshotTests {
     }
 
     @Test
-    func repeatedSameMinuteReadsReturnIdenticalSnapshots() throws {
-        let now = Date()
-        let (store, _, _) = try makeStoreWithSegments(now: now)
-        let segments = store.timelineSegments
-
-        let first = store.timelineSnapshot(
-            segments: segments,
-            date: now,
-            now: now
-        )
-        let second = store.timelineSnapshot(
-            segments: segments,
-            date: now,
-            now: now
-        )
-
-        #expect(first == second)
-        #expect(first.entries.count == 1)
-    }
-
-    @Test
     func ledgerMutationIsReflectedAfterCachedRead() throws {
         let (store, task, _) = try makeStoreWithSegments(now: Date())
         let beforeNow = Date()

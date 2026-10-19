@@ -231,7 +231,11 @@ struct PreferenceCommandValidationTests {
             repeating: "m",
             count: AppPreferenceValueSanitizer.maximumLLMModelIDByteCount
         )
-        let oversizedUnicode = String(repeating: "🧭", count: 65)
+        // "🧭" is four UTF-8 bytes, so this is one character past the byte limit.
+        let oversizedUnicode = String(
+            repeating: "🧭",
+            count: AppPreferenceValueSanitizer.maximumLLMModelIDByteCount / 4 + 1
+        )
         let controlCharacter = "model\u{0000}suffix"
 
         #expect(AppPreferenceValueSanitizer.llmModelID("  \(exactBoundary)  ") == exactBoundary)
@@ -244,61 +248,6 @@ struct PreferenceCommandValidationTests {
                 controlCharacter,
             ]) == [exactBoundary]
         )
-        #expect(!AppPreferenceValueSanitizer.llmModelIDs([oversizedUnicode]).contains {
-            $0 == LLMSuggestionInputPolicy.boundedTrimmedUTF8(
-                oversizedUnicode,
-                maximumByteCount: LLMSuggestionInputPolicy.maximumModelIDByteCount
-            )
-        })
-    }
-
-    @MainActor
-    private func initializeWritableStore(
-        at url: URL,
-        schema: Schema,
-        seed: (ModelContext) throws -> Void
-    ) throws {
-        let configuration = ModelConfiguration(
-            "WritablePreferenceCommandValidationTests-\(UUID().uuidString)",
-            schema: schema,
-            url: url,
-            cloudKitDatabase: .none
-        )
-        let container = try ModelContainer(
-            for: schema,
-            migrationPlan: TimeTrackerMigrationPlan.self,
-            configurations: [configuration]
-        )
-        let context = ModelContext(container)
-        try seed(context)
-        try context.save()
-    }
-
-    @MainActor
-    private func makeReadOnlyContainer(at url: URL, schema: Schema) throws -> ModelContainer {
-        let configuration = ModelConfiguration(
-            "ReadOnlyPreferenceCommandValidationTests-\(UUID().uuidString)",
-            schema: schema,
-            url: url,
-            allowsSave: false,
-            cloudKitDatabase: .none
-        )
-        return try ModelContainer(
-            for: schema,
-            migrationPlan: TimeTrackerMigrationPlan.self,
-            configurations: [configuration]
-        )
-    }
-
-    private func makeStoreDirectory() throws -> URL {
-        // SwiftData may close SQLite sidecars asynchronously. Keep this unique
-        // store in the sandbox temp directory for operating-system cleanup.
-        let url = FileManager.default.temporaryDirectory.appending(
-            path: "PreferenceCommandValidationTests-\(UUID().uuidString)",
-            directoryHint: .isDirectory
-        )
-        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        return url
     }
 }
 

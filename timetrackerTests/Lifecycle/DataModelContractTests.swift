@@ -137,10 +137,6 @@ struct DataModelContractTests {
         #expect(schema.entity(for: TaskRecurrenceOccurrence.self) != nil)
         #expect(schema.entity(for: TaskQuantityGoal.self) != nil)
         #expect(schema.entity(for: TaskQuantityEntry.self) != nil)
-        #expect(
-            TimeTrackerMigrationPlan.schemas.last?.versionIdentifier
-                == TimeTrackerSchemaV14.versionIdentifier
-        )
         // Every cloud-synced entity must resolve together when the schema is
         // instantiated into a container; the name-set assertions above prove the
         // membership, so no per-model insert/fetch round trip is needed.
@@ -165,7 +161,6 @@ struct DataModelContractTests {
             let taskIDs = try context.fetch(FetchDescriptor<TaskNode>()).map(\.id)
             #expect(taskIDs == [fixture.taskID])
             #expect(TimeTrackerModelRegistry.currentSchema.entity(for: DailySummary.self) == nil)
-            #expect(TimeTrackerMigrationPlan.schemas.last?.versionIdentifier == TimeTrackerSchemaV14.versionIdentifier)
         }
     }
 

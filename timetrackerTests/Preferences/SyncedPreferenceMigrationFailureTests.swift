@@ -50,56 +50,6 @@ struct SyncedPreferenceMigrationFailureTests {
         #expect(try credentialStore.readAPIKey() == "legacy-secret")
     }
 
-    @MainActor
-    private func initializeWritableStore(
-        at url: URL,
-        schema: Schema,
-        seed: ((ModelContext) throws -> Void)? = nil
-    ) throws {
-        let configuration = ModelConfiguration(
-            "WritableSyncedPreferenceMigrationTests-\(UUID().uuidString)",
-            schema: schema,
-            url: url,
-            cloudKitDatabase: .none
-        )
-        let container = try ModelContainer(
-            for: schema,
-            migrationPlan: TimeTrackerMigrationPlan.self,
-            configurations: [configuration]
-        )
-        guard let seed else { return }
-        let context = ModelContext(container)
-        try seed(context)
-        try context.save()
-    }
-
-    @MainActor
-    private func makeReadOnlyContainer(at url: URL, schema: Schema) throws -> ModelContainer {
-        let configuration = ModelConfiguration(
-            "ReadOnlySyncedPreferenceMigrationTests-\(UUID().uuidString)",
-            schema: schema,
-            url: url,
-            allowsSave: false,
-            cloudKitDatabase: .none
-        )
-        return try ModelContainer(
-            for: schema,
-            migrationPlan: TimeTrackerMigrationPlan.self,
-            configurations: [configuration]
-        )
-    }
-
-    private func makeStoreDirectory() throws -> URL {
-        // SwiftData may close SQLite sidecars asynchronously. Keep these unique
-        // stores in the sandbox temp directory for operating-system cleanup.
-        let url = FileManager.default.temporaryDirectory.appending(
-            path: "SyncedPreferenceMigrationTests-\(UUID().uuidString)",
-            directoryHint: .isDirectory
-        )
-        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        return url
-    }
-
     private func makeDefaults() throws -> UserDefaults {
         let suiteName = "SyncedPreferenceMigrationFailureTests-\(UUID().uuidString)"
         return try #require(UserDefaults(suiteName: suiteName))

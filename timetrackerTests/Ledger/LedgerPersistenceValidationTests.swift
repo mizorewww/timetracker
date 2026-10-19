@@ -181,19 +181,19 @@ struct LedgerPersistenceValidationTests {
 
     @Test @MainActor
     func failedManualInsertRollsBackBothNewRows() throws {
-        let storeDirectory = try Self.makeStoreDirectory()
+        let storeDirectory = try makeStoreDirectory()
         let storeURL = storeDirectory.appending(path: "manual-insert.store")
         let schema = TimeTrackerModelRegistry.currentSchema
         let taskID = UUID()
         let now = Date(timeIntervalSinceReferenceDate: 4_000_000)
-        try Self.initializeWritableStore(at: storeURL, schema: schema) { context in
+        try initializeWritableStore(at: storeURL, schema: schema) { context in
             let task = TaskNode(title: "Read-only task", parentID: nil, deviceID: "seed-device")
             task.id = taskID
             context.insert(task)
         }
 
         try autoreleasepool {
-            let context = try ModelContext(Self.makeReadOnlyContainer(at: storeURL, schema: schema))
+            let context = try ModelContext(makeReadOnlyContainer(at: storeURL, schema: schema))
             let repository = SwiftDataTimeTrackingRepository(
                 context: context,
                 deviceID: "local-device",
@@ -220,7 +220,7 @@ struct LedgerPersistenceValidationTests {
 
     @Test @MainActor
     func failedSessionStopRollsBackEverySegmentAndSessionMutation() throws {
-        let storeDirectory = try Self.makeStoreDirectory()
+        let storeDirectory = try makeStoreDirectory()
         let storeURL = storeDirectory.appending(path: "session-stop.store")
         let schema = TimeTrackerModelRegistry.currentSchema
         let taskID = UUID()
@@ -229,7 +229,7 @@ struct LedgerPersistenceValidationTests {
         let originalMutationID = UUID()
         let start = Date(timeIntervalSinceReferenceDate: 5_000_000)
         let mutationDate = start.addingTimeInterval(600)
-        try Self.initializeWritableStore(at: storeURL, schema: schema) { context in
+        try initializeWritableStore(at: storeURL, schema: schema) { context in
             let task = TaskNode(title: "Atomic stop", parentID: nil, deviceID: "seed-device")
             task.id = taskID
             let session = TimeSession(
@@ -259,7 +259,7 @@ struct LedgerPersistenceValidationTests {
         }
 
         try autoreleasepool {
-            let context = try ModelContext(Self.makeReadOnlyContainer(at: storeURL, schema: schema))
+            let context = try ModelContext(makeReadOnlyContainer(at: storeURL, schema: schema))
             let repository = SwiftDataTimeTrackingRepository(
                 context: context,
                 deviceID: "local-device",
@@ -294,54 +294,5 @@ struct LedgerPersistenceValidationTests {
         return prefix
             + String(repeating: "🧭", count: remaining / 4)
             + String(repeating: "x", count: remaining % 4)
-    }
-
-    @MainActor
-    private static func initializeWritableStore(
-        at url: URL,
-        schema: Schema,
-        seed: (ModelContext) throws -> Void
-    ) throws {
-        let configuration = ModelConfiguration(
-            "WritableLedgerPersistenceTests-\(UUID().uuidString)",
-            schema: schema,
-            url: url,
-            cloudKitDatabase: .none
-        )
-        let container = try ModelContainer(
-            for: schema,
-            migrationPlan: TimeTrackerMigrationPlan.self,
-            configurations: [configuration]
-        )
-        let context = ModelContext(container)
-        try seed(context)
-        try context.save()
-    }
-
-    @MainActor
-    private static func makeReadOnlyContainer(at url: URL, schema: Schema) throws -> ModelContainer {
-        let configuration = ModelConfiguration(
-            "ReadOnlyLedgerPersistenceTests-\(UUID().uuidString)",
-            schema: schema,
-            url: url,
-            allowsSave: false,
-            cloudKitDatabase: .none
-        )
-        return try ModelContainer(
-            for: schema,
-            migrationPlan: TimeTrackerMigrationPlan.self,
-            configurations: [configuration]
-        )
-    }
-
-    private static func makeStoreDirectory() throws -> URL {
-        // SwiftData can close SQLite sidecar descriptors asynchronously. Keep these
-        // unique stores in the sandbox temp directory and let the OS clean them up.
-        let url = FileManager.default.temporaryDirectory.appending(
-            path: "LedgerPersistenceValidationTests-\(UUID().uuidString)",
-            directoryHint: .isDirectory
-        )
-        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        return url
     }
 }

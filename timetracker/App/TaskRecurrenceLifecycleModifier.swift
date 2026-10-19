@@ -29,28 +29,9 @@ private struct TaskRecurrenceLifecycleModifier: ViewModifier {
             .task(id: scheduleIdentity) {
                 await runSchedule()
             }
-            .onReceive(
-                NotificationCenter.default.publisher(
-                    for: .NSCalendarDayChanged
-                )
-            ) { _ in
+            .onSystemClockChange {
                 clockRevision = UUID()
                 materializeIfReady()
-            }
-            .onReceive(
-                NotificationCenter.default.publisher(
-                    for: .NSSystemClockDidChange
-                )
-            ) { _ in
-                clockRevision = UUID()
-                materializeIfReady()
-            }
-            .onReceive(
-                NotificationCenter.default.publisher(
-                    for: .NSSystemTimeZoneDidChange
-                )
-            ) { _ in
-                clockRevision = UUID()
             }
     }
 

@@ -64,11 +64,7 @@ struct SidebarView: View {
         .listStyle(.sidebar)
         .navigationTitle(AppStrings.localized("app.name"))
         .onAppear(perform: expandAncestorsForCurrentTask)
-        .task {
-            for await _ in NotificationCenter.default.notifications(named: .NSCalendarDayChanged) {
-                today = Date()
-            }
-        }
+        .onSystemClockChange { today = Date() }
         .onChange(of: store.tasksRoute) { _, _ in expandAncestorsForCurrentTask() }
         .onChange(of: store.taskTreeReadIndexRevision) { _, _ in
             expandAncestorsForCurrentTask()

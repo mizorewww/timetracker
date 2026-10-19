@@ -19,8 +19,7 @@ struct InboxView: View {
     }
 
     /// Drives whether suggestion accept/dismiss render as icon-only circular
-    /// buttons or as full labelled rows. Previously false on macOS at any
-    /// width, which left a narrow Mac window trying to fit both labels.
+    /// buttons or as full labelled rows.
     private var isCompact: Bool {
         layoutShell == .compact
     }

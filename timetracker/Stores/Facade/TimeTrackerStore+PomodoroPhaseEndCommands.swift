@@ -42,9 +42,8 @@ extension TimeTrackerStore {
                 } else {
                     // No expired focus needed fixing: converge only the live
                     // timer read models instead of running the full refresh
-                    // pipeline. The full pipeline invalidates analytics caches
-                    // and re-projects rollups, so every Pomodoro page appear
-                    // used to pay that cost (visible as tab-switch latency).
+                    // pipeline, which invalidates analytics caches and
+                    // re-projects rollups on every Pomodoro page appear.
                     try convergeLiveTimerReadModels()
                 }
             }

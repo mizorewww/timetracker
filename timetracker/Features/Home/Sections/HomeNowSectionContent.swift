@@ -84,8 +84,7 @@ struct HomeNowSection: View {
 }
 
 /// Shared Now content used by every platform: iPhone hosts it in a grouped
-/// list section, iPad and macOS in an app card, so the Now view no longer
-/// diverges by platform.
+/// list section, iPad and macOS in an app card.
 struct HomeNowActiveContent: View {
     let store: TimeTrackerStore
     let segments: [TimeSegment]

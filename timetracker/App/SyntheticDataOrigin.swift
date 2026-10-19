@@ -7,8 +7,7 @@ import Foundation
 ///
 /// Every producer of synthetic rows stamps one of these, and the maintenance
 /// cleanup matches on `marks(_:)`. Keeping both sides on one list is what makes
-/// "clear demo data" able to remove *all* non-user residue: the cloud
-/// smoke-test task used to survive it, because the cleanup only knew `demo`.
+/// "clear demo data" able to remove *all* non-user residue.
 ///
 /// Adding a new kind of synthetic data means adding its ID here, and nowhere
 /// else, for it to become removable.

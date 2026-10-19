@@ -56,9 +56,8 @@ struct AppRootView: View {
 
 /// Sidebar plus detail, for widths that can hold both columns.
 ///
-/// One view for iPad and Mac. They previously had near-identical copies that
-/// differed only in their column-width preset; the remaining `#if os(macOS)`
-/// blocks are scene plumbing that has no iOS equivalent, not layout.
+/// One view for iPad and Mac; the `#if os(macOS)` blocks are scene plumbing
+/// that has no iOS equivalent, not layout.
 struct RegularShellRootView: View {
     let store: TimeTrackerStore
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic

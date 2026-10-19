@@ -21,14 +21,12 @@ struct StoreScopedSegmentCommandCoordinator {
         draft: ManualTimeDraft,
         taskID: UUID
     ) throws {
-        try withLockedFreshContext { _, now, timeRepository, _ in
-            _ = try LedgerCommandHandler(
-                deviceID: resolvedDeviceID,
-                nowProvider: { now }
-            ).addManualTime(
-                draft: draft,
+        try withLockedFreshContext { _, _, timeRepository, _ in
+            _ = try timeRepository.addManualSegment(
                 taskID: taskID,
-                repository: timeRepository
+                startedAt: draft.startedAt,
+                endedAt: draft.endedAt,
+                note: draft.note.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
             )
         }
     }
@@ -95,19 +93,35 @@ struct StoreScopedSegmentCommandCoordinator {
                 )
             }
 
-            try LedgerCommandHandler(
-                deviceID: resolvedDeviceID,
-                nowProvider: { now }
-            ).updateSegment(
-                draft: draft,
+            guard draft.wasActive || draft.isActive == false else {
+                throw TimeTrackingRepositoryError.closedSegmentCannotReopen
+            }
+            try timeRepository.updateSegment(
+                segmentID: draft.segmentID,
                 taskID: taskID,
-                activePomodoroSessionID: canonical.linkedRun.map { _ in
-                    canonical.segment.sessionID
-                },
-                pomodoroRuns: canonical.linkedRun.map { [$0] } ?? [],
-                repository: timeRepository,
-                context: context
+                startedAt: draft.startedAt,
+                endedAt: draft.isActive ? nil : draft.endedAt,
+                note: draft.note.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
             )
+            if let linkedRun = canonical.linkedRun {
+                try rebindActivePomodoro(
+                    linkedRun,
+                    sessionID: canonical.segment.sessionID,
+                    taskID: taskID,
+                    fallbackStartedAt: draft.startedAt,
+                    timeRepository: timeRepository,
+                    now: now
+                )
+                if draft.wasActive, draft.isActive == false {
+                    try pomodoroHandler.cancelIfNeeded(
+                        sessionID: canonical.segment.sessionID,
+                        runs: [linkedRun],
+                        context: context,
+                        now: draft.endedAt,
+                        discardShortAttempt: false
+                    )
+                }
+            }
             return try outcome(
                 subjectSegmentID: draft.segmentID,
                 before: before,
@@ -134,18 +148,17 @@ struct StoreScopedSegmentCommandCoordinator {
                 activeRuns: pomodoroRepository.activeRuns(),
                 timeRepository: timeRepository
             )
-            try LedgerCommandHandler(
-                deviceID: resolvedDeviceID,
-                nowProvider: { now }
-            ).softDeleteSegment(
-                segmentID,
-                activePomodoroSessionID: canonical.linkedRun.map { _ in
-                    canonical.segment.sessionID
-                },
-                pomodoroRuns: canonical.linkedRun.map { [$0] } ?? [],
-                repository: timeRepository,
-                context: context
-            )
+            if let linkedRun = canonical.linkedRun {
+                try PomodoroCommandHandler(
+                    deviceID: resolvedDeviceID,
+                    nowProvider: { now }
+                ).discardIfNeeded(
+                    sessionID: canonical.segment.sessionID,
+                    runs: [linkedRun],
+                    context: context
+                )
+            }
+            try timeRepository.softDeleteSegment(segmentID: segmentID)
             return try outcome(
                 subjectSegmentID: segmentID,
                 before: before,
@@ -154,6 +167,29 @@ struct StoreScopedSegmentCommandCoordinator {
                 pomodoroRepository: pomodoroRepository
             )
         }
+    }
+
+    private func rebindActivePomodoro(
+        _ run: PomodoroRun,
+        sessionID: UUID,
+        taskID: UUID,
+        fallbackStartedAt: Date,
+        timeRepository: SwiftDataTimeTrackingRepository,
+        now: Date
+    ) throws {
+        guard run.sessionID == sessionID,
+              run.deletedAt == nil,
+              run.endedAt == nil,
+              run.state == .focusing || run.state == .interrupted
+        else {
+            return
+        }
+        run.taskID = taskID
+        run.startedAt = try timeRepository
+            .canonicalSessions(ids: [sessionID])
+            .first?
+            .startedAt ?? fallbackStartedAt
+        run.markMutated(at: now, deviceID: resolvedDeviceID)
     }
 
     var resolvedDeviceID: String {

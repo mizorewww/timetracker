@@ -202,21 +202,30 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
             let ancestorsBeforeSave = existingTask.map {
                 Self.ancestorTaskIDs(for: $0, tasks: tasksBeforeSave)
             } ?? []
-            let saveChecklistDrafts:
-                ([ChecklistEditorDraft], UUID) throws -> Void = { drafts, taskID in
-                    try ChecklistDraftService().save(
-                        drafts: drafts,
-                        taskID: taskID,
-                        context: context,
-                        deviceID: resolvedDeviceID
-                    )
-                }
-            let savedTaskID = try TaskDraftCommandHandler().save(
-                draft: draft,
-                newTaskID: proposedTaskID ?? UUID(),
-                sanitizedTitle: sanitizedTitle,
-                taskRepository: taskRepository,
-                saveChecklistDrafts: saveChecklistDrafts
+            let savedTaskID = try draft.taskID ?? taskRepository.createTask(
+                proposedID: proposedTaskID ?? UUID(),
+                title: sanitizedTitle,
+                parentID: draft.parentID,
+                categoryID: draft.categoryID,
+                colorHex: draft.colorHex,
+                iconName: draft.iconName
+            ).id
+            try taskRepository.updateTask(
+                taskID: savedTaskID,
+                title: sanitizedTitle,
+                parentID: draft.parentID,
+                categoryID: draft.categoryID,
+                colorHex: draft.colorHex,
+                iconName: draft.iconName,
+                notes: draft.notes.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
+                estimatedSeconds: TaskEstimatePolicy.seconds(fromMinutes: draft.estimatedMinutes),
+                dueAt: draft.hasDueDate ? draft.dueAt : nil
+            )
+            try ChecklistDraftService().save(
+                drafts: draft.checklistItems,
+                taskID: savedTaskID,
+                context: context,
+                deviceID: resolvedDeviceID
             )
             try didReachDraftCheckpoint(
                 .taskAndChecklistSaved(savedTaskID)

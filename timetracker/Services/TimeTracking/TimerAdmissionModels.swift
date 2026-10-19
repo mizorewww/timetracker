@@ -34,8 +34,4 @@ nonisolated enum TimerStopTarget: Hashable, Sendable {
 
 nonisolated struct TimerStopPlan: Hashable, Sendable {
     let segmentsToStop: [TimerActiveSegmentSnapshot]
-
-    var isNoOp: Bool {
-        segmentsToStop.isEmpty
-    }
 }

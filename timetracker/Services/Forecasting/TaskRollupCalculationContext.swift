@@ -12,7 +12,6 @@ struct TaskRollupCalculationContext {
     private let ownWorkedSecondsByTaskID: [UUID: Int]
     private let checklistProgressByTaskID: [UUID: ChecklistProgress]
     private let forecastEligibleTaskIDs: Set<UUID>?
-    private let postorderTaskIDs: [UUID]
     private let historicalPaceByTaskID: [UUID: TaskRollupHistoricalPace]
     private let initialCache: [UUID: TaskRollup]
     private var updates: [UUID: TaskRollup] = [:]
@@ -28,7 +27,6 @@ struct TaskRollupCalculationContext {
         checklistProgressByTaskID: [UUID: ChecklistProgress],
         historicalPaceByTaskID: [UUID: TaskRollupHistoricalPace],
         forecastEligibleTaskIDs: Set<UUID>?,
-        postorderTaskIDs: [UUID],
         initialCache: [UUID: TaskRollup]
     ) {
         self.service = service
@@ -38,19 +36,7 @@ struct TaskRollupCalculationContext {
         self.checklistProgressByTaskID = checklistProgressByTaskID
         self.historicalPaceByTaskID = historicalPaceByTaskID
         self.forecastEligibleTaskIDs = forecastEligibleTaskIDs
-        self.postorderTaskIDs = postorderTaskIDs
         self.initialCache = initialCache
-    }
-
-    mutating func calculate(buildIDs: Set<UUID>?) -> [UUID: TaskRollup] {
-        let idsToBuild = buildIDs ?? Set(taskByID.keys)
-        for taskID in postorderTaskIDs {
-            guard idsToBuild.contains(taskID) || rollup(for: taskID) == nil else { continue }
-            build(taskID: taskID)
-        }
-        var result = initialCache.filter { taskByID[$0.key] != nil }
-        result.merge(updates) { _, updated in updated }
-        return result
     }
 
     /// Returns only rebuilt values. The mutation hot path merges these after

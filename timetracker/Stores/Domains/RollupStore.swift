@@ -29,7 +29,6 @@ struct RollupStore {
                 checklistProgressByTaskID: incrementalIndex.checklistProgressByTaskID,
                 historicalPaceByTaskID: incrementalIndex.historicalPaceByTaskID,
                 forecastEligibleTaskIDs: forecastEligibleTaskIDs,
-                postorderTaskIDs: incrementalIndex.postorderTaskIDs,
                 initialCache: [:]
             )
             taskRollups = context.calculateUpdates(buildOrder: incrementalIndex.postorderTaskIDs)
@@ -64,7 +63,6 @@ struct RollupStore {
                     checklistProgressByTaskID: incrementalIndex.checklistProgressByTaskID,
                     historicalPaceByTaskID: incrementalIndex.historicalPaceByTaskID,
                     forecastEligibleTaskIDs: forecastEligibleTaskIDs,
-                    postorderTaskIDs: incrementalIndex.postorderTaskIDs,
                     initialCache: taskRollups
                 )
                 return context.calculateUpdates(buildOrder: buildOrder)

@@ -51,13 +51,6 @@ nonisolated struct InboxItemRecord:
 }
 
 extension InboxItemRecord {
-    var effectiveSuggestionIdentity: InboxSuggestionIdentity {
-        InboxSuggestionIdentity(
-            contextID: suggestionContextID ?? id,
-            revisionID: suggestionRevisionID ?? id
-        )
-    }
-
     func isPreferredLogicalWinner(over other: Self) -> Bool {
         if (deletedAt == nil) != (other.deletedAt == nil) {
             if updatedAt != other.updatedAt {

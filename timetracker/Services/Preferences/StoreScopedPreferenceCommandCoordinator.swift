@@ -39,15 +39,6 @@ struct StoreScopedPreferenceCommandCoordinator: StoreScopedCommandCoordinator {
         }
     }
 
-    /// Serializes a device-local setting that has no SwiftData row, such as
-    /// the device-only LLM credential, with a concurrent full configuration
-    /// save. It deliberately creates a fresh read context without saving it.
-    func withLockedStoreAccess(_ operation: () throws -> Void) throws {
-        try mutationSession.withFreshReadContext { _ in
-            try operation()
-        }
-    }
-
     private func withFreshMutationContext(
         _ operation: (ModelContext) throws -> Void
     ) throws {

@@ -19,18 +19,10 @@ nonisolated enum AITaskWorkspaceToolName: String, CaseIterable, Sendable {
     case finalizePlan = "finalize_plan"
 }
 
-private nonisolated struct AITaskWorkspaceToolEntityResult<Value: Encodable>:
-    Encodable
-{
+/// A `get_*` miss encodes as `{"ok":true,"value":null}`.
+private nonisolated struct AITaskWorkspaceToolResult<Value: Encodable>: Encodable {
     let ok = true
     let value: Value
-}
-
-private nonisolated struct AITaskWorkspaceToolOptionalResult<Value: Encodable>:
-    Encodable
-{
-    let ok = true
-    let value: Value?
 }
 
 private nonisolated struct AITaskWorkspaceToolFailureResult: Encodable {
@@ -136,260 +128,134 @@ extension LLMTaskWorkspacePlanningService {
         overlay: inout AITaskWorkspaceOverlay,
         makeID: @MainActor () -> UUID
     ) throws -> String {
-        guard let tool = AITaskWorkspaceToolName(
-            rawValue: call.function.name
-        ) else {
-            throw LLMTaskWorkspacePlanningError.unknownTool(
-                call.function.name
-            )
+        guard let tool = AITaskWorkspaceToolName(rawValue: call.function.name) else {
+            throw LLMTaskWorkspacePlanningError.unknownTool(call.function.name)
+        }
+        let arguments = call.function.arguments
+
+        // Decodes the call's arguments, runs one overlay operation, and
+        // encodes its value as the tool result.
+        func respond<Arguments: Decodable>(
+            _ body: (Arguments) throws -> some Encodable
+        ) throws -> String {
+            let decoded: Arguments = try decodeArguments(arguments, toolName: tool.rawValue)
+            return try encodeToolResult(AITaskWorkspaceToolResult(value: body(decoded)))
         }
 
         do {
             switch tool {
             case .listWorkspace:
-                try validateEmptyArguments(
-                    call.function.arguments,
-                    toolName: tool.rawValue
-                )
-                return try encodeToolResult(
-                    AITaskWorkspaceToolEntityResult(
-                        value: overlay.snapshot
-                    )
-                )
-
+                try validateEmptyArguments(arguments, toolName: tool.rawValue)
+                return try encodeToolResult(AITaskWorkspaceToolResult(value: overlay.snapshot))
             case .getCategory:
-                let arguments: AITaskWorkspaceIDArguments = try decodeArguments(
-                    call.function.arguments,
-                    toolName: tool.rawValue
-                )
-                return try encodeToolResult(
-                    AITaskWorkspaceToolOptionalResult(
-                        value: overlay.category(id: arguments.id)
-                    )
-                )
-
+                return try respond { (input: AITaskWorkspaceIDArguments) in
+                    overlay.category(id: input.id)
+                }
             case .getTask:
-                let arguments: AITaskWorkspaceIDArguments = try decodeArguments(
-                    call.function.arguments,
-                    toolName: tool.rawValue
-                )
-                return try encodeToolResult(
-                    AITaskWorkspaceToolOptionalResult(
-                        value: overlay.task(id: arguments.id)
-                    )
-                )
-
+                return try respond { (input: AITaskWorkspaceIDArguments) in
+                    overlay.task(id: input.id)
+                }
             case .getChecklistItem:
-                let arguments: AITaskWorkspaceIDArguments = try decodeArguments(
-                    call.function.arguments,
-                    toolName: tool.rawValue
-                )
-                return try encodeToolResult(
-                    AITaskWorkspaceToolOptionalResult(
-                        value: overlay.checklistItem(id: arguments.id)
-                    )
-                )
-
+                return try respond { (input: AITaskWorkspaceIDArguments) in
+                    overlay.checklistItem(id: input.id)
+                }
             case .useExistingCategory:
-                let arguments: AITaskWorkspaceCategoryNameArguments =
-                    try decodeArguments(
-                        call.function.arguments,
-                        toolName: tool.rawValue
-                    )
-                return try encodeToolResult(
-                    AITaskWorkspaceToolEntityResult(
-                        value: overlay.useExistingCategory(
-                            named: arguments.title
-                        )
-                    )
-                )
-
+                return try respond { (input: AITaskWorkspaceCategoryNameArguments) in
+                    try overlay.useExistingCategory(named: input.title)
+                }
             case .createCategory:
-                let arguments: AITaskWorkspaceCreateCategoryArguments =
-                    try decodeArguments(
-                        call.function.arguments,
-                        toolName: tool.rawValue
+                return try respond { (input: AITaskWorkspaceCreateCategoryArguments) in
+                    try overlay.createCategory(
+                        id: makeID(),
+                        title: input.title,
+                        iconName: input.iconName,
+                        colorHex: input.colorHex,
+                        includesInForecast: input.includesInForecast
                     )
-                return try encodeToolResult(
-                    AITaskWorkspaceToolEntityResult(
-                        value: overlay.createCategory(
-                            id: makeID(),
-                            title: arguments.title,
-                            iconName: arguments.iconName,
-                            colorHex: arguments.colorHex,
-                            includesInForecast:
-                            arguments.includesInForecast
-                        )
-                    )
-                )
-
+                }
             case .updateCategory:
-                let arguments: AITaskWorkspaceUpdateCategoryArguments =
-                    try decodeArguments(
-                        call.function.arguments,
-                        toolName: tool.rawValue
+                return try respond { (input: AITaskWorkspaceUpdateCategoryArguments) in
+                    try overlay.updateCategory(
+                        id: input.id,
+                        title: input.title,
+                        iconName: input.iconName,
+                        colorHex: input.colorHex,
+                        includesInForecast: input.includesInForecast
                     )
-                return try encodeToolResult(
-                    AITaskWorkspaceToolEntityResult(
-                        value: overlay.updateCategory(
-                            id: arguments.id,
-                            title: arguments.title,
-                            iconName: arguments.iconName,
-                            colorHex: arguments.colorHex,
-                            includesInForecast:
-                            arguments.includesInForecast
-                        )
-                    )
-                )
-
+                }
             case .deleteCategory:
-                let arguments: AITaskWorkspaceIDArguments = try decodeArguments(
-                    call.function.arguments,
-                    toolName: tool.rawValue
-                )
-                return try encodeToolResult(
-                    AITaskWorkspaceToolEntityResult(
-                        value: overlay.deleteCategory(id: arguments.id)
-                    )
-                )
-
+                return try respond { (input: AITaskWorkspaceIDArguments) in
+                    try overlay.deleteCategory(id: input.id)
+                }
             case .createTask:
-                let arguments: AITaskWorkspaceCreateTaskArguments =
-                    try decodeArguments(
-                        call.function.arguments,
-                        toolName: tool.rawValue
+                return try respond { (input: AITaskWorkspaceCreateTaskArguments) in
+                    try overlay.createTask(
+                        id: makeID(),
+                        title: input.title,
+                        parentID: input.parentID,
+                        categoryID: input.categoryID,
+                        notes: input.notes,
+                        estimatedMinutes: input.estimatedMinutes,
+                        dueAt: preparedDate(input.dueAt, toolName: tool.rawValue),
+                        iconName: input.iconName,
+                        colorHex: input.colorHex,
+                        quantityGoal: input.quantityGoal?.draft,
+                        dailyRecurrence: input.dailyRecurrence?.draft
                     )
-                return try encodeToolResult(
-                    AITaskWorkspaceToolEntityResult(
-                        value: overlay.createTask(
-                            id: makeID(),
-                            title: arguments.title,
-                            parentID: arguments.parentID,
-                            categoryID: arguments.categoryID,
-                            notes: arguments.notes,
-                            estimatedMinutes:
-                            arguments.estimatedMinutes,
-                            dueAt: preparedDate(
-                                arguments.dueAt,
-                                toolName: tool.rawValue
-                            ),
-                            iconName: arguments.iconName,
-                            colorHex: arguments.colorHex,
-                            quantityGoal: arguments.quantityGoal?.draft,
-                            dailyRecurrence:
-                            arguments.dailyRecurrence?.draft
-                        )
-                    )
-                )
-
+                }
             case .updateTask:
-                let arguments: AITaskWorkspaceUpdateTaskArguments =
-                    try decodeArguments(
-                        call.function.arguments,
-                        toolName: tool.rawValue
+                return try respond { (input: AITaskWorkspaceUpdateTaskArguments) in
+                    try overlay.updateTask(
+                        id: input.id,
+                        title: input.title,
+                        parentID: input.parentID,
+                        categoryID: input.categoryID,
+                        notes: input.notes,
+                        estimatedMinutes: input.estimatedMinutes,
+                        dueAt: preparedDate(input.dueAt, toolName: tool.rawValue),
+                        iconName: input.iconName,
+                        colorHex: input.colorHex,
+                        quantityGoal: input.quantityGoal?.draft,
+                        dailyRecurrence: input.dailyRecurrence?.draft
                     )
-                return try encodeToolResult(
-                    AITaskWorkspaceToolEntityResult(
-                        value: overlay.updateTask(
-                            id: arguments.id,
-                            title: arguments.title,
-                            parentID: arguments.parentID,
-                            categoryID: arguments.categoryID,
-                            notes: arguments.notes,
-                            estimatedMinutes:
-                            arguments.estimatedMinutes,
-                            dueAt: preparedDate(
-                                arguments.dueAt,
-                                toolName: tool.rawValue
-                            ),
-                            iconName: arguments.iconName,
-                            colorHex: arguments.colorHex,
-                            quantityGoal: arguments.quantityGoal?.draft,
-                            dailyRecurrence:
-                            arguments.dailyRecurrence?.draft
-                        )
-                    )
-                )
-
+                }
             case .archiveTask:
-                let arguments: AITaskWorkspaceIDArguments = try decodeArguments(
-                    call.function.arguments,
-                    toolName: tool.rawValue
-                )
-                return try encodeToolResult(
-                    AITaskWorkspaceToolEntityResult(
-                        value: overlay.deleteTask(id: arguments.id)
-                    )
-                )
-
+                return try respond { (input: AITaskWorkspaceIDArguments) in
+                    try overlay.deleteTask(id: input.id)
+                }
             case .createChecklistItem:
-                let arguments: AITaskWorkspaceCreateChecklistArguments =
-                    try decodeArguments(
-                        call.function.arguments,
-                        toolName: tool.rawValue
+                return try respond { (input: AITaskWorkspaceCreateChecklistArguments) in
+                    try overlay.createChecklistItem(
+                        id: makeID(),
+                        taskID: input.taskID,
+                        title: input.title,
+                        isCompleted: input.isCompleted,
+                        iconName: input.iconName,
+                        colorHex: input.colorHex
                     )
-                return try encodeToolResult(
-                    AITaskWorkspaceToolEntityResult(
-                        value: overlay.createChecklistItem(
-                            id: makeID(),
-                            taskID: arguments.taskID,
-                            title: arguments.title,
-                            isCompleted: arguments.isCompleted,
-                            iconName: arguments.iconName,
-                            colorHex: arguments.colorHex
-                        )
-                    )
-                )
-
+                }
             case .updateChecklistItem:
-                let arguments: AITaskWorkspaceUpdateChecklistArguments =
-                    try decodeArguments(
-                        call.function.arguments,
-                        toolName: tool.rawValue
+                return try respond { (input: AITaskWorkspaceUpdateChecklistArguments) in
+                    try overlay.updateChecklistItem(
+                        id: input.id,
+                        title: input.title,
+                        isCompleted: input.isCompleted,
+                        iconName: input.iconName,
+                        colorHex: input.colorHex
                     )
-                return try encodeToolResult(
-                    AITaskWorkspaceToolEntityResult(
-                        value: overlay.updateChecklistItem(
-                            id: arguments.id,
-                            title: arguments.title,
-                            isCompleted: arguments.isCompleted,
-                            iconName: arguments.iconName,
-                            colorHex: arguments.colorHex
-                        )
-                    )
-                )
-
+                }
             case .deleteChecklistItem:
-                let arguments: AITaskWorkspaceIDArguments = try decodeArguments(
-                    call.function.arguments,
-                    toolName: tool.rawValue
-                )
-                return try encodeToolResult(
-                    AITaskWorkspaceToolEntityResult(
-                        value: overlay.deleteChecklistItem(
-                            id: arguments.id
-                        )
-                    )
-                )
-
+                return try respond { (input: AITaskWorkspaceIDArguments) in
+                    try overlay.deleteChecklistItem(id: input.id)
+                }
             case .finalizePlan:
                 throw LLMTaskWorkspacePlanningError.invalidResponse
             }
         } catch let error as LLMTaskWorkspacePlanningError {
-            if case .invalidToolArguments = error {
-                return try encodeToolResult(
-                    AITaskWorkspaceToolFailureResult(
-                        error: error.localizedDescription
-                    )
-                )
-            }
-            throw error
+            guard case .invalidToolArguments = error else { throw error }
+            return try encodeToolResult(AITaskWorkspaceToolFailureResult(error: error.localizedDescription))
         } catch {
-            return try encodeToolResult(
-                AITaskWorkspaceToolFailureResult(
-                    error: error.localizedDescription
-                )
-            )
+            return try encodeToolResult(AITaskWorkspaceToolFailureResult(error: error.localizedDescription))
         }
     }
 }

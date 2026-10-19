@@ -55,19 +55,28 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
     /// path components the task tree displays.
     static let maximumAncestorDepth = TaskTreeService.maximumDisplayedPathComponents
 
-    private(set) var snapshot: AITaskWorkspaceSnapshot
+    private(set) var snapshot: AITaskWorkspaceSnapshot {
+        didSet { indexes = Indexes(snapshot) }
+    }
+
     private(set) var operations: [AITaskWorkspaceOperation] = []
+    private var indexes: Indexes
+
+    init(snapshot: AITaskWorkspaceSnapshot) {
+        self.snapshot = snapshot
+        indexes = Indexes(snapshot)
+    }
 
     func category(id: UUID) -> AITaskWorkspaceCategory? {
-        snapshot.categories.first { $0.id == id }
+        indexes.categoryByID[id]
     }
 
     func task(id: UUID) -> AITaskWorkspaceTask? {
-        snapshot.tasks.first { $0.id == id }
+        indexes.taskByID[id]
     }
 
     func checklistItem(id: UUID) -> AITaskWorkspaceChecklistItem? {
-        snapshot.checklistItems.first { $0.id == id }
+        indexes.checklistItemByID[id]
     }
 
     func checklistItems(taskID: UUID) -> [AITaskWorkspaceChecklistItem] {
@@ -425,6 +434,35 @@ nonisolated struct AITaskWorkspaceOverlay: Equatable, Sendable {
 }
 
 private nonisolated extension AITaskWorkspaceOverlay {
+    /// Lookups rebuilt once per snapshot change so validation does not rescan
+    /// or regroup the workspace per check.
+    struct Indexes: Equatable {
+        let categoryByID: [UUID: AITaskWorkspaceCategory]
+        let taskByID: [UUID: AITaskWorkspaceTask]
+        let checklistItemByID: [UUID: AITaskWorkspaceChecklistItem]
+        let childIDsByParentID: [UUID: [UUID]]
+
+        init(_ snapshot: AITaskWorkspaceSnapshot) {
+            categoryByID = Dictionary(
+                snapshot.categories.map { ($0.id, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            taskByID = Dictionary(
+                snapshot.tasks.map { ($0.id, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            checklistItemByID = Dictionary(
+                snapshot.checklistItems.map { ($0.id, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            childIDsByParentID = snapshot.tasks.reduce(into: [:]) { result, task in
+                if let parentID = task.parentID {
+                    result[parentID, default: []].append(task.id)
+                }
+            }
+        }
+    }
+
     struct PreparedTaskValues {
         let title: String
         let notes: String
@@ -495,9 +533,9 @@ private nonisolated extension AITaskWorkspaceOverlay {
     }
 
     func requireUnusedIdentity(_ id: UUID) throws {
-        let isUsed = snapshot.categories.contains { $0.id == id } ||
-            snapshot.tasks.contains { $0.id == id } ||
-            snapshot.checklistItems.contains { $0.id == id }
+        let isUsed = indexes.categoryByID[id] != nil ||
+            indexes.taskByID[id] != nil ||
+            indexes.checklistItemByID[id] != nil
         guard !isUsed else {
             throw AITaskWorkspaceOverlayError.identityConflict(id)
         }
@@ -529,38 +567,32 @@ private nonisolated extension AITaskWorkspaceOverlay {
         )
     }
 
+    /// The moved task's new depth plus the height of its subtree must fit
+    /// within `maximumAncestorDepth`.
     func validateMaximumTaskDepth(
         taskID: UUID,
         parentID: UUID?
     ) throws {
-        var parentByTaskID = snapshot.tasks.reduce(
-            into: [UUID: UUID]()
-        ) { result, task in
-            if let parentID = task.parentID {
-                result[task.id] = parentID
+        var depth = 0
+        var visited: Set<UUID> = [taskID]
+        var cursor = parentID
+        while let current = cursor {
+            guard visited.insert(current).inserted else {
+                throw AITaskWorkspaceOverlayError.hierarchyCycle
             }
-        }
-        if let parentID {
-            parentByTaskID[taskID] = parentID
-        } else {
-            parentByTaskID.removeValue(forKey: taskID)
+            depth += 1
+            cursor = indexes.taskByID[current]?.parentID
         }
 
-        let affectedTaskIDs = [taskID] + descendantIDs(of: taskID)
-        for affectedTaskID in affectedTaskIDs {
-            var depth = 0
-            var visited: Set<UUID> = [affectedTaskID]
-            var cursor = affectedTaskID
-            while let parentID = parentByTaskID[cursor] {
-                guard visited.insert(parentID).inserted else {
-                    throw AITaskWorkspaceOverlayError.hierarchyCycle
-                }
-                depth += 1
-                guard depth <= Self.maximumAncestorDepth else {
-                    throw AITaskWorkspaceOverlayError.depthExceeded
-                }
-                cursor = parentID
-            }
+        var level = indexes.childIDsByParentID[taskID] ?? []
+        while !level.isEmpty {
+            depth += 1
+            level = level
+                .filter { visited.insert($0).inserted }
+                .flatMap { indexes.childIDsByParentID[$0] ?? [] }
+        }
+        guard depth <= Self.maximumAncestorDepth else {
+            throw AITaskWorkspaceOverlayError.depthExceeded
         }
     }
 
@@ -574,11 +606,7 @@ private nonisolated extension AITaskWorkspaceOverlay {
     }
 
     func isTaskAvailable(_ taskID: UUID) -> Bool {
-        let taskByID = snapshot.tasks.reduce(
-            into: [UUID: AITaskWorkspaceTask]()
-        ) {
-            $0[$1.id] = $1
-        }
+        let taskByID = indexes.taskByID
         var visited = Set<UUID>()
         var cursor = taskByID[taskID]
         while let current = cursor {
@@ -593,21 +621,15 @@ private nonisolated extension AITaskWorkspaceOverlay {
     }
 
     func descendantIDs(of taskID: UUID) -> [UUID] {
-        let childrenByParentID = Dictionary(
-            grouping: snapshot.tasks,
-            by: \.parentID
-        )
         var result: [UUID] = []
-        var pending = (childrenByParentID[taskID] ?? []).map(\.id)
+        var pending = indexes.childIDsByParentID[taskID] ?? []
         var visited = Set<UUID>()
         while let currentID = pending.popLast() {
             guard currentID != taskID, visited.insert(currentID).inserted else {
                 continue
             }
             result.append(currentID)
-            pending.append(
-                contentsOf: (childrenByParentID[currentID] ?? []).map(\.id)
-            )
+            pending.append(contentsOf: indexes.childIDsByParentID[currentID] ?? [])
         }
         return result
     }

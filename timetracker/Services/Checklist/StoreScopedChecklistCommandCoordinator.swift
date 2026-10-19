@@ -13,18 +13,6 @@ struct ChecklistMutationBaseline: Equatable, Sendable {
     }
 }
 
-struct ChecklistOrderMutationBaseline: Equatable, Sendable {
-    let taskID: UUID
-    let itemMutationIDs: [UUID: UUID]
-
-    init(taskID: UUID, items: [ChecklistItem]) {
-        self.taskID = taskID
-        itemMutationIDs = items.reduce(into: [:]) { result, item in
-            result[item.id] = item.clientMutationID
-        }
-    }
-}
-
 enum StoreScopedChecklistMutationError: LocalizedError, Equatable {
     case taskUnavailable
     case itemUnavailable
@@ -84,15 +72,22 @@ struct StoreScopedChecklistCommandCoordinator {
         ])[0].title
         return try withCanonicalTask(taskID: taskID) { context, _ in
             let existingItems = try visibleItems(taskID: taskID, context: context)
-            guard let item = try ChecklistCommandHandler().add(
+            let item = ChecklistItem(
                 taskID: taskID,
                 title: preparedTitle,
-                existingItems: existingItems,
-                context: context,
+                isCompleted: false,
+                sortOrder: SortOrderPolicy.after(existingItems.map(\.sortOrder).max()),
                 deviceID: deviceID
-            ) else {
-                throw ChecklistDraftValidationError.emptyTitle(index: 0)
-            }
+            )
+            context.insert(item)
+            context.insert(
+                ChecklistItemVisual(
+                    checklistItemID: item.id,
+                    iconName: ChecklistVisualSanitizer.defaultIcon,
+                    colorHex: ChecklistVisualSanitizer.defaultColor,
+                    deviceID: deviceID
+                )
+            )
             return (item.id, true)
         }
     }
@@ -112,45 +107,24 @@ struct StoreScopedChecklistCommandCoordinator {
             guard item.isCompleted != isCompleted else {
                 return (item.id, false)
             }
-            try ChecklistCommandHandler().setCompletion(
-                item,
-                isCompleted: isCompleted,
-                existingItems: items,
-                context: context,
-                now: nowProvider(),
-                deviceID: deviceID
-            )
+            let now = nowProvider()
+            if isCompleted {
+                item.sortOrderBeforeCompletion = item.sortOrder
+            }
+            if let restoredOrder = isCompleted ? nil : item.sortOrderBeforeCompletion {
+                item.sortOrder = restoredOrder
+                item.sortOrderBeforeCompletion = nil
+            } else if let lastSiblingSortOrder = items.lazy
+                .filter({ $0.id != item.id })
+                .map(\.sortOrder)
+                .max()
+            {
+                item.sortOrder = SortOrderPolicy.after(lastSiblingSortOrder)
+            }
+            item.isCompleted = isCompleted
+            item.completedAt = isCompleted ? now : nil
+            item.markMutated(at: now, deviceID: deviceID)
             return (item.id, true)
-        }
-    }
-
-    func reorder(
-        baseline: ChecklistOrderMutationBaseline,
-        orderedItemIDs: [UUID]
-    ) throws -> ChecklistMutationOutcome {
-        try withCanonicalTask(taskID: baseline.taskID) { context, _ in
-            let items = try visibleItems(taskID: baseline.taskID, context: context)
-            let currentMutationIDs = items.reduce(into: [UUID: UUID]()) {
-                $0[$1.id] = $1.clientMutationID
-            }
-            guard currentMutationIDs == baseline.itemMutationIDs,
-                  orderedItemIDs.count == items.count,
-                  Set(orderedItemIDs) == Set(items.map(\.id))
-            else {
-                throw StoreScopedChecklistMutationError.checklistChanged
-            }
-            let currentOrder = Self.ordered(items).map(\.id)
-            guard currentOrder != orderedItemIDs else {
-                return (nil, false)
-            }
-            try ChecklistCommandHandler().reorder(
-                orderedItemIDs: orderedItemIDs,
-                existingItems: items,
-                context: context,
-                now: nowProvider(),
-                deviceID: deviceID
-            )
-            return (nil, true)
         }
     }
 
@@ -190,20 +164,5 @@ struct StoreScopedChecklistCommandCoordinator {
                 predicate: #Predicate { $0.taskID == requestedTaskID }
             )
         ).visibleDeduplicatedByID()
-    }
-
-    private static func ordered(_ items: [ChecklistItem]) -> [ChecklistItem] {
-        items.sorted { lhs, rhs in
-            if lhs.isCompleted != rhs.isCompleted {
-                return !lhs.isCompleted
-            }
-            if lhs.sortOrder != rhs.sortOrder {
-                return lhs.sortOrder < rhs.sortOrder
-            }
-            if lhs.createdAt != rhs.createdAt {
-                return lhs.createdAt < rhs.createdAt
-            }
-            return lhs.id.uuidString < rhs.id.uuidString
-        }
     }
 }

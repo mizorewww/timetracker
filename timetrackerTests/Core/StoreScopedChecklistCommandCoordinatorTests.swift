@@ -166,55 +166,6 @@ struct StoreScopedChecklistCommandCoordinatorTests {
     }
 
     @Test
-    func staleReorderCannotOverwriteANewerItemMutation() throws {
-        let context = try makeTestContext()
-        let task = try makeTask(in: context, title: "Reorder")
-        let coordinator = coordinator(container: context.container, deviceID: "test")
-        _ = try coordinator.add(taskID: task.id, title: "First")
-        _ = try coordinator.add(taskID: task.id, title: "Second")
-        let staleItems = try visibleItems(in: context.container)
-            .sorted { $0.sortOrder < $1.sortOrder }
-        let baseline = ChecklistOrderMutationBaseline(taskID: task.id, items: staleItems)
-        _ = try coordinator.setCompletion(
-            baseline: ChecklistMutationBaseline(item: staleItems[0]),
-            isCompleted: true
-        )
-
-        #expect(throws: StoreScopedChecklistMutationError.checklistChanged) {
-            try coordinator.reorder(
-                baseline: baseline,
-                orderedItemIDs: staleItems.reversed().map(\.id)
-            )
-        }
-        let persisted = try visibleItems(in: context.container)
-        #expect(persisted.first(where: { $0.id == staleItems[0].id })?.isCompleted == true)
-    }
-
-    @Test
-    func successfulReorderPersistsTheValidatedScopedOrder() throws {
-        let context = try makeTestContext()
-        let task = try makeTask(in: context, title: "Reorder")
-        let coordinator = coordinator(container: context.container, deviceID: "test")
-        _ = try coordinator.add(taskID: task.id, title: "First")
-        _ = try coordinator.add(taskID: task.id, title: "Second")
-        _ = try coordinator.add(taskID: task.id, title: "Third")
-        let items = try visibleItems(in: context.container)
-            .sorted { $0.sortOrder < $1.sortOrder }
-        let expectedIDs = items.reversed().map(\.id)
-
-        let outcome = try coordinator.reorder(
-            baseline: ChecklistOrderMutationBaseline(taskID: task.id, items: items),
-            orderedItemIDs: expectedIDs
-        )
-
-        #expect(outcome.didMutate)
-        let persistedIDs = try visibleItems(in: context.container)
-            .sorted { $0.sortOrder < $1.sortOrder }
-            .map(\.id)
-        #expect(persistedIDs == expectedIDs)
-    }
-
-    @Test
     func staleVisualSuggestionCannotOverwriteAManualVisualFromAnotherScene() throws {
         let context = try makeTestContext()
         let task = try makeTask(in: context, title: "Visual owner")

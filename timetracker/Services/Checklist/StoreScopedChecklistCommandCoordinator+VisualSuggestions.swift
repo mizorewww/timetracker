@@ -49,14 +49,32 @@ extension StoreScopedChecklistCommandCoordinator {
                 return (nil, false)
             }
 
-            try ChecklistCommandHandler().applyVisualSuggestion(
-                item: item,
-                result: result,
-                existingVisual: visual,
-                context: context,
-                now: nowProvider(),
-                deviceID: deviceID
-            )
+            let now = nowProvider()
+            let titleSnapshot = ChecklistVisualSuggestionPolicy().normalizedTitle(item.title)
+            let iconName = ChecklistVisualSanitizer.sanitizedIcon(result.iconName)
+            let colorHex = ChecklistVisualSanitizer.sanitizedColor(result.colorHex)
+            if let visual {
+                visual.iconName = iconName
+                visual.colorHex = colorHex
+                visual.suggestionTitleSnapshot = titleSnapshot
+                visual.suggestionModelID = result.modelID
+                visual.suggestionGeneratedAt = now
+                visual.userEditedAt = nil
+                visual.deletedAt = nil
+                visual.markMutated(at: now, deviceID: deviceID)
+            } else {
+                context.insert(
+                    ChecklistItemVisual(
+                        checklistItemID: item.id,
+                        iconName: iconName,
+                        colorHex: colorHex,
+                        suggestionTitleSnapshot: titleSnapshot,
+                        suggestionModelID: result.modelID,
+                        suggestionGeneratedAt: now,
+                        deviceID: deviceID
+                    )
+                )
+            }
             return (item.id, true)
         }
     }

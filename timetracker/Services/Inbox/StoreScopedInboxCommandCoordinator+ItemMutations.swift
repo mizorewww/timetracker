@@ -20,17 +20,15 @@ extension StoreScopedInboxCommandCoordinator {
         )
 
         let nextSortOrder = SortOrderPolicy.after(existingItems.filter { !$0.isCompleted }.map(\.sortOrder).max())
-        return try context.performAtomicMutation {
-            let item = InboxItem(
-                title: preparedText.title,
-                isCompleted: false,
-                sortOrder: nextSortOrder,
-                deviceID: deviceID
-            )
-            preparedText.apply(to: item)
-            context.insert(item)
-            return item
-        }
+        let item = InboxItem(
+            title: preparedText.title,
+            isCompleted: false,
+            sortOrder: nextSortOrder,
+            deviceID: deviceID
+        )
+        preparedText.apply(to: item)
+        context.insert(item)
+        return item
     }
 
     func toggle(
@@ -42,19 +40,17 @@ extension StoreScopedInboxCommandCoordinator {
         let logicalMutation = try preparedLogicalMutation(for: item, context: context)
         let winner = logicalMutation.winner.item
         guard winner.deletedAt == nil else { return }
-        try context.performAtomicMutation {
-            winner.materializeSuggestionIdentity()
-            logicalMutation.materializeDismissal()
-            logicalMutation.winner.text.apply(to: winner)
-            winner.isCompleted.toggle()
-            winner.completedAt = winner.isCompleted ? now : nil
-            winner.markMutated(at: now, deviceID: deviceID)
-            tombstoneSuperseded(
-                logicalMutation.activeSiblings,
-                winnerUpdatedAt: now,
-                deviceID: deviceID
-            )
-        }
+        winner.materializeSuggestionIdentity()
+        logicalMutation.materializeDismissal()
+        logicalMutation.winner.text.apply(to: winner)
+        winner.isCompleted.toggle()
+        winner.completedAt = winner.isCompleted ? now : nil
+        winner.markMutated(at: now, deviceID: deviceID)
+        tombstoneSuperseded(
+            logicalMutation.activeSiblings,
+            winnerUpdatedAt: now,
+            deviceID: deviceID
+        )
     }
 
     func updateTitle(
@@ -80,21 +76,19 @@ extension StoreScopedInboxCommandCoordinator {
         guard winner.title != preparedText.title else { return }
         let preparedSuggestions = try preparedSuggestionMutations(for: winner, context: context)
 
-        try context.performAtomicMutation {
-            winner.materializeSuggestionIdentity()
-            preparedText.apply(to: winner)
-            winner.suggestedTaskID = nil
-            winner.suggestionGeneratedAt = nil
-            winner.suggestionRevisionID = UUID()
-            winner.dismissedSuggestionRevisionID = nil
-            winner.markMutated(at: now, deviceID: deviceID)
-            tombstone(preparedSuggestions, now: now, deviceID: deviceID)
-            tombstoneSuperseded(
-                logicalMutation.activeSiblings,
-                winnerUpdatedAt: now,
-                deviceID: deviceID
-            )
-        }
+        winner.materializeSuggestionIdentity()
+        preparedText.apply(to: winner)
+        winner.suggestedTaskID = nil
+        winner.suggestionGeneratedAt = nil
+        winner.suggestionRevisionID = UUID()
+        winner.dismissedSuggestionRevisionID = nil
+        winner.markMutated(at: now, deviceID: deviceID)
+        tombstone(preparedSuggestions, now: now, deviceID: deviceID)
+        tombstoneSuperseded(
+            logicalMutation.activeSiblings,
+            winnerUpdatedAt: now,
+            deviceID: deviceID
+        )
     }
 
     func softDelete(
@@ -108,15 +102,13 @@ extension StoreScopedInboxCommandCoordinator {
         guard winner.deletedAt == nil else { return }
         let preparedSuggestions = try preparedSuggestionMutations(for: winner, context: context)
 
-        try context.performAtomicMutation {
-            winner.materializeSuggestionIdentity()
-            logicalMutation.materializeDismissal()
-            logicalMutation.winner.text.apply(to: winner)
-            winner.deletedAt = now
-            winner.markMutated(at: now, deviceID: deviceID)
-            tombstone(preparedSuggestions, now: now, deviceID: deviceID)
-            tombstone(logicalMutation.activeSiblings, now: now, deviceID: deviceID)
-        }
+        winner.materializeSuggestionIdentity()
+        logicalMutation.materializeDismissal()
+        logicalMutation.winner.text.apply(to: winner)
+        winner.deletedAt = now
+        winner.markMutated(at: now, deviceID: deviceID)
+        tombstone(preparedSuggestions, now: now, deviceID: deviceID)
+        tombstone(logicalMutation.activeSiblings, now: now, deviceID: deviceID)
     }
 
     static func reorderedOpenItemIDs(
@@ -162,20 +154,18 @@ extension StoreScopedInboxCommandCoordinator {
         }
         guard logicalMutations.map({ $0.winner.item.id }) == orderedItemIDs else { return }
 
-        try context.performAtomicMutation {
-            for (index, logicalMutation) in logicalMutations.enumerated() {
-                let item = logicalMutation.winner.item
-                item.materializeSuggestionIdentity()
-                logicalMutation.materializeDismissal()
-                logicalMutation.winner.text.apply(to: item)
-                item.sortOrder = SortOrderPolicy.position(index)
-                item.markMutated(at: now, deviceID: deviceID)
-                tombstoneSuperseded(
-                    logicalMutation.activeSiblings,
-                    winnerUpdatedAt: now,
-                    deviceID: deviceID
-                )
-            }
+        for (index, logicalMutation) in logicalMutations.enumerated() {
+            let item = logicalMutation.winner.item
+            item.materializeSuggestionIdentity()
+            logicalMutation.materializeDismissal()
+            logicalMutation.winner.text.apply(to: item)
+            item.sortOrder = SortOrderPolicy.position(index)
+            item.markMutated(at: now, deviceID: deviceID)
+            tombstoneSuperseded(
+                logicalMutation.activeSiblings,
+                winnerUpdatedAt: now,
+                deviceID: deviceID
+            )
         }
     }
 }

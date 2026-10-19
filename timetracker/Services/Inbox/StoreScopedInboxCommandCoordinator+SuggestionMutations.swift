@@ -19,20 +19,18 @@ extension StoreScopedInboxCommandCoordinator {
         )
         let preparedSuggestions = try preparedSuggestionMutations(for: winner, context: context)
 
-        try context.performAtomicMutation {
-            winner.materializeSuggestionIdentity()
-            preparedItem.apply(to: winner)
-            winner.suggestedTaskID = nil
-            winner.suggestionGeneratedAt = now
-            winner.dismissedSuggestionRevisionID = winner.effectiveSuggestionRevisionID
-            winner.markMutated(at: now, deviceID: deviceID)
-            tombstone(preparedSuggestions, now: now, deviceID: deviceID)
-            tombstoneSuperseded(
-                logicalMutation.activeSiblings,
-                winnerUpdatedAt: now,
-                deviceID: deviceID
-            )
-        }
+        winner.materializeSuggestionIdentity()
+        preparedItem.apply(to: winner)
+        winner.suggestedTaskID = nil
+        winner.suggestionGeneratedAt = now
+        winner.dismissedSuggestionRevisionID = winner.effectiveSuggestionRevisionID
+        winner.markMutated(at: now, deviceID: deviceID)
+        tombstone(preparedSuggestions, now: now, deviceID: deviceID)
+        tombstoneSuperseded(
+            logicalMutation.activeSiblings,
+            winnerUpdatedAt: now,
+            deviceID: deviceID
+        )
     }
 
     func upsertSuggestion(
@@ -75,49 +73,47 @@ extension StoreScopedInboxCommandCoordinator {
         let duplicateMutations = try existing
             .filter { $0.deletedAt == nil && $0.id != active?.id }
             .map(prepareSuggestionMutation)
-        try context.performAtomicMutation {
-            winner.materializeSuggestionIdentity()
-            preparedItem.apply(to: winner)
-            if let active {
-                update(
-                    active,
-                    item: winner,
-                    destination: result.destination,
-                    text: preparedResult,
-                    now: now,
-                    deviceID: deviceID
-                )
-            } else {
-                context.insert(
-                    InboxSuggestion(
-                        inboxItemID: winner.id,
-                        inboxItemContextID: winner.effectiveSuggestionContextID,
-                        inboxItemRevisionID: winner.effectiveSuggestionRevisionID,
-                        taskID: result.destination.persistenceTargetID,
-                        destinationKind: result.destination.suggestionDestinationKind,
-                        reason: preparedResult.reason,
-                        iconName: preparedResult.iconName,
-                        colorHex: preparedResult.colorHex,
-                        modelID: preparedResult.modelID,
-                        titleSnapshot: preparedResult.titleSnapshot,
-                        generatedAt: now,
-                        deviceID: deviceID
-                    )
-                )
-            }
-
-            tombstone(duplicateMutations, now: now, deviceID: deviceID)
-
-            winner.suggestedTaskID = result.destination.legacySuggestedTaskID
-            winner.suggestionGeneratedAt = now
-            winner.dismissedSuggestionRevisionID = nil
-            winner.markMutated(at: now, deviceID: deviceID)
-            tombstoneSuperseded(
-                logicalMutation.activeSiblings,
-                winnerUpdatedAt: now,
+        winner.materializeSuggestionIdentity()
+        preparedItem.apply(to: winner)
+        if let active {
+            update(
+                active,
+                item: winner,
+                destination: result.destination,
+                text: preparedResult,
+                now: now,
                 deviceID: deviceID
             )
+        } else {
+            context.insert(
+                InboxSuggestion(
+                    inboxItemID: winner.id,
+                    inboxItemContextID: winner.effectiveSuggestionContextID,
+                    inboxItemRevisionID: winner.effectiveSuggestionRevisionID,
+                    taskID: result.destination.persistenceTargetID,
+                    destinationKind: result.destination.suggestionDestinationKind,
+                    reason: preparedResult.reason,
+                    iconName: preparedResult.iconName,
+                    colorHex: preparedResult.colorHex,
+                    modelID: preparedResult.modelID,
+                    titleSnapshot: preparedResult.titleSnapshot,
+                    generatedAt: now,
+                    deviceID: deviceID
+                )
+            )
         }
+
+        tombstone(duplicateMutations, now: now, deviceID: deviceID)
+
+        winner.suggestedTaskID = result.destination.legacySuggestedTaskID
+        winner.suggestionGeneratedAt = now
+        winner.dismissedSuggestionRevisionID = nil
+        winner.markMutated(at: now, deviceID: deviceID)
+        tombstoneSuperseded(
+            logicalMutation.activeSiblings,
+            winnerUpdatedAt: now,
+            deviceID: deviceID
+        )
     }
 
     func saveSuggestionDraft(

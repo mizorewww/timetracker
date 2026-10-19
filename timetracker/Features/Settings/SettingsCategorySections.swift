@@ -93,10 +93,8 @@ extension SettingsView {
         case .intelligence:
             LLMSettingsSection(
                 automaticSuggestionsEnabled: llmAutomaticSuggestionsEnabledBinding,
-                endpoint: store.preferences.llmEndpoint,
-                hasAPIKey: !store.preferences.llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                isConfigured: store.preferences.isLLMConfigured,
                 selectedModel: store.preferences.llmSelectedModel,
-                availableModels: store.preferences.llmAvailableModelIDs,
                 reasoningEffort: store.preferences.llmReasoningEffort,
                 onConfigure: presentLLMConfiguration,
                 onEditPrompt: presentLLMPrompt

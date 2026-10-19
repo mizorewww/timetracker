@@ -9,7 +9,31 @@ nonisolated struct LLMRequestConfiguration: Equatable, Sendable {
     let reasoningEffort: LLMReasoningEffort
 }
 
+nonisolated extension LLMClient {
+    /// A connection is usable once the endpoint is valid, a key is set, and
+    /// the selected model was listed by that endpoint.
+    static func isConfigured(
+        endpoint: String,
+        apiKey: String,
+        selectedModel: String,
+        availableModels: [String]
+    ) -> Bool {
+        isValidEndpoint(endpoint) &&
+            apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false &&
+            availableModels.contains(selectedModel)
+    }
+}
+
 extension AppPreferences {
+    var isLLMConfigured: Bool {
+        LLMClient.isConfigured(
+            endpoint: llmEndpoint,
+            apiKey: llmAPIKey,
+            selectedModel: llmSelectedModel,
+            availableModels: llmAvailableModelIDs
+        )
+    }
+
     /// Current connection settings as a single request configuration value.
     var llmRequestConfiguration: LLMRequestConfiguration {
         LLMRequestConfiguration(

@@ -12,38 +12,46 @@ struct AITaskPlanGeneratorSheet: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dismiss) private var dismiss
+    @State private var model: AITaskPlanGenerationModel
     @State private var requestText = ""
-    @State private var reviewDraft: AITaskWorkspaceReviewDraft?
-    @State private var disclosedCounts: AITaskWorkspaceCounts?
-    @State private var activity = Activity.idle
-    @State private var generationProgress: LLMGenerationProgress?
-    @State private var errorMessage: String?
     @State private var pendingDiscardAction: PendingDiscardAction?
     @State private var isDiscardConfirmationPresented = false
     @State private var isDestructiveConfirmationPresented = false
 
+    init(
+        store: TimeTrackerStore,
+        onConfigureAI: @escaping () -> Void,
+        onApply: @escaping (AITaskWorkspaceReviewDraft) async -> AITaskWorkspaceApplyResult
+    ) {
+        self.store = store
+        self.onConfigureAI = onConfigureAI
+        self.onApply = onApply
+        _model = State(initialValue: AITaskPlanGenerationModel(store: store))
+    }
+
     private var isConfigured: Bool {
-        LLMClient.isValidEndpoint(
-            store.preferences.llmEndpoint
-        ) &&
-            store.preferences.llmAPIKey
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .isEmpty == false &&
-            store.preferences.llmAvailableModelIDs
-            .contains(store.preferences.llmSelectedModel)
+        store.preferences.isLLMConfigured
+    }
+
+    private var isGenerating: Bool {
+        model.isGenerating
+    }
+
+    private var isApplying: Bool {
+        model.isApplying
     }
 
     private var hasUnsavedChanges: Bool {
-        requestText.isEmpty == false || reviewDraft != nil
+        requestText.isEmpty == false || model.reviewDraft != nil
     }
 
     var body: some View {
         NavigationStack {
             Group {
-                if let reviewDraft {
+                if let reviewDraft = model.reviewDraft {
                     AITaskWorkspaceReviewView(
                         draft: reviewDraft,
-                        errorMessage: errorMessage,
+                        errorMessage: model.errorMessage,
                         isApplying: isApplying,
                         onChangeRequest: requestReturnToRequest
                     )
@@ -51,6 +59,10 @@ struct AITaskPlanGeneratorSheet: View {
                     requestForm
                 }
             }
+            .animation(
+                reduceMotion ? nil : AppMotion.stateChange,
+                value: model.reviewDraft == nil
+            )
             .navigationTitle(AppStrings.localized("aiTaskPlan.title"))
             .appInlineNavigationTitle()
             .toolbar {
@@ -60,7 +72,7 @@ struct AITaskPlanGeneratorSheet: View {
                         .accessibilityIdentifier("aiTaskPlan.cancel")
                 }
 
-                if let reviewDraft {
+                if let reviewDraft = model.reviewDraft {
                     ToolbarItem(placement: .confirmationAction) {
                         Button {
                             requestApply(reviewDraft)
@@ -118,7 +130,7 @@ struct AITaskPlanGeneratorSheet: View {
             isPresented: $isDestructiveConfirmationPresented,
             titleVisibility: .visible
         ) {
-            if let reviewDraft {
+            if let reviewDraft = model.reviewDraft {
                 Button(
                     String.localizedStringWithFormat(
                         AppStrings.localized(
@@ -138,10 +150,10 @@ struct AITaskPlanGeneratorSheet: View {
             Text(.app("aiTaskPlan.destructive.message"))
         }
         .task {
-            await refreshDisclosureCounts()
+            await model.loadDisclosureCounts()
         }
         .onDisappear {
-            activity.task?.cancel()
+            model.cancel()
         }
         .accessibilityIdentifier("aiTaskPlan.sheet")
     }
@@ -200,7 +212,7 @@ struct AITaskPlanGeneratorSheet: View {
                                 )
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(.app("aiTaskPlan.generating.workspace"))
-                                if let generationProgress {
+                                if let generationProgress = model.progress {
                                     Text(
                                         String.localizedStringWithFormat(
                                             AppStrings.localized(
@@ -225,7 +237,7 @@ struct AITaskPlanGeneratorSheet: View {
                                 AppStrings.localized(
                                     "aiTaskPlan.stopGenerating"
                                 ),
-                                action: stopGenerating
+                                action: model.stop
                             )
                             .accessibilityIdentifier(
                                 "aiTaskPlan.stopGenerating"
@@ -275,7 +287,7 @@ struct AITaskPlanGeneratorSheet: View {
 
     @ViewBuilder
     private var requestErrorSection: some View {
-        if let errorMessage {
+        if let errorMessage = model.errorMessage {
             Section {
                 Label(
                     errorMessage,
@@ -299,7 +311,7 @@ struct AITaskPlanGeneratorSheet: View {
     }
 
     private var disclosureSummary: String {
-        guard let disclosedCounts else {
+        guard let disclosedCounts = model.disclosedCounts else {
             return AppStrings.localized("aiTaskPlan.privacy.loading")
         }
         return String.localizedStringWithFormat(
@@ -310,100 +322,8 @@ struct AITaskPlanGeneratorSheet: View {
         )
     }
 
-    private func refreshDisclosureCounts() async {
-        guard disclosedCounts == nil else { return }
-        do {
-            disclosedCounts = try await AITaskWorkspaceCounts(
-                snapshot: store.captureAITaskWorkspaceBaseline().snapshot
-            )
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
     private func generate() {
-        activity.task?.cancel()
-        let request = requestText
-        let requestID = UUID()
-        errorMessage = nil
-        generationProgress = nil
-
-        let task = Task { @MainActor in
-            let progressClock = ContinuousClock()
-            var firstProgressInstant: ContinuousClock.Instant?
-            defer {
-                if activity.generationID == requestID {
-                    activity = .idle
-                }
-            }
-            do {
-                let baseline = try await store.captureAITaskWorkspaceBaseline()
-                disclosedCounts = AITaskWorkspaceCounts(
-                    snapshot: baseline.snapshot
-                )
-                let plan = try await LLMTaskWorkspacePlanningService()
-                    .generate(
-                        request: request,
-                        instructions:
-                        store.preferences.llmTaskPlanInstructions,
-                        workspace: baseline.snapshot,
-                        configuration:
-                        store.preferences.llmRequestConfiguration,
-                        onProgress: { progress in
-                            guard activity.generationID == requestID,
-                                  Task.isCancelled == false
-                            else {
-                                return
-                            }
-                            if firstProgressInstant == nil {
-                                firstProgressInstant = progressClock.now
-                            }
-                            generationProgress = progress
-                        }
-                    )
-                guard Task.isCancelled == false,
-                      activity.generationID == requestID
-                else {
-                    return
-                }
-                if let firstProgressInstant {
-                    let minimumPresentationDuration =
-                        Duration.seconds(2)
-                    let elapsed = firstProgressInstant.duration(
-                        to: progressClock.now
-                    )
-                    if elapsed < minimumPresentationDuration {
-                        try await progressClock.sleep(
-                            for: minimumPresentationDuration - elapsed
-                        )
-                    }
-                }
-                withAnimation(
-                    reduceMotion ? nil : AppMotion.stateChange
-                ) {
-                    reviewDraft = AITaskWorkspaceReviewDraft(
-                        baseline: baseline,
-                        plan: plan
-                    )
-                }
-            } catch is CancellationError {
-                // Stop is a normal user action and preserves the request.
-            } catch {
-                guard Task.isCancelled == false,
-                      activity.generationID == requestID
-                else {
-                    return
-                }
-                errorMessage = error.localizedDescription
-            }
-        }
-        activity = .generating(id: requestID, task: task)
-    }
-
-    private func stopGenerating() {
-        activity.task?.cancel()
-        activity = .idle
-        generationProgress = nil
+        model.generate(request: requestText)
     }
 
     private func requestApply(_ draft: AITaskWorkspaceReviewDraft) {
@@ -416,21 +336,7 @@ struct AITaskPlanGeneratorSheet: View {
     }
 
     private func apply(_ draft: AITaskWorkspaceReviewDraft) {
-        guard isApplying == false else { return }
-        errorMessage = nil
-        let task = Task { @MainActor in
-            let result = await onApply(draft)
-            guard Task.isCancelled == false else { return }
-            switch result {
-            case .applied:
-                dismiss()
-            case let .workspaceChanged(message),
-                 let .failed(message):
-                errorMessage = message
-                activity = .idle
-            }
-        }
-        activity = .applying(task)
+        model.apply(draft, using: onApply, onApplied: { dismiss() })
     }
 
     private func requestDismiss() {
@@ -453,66 +359,12 @@ struct AITaskPlanGeneratorSheet: View {
         isDiscardConfirmationPresented = false
         switch action {
         case .dismissSheet:
-            activity.task?.cancel()
+            model.cancel()
             dismiss()
         case .returnToRequest:
-            errorMessage = nil
-            withAnimation(
-                reduceMotion ? nil : AppMotion.stateChange
-            ) {
-                reviewDraft = nil
-            }
+            model.discardReview()
         case nil:
             break
         }
-    }
-}
-
-extension AITaskPlanGeneratorSheet {
-    /// At most one model request or apply runs at a time; the generation ID
-    /// lets a superseded request ignore its own late results.
-    enum Activity {
-        case idle
-        case generating(id: UUID, task: Task<Void, Never>)
-        case applying(Task<Void, Never>)
-
-        var task: Task<Void, Never>? {
-            switch self {
-            case .idle: nil
-            case let .generating(_, task), let .applying(task): task
-            }
-        }
-
-        var generationID: UUID? {
-            if case let .generating(id, _) = self {
-                id
-            } else {
-                nil
-            }
-        }
-    }
-
-    var isGenerating: Bool {
-        activity.generationID != nil
-    }
-
-    var isApplying: Bool {
-        if case .applying = activity {
-            true
-        } else {
-            false
-        }
-    }
-}
-
-private struct AITaskWorkspaceCounts: Equatable {
-    let categoryCount: Int
-    let taskCount: Int
-    let checklistCount: Int
-
-    init(snapshot: AITaskWorkspaceSnapshot) {
-        categoryCount = snapshot.categories.count
-        taskCount = snapshot.tasks.count
-        checklistCount = snapshot.checklistItems.count
     }
 }

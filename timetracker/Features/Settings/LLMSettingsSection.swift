@@ -35,27 +35,22 @@ struct LLMConfigurationDraft: Equatable {
 
     var canSave: Bool {
         let normalizedDraft = normalized
-        return LLMClient.isValidEndpoint(normalizedDraft.endpoint) &&
-            !normalizedDraft.apiKey.isEmpty &&
-            normalizedDraft.availableModels.contains(normalizedDraft.selectedModel)
+        return LLMClient.isConfigured(
+            endpoint: normalizedDraft.endpoint,
+            apiKey: normalizedDraft.apiKey,
+            selectedModel: normalizedDraft.selectedModel,
+            availableModels: normalizedDraft.availableModels
+        )
     }
 }
 
 struct LLMSettingsSection: View {
     let automaticSuggestionsEnabled: Binding<Bool>
-    let endpoint: String
-    let hasAPIKey: Bool
+    let isConfigured: Bool
     let selectedModel: String
-    let availableModels: [String]
     let reasoningEffort: LLMReasoningEffort
     let onConfigure: () -> Void
     let onEditPrompt: (LLMPromptKind) -> Void
-
-    private var isConfigured: Bool {
-        LLMClient.isValidEndpoint(endpoint) &&
-            hasAPIKey &&
-            availableModels.contains(selectedModel)
-    }
 
     var body: some View {
         Section {

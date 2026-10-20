@@ -43,23 +43,36 @@ enum AppMotion {
 }
 
 /// A design-language card: `cardBackground` fill with the card shadow, plus
-/// a faint light edge in dark mode so cards separate from the window.
+/// a faint light edge in dark mode (and an edge under Increase Contrast) so
+/// cards separate from the window.
 private struct AppCardSurface: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: AppLayout.cardRadius, style: .continuous)
+        let filled = shape
+            .fill(AppColors.cardBackground)
+            .overlay {
+                if let edge {
+                    shape.strokeBorder(edge)
+                }
+            }
         if colorScheme == .dark {
-            shape
-                .fill(AppColors.cardBackground)
-                .strokeBorder(.white.opacity(0.06))
+            filled
                 .shadow(color: .black.opacity(0.35), radius: 10, y: 6)
         } else {
-            shape
-                .fill(AppColors.cardBackground)
+            filled
                 .shadow(color: AppColors.shadowInk.opacity(0.04), radius: 1, y: 1)
                 .shadow(color: AppColors.shadowInk.opacity(0.06), radius: 10, y: 6)
         }
+    }
+
+    private var edge: Color? {
+        if contrast == .increased {
+            return .primary.opacity(0.25)
+        }
+        return colorScheme == .dark ? .white.opacity(0.06) : nil
     }
 }
 

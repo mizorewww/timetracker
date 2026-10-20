@@ -13,7 +13,10 @@ extension TimeTrackerStore {
     func refreshForForeground(
         cloudAccountStatusClient: CloudAccountStatusClient? = nil
     ) async {
-        refreshQuietly()
+        // Reloading every read model here cost seconds on a long history;
+        // persistent history names what changed while the app was away, and
+        // reconciling Pomodoro re-converges today's window and live timers.
+        refreshChangesSinceLastCatchUp()
         materializeCurrentDailyTaskRecurrences()
         reconcileActivePomodoro(now: Date())
         enqueueCommittedMutationSystemProjections(

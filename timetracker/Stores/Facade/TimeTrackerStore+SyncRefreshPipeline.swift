@@ -13,6 +13,18 @@ extension TimeTrackerStore {
         return StoreRefreshPlan(scopes: remoteChangeHistory.scopesSinceLastCatchUp(in: modelContext))
     }
 
+    /// Catches the read models up on what widgets, Shortcuts, the Watch and
+    /// CloudKit committed since the last catch-up.
+    func refreshChangesSinceLastCatchUp() {
+        let plan = remoteChangeRefreshPlan()
+        guard plan.scopes.isEmpty == false else { return }
+        do {
+            try refresh(plan: plan)
+        } catch {
+            logUnpresentedFailure("Refresh", error)
+        }
+    }
+
     /// Coalesces CloudKit and remote-store notifications into one read-model
     /// catch-up per window; the window's highest-priority event becomes the
     /// reported Cloud activity.

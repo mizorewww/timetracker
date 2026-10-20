@@ -9,7 +9,7 @@ struct SidebarDestinationLabel: View {
             Label {
                 Text(destination.title)
             } icon: {
-                SidebarTile(systemImage: destination.symbolName, tint: tint)
+                SidebarTile(visual: destination.visual)
             }
             Spacer()
             if let count {
@@ -23,28 +23,17 @@ struct SidebarDestinationLabel: View {
         }
         .accessibilityElement(children: .combine)
     }
-
-    private var tint: Color {
-        switch destination {
-        case .today: .orange
-        case .inbox: .blue
-        case .tasks: .green
-        case .pomodoro: .pink
-        case .analytics: .purple
-        }
-    }
 }
 
 /// Solid destination tile, sized to the platform's sidebar row.
 struct SidebarTile: View {
-    let systemImage: String
-    let tint: Color
+    let visual: DestinationVisual
 
     var body: some View {
         #if os(macOS)
-        AppIconTile(systemImage: systemImage, tint: tint, style: .solid, size: 22)
+        AppIconTile(systemImage: visual.symbolName, tint: visual.tint, style: .solid, size: 22)
         #else
-        AppIconTile(systemImage: systemImage, tint: tint, style: .solid, size: 30)
+        AppIconTile(systemImage: visual.symbolName, tint: visual.tint, style: .solid, size: 30)
         #endif
     }
 }

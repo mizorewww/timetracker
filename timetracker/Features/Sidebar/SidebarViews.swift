@@ -50,7 +50,7 @@ struct SidebarView: View {
                     Label {
                         Text(AppStrings.settings)
                     } icon: {
-                        SidebarTile(systemImage: "gearshape.fill", tint: .gray)
+                        SidebarTile(visual: .settings)
                     }
                 }
                 .accessibilityIdentifier("sidebar.Settings")

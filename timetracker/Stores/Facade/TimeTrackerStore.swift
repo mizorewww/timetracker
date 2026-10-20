@@ -197,16 +197,6 @@ final class TimeTrackerStore {
             case .analytics: AppStrings.analytics
             }
         }
-
-        var symbolName: String {
-            switch self {
-            case .today: "sun.max.fill"
-            case .inbox: "tray.fill"
-            case .tasks: "checklist"
-            case .pomodoro: "timer"
-            case .analytics: "chart.bar.fill"
-            }
-        }
     }
 
     var modelContext: ModelContext?

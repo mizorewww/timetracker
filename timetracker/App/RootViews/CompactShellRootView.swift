@@ -26,7 +26,7 @@ struct CompactShellRootView: View {
                     store.desktopDestination == .today
                 )
             } label: {
-                Label(AppStrings.today, systemImage: TimeTrackerStore.DesktopDestination.today.symbolName)
+                Label(AppStrings.today, systemImage: TimeTrackerStore.DesktopDestination.today.visual.symbolName)
                     .accessibilityIdentifier("phone.tab.today")
             }
 
@@ -35,14 +35,14 @@ struct CompactShellRootView: View {
                     InboxView(store: store)
                 }
             } label: {
-                Label(AppStrings.inbox, systemImage: TimeTrackerStore.DesktopDestination.inbox.symbolName)
+                Label(AppStrings.inbox, systemImage: TimeTrackerStore.DesktopDestination.inbox.visual.symbolName)
                     .accessibilityIdentifier("phone.tab.inbox")
             }
 
             Tab(value: .tasks) {
                 TasksNavigationView(store: store)
             } label: {
-                Label(AppStrings.tasks, systemImage: TimeTrackerStore.DesktopDestination.tasks.symbolName)
+                Label(AppStrings.tasks, systemImage: TimeTrackerStore.DesktopDestination.tasks.visual.symbolName)
                     .accessibilityIdentifier("phone.tab.tasks")
             }
 
@@ -55,7 +55,7 @@ struct CompactShellRootView: View {
                     store.desktopDestination == .pomodoro
                 )
             } label: {
-                Label(AppStrings.focus, systemImage: TimeTrackerStore.DesktopDestination.pomodoro.symbolName)
+                Label(AppStrings.focus, systemImage: TimeTrackerStore.DesktopDestination.pomodoro.visual.symbolName)
                     .accessibilityIdentifier("phone.tab.focus")
             }
 
@@ -64,7 +64,7 @@ struct CompactShellRootView: View {
                     AnalyticsView(store: store)
                 }
             } label: {
-                Label(AppStrings.analytics, systemImage: TimeTrackerStore.DesktopDestination.analytics.symbolName)
+                Label(AppStrings.analytics, systemImage: TimeTrackerStore.DesktopDestination.analytics.visual.symbolName)
                     .accessibilityIdentifier("phone.tab.analytics")
             }
         }

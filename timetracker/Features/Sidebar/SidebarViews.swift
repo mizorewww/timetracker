@@ -5,10 +5,7 @@ enum SidebarSelection: Hashable {
     case task(UUID)
 
     @MainActor
-    func navigate(
-        in store: TimeTrackerStore,
-        onNavigate: @escaping () -> Void = {}
-    ) {
+    func navigate(in store: TimeTrackerStore) {
         switch self {
         case let .destination(destination):
             store.closeTaskDetailNavigation()
@@ -16,23 +13,16 @@ enum SidebarSelection: Hashable {
         case let .task(taskID):
             store.openTaskDetail(taskID)
         }
-        onNavigate()
     }
 }
 
 struct SidebarView: View {
     let store: TimeTrackerStore
-    let onNavigate: () -> Void
     @Environment(AppPresentationRouter.self) private var presentationRouter
     @State private var expansionState = TaskExpansionState()
     @State private var categoryExpansionState = TaskCategoryExpansionState()
     /// The day the Focus badge counts; advanced when the calendar day changes.
     @State private var today = Date()
-
-    init(store: TimeTrackerStore, onNavigate: @escaping () -> Void = {}) {
-        self.store = store
-        self.onNavigate = onNavigate
-    }
 
     var body: some View {
         List(selection: selectionBinding) {
@@ -144,7 +134,7 @@ struct SidebarView: View {
             selectionFromStore
         } set: { newValue in
             guard let newValue, newValue != selectionFromStore else { return }
-            newValue.navigate(in: store, onNavigate: onNavigate)
+            newValue.navigate(in: store)
         }
     }
 

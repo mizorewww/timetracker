@@ -46,17 +46,11 @@ struct AppRootView: View {
 struct RegularShellRootView: View {
     let store: TimeTrackerStore
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
-    @State private var preferredCompactColumn: NavigationSplitViewColumn = .detail
 
     var body: some View {
-        NavigationSplitView(
-            columnVisibility: $columnVisibility,
-            preferredCompactColumn: $preferredCompactColumn
-        ) {
-            SidebarView(store: store) {
-                preferredCompactColumn = .detail
-            }
-            .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 300)
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            SidebarView(store: store)
+                .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 300)
         } detail: {
             // 220 + 420 keeps both columns usable down to
             // `RootLayoutPolicy.regularShellMinimumWidth`.
@@ -66,9 +60,6 @@ struct RegularShellRootView: View {
         .navigationSplitViewStyle(.balanced)
         // Kept verbatim: this is the identifier the existing XCUITests select on.
         .accessibilityIdentifier("ipad.splitNavigation")
-        .onChange(of: store.desktopDestination) { _, _ in
-            preferredCompactColumn = .detail
-        }
     }
 }
 #endif

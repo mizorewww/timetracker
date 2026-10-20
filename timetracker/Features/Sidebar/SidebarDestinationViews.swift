@@ -30,10 +30,12 @@ struct SidebarTile: View {
     let visual: DestinationVisual
 
     var body: some View {
-        #if os(macOS)
-        AppIconTile(systemImage: visual.symbolName, tint: visual.tint, style: .solid, size: 22)
-        #else
-        AppIconTile(systemImage: visual.symbolName, tint: visual.tint, style: .solid, size: 30)
-        #endif
+        AppIconTile(systemImage: visual.symbolName, tint: visual.tint, style: .solid, size: size)
     }
+
+    #if os(macOS)
+    private let size: CGFloat = 22
+    #else
+    private let size: CGFloat = 30
+    #endif
 }

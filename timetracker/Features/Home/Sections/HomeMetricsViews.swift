@@ -47,7 +47,7 @@ struct HomeOverviewSection: View {
         VStack(spacing: 12) {
             HomeSummaryMetric(
                 title: AppStrings.grossTime,
-                value: DurationFormatter.compact(metrics.grossSeconds),
+                seconds: metrics.grossSeconds,
                 systemImage: "square.stack.3d.up",
                 tint: AppColors.grossTime
             )
@@ -56,7 +56,7 @@ struct HomeOverviewSection: View {
                 Divider()
                 HomeSummaryMetric(
                     title: AppStrings.wallTime,
-                    value: DurationFormatter.compact(metrics.wallSeconds),
+                    seconds: metrics.wallSeconds,
                     systemImage: "timeline.selection",
                     tint: AppColors.wallTime
                 )
@@ -68,7 +68,7 @@ struct HomeOverviewSection: View {
 
 private struct HomeSummaryMetric: View {
     let title: String
-    let value: String
+    let seconds: Int
     let systemImage: String
     let tint: Color
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -83,7 +83,7 @@ private struct HomeSummaryMetric: View {
                     } icon: {
                         AppIconTile(systemImage: systemImage, tint: tint, size: AppLayout.rowIconSize)
                     }
-                    Text(value)
+                    value
                         .font(.title3.weight(.semibold).monospacedDigit())
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -92,7 +92,7 @@ private struct HomeSummaryMetric: View {
                     AppIconTile(systemImage: systemImage, tint: tint, size: AppLayout.rowIconSize)
                     Text(title)
                     Spacer(minLength: 12)
-                    Text(value)
+                    value
                         .font(.headline.monospacedDigit())
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
@@ -100,5 +100,9 @@ private struct HomeSummaryMetric: View {
             }
         }
         .accessibilityElement(children: .combine)
+    }
+
+    private var value: some View {
+        AnimatedNumberText(text: DurationFormatter.compact(seconds), value: seconds)
     }
 }

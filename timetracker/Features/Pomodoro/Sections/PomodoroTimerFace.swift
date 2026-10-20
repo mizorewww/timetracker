@@ -29,7 +29,7 @@ struct PomodoroTimerFace: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            AnimatedClockText(text: timeText, value: timeValue)
+            AnimatedNumberText(text: timeText, value: timeValue)
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
                 .foregroundStyle(PomodoroStyle.timerText)
 

@@ -70,10 +70,13 @@ struct AnalyticsHomeSummaryRow: View {
 
     private var grossMetric: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(DurationFormatter.compact(snapshot.overview.grossSeconds))
-                .font(.largeTitle.weight(.semibold).monospacedDigit())
-                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-                .minimumScaleFactor(0.72)
+            AnimatedNumberText(
+                text: DurationFormatter.compact(snapshot.overview.grossSeconds),
+                value: snapshot.overview.grossSeconds
+            )
+            .font(.largeTitle.weight(.semibold).monospacedDigit())
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+            .minimumScaleFactor(0.72)
             Text(AppStrings.localized("analytics.summary.grossLabel"))
                 .font(primaryMetricLabelFont)
                 .foregroundStyle(.secondary)
@@ -82,10 +85,13 @@ struct AnalyticsHomeSummaryRow: View {
 
     private var wallMetric: some View {
         VStack(alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing, spacing: 3) {
-            Text(DurationFormatter.compact(snapshot.overview.wallSeconds))
-                .font(.title3.weight(.semibold).monospacedDigit())
-                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-                .minimumScaleFactor(0.72)
+            AnimatedNumberText(
+                text: DurationFormatter.compact(snapshot.overview.wallSeconds),
+                value: snapshot.overview.wallSeconds
+            )
+            .font(.title3.weight(.semibold).monospacedDigit())
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+            .minimumScaleFactor(0.72)
             Text(AppStrings.localized("analytics.summary.wallLabel"))
                 .font(secondaryMetricLabelFont)
                 .foregroundStyle(.secondary)

@@ -19,9 +19,20 @@ enum AppLayout {
     static let desktopReadableWidth: CGFloat = 980
     #if os(iOS)
     static let minimumInteractiveTarget: CGFloat = 44
+    static let rowIconSize: CGFloat = 30
     #else
     static let minimumInteractiveTarget: CGFloat = 28
+    static let rowIconSize: CGFloat = 26
     #endif
+
+    /// Task tile of a primary task row: 28 on macOS, 34 on iPad, 36 on iPhone.
+    static func taskRowIconSize(_ shell: RootLayoutPolicy.Shell) -> CGFloat {
+        #if os(macOS)
+        28
+        #else
+        shell == .compact ? 36 : 34
+        #endif
+    }
 }
 
 enum AppMotion {

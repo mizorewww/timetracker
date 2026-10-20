@@ -147,13 +147,14 @@ struct TaskManagementRowPresentation {
 struct TaskManagementRowContent: View {
     let presentation: TaskManagementRowPresentation
     let showsNavigationChevron: Bool
+    @Environment(\.layoutShell) private var layoutShell
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             TaskSummaryRow(
                 presentation: presentation.identity,
                 context: presentation.identityContext,
-                iconSize: 30,
+                iconSize: AppLayout.taskRowIconSize(layoutShell),
                 metadata: TaskSummaryRowMetadata(
                     checklistProgress:
                     presentation.progress.totalCount > 0

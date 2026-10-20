@@ -34,6 +34,7 @@ struct HomeTimerTaskRow: View {
     let taskAccessibilityIdentifier: String
     let actionAccessibilityIdentifier: String
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.layoutShell) private var layoutShell
 
     var body: some View {
         Group {
@@ -87,7 +88,7 @@ struct HomeTimerTaskRow: View {
     private func taskButton(showsElapsedTime: Bool) -> some View {
         Button(action: openTask) {
             HStack(alignment: .center, spacing: 10) {
-                TaskIcon(visual: presentation.visual, size: 34)
+                TaskIcon(visual: presentation.visual, size: AppLayout.taskRowIconSize(layoutShell))
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(presentation.title)

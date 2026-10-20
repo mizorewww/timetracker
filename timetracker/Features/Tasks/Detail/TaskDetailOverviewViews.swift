@@ -53,7 +53,7 @@ struct TaskDetailValueRow: View {
             if dynamicTypeSize.isAccessibilitySize {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .top, spacing: 12) {
-                        AppIconTile(systemImage: systemImage, tint: tint, size: 30)
+                        AppIconTile(systemImage: systemImage, tint: tint, size: AppLayout.rowIconSize)
                         Text(title)
                             .lineLimit(nil)
                             .fixedSize(horizontal: false, vertical: true)
@@ -66,7 +66,7 @@ struct TaskDetailValueRow: View {
                 .padding(.vertical, 4)
             } else {
                 HStack(spacing: 12) {
-                    AppIconTile(systemImage: systemImage, tint: tint, size: 30)
+                    AppIconTile(systemImage: systemImage, tint: tint, size: AppLayout.rowIconSize)
                     Text(title)
                     Spacer(minLength: 12)
                     Text(value)

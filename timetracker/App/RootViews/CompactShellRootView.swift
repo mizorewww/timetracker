@@ -1,76 +1,23 @@
 import SwiftUI
 
-/// Tab bar over a single navigation stack, for widths too narrow for a split
-/// view. Used by iPhone, by an iPad in Split View or Slide Over, and by a Mac
-/// window dragged below `RootLayoutPolicy.regularShellMinimumWidth`.
+#if os(macOS)
+/// Tab bar over a single navigation stack, for a Mac window dragged below
+/// `RootLayoutPolicy.regularShellMinimumWidth`. iOS draws the same tabs with
+/// UIKit (`TabShellController`, AD-144).
 struct CompactShellRootView: View {
     let store: TimeTrackerStore
     let openSettings: () -> Void
 
     var body: some View {
         TabView(selection: selectedDestinationBinding) {
-            Tab(value: .today) {
-                NavigationStack {
-                    CompactHomeView(
-                        store: store,
-                        openSettings: openSettings,
-                        openTask: openTask
-                    )
-                    .todayTaskNavigationDestination(
-                        store: store,
-                        route: todayTaskRoute
-                    )
+            ForEach(TimeTrackerStore.DesktopDestination.allCases) { destination in
+                Tab(value: destination) {
+                    CompactTabPage(store: store, destination: destination, openSettings: openSettings)
+                } label: {
+                    Label(destination.title, systemImage: destination.visual.symbolName)
                 }
-                .environment(
-                    \.pageLiveClocksActive,
-                    store.desktopDestination == .today
-                )
-            } label: {
-                Label(AppStrings.today, systemImage: TimeTrackerStore.DesktopDestination.today.visual.symbolName)
-                    .accessibilityIdentifier("phone.tab.today")
-            }
-
-            Tab(value: .inbox) {
-                NavigationStack {
-                    InboxView(store: store)
-                }
-            } label: {
-                Label(AppStrings.inbox, systemImage: TimeTrackerStore.DesktopDestination.inbox.visual.symbolName)
-                    .accessibilityIdentifier("phone.tab.inbox")
-            }
-
-            Tab(value: .tasks) {
-                TasksNavigationView(store: store)
-            } label: {
-                Label(AppStrings.tasks, systemImage: TimeTrackerStore.DesktopDestination.tasks.visual.symbolName)
-                    .accessibilityIdentifier("phone.tab.tasks")
-            }
-
-            Tab(value: .pomodoro) {
-                NavigationStack {
-                    PomodoroView(store: store)
-                }
-                .environment(
-                    \.pageLiveClocksActive,
-                    store.desktopDestination == .pomodoro
-                )
-            } label: {
-                Label(AppStrings.focus, systemImage: TimeTrackerStore.DesktopDestination.pomodoro.visual.symbolName)
-                    .accessibilityIdentifier("phone.tab.focus")
-            }
-
-            Tab(value: .analytics) {
-                NavigationStack {
-                    AnalyticsView(store: store)
-                }
-            } label: {
-                Label(AppStrings.analytics, systemImage: TimeTrackerStore.DesktopDestination.analytics.visual.symbolName)
-                    .accessibilityIdentifier("phone.tab.analytics")
             }
         }
-        #if os(iOS)
-        .tabBarMinimizeBehavior(.onScrollDown)
-        #endif
         // Kept verbatim: this is the identifier the existing XCUITests select on.
         .accessibilityIdentifier("phone.tabView")
     }
@@ -81,9 +28,39 @@ struct CompactShellRootView: View {
             set: { store.desktopDestination = $0 }
         )
     }
+}
+#endif
 
-    private func openTask(_ taskID: UUID) {
-        store.openTodayTaskDetail(taskID)
+/// One destination's page in the compact shell, in its own navigation stack.
+struct CompactTabPage: View {
+    let store: TimeTrackerStore
+    let destination: TimeTrackerStore.DesktopDestination
+    let openSettings: () -> Void
+
+    var body: some View {
+        switch destination {
+        case .today:
+            NavigationStack {
+                CompactHomeView(store: store, openSettings: openSettings, openTask: store.openTodayTaskDetail)
+                    .todayTaskNavigationDestination(store: store, route: todayTaskRoute)
+            }
+            .environment(\.pageLiveClocksActive, store.desktopDestination == .today)
+        case .inbox:
+            NavigationStack {
+                InboxView(store: store)
+            }
+        case .tasks:
+            TasksNavigationView(store: store)
+        case .pomodoro:
+            NavigationStack {
+                PomodoroView(store: store)
+            }
+            .environment(\.pageLiveClocksActive, store.desktopDestination == .pomodoro)
+        case .analytics:
+            NavigationStack {
+                AnalyticsView(store: store)
+            }
+        }
     }
 
     private var todayTaskRoute: Binding<TasksRoute?> {

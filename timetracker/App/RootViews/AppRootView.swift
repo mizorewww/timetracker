@@ -1,11 +1,9 @@
+#if os(macOS)
 import SwiftUI
 
-/// The app shell, chosen from measured width rather than from the device.
-///
-/// See `RootLayoutPolicy` for why width is the predicate. The practical effect
-/// is that an iPad in Split View or Slide Over, and a Mac window dragged narrow,
-/// both get the same compact shell an iPhone gets — instead of a split view
-/// squeezed into a column too narrow to use.
+/// The Mac app shell, chosen from measured width (AD-139): a window dragged
+/// narrow gets the compact shell. iOS draws its shells in UIKit
+/// (`ShellController`, AD-144).
 struct AppRootView: View {
     let store: TimeTrackerStore
     @Environment(AppPresentationRouter.self) private var presentationRouter
@@ -34,10 +32,8 @@ struct AppRootView: View {
         // Nested views adapt from this instead of re-measuring or, worse,
         // asking what device they are running on.
         .environment(\.layoutShell, shell)
-        #if os(macOS)
         .focusedSceneValue(\.timeTrackerStore, store)
         .focusedSceneValue(\.appPresentationRouter, presentationRouter)
-        #endif
         .onGeometryChange(for: RootLayoutPolicy.Shell.self) { proxy in
             RootLayoutPolicy.shell(forWidth: proxy.size.width)
         } action: { shell in
@@ -47,9 +43,6 @@ struct AppRootView: View {
 }
 
 /// Sidebar plus detail, for widths that can hold both columns.
-///
-/// One view for iPad and Mac; the `#if os(macOS)` blocks are scene plumbing
-/// that has no iOS equivalent, not layout.
 struct RegularShellRootView: View {
     let store: TimeTrackerStore
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
@@ -78,3 +71,4 @@ struct RegularShellRootView: View {
         }
     }
 }
+#endif

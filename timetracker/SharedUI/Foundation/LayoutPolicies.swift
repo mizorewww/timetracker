@@ -46,7 +46,7 @@ nonisolated enum RootLayoutPolicy {
 extension EnvironmentValues {
     /// The shell the root chose for the current width.
     ///
-    /// Published once by `AppRootView` so nested views can adapt without
+    /// Published once by the app shell so nested views can adapt without
     /// re-measuring or, worse, asking what device they are on. Defaults to
     /// `.regular` so a view rendered outside the app shell (a preview, a
     /// standalone sheet) gets the roomier treatment rather than the phone one.

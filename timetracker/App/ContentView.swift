@@ -33,7 +33,12 @@ struct ContentView: View {
     var body: some View {
         Group {
             if store.effectivePersistenceWriteSafety == .ready {
+                #if os(iOS)
+                UIKitShellView(store: store)
+                    .ignoresSafeArea()
+                #else
                 AppRootView(store: store)
+                #endif
             } else {
                 PersistenceRecoveryView(safety: store.effectivePersistenceWriteSafety)
             }

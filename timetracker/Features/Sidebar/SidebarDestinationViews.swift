@@ -3,6 +3,10 @@ import SwiftUI
 struct SidebarDestinationLabel: View {
     let destination: TimeTrackerStore.DesktopDestination
     let count: Int?
+    let isSelected: Bool
+    /// Bumped on selection so the tile's symbol bounces once.
+    @State private var selectionCount = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack {
@@ -10,6 +14,8 @@ struct SidebarDestinationLabel: View {
                 Text(destination.title)
             } icon: {
                 SidebarTile(visual: destination.visual)
+                    .symbolEffect(.bounce, value: selectionCount)
+                    .symbolEffectsRemoved(reduceMotion)
             }
             Spacer()
             if let count {
@@ -22,6 +28,11 @@ struct SidebarDestinationLabel: View {
             }
         }
         .accessibilityElement(children: .combine)
+        .onChange(of: isSelected) { _, isSelected in
+            if isSelected {
+                selectionCount += 1
+            }
+        }
     }
 }
 

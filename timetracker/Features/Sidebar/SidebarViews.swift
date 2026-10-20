@@ -38,9 +38,13 @@ struct SidebarView: View {
         List(selection: selectionBinding) {
             Section {
                 ForEach(TimeTrackerStore.DesktopDestination.allCases) { destination in
-                    SidebarDestinationLabel(destination: destination, count: count(for: destination))
-                        .tag(SidebarSelection.destination(destination))
-                        .accessibilityIdentifier("sidebar.\(destination.rawValue)")
+                    SidebarDestinationLabel(
+                        destination: destination,
+                        count: count(for: destination),
+                        isSelected: selectionFromStore == .destination(destination)
+                    )
+                    .tag(SidebarSelection.destination(destination))
+                    .accessibilityIdentifier("sidebar.\(destination.rawValue)")
                 }
                 #if !os(macOS)
                 // macOS opens its Settings scene from the app menu instead.

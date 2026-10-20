@@ -2,8 +2,8 @@
 import SwiftUI
 import UIKit
 
-/// The iOS/iPadOS app shell, in UIKit (AD-144). Pages not yet rewritten are
-/// hosted SwiftUI views given the scene objects they would have inherited.
+/// The iOS/iPadOS app shell, in UIKit (AD-144). Pages are hosted SwiftUI
+/// views given the scene objects they would have inherited.
 struct UIKitShellView: UIViewControllerRepresentable {
     let store: TimeTrackerStore
     @Environment(AppPresentationRouter.self) private var presentationRouter

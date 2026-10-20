@@ -20,7 +20,7 @@ SwiftUI View
 - 命令失败抛给调用方，由发起的 view 经 scene 的 `AppSceneFeedbackRouter` 展示；store 没有全局错误槽。无发起 view 的生命周期、同步与提交后读模型刷新失败只写日志，下一次刷新重试。
 - 任务详情没有离开确认或崩溃恢复副本：编辑 450 ms 后自动保存，失焦、进入后台、详情消失（任何导航）时同步提交；未通过校验的草稿不保存并在原处标出原因；只有保存时发现任务已被其它设备/场景改动才弹 Reload/Keep。离开详情时若编辑仍无法保存，以场景提示告知未保存的原因；归档前先同步提交打开中的编辑，若该编辑无法保存且属于被归档任务或其子任务，则不执行归档。
 - CloudKit 远端变更经 notification 合并后由 `RemoteChangeHistoryCursor` 按 persistent history 决定刷新范围；没有轮询。
-- 布局只按窗口宽度在 `AppRootView` 选择 compact（<720 pt，TabView）或 regular（NavigationSplitView）shell；`#if os(...)` 只用于平台独有 API。
+- 布局只按窗口宽度选择 compact（<720 pt，标签栏）或 regular（侧栏 + 详情）shell：iOS/iPadOS 由 UIKit 的 `ShellController` 选择（`UITabBarController` / `UISplitViewController`，页面为承载的 SwiftUI），macOS 由 `AppRootView` 选择（`TabView` / `NavigationSplitView`）；`#if os(...)` 只用于平台独有 API。
 
 ## 目录
 

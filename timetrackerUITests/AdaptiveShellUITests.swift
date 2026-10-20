@@ -3,14 +3,13 @@ import XCTest
 /// Proves the shell the user actually sees follows the available width.
 ///
 /// `RootLayoutPolicy` unit tests cover the decision itself; these cover the
-/// wiring — that each branch of `AppRootView` builds and presents the shell it
-/// claims to. Run on an iPhone destination and an iPad destination to cover
-/// both widths.
+/// wiring — that the shell root (`ShellController` on iOS, `AppRootView` on
+/// macOS) builds and presents the shell it claims to. Run on an iPhone
+/// destination and an iPad destination to cover both widths.
 ///
 /// The shells are identified by the navigation affordance each one owns rather
-/// than by a container identifier. `TabView`'s own `.accessibilityIdentifier`
-/// does not surface as a queryable element under the iOS 26+ floating tab bar,
-/// so asserting on it would test the SwiftUI version, not the app.
+/// than by a container identifier, which the iOS 26+ floating tab bar does not
+/// surface as a queryable element.
 final class AdaptiveShellUITests: XCTestCase {
     override func setUp() {
         super.setUp()

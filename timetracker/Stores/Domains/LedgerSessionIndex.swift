@@ -14,6 +14,7 @@ struct LedgerSessionIndex {
     /// `canonicalSessions` must already be visible, deduplicated and newest
     /// first, as `SwiftDataTimeTrackingRepository.sessions()` returns them.
     mutating func rebuild(_ canonicalSessions: [TimeSession]) {
+        assert(Set(canonicalSessions.map(\.id)).count == canonicalSessions.count, "Sessions must be deduplicated")
         sessions = canonicalSessions
         arrayIndexByID = Dictionary(uniqueKeysWithValues: sessions.indices.map {
             (sessions[$0].id, $0)
@@ -115,19 +116,12 @@ struct LedgerSessionIndex {
         var upperBound = sessions.endIndex
         while lowerBound < upperBound {
             let middle = lowerBound + sessions.distance(from: lowerBound, to: upperBound) / 2
-            if sessionOrder(sessions[middle], session) {
+            if DatedIdentityOrder.newestFirst(sessions[middle].startOrderKey, session.startOrderKey) {
                 lowerBound = middle + 1
             } else {
                 upperBound = middle
             }
         }
         return lowerBound
-    }
-
-    private func sessionOrder(_ lhs: TimeSession, _ rhs: TimeSession) -> Bool {
-        if lhs.startedAt != rhs.startedAt {
-            return lhs.startedAt > rhs.startedAt
-        }
-        return lhs.id < rhs.id
     }
 }

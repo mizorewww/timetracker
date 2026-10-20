@@ -17,7 +17,7 @@ nonisolated struct TrackableTaskCatalog {
             .deduplicatedByID()
         let tasks = canonicalTaskRows
             .filter { $0.deletedAt == nil }
-            .sorted(byKey: { ($0.depth, $0.sortOrder, $0.createdAt, $0.id) }, by: <)
+            .sorted(byKey: \.hierarchyOrderKey, by: <)
         let recurrence = try Self.completeRecurrenceFacts(
             tasks: tasks,
             rules: context

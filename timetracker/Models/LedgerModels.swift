@@ -178,9 +178,4 @@ extension TimeSegment {
     var isActive: Bool {
         endedAt == nil && deletedAt == nil
     }
-
-    /// Canonical ledger order key: earlier start first, then stable identity.
-    var startOrderKey: (Date, UUID) {
-        (startedAt, id)
-    }
 }

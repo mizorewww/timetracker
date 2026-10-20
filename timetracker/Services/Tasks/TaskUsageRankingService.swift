@@ -14,12 +14,15 @@ nonisolated enum TaskUsageRankingService {
             .filter { excludedIDs.contains($0.id) == false }
             .sorted(byKey: { task in
                 let activity = activityByTaskID[task.id]
-                return (activity?.segmentCount ?? 0, activity?.lastStartedAt ?? .distantPast, task.id)
+                return (count: activity?.segmentCount ?? 0, lastStartedAt: activity?.lastStartedAt ?? .distantPast, id: task.id)
             }, by: { lhs, rhs in
-                if lhs.0 != rhs.0 {
-                    return lhs.0 > rhs.0
+                if lhs.count != rhs.count {
+                    return lhs.count > rhs.count
                 }
-                return DatedIdentityOrder.newestFirst((lhs.1, lhs.2), (rhs.1, rhs.2))
+                if lhs.lastStartedAt != rhs.lastStartedAt {
+                    return lhs.lastStartedAt > rhs.lastStartedAt
+                }
+                return lhs.id < rhs.id
             })
     }
 

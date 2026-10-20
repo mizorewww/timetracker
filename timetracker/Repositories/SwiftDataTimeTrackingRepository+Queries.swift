@@ -15,7 +15,7 @@ extension SwiftDataTimeTrackingRepository {
     func sessions() throws -> [TimeSession] {
         try context.fetch(FetchDescriptor<TimeSession>())
             .visibleDeduplicatedByID()
-            .sorted(byKey: { ($0.startedAt, $0.id) }, by: DatedIdentityOrder.newestFirst)
+            .sorted(byKey: \.startOrderKey, by: DatedIdentityOrder.newestFirst)
     }
 
     func sessions(ids: Set<UUID>) throws -> [TimeSession] {
@@ -26,7 +26,7 @@ extension SwiftDataTimeTrackingRepository {
         )
         return try context.fetch(descriptor)
             .visibleDeduplicatedByID()
-            .sorted(byKey: { ($0.startedAt, $0.id) }, by: DatedIdentityOrder.newestFirst)
+            .sorted(byKey: \.startOrderKey, by: DatedIdentityOrder.newestFirst)
     }
 
     func segments(ids: Set<UUID>) throws -> [TimeSegment] {

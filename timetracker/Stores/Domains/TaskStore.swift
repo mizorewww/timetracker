@@ -195,17 +195,6 @@ struct TaskStore {
     }
 
     private func sortedTasks(_ tasks: [TaskNode]) -> [TaskNode] {
-        tasks.sorted { lhs, rhs in
-            if lhs.depth != rhs.depth {
-                return lhs.depth < rhs.depth
-            }
-            if lhs.sortOrder != rhs.sortOrder {
-                return lhs.sortOrder < rhs.sortOrder
-            }
-            if lhs.createdAt != rhs.createdAt {
-                return lhs.createdAt < rhs.createdAt
-            }
-            return lhs.id < rhs.id
-        }
+        tasks.sorted(byKey: \.hierarchyOrderKey, by: <)
     }
 }

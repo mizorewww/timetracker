@@ -5,7 +5,7 @@ nonisolated extension SwiftDataTaskRepository {
     func allNodes() throws -> [TaskNode] {
         try context.fetch(FetchDescriptor<TaskNode>())
             .visibleDeduplicatedByID()
-            .sorted(byKey: { ($0.depth, $0.sortOrder, $0.createdAt, $0.id) }, by: <)
+            .sorted(byKey: \.hierarchyOrderKey, by: <)
     }
 
     /// The predicate only nominates candidates: every copy of each candidate
@@ -22,7 +22,7 @@ nonisolated extension SwiftDataTaskRepository {
         )
         .visibleDeduplicatedByID()
         .filter { $0.parentID == parent }
-        .sorted(byKey: { ($0.sortOrder, $0.createdAt, $0.id) }, by: <)
+        .sorted(byKey: \.siblingOrderKey, by: <)
     }
 
     func task(id: UUID) throws -> TaskNode? {
@@ -64,7 +64,7 @@ nonisolated extension SwiftDataTaskRepository {
         )
         return try context.fetch(descriptor)
             .visibleDeduplicatedByID()
-            .sorted(byKey: { ($0.depth, $0.sortOrder, $0.createdAt, $0.id) }, by: <)
+            .sorted(byKey: \.hierarchyOrderKey, by: <)
     }
 
     func taskRecurrenceRules() throws -> [TaskRecurrenceRule] {

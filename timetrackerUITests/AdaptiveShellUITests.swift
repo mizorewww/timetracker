@@ -111,6 +111,31 @@ final class AdaptiveShellUITests: XCTestCase {
 
     #endif
 
+    #if os(iOS)
+    /// Re-tapping the selected tab returns its page to the root, as a system
+    /// tab bar does.
+    func testRetappingTasksReturnsFromTaskDetailToTheList() throws {
+        let app = launchApp()
+        XCTAssertTrue(app.descendants(matching: .any)["home.view"].waitForExistence(timeout: 15))
+        guard compactSettingsButton(in: app).exists else {
+            throw XCTSkip("Only the compact shell has tabs.")
+        }
+
+        app.buttons["Tasks"].tap()
+        let row = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH 'tasks.row.'")).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        row.tap()
+        let detail = app.descendants(matching: .any)["task.detail"]
+        XCTAssertTrue(detail.waitForExistence(timeout: 10))
+
+        app.buttons["Tasks"].tap()
+
+        XCTAssertTrue(detail.waitForNonExistence(timeout: 10), "Re-tapping Tasks left task detail open.")
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+    }
+    #endif
+
     /// Mirrors `RootLayoutPolicy.regularShellMinimumWidth`.
     private static let shellBreakpoint: CGFloat = 720
 

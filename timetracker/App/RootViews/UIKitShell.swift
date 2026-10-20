@@ -51,6 +51,7 @@ final class ShellController: UIViewController {
 
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
+        guard view.bounds.width > 0 else { return }
         let next = RootLayoutPolicy.shell(
             measured: RootLayoutPolicy.shell(forWidth: view.bounds.width),
             horizontalSizeClass: UserInterfaceSizeClass(traitCollection.horizontalSizeClass)
@@ -83,22 +84,7 @@ final class TabShellController: UITabBarController, UITabBarControllerDelegate {
         super.init(nibName: nil, bundle: nil)
         delegate = self
         tabBarMinimizeBehavior = .onScrollDown
-        tabs = TimeTrackerStore.DesktopDestination.allCases.map { destination in
-            UITab(
-                title: destination.title,
-                image: UIImage(systemName: destination.visual.symbolName),
-                identifier: destination.rawValue
-            ) { _ in
-                scene.host(
-                    CompactTabPage(
-                        store: scene.store,
-                        destination: destination,
-                        openSettings: { scene.presentationRouter.present(.settings) }
-                    ),
-                    shell: .compact
-                )
-            }
-        }
+        tabs = TimeTrackerStore.DesktopDestination.allCases.map(makeTab)
     }
 
     @available(*, unavailable)
@@ -114,6 +100,43 @@ final class TabShellController: UITabBarController, UITabBarControllerDelegate {
     func tabBarController(_: UITabBarController, didSelectTab tab: UITab, previousTab _: UITab?) {
         guard let destination = TimeTrackerStore.DesktopDestination(rawValue: tab.identifier) else { return }
         scene.store.desktopDestination = destination
+    }
+
+    /// Re-tapping the selected tab starts its page over, back at its root and
+    /// scrolled to the top, as a system tab bar does.
+    func tabBarController(_: UITabBarController, shouldSelectTab tab: UITab) -> Bool {
+        guard tab == selectedTab,
+              let index = tabs.firstIndex(of: tab),
+              let destination = TimeTrackerStore.DesktopDestination(rawValue: tab.identifier)
+        else { return true }
+        switch destination {
+        case .today: scene.store.todayTaskRoute = nil
+        case .tasks: scene.store.closeTaskDetailNavigation()
+        case .inbox, .pomodoro, .analytics: break
+        }
+        var restarted = tabs
+        restarted[index] = makeTab(destination)
+        setTabs(restarted, animated: false)
+        selectedTab = restarted[index]
+        return false
+    }
+
+    private func makeTab(_ destination: TimeTrackerStore.DesktopDestination) -> UITab {
+        let scene = scene
+        return UITab(
+            title: destination.title,
+            image: UIImage(systemName: destination.visual.symbolName),
+            identifier: destination.rawValue
+        ) { _ in
+            scene.host(
+                CompactTabPage(
+                    store: scene.store,
+                    destination: destination,
+                    openSettings: { scene.presentationRouter.present(.settings) }
+                ),
+                shell: .compact
+            )
+        }
     }
 }
 

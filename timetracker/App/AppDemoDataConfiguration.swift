@@ -45,6 +45,13 @@ enum AppDemoDataConfiguration {
         return nil
     }
 
+    /// Days of heavy-user history the demo data adds, from
+    /// `-TimeTrackerDemoHistoryDays <days>`; none when absent.
+    static var largeHistoryDays: Int? {
+        let days = UserDefaults.standard.integer(forKey: "TimeTrackerDemoHistoryDays")
+        return days > 0 ? days : nil
+    }
+
     static var usesLocalDemoStore: Bool {
         currentMode != .off
     }

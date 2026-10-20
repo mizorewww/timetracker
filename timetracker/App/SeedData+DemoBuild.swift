@@ -162,10 +162,14 @@ extension SeedData {
             note: "Parallel reading"
         )
 
+        if let days = AppDemoDataConfiguration.largeHistoryDays {
+            try buildLargeHistory(context: context, days: days)
+        }
+
         try context.saveAfterMutationStep()
     }
 
-    private static func addSegment(
+    static func addSegment(
         context: ModelContext,
         taskID: UUID,
         source: TimeSessionSource,

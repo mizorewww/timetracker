@@ -6,7 +6,11 @@ struct SidebarDestinationLabel: View {
 
     var body: some View {
         HStack {
-            Label(destination.title, systemImage: destination.symbolName)
+            Label {
+                Text(destination.title)
+            } icon: {
+                SidebarTile(systemImage: destination.symbolName, tint: tint)
+            }
             Spacer()
             if let count {
                 Text("\(count)")
@@ -18,5 +22,29 @@ struct SidebarDestinationLabel: View {
             }
         }
         .accessibilityElement(children: .combine)
+    }
+
+    private var tint: Color {
+        switch destination {
+        case .today: .orange
+        case .inbox: .blue
+        case .tasks: .green
+        case .pomodoro: .pink
+        case .analytics: .purple
+        }
+    }
+}
+
+/// Solid destination tile, sized to the platform's sidebar row.
+struct SidebarTile: View {
+    let systemImage: String
+    let tint: Color
+
+    var body: some View {
+        #if os(macOS)
+        AppIconTile(systemImage: systemImage, tint: tint, style: .solid, size: 22)
+        #else
+        AppIconTile(systemImage: systemImage, tint: tint, style: .solid, size: 30)
+        #endif
     }
 }

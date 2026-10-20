@@ -47,7 +47,11 @@ struct SidebarView: View {
                 Button {
                     presentationRouter.present(.settings)
                 } label: {
-                    Label(AppStrings.settings, systemImage: "gearshape")
+                    Label {
+                        Text(AppStrings.settings)
+                    } icon: {
+                        SidebarTile(systemImage: "gearshape.fill", tint: .gray)
+                    }
                 }
                 .accessibilityIdentifier("sidebar.Settings")
                 #endif

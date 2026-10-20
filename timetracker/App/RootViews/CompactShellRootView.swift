@@ -26,7 +26,7 @@ struct CompactShellRootView: View {
                     store.desktopDestination == .today
                 )
             } label: {
-                Label(AppStrings.today, systemImage: "house")
+                Label(AppStrings.today, systemImage: TimeTrackerStore.DesktopDestination.today.symbolName)
                     .accessibilityIdentifier("phone.tab.today")
             }
 
@@ -35,14 +35,14 @@ struct CompactShellRootView: View {
                     InboxView(store: store)
                 }
             } label: {
-                Label(AppStrings.inbox, systemImage: "tray")
+                Label(AppStrings.inbox, systemImage: TimeTrackerStore.DesktopDestination.inbox.symbolName)
                     .accessibilityIdentifier("phone.tab.inbox")
             }
 
             Tab(value: .tasks) {
                 TasksNavigationView(store: store)
             } label: {
-                Label(AppStrings.tasks, systemImage: "checklist")
+                Label(AppStrings.tasks, systemImage: TimeTrackerStore.DesktopDestination.tasks.symbolName)
                     .accessibilityIdentifier("phone.tab.tasks")
             }
 
@@ -55,7 +55,7 @@ struct CompactShellRootView: View {
                     store.desktopDestination == .pomodoro
                 )
             } label: {
-                Label(AppStrings.focus, systemImage: "timer")
+                Label(AppStrings.focus, systemImage: TimeTrackerStore.DesktopDestination.pomodoro.symbolName)
                     .accessibilityIdentifier("phone.tab.focus")
             }
 
@@ -64,7 +64,7 @@ struct CompactShellRootView: View {
                     AnalyticsView(store: store)
                 }
             } label: {
-                Label(AppStrings.analytics, systemImage: "chart.bar.xaxis")
+                Label(AppStrings.analytics, systemImage: TimeTrackerStore.DesktopDestination.analytics.symbolName)
                     .accessibilityIdentifier("phone.tab.analytics")
             }
         }

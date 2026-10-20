@@ -200,11 +200,11 @@ final class TimeTrackerStore {
 
         var symbolName: String {
             switch self {
-            case .today: "sun.max"
-            case .inbox: "tray"
+            case .today: "sun.max.fill"
+            case .inbox: "tray.fill"
             case .tasks: "checklist"
             case .pomodoro: "timer"
-            case .analytics: "chart.bar"
+            case .analytics: "chart.bar.fill"
             }
         }
     }

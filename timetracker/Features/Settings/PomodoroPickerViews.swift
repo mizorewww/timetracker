@@ -60,7 +60,7 @@ struct SettingsPomodoroMinuteWheelRow: View {
                 Text(String(format: AppStrings.localized("common.minutes"), normalizedValue.wrappedValue))
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
-                    .padding(.leading, 40)
+                    .padding(.leading, AppLayout.rowIconSize + 12)
             }
         } else {
             HStack(spacing: 12) {

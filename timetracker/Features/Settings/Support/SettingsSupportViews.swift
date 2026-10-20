@@ -125,7 +125,7 @@ struct CountdownEventSettingsRow: View {
                 }
                 Text(event.date.formatted(date: .abbreviated, time: .omitted))
                     .foregroundStyle(.secondary)
-                    .padding(.leading, 40)
+                    .padding(.leading, AppLayout.rowIconSize + 12)
             }
         } else {
             HStack(spacing: 12) {

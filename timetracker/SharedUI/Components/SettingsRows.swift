@@ -17,25 +17,13 @@ private struct SettingsRowSeparatorAlignmentModifier: ViewModifier {
     }
 }
 
+/// Solid design-language tile for a settings or navigation row.
 struct SettingsRowIcon: View {
     let systemImage: String
     var tint: Color = .accentColor
-    var secondaryTint: Color?
 
     var body: some View {
-        Group {
-            if let secondaryTint {
-                Image(systemName: systemImage)
-                    .symbolRenderingMode(.palette)
-                    .foregroundStyle(tint, secondaryTint)
-            } else {
-                Image(systemName: systemImage)
-                    .foregroundStyle(tint)
-            }
-        }
-        .font(.system(size: 18, weight: .semibold))
-        .frame(width: 28, height: 28)
-        .accessibilityHidden(true)
+        AppIconTile(systemImage: systemImage, tint: tint, style: .solid, size: AppLayout.rowIconSize)
     }
 }
 
@@ -73,7 +61,7 @@ struct SettingsValueRow: View {
                     Text(value)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.leading, 40)
+                        .padding(.leading, AppLayout.rowIconSize + 12)
                 }
             } else {
                 HStack(spacing: 12) {

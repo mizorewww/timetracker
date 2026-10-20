@@ -71,7 +71,7 @@ enum SettingsCategory: String, CaseIterable, Identifiable {
         case .shortcuts: .indigo
         #endif
         case .archivedTasks: .orange
-        case .focus: .orange
+        case .focus: AppColors.focus
         case .dataAndSync: .cyan
         case .intelligence: .purple
         case .advanced: .gray

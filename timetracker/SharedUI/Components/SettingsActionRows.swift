@@ -4,14 +4,12 @@ struct SettingsActionLabel: View {
     let title: String
     let systemImage: String
     var tint: Color = .accentColor
-    var secondaryTint: Color?
 
     var body: some View {
         SettingsActionRowContent(
             title: title,
             systemImage: systemImage,
             iconTint: tint,
-            secondaryIconTint: secondaryTint,
             titleColor: .primary
         )
     }
@@ -26,7 +24,6 @@ struct SettingsDestructiveActionLabel: View {
             title: title,
             systemImage: systemImage,
             iconTint: .red,
-            secondaryIconTint: nil,
             titleColor: .red
         )
     }
@@ -36,17 +33,12 @@ private struct SettingsActionRowContent: View {
     let title: String
     let systemImage: String
     let iconTint: Color
-    let secondaryIconTint: Color?
     let titleColor: Color
     @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         HStack(spacing: 12) {
-            SettingsRowIcon(
-                systemImage: systemImage,
-                tint: iconTint,
-                secondaryTint: secondaryIconTint
-            )
+            SettingsRowIcon(systemImage: systemImage, tint: iconTint)
 
             Text(title)
                 .font(.body)

@@ -11,10 +11,13 @@ extension TimeTrackerStore {
     }
 
     func refreshForForeground() async {
-        // Reloading every read model here cost seconds on a long history;
-        // persistent history names what changed while the app was away, and
+        // Persistent history names what changed while the app was away;
         // reconciling Pomodoro re-converges today's window and live timers.
-        refreshChangesSinceLastCatchUp()
+        if needsFullRefresh {
+            refreshQuietly()
+        } else {
+            refreshChangesSinceLastCatchUp()
+        }
         materializeCurrentDailyTaskRecurrences()
         reconcileActivePomodoro(now: Date())
         enqueueCommittedMutationSystemProjections(
@@ -49,10 +52,16 @@ extension TimeTrackerStore {
 
     func refresh() throws {
         try refresh(plan: StoreRefreshPlanner.plan(after: [.fullSync]))
+        needsFullRefresh = false
     }
 
     func refresh(plan: StoreRefreshPlan) throws {
-        try StoreRefreshCoordinator.refresh(self, plan: plan)
+        do {
+            try StoreRefreshCoordinator.refresh(self, plan: plan)
+        } catch {
+            needsFullRefresh = true
+            throw error
+        }
     }
 
     func validateSelectedTask() {

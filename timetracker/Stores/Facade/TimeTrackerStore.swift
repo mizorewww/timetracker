@@ -144,6 +144,9 @@ final class TimeTrackerStore {
     var analyticsRevision: UInt = 0
     /// Today page read model; see TimeTrackerStore+TodayReadModels.swift.
     @ObservationIgnored var todayReadModelCache = TodayReadModelCache()
+    /// Set when a read-model refresh fails, so the next foreground reloads
+    /// everything rather than catching up only on history it already read.
+    @ObservationIgnored var needsFullRefresh = false
     /// Tasks-page row supplement projection cache (recurrence roles +
     /// quantity progress). Keyed by taskReadModelRevision; see
     /// TimeTrackerStore+TaskReadModels.swift.

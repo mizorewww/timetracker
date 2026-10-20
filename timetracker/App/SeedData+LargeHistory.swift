@@ -47,12 +47,14 @@ extension SeedData {
             }
         }
 
-        let startOfToday = Calendar.current.startOfDay(for: Date())
+        let now = Date()
+        let startOfToday = Calendar.current.startOfDay(for: now)
         for dayOffset in 1 ... max(1, days) {
             let day = startOfToday.addingTimeInterval(-Double(dayOffset) * 86400)
             var start = day.addingTimeInterval(7 * 3600)
             for recordIndex in 0 ..< 24 {
                 let duration = TimeInterval((10 + random.next(below: 50)) * 60)
+                guard start.addingTimeInterval(duration) < now else { break }
                 let source: TimeSessionSource = switch recordIndex % 6 {
                 case 0: .pomodoro
                 case 5: .manual

@@ -31,4 +31,4 @@
 
 **AD-139：按窗口宽度选择共享 shell。** `AppRootView` 以实测宽度选 compact（<720 pt）或 regular shell；`#if os(...)` 只封装真实缺失的 API 与系统 chrome，不按设备 idiom 复制同一页面。
 
-**AD-144：iOS/iPadOS 界面用 UIKit 承载。** 用户以性能为由决定（目标：`PagePerformanceUITests` Release 度量相对 SwiftUI 基线 10x）。iOS/iPadOS 的 shell 与页面是 UIKit view controller：列表用 `UICollectionView` + diffable data source，store 变化靠 UIKit 对 `@Observable` 的自动观察（`updateProperties()`/`viewWillLayoutSubviews()` 中读取），不另建通知或轮询。macOS 保持 SwiftUI。迁移逐页进行，未迁移页面经 `UIHostingController` 挂在 UIKit shell 下；AD-139 的按宽度选 shell 规则不变，写入仍只走命令边界（AD-002）。
+**AD-144：iOS/iPadOS 的 shell 用 UIKit，页面保持 SwiftUI。** `ShellController` 按宽度（AD-139）放 `UITabBarController` 或 `UISplitViewController`，选中项经 UIKit 对 `@Observable` store 的自动观察跟随 `desktopDestination`；页面以 `UIHostingController` 承载并注入 scene 级环境。实测（`PagePerformanceUITests`，Release）页面绘制只占应用 CPU 约四分之一，整页改写 UIKit 收益有限，所以只有某页经度量证明是瓶颈时才改为 UIKit。macOS 保持 SwiftUI。

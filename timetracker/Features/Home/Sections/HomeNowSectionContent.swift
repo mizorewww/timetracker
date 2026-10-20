@@ -92,21 +92,25 @@ struct HomeNowActiveContent: View {
     let actionLabelStyle: TaskTimerActionLabelStyle
     let openTask: (UUID) -> Void
     let startTimer: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 0) {
             ForEach(segments, id: \.id) { segment in
-                ActiveTimerRow(
-                    store: store,
-                    segment: segment,
-                    actionLabelStyle: actionLabelStyle,
-                    openTaskDetail: openTask
-                )
-                .padding(12)
-                .accessibilityIdentifier("home.activeTimer.\(segment.id.uuidString)")
+                VStack(spacing: 0) {
+                    ActiveTimerRow(
+                        store: store,
+                        segment: segment,
+                        actionLabelStyle: actionLabelStyle,
+                        openTaskDetail: openTask
+                    )
+                    .padding(12)
+                    .accessibilityIdentifier("home.activeTimer.\(segment.id.uuidString)")
 
-                Divider()
-                    .padding(.horizontal, 12)
+                    Divider()
+                        .padding(.horizontal, 12)
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
             HomeTimerPickerButton(
@@ -116,6 +120,7 @@ struct HomeNowActiveContent: View {
             )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .animation(reduceMotion ? nil : AppMotion.structuralChange, value: segments.map(\.id))
     }
 }
 

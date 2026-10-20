@@ -2,7 +2,9 @@ import SwiftUI
 
 struct PomodoroTimerFace: View {
     let timeText: String
-    let timeValue: Int
+    /// The value the face rolls to when it changes; `nil` for a countdown
+    /// that ticks every second, where a roll would animate continuously.
+    let timeValue: Int?
     let title: String
     let subtitle: String?
     let titleColor: Color
@@ -11,7 +13,7 @@ struct PomodoroTimerFace: View {
 
     init(
         timeText: String,
-        timeValue: Int,
+        timeValue: Int?,
         title: String,
         subtitle: String? = nil,
         titleColor: Color,
@@ -29,7 +31,7 @@ struct PomodoroTimerFace: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            AnimatedNumberText(text: timeText, value: timeValue)
+            timeLabel
                 .font(.system(.largeTitle, design: .rounded, weight: .bold))
                 .foregroundStyle(PomodoroStyle.timerText)
 
@@ -53,5 +55,15 @@ struct PomodoroTimerFace: View {
         .accessibilityLabel(spokenLabel ?? title)
         .accessibilityValue(spokenValue ?? timeText)
         .accessibilityIdentifier("pomodoro.timerFace")
+    }
+
+    @ViewBuilder
+    private var timeLabel: some View {
+        if let timeValue {
+            AnimatedNumberText(text: timeText, value: timeValue)
+        } else {
+            Text(timeText)
+                .monospacedDigit()
+        }
     }
 }

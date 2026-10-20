@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Shared changing-number treatment for running timers, countdowns and
-/// totals.
+/// Rolls a number to its new value, for values that jump (totals, a chosen
+/// duration). Clocks that tick every second use plain monospaced text, since
+/// rolling every tick keeps the window animating.
 ///
 /// The surrounding view owns the clock schedule. This view only explains a
 /// numeric value change, so it cannot create another timer or invalidate a

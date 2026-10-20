@@ -82,6 +82,9 @@ struct ActivityHeatmapChart: View {
     @Environment(\.calendar) private var calendar
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.locale) private var locale
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Cells warm up from empty the first time the chart appears.
+    @State private var isRevealed = false
 
     private let cells: [ActivityHeatmapChartCell]
 
@@ -190,6 +193,11 @@ struct ActivityHeatmapChart: View {
         .accessibilityIdentifier(
             "home.heatmap.chart.\(snapshot.taskID.uuidString)"
         )
+        .onAppear {
+            withAnimation(AppMotion.chartReveal) {
+                isRevealed = true
+            }
+        }
     }
 
     private var palette: ActivityHeatmapPalette {
@@ -237,7 +245,8 @@ struct ActivityHeatmapChart: View {
     }
 
     private func fillColor(for day: ActivityHeatmapDay) -> Color {
-        day.isFuture ? .clear : palette.color(for: day.intensity)
+        guard !day.isFuture else { return .clear }
+        return palette.color(for: isRevealed || reduceMotion ? day.intensity : .none)
     }
 }
 

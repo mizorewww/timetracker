@@ -40,6 +40,7 @@ enum AppMotion {
     static let structuralChange = Animation.snappy(duration: 0.28)
     static let opacity = Animation.easeOut(duration: 0.16)
     static let press = Animation.easeOut(duration: 0.12)
+    static let chartReveal = Animation.smooth(duration: 0.6)
 }
 
 /// A design-language card: `cardBackground` fill with the card shadow, plus

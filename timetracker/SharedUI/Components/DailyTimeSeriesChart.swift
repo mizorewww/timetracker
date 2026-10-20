@@ -47,7 +47,10 @@ struct DailyTimeSeriesChart: View {
     var dateDomain: ClosedRange<Date>?
 
     @Environment(\.locale) private var locale
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var availableWidth: CGFloat = 0
+    /// Bars grow from zero the first time the chart appears.
+    @State private var isRevealed = false
 
     var body: some View {
         Group {
@@ -67,6 +70,15 @@ struct DailyTimeSeriesChart: View {
                   abs(width - availableWidth) > 0.5 else { return }
             availableWidth = max(0, width)
         }
+        .onAppear {
+            withAnimation(AppMotion.chartReveal) {
+                isRevealed = true
+            }
+        }
+    }
+
+    private func revealed(_ minutes: Double) -> Double {
+        isRevealed || reduceMotion ? minutes : 0
     }
 
     private var grossAndWallChart: some View {
@@ -161,7 +173,11 @@ struct DailyTimeSeriesChart: View {
                     }
                 }
             }
-            .chartYScale(domain: .automatic(includesZero: true))
+            // Sized to the data rather than the growing bars, so the axis
+            // holds still while they grow.
+            .chartYScale(domain: .automatic(includesZero: true, dataType: Double.self) { domain in
+                domain.append(maximumMinutes)
+            })
     }
 
     private var chart: some View {
@@ -174,7 +190,7 @@ struct DailyTimeSeriesChart: View {
                         point.date,
                         unit: .day
                     ),
-                    y: .value(AppStrings.grossTime, point.grossMinutes),
+                    y: .value(AppStrings.grossTime, revealed(point.grossMinutes)),
                     width: .ratio(0.62)
                 )
                 .foregroundStyle(AppColors.grossTime)
@@ -190,7 +206,7 @@ struct DailyTimeSeriesChart: View {
                         point.date,
                         unit: .day
                     ),
-                    y: .value(AppStrings.grossTime, point.grossMinutes)
+                    y: .value(AppStrings.grossTime, revealed(point.grossMinutes))
                 )
                 .foregroundStyle(
                     by: .value(
@@ -217,7 +233,7 @@ struct DailyTimeSeriesChart: View {
                         point.date,
                         unit: .day
                     ),
-                    y: .value(AppStrings.wallTime, point.wallMinutes)
+                    y: .value(AppStrings.wallTime, revealed(point.wallMinutes))
                 )
                 .foregroundStyle(
                     by: .value(
@@ -244,7 +260,7 @@ struct DailyTimeSeriesChart: View {
                         point.date,
                         unit: .day
                     ),
-                    y: .value(AppStrings.wallTime, point.wallMinutes),
+                    y: .value(AppStrings.wallTime, revealed(point.wallMinutes)),
                     width: .ratio(0.62)
                 )
                 .foregroundStyle(
@@ -264,7 +280,7 @@ struct DailyTimeSeriesChart: View {
                         point.date,
                         unit: .day
                     ),
-                    y: .value(AppStrings.grossTime, point.grossMinutes)
+                    y: .value(AppStrings.grossTime, revealed(point.grossMinutes))
                 )
                 .foregroundStyle(
                     by: .value(
@@ -279,6 +295,10 @@ struct DailyTimeSeriesChart: View {
                 )
             }
         }
+    }
+
+    private var maximumMinutes: Double {
+        points.map { max($0.grossMinutes, $0.wallMinutes) }.max() ?? 0
     }
 
     private var groupedChartAccessibilityLabel: String {

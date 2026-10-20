@@ -64,10 +64,9 @@ enum AppCloudSync {
         }
     }
 
-    /// Whether this launch's store can sync, so its iCloud account is worth
-    /// checking automatically: unit-test, UI-test and demo launches open
-    /// in-memory or local-only stores.
-    static var opensSyncableStore: Bool {
+    /// Whether to check the iCloud account automatically: every launch except
+    /// unit-test, UI-test and demo ones, whose stores never sync.
+    static var checksCloudAccountAutomatically: Bool {
         AppRuntimeEnvironment.isUnitTestHost() == false &&
             persistenceMode != modeUITest &&
             persistenceMode != modeDemoData

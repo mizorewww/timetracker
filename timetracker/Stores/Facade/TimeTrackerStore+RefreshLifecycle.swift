@@ -19,9 +19,9 @@ extension TimeTrackerStore {
         enqueueCommittedMutationSystemProjections(
             events: [.fullSync]
         )
-        await refreshCloudAccountStatus(
-            client: cloudAccountStatusClient
-        )
+        if AppCloudSync.opensSyncableStore {
+            await refreshCloudAccountStatus(client: cloudAccountStatusClient)
+        }
     }
 
     @discardableResult

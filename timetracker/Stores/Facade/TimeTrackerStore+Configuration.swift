@@ -73,9 +73,7 @@ extension TimeTrackerStore {
         // `.fullSync` republishes every system surface, including the Watch
         // state a terminal Watch command outcome may not have recorded.
         enqueueCommittedMutationSystemProjections(events: [.fullSync])
-        if writeAuthorization.usesApplicationState,
-           AppRuntimeEnvironment.isUnitTestHost() == false
-        {
+        if writeAuthorization.usesApplicationState, AppCloudSync.opensSyncableStore {
             Task {
                 await refreshCloudAccountStatus()
             }

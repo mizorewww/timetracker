@@ -12,7 +12,7 @@ struct InboxCaptureRow: View {
             HStack(spacing: 10) {
                 Image(systemName: "plus.circle")
                     .font(.system(size: 24, weight: .regular))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.tint)
                     .frame(width: 30, height: 30)
                     .accessibilityHidden(true)
 

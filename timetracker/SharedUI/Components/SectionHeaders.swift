@@ -5,7 +5,6 @@ struct AppSectionHeader: View {
     var subtitle: String?
     var systemImage: String?
     var trailing: String?
-    var trailingTint: Color = .blue
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -30,7 +29,7 @@ struct AppSectionHeader: View {
             if let trailing, !trailing.isEmpty {
                 Text(trailing)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(trailingTint)
+                    .foregroundStyle(.tint)
                     .lineLimit(1)
             }
         }
@@ -42,14 +41,9 @@ struct AppSectionHeader: View {
 struct SectionTitle: View {
     let title: String
     var trailing: String?
-    var trailingTint: Color = .blue
 
     var body: some View {
-        AppSectionHeader(
-            title: title,
-            trailing: trailing,
-            trailingTint: trailingTint
-        )
+        AppSectionHeader(title: title, trailing: trailing)
     }
 }
 

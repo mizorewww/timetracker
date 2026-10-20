@@ -26,7 +26,7 @@ struct InboxListRow: View {
                 } label: {
                     Label(action.destination.applyTitle, systemImage: "checkmark")
                 }
-                .tint(.blue)
+                .tint(.accentColor)
             }
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {

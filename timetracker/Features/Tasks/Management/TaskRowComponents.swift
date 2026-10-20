@@ -133,7 +133,7 @@ struct TaskRowSwipeActions: ViewModifier {
                     } label: {
                         actionLabel(AppStrings.localized("task.swipe.start"), systemImage: "play.fill")
                     }
-                    .tint(.blue)
+                    .tint(.accentColor)
                 }
 
                 if eligibility.isEligibleAsParent {
@@ -159,7 +159,7 @@ struct TaskRowSwipeActions: ViewModifier {
                             systemImage: "archivebox"
                         )
                     }
-                    .tint(.blue)
+                    .tint(.accentColor)
                     .accessibilityIdentifier("task.swipe.archive.\(task.id.uuidString)")
                 }
             }

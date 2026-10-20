@@ -9,7 +9,7 @@ struct InboxGeneratingSuggestionBar: View {
                 Text(.app("inbox.suggestion.generating"))
             } icon: {
                 Image(systemName: "sparkles")
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.tint)
             }
             Spacer(minLength: 8)
             ProgressView()
@@ -142,7 +142,7 @@ struct InboxSuggestionBar: View {
                 action: apply
             )
             .fontWeight(.semibold)
-            .foregroundStyle(.blue)
+            .foregroundStyle(.tint)
             .disabled(destination.isAvailable == false)
         }
     }
@@ -268,7 +268,7 @@ struct InboxSuggestionFailureBar: View {
             }
             .buttonStyle(.plain)
             .fontWeight(.semibold)
-            .foregroundStyle(.blue)
+            .foregroundStyle(.tint)
             .accessibilityLabel(AppStrings.localized("inbox.suggestion.retry"))
             .accessibilityIdentifier(
                 "inbox.suggestion.retry.\(itemID.uuidString)"

@@ -167,7 +167,7 @@ struct TimelineRow: View {
 
     private var tagColor: Color {
         switch segment.source {
-        case .pomodoro: .blue
+        case .pomodoro: AppColors.focus
         case .manual: .orange
         default: .secondary
         }
@@ -344,7 +344,7 @@ struct TodayTimelineRecordContent: View {
             endedAt: presentation.durationEndedAt
         )
         .font(.subheadline.monospacedDigit())
-        .foregroundStyle(presentation.usesCurrentEndLabel ? Color.blue : Color.secondary)
+        .foregroundStyle(presentation.usesCurrentEndLabel ? Color.accentColor : Color.secondary)
         .lineLimit(1)
         .minimumScaleFactor(0.82)
         .accessibilityIdentifier(

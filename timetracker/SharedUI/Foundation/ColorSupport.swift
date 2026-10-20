@@ -20,6 +20,7 @@ enum AppColors {
     static let shadowInk = Color(red: 0x14 / 255, green: 0x16 / 255, blue: 0x1E / 255)
     static let grossTime = Color.green
     static let wallTime = Color.blue
+    static let focus = Color.pink
 }
 
 enum TaskColorPalette {

@@ -102,7 +102,7 @@ private struct PomodoroRunRow: View {
         switch state {
         case .completed: .green
         case .cancelled: .red
-        case .focusing: .blue
+        case .focusing: AppColors.focus
         case .shortBreak, .longBreak: .orange
         case .planned, .interrupted: .secondary
         }

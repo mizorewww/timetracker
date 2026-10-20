@@ -12,7 +12,6 @@ enum AppLayout {
     #endif
     /// Corner radius matching the native inset-grouped list card on iOS.
     static let nativeGroupedCardRadius: CGFloat = 26
-    static let iconRadius: CGFloat = 7
     static let sectionSpacing: CGFloat = 12
     static let cardPadding: CGFloat = 16
     static let compactPagePadding: CGFloat = 18
@@ -146,16 +145,28 @@ extension View {
     }
 }
 
-struct AppRowIcon: View {
+/// A design-language icon tile: `.soft` draws the glyph in its color on a
+/// 16% tint (tasks), `.solid` draws a white glyph on the color (destinations).
+struct AppIconTile: View {
+    enum Style {
+        case soft
+        case solid
+    }
+
     let systemImage: String
-    var tint: Color = .blue
+    let tint: Color
+    var style: Style = .soft
+    let size: CGFloat
 
     var body: some View {
         Image(systemName: systemImage)
-            .font(.system(size: 17, weight: .semibold))
-            .foregroundStyle(tint)
-            .frame(width: 30, height: 30)
-            .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: AppLayout.iconRadius, style: .continuous))
+            .font(.system(size: size * 0.52, weight: .semibold))
+            .foregroundStyle(style == .solid ? Color.white : tint)
+            .frame(width: size, height: size)
+            .background(
+                style == .solid ? tint : tint.opacity(0.16),
+                in: RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+            )
             .accessibilityHidden(true)
     }
 }

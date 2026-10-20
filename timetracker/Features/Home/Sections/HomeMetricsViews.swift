@@ -81,7 +81,7 @@ private struct HomeSummaryMetric: View {
                         Text(title)
                             .font(.headline)
                     } icon: {
-                        AppRowIcon(systemImage: systemImage, tint: tint)
+                        AppIconTile(systemImage: systemImage, tint: tint, size: 30)
                     }
                     Text(value)
                         .font(.title3.weight(.semibold).monospacedDigit())
@@ -89,7 +89,7 @@ private struct HomeSummaryMetric: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 HStack(spacing: 12) {
-                    AppRowIcon(systemImage: systemImage, tint: tint)
+                    AppIconTile(systemImage: systemImage, tint: tint, size: 30)
                     Text(title)
                     Spacer(minLength: 12)
                     Text(value)

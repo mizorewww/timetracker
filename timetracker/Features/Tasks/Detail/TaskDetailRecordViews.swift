@@ -98,7 +98,7 @@ private struct TaskDetailRecentRecordRow: View {
 
     private var recordIdentity: some View {
         HStack(alignment: .top, spacing: 10) {
-            AppRowIcon(systemImage: "clock", tint: .secondary)
+            AppIconTile(systemImage: "clock", tint: .secondary, size: 30)
             VStack(alignment: .leading, spacing: 2) {
                 Text(record.title)
                     .font(primaryFont.weight(.medium))

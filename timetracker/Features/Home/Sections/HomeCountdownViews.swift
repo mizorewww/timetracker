@@ -49,14 +49,14 @@ struct HomeCountdownRow: View {
                         Text(event.title)
                             .fixedSize(horizontal: false, vertical: true)
                     } icon: {
-                        AppRowIcon(systemImage: "calendar", tint: .purple)
+                        AppIconTile(systemImage: "calendar", tint: .purple, size: 30)
                     }
                     eventDetails
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 HStack(spacing: 12) {
-                    AppRowIcon(systemImage: "calendar", tint: .purple)
+                    AppIconTile(systemImage: "calendar", tint: .purple, size: 30)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(event.title)
                             .lineLimit(2)

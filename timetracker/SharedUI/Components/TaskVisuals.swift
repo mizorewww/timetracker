@@ -18,12 +18,10 @@ struct TaskIcon: View {
     }
 
     var body: some View {
-        let tint = Color(hex: visual.colorHex) ?? .blue
-        Image(systemName: visual.symbolName)
-            .font(.system(size: size * 0.45, weight: .semibold))
-            .foregroundStyle(tint)
-            .frame(width: size, height: size)
-            .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: AppLayout.iconRadius, style: .continuous))
-            .accessibilityHidden(true)
+        AppIconTile(
+            systemImage: visual.symbolName,
+            tint: Color(hex: visual.colorHex) ?? .blue,
+            size: size
+        )
     }
 }

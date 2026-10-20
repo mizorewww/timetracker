@@ -27,11 +27,11 @@ final class SwiftDataPomodoroRepository {
     func runs() throws -> [PomodoroRun] {
         try context.fetch(FetchDescriptor<PomodoroRun>())
             .visibleDeduplicatedByID()
-            .sorted(by: runCreationOrder)
+            .sorted(byKey: { ($0.createdAt, $0.id) }, by: DatedIdentityOrder.newestFirst)
     }
 
     func runs(ids: Set<UUID>) throws -> [PomodoroRun] {
-        try canonicalRuns(ids: ids).sorted(by: runCreationOrder)
+        try canonicalRuns(ids: ids).sorted(byKey: { ($0.createdAt, $0.id) }, by: DatedIdentityOrder.newestFirst)
     }
 
     /// Timer stop commands only need open runs attached to the sessions they
@@ -50,7 +50,7 @@ final class SwiftDataPomodoroRepository {
                 $0.endedAt == nil &&
                     $0.sessionID.map(sessionIDs.contains) == true
             }
-            .sorted(by: runCreationOrder)
+            .sorted(byKey: { ($0.createdAt, $0.id) }, by: DatedIdentityOrder.newestFirst)
     }
 
     func activeRuns() throws -> [PomodoroRun] {
@@ -70,7 +70,7 @@ final class SwiftDataPomodoroRepository {
                     $0.stateRaw != completed &&
                     $0.stateRaw != cancelled
             }
-            .sorted(by: runCreationOrder)
+            .sorted(byKey: { ($0.createdAt, $0.id) }, by: DatedIdentityOrder.newestFirst)
     }
 
     @discardableResult
@@ -256,12 +256,5 @@ final class SwiftDataPomodoroRepository {
             predicate: #Predicate { requestedIDs.contains($0.id) }
         )
         return try context.fetch(descriptor).visibleDeduplicatedByID()
-    }
-
-    private func runCreationOrder(_ lhs: PomodoroRun, _ rhs: PomodoroRun) -> Bool {
-        if lhs.createdAt != rhs.createdAt {
-            return lhs.createdAt > rhs.createdAt
-        }
-        return lhs.id < rhs.id
     }
 }

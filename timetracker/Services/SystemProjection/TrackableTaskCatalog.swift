@@ -17,7 +17,7 @@ nonisolated struct TrackableTaskCatalog {
             .deduplicatedByID()
         let tasks = canonicalTaskRows
             .filter { $0.deletedAt == nil }
-            .sorted(by: Self.taskHierarchyOrder)
+            .sorted(byKey: { ($0.depth, $0.sortOrder, $0.createdAt, $0.id) }, by: <)
         let recurrence = try Self.completeRecurrenceFacts(
             tasks: tasks,
             rules: context
@@ -56,7 +56,7 @@ nonisolated struct TrackableTaskCatalog {
                 existingTaskIDs.contains($0.taskID) &&
                     taskIDBySessionID[$0.sessionID] == $0.taskID
             }
-            .sorted(by: TimeSegment.startOrder)
+            .sorted(byKey: \.startOrderKey, by: DatedIdentityOrder.oldestFirst)
     }
 
     private static func completeRecurrenceFacts(
@@ -102,21 +102,5 @@ nonisolated struct TrackableTaskCatalog {
             completeOccurrences,
             incompleteTaskIDs
         )
-    }
-
-    private static func taskHierarchyOrder(
-        _ lhs: TaskNode,
-        _ rhs: TaskNode
-    ) -> Bool {
-        if lhs.depth != rhs.depth {
-            return lhs.depth < rhs.depth
-        }
-        if lhs.sortOrder != rhs.sortOrder {
-            return lhs.sortOrder < rhs.sortOrder
-        }
-        if lhs.createdAt != rhs.createdAt {
-            return lhs.createdAt < rhs.createdAt
-        }
-        return lhs.id < rhs.id
     }
 }

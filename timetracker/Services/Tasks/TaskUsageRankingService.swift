@@ -12,24 +12,15 @@ nonisolated enum TaskUsageRankingService {
     ) -> [TaskNode] {
         availableTasks
             .filter { excludedIDs.contains($0.id) == false }
-            .sorted { lhs, rhs in
-                let lhsActivity = activityByTaskID[lhs.id]
-                let rhsActivity = activityByTaskID[rhs.id]
-                let lhsSegmentCount = lhsActivity?.segmentCount ?? 0
-                let rhsSegmentCount = rhsActivity?.segmentCount ?? 0
-                if lhsSegmentCount != rhsSegmentCount {
-                    return lhsSegmentCount > rhsSegmentCount
+            .sorted(byKey: { task in
+                let activity = activityByTaskID[task.id]
+                return (activity?.segmentCount ?? 0, activity?.lastStartedAt ?? .distantPast, task.id)
+            }, by: { lhs, rhs in
+                if lhs.0 != rhs.0 {
+                    return lhs.0 > rhs.0
                 }
-
-                let lhsLastStartedAt =
-                    lhsActivity?.lastStartedAt ?? .distantPast
-                let rhsLastStartedAt =
-                    rhsActivity?.lastStartedAt ?? .distantPast
-                if lhsLastStartedAt != rhsLastStartedAt {
-                    return lhsLastStartedAt > rhsLastStartedAt
-                }
-                return lhs.id < rhs.id
-            }
+                return DatedIdentityOrder.newestFirst((lhs.1, lhs.2), (rhs.1, rhs.2))
+            })
     }
 
     static func frequentRecentTasks(
@@ -49,12 +40,7 @@ nonisolated enum TaskUsageRankingService {
             historicallyUsedTasks.map(\.id)
         )
         let recentTasks = availableTasks
-            .sorted {
-                if $0.updatedAt != $1.updatedAt {
-                    return $0.updatedAt > $1.updatedAt
-                }
-                return $0.id < $1.id
-            }
+            .sorted(byKey: { ($0.updatedAt, $0.id) }, by: DatedIdentityOrder.newestFirst)
             .prefix(4)
         let fallbackTasks = recentTasks.filter {
             excludedIDs.contains($0.id) == false &&

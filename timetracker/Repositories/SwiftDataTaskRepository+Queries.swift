@@ -5,7 +5,7 @@ nonisolated extension SwiftDataTaskRepository {
     func allNodes() throws -> [TaskNode] {
         try context.fetch(FetchDescriptor<TaskNode>())
             .visibleDeduplicatedByID()
-            .sorted(by: taskHierarchyOrder)
+            .sorted(byKey: { ($0.depth, $0.sortOrder, $0.createdAt, $0.id) }, by: <)
     }
 
     /// The predicate only nominates candidates: every copy of each candidate
@@ -22,7 +22,7 @@ nonisolated extension SwiftDataTaskRepository {
         )
         .visibleDeduplicatedByID()
         .filter { $0.parentID == parent }
-        .sorted(by: taskSiblingOrder)
+        .sorted(byKey: { ($0.sortOrder, $0.createdAt, $0.id) }, by: <)
     }
 
     func task(id: UUID) throws -> TaskNode? {
@@ -64,7 +64,7 @@ nonisolated extension SwiftDataTaskRepository {
         )
         return try context.fetch(descriptor)
             .visibleDeduplicatedByID()
-            .sorted(by: taskHierarchyOrder)
+            .sorted(byKey: { ($0.depth, $0.sortOrder, $0.createdAt, $0.id) }, by: <)
     }
 
     func taskRecurrenceRules() throws -> [TaskRecurrenceRule] {
@@ -156,23 +156,6 @@ nonisolated extension SwiftDataTaskRepository {
                 }
                 return persistentIdentityOrder($0, $1)
             }
-    }
-
-    private func taskHierarchyOrder(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {
-        if lhs.depth != rhs.depth {
-            return lhs.depth < rhs.depth
-        }
-        return taskSiblingOrder(lhs, rhs)
-    }
-
-    private func taskSiblingOrder(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {
-        if lhs.sortOrder != rhs.sortOrder {
-            return lhs.sortOrder < rhs.sortOrder
-        }
-        if lhs.createdAt != rhs.createdAt {
-            return lhs.createdAt < rhs.createdAt
-        }
-        return lhs.id < rhs.id
     }
 
     private func persistentIdentityOrder<Model: PersistentUUIDModel>(

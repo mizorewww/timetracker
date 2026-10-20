@@ -9,13 +9,13 @@ extension SwiftDataTimeTrackingRepository {
         let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
         return try canonicalSegments(ids: candidateIDs)
             .filter { $0.endedAt == nil }
-            .sorted(by: TimeSegment.startOrder)
+            .sorted(byKey: \.startOrderKey, by: DatedIdentityOrder.oldestFirst)
     }
 
     func sessions() throws -> [TimeSession] {
         try context.fetch(FetchDescriptor<TimeSession>())
             .visibleDeduplicatedByID()
-            .sorted(by: sessionStartOrder)
+            .sorted(byKey: { ($0.startedAt, $0.id) }, by: DatedIdentityOrder.newestFirst)
     }
 
     func sessions(ids: Set<UUID>) throws -> [TimeSession] {
@@ -26,11 +26,11 @@ extension SwiftDataTimeTrackingRepository {
         )
         return try context.fetch(descriptor)
             .visibleDeduplicatedByID()
-            .sorted(by: sessionStartOrder)
+            .sorted(byKey: { ($0.startedAt, $0.id) }, by: DatedIdentityOrder.newestFirst)
     }
 
     func segments(ids: Set<UUID>) throws -> [TimeSegment] {
-        try canonicalSegments(ids: ids).sorted(by: TimeSegment.startOrder)
+        try canonicalSegments(ids: ids).sorted(byKey: \.startOrderKey, by: DatedIdentityOrder.oldestFirst)
     }
 
     func segments(sessionIDs: Set<UUID>) throws -> [TimeSegment] {
@@ -42,7 +42,7 @@ extension SwiftDataTimeTrackingRepository {
         let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
         return try canonicalSegments(ids: candidateIDs)
             .filter { sessionIDs.contains($0.sessionID) }
-            .sorted(by: TimeSegment.startOrder)
+            .sorted(byKey: \.startOrderKey, by: DatedIdentityOrder.oldestFirst)
     }
 
     func segments(from: Date, to: Date) throws -> [TimeSegment] {
@@ -70,13 +70,13 @@ extension SwiftDataTimeTrackingRepository {
                     now: now
                 )
             }
-            .sorted(by: TimeSegment.startOrder)
+            .sorted(byKey: \.startOrderKey, by: DatedIdentityOrder.oldestFirst)
     }
 
     func allSegments() throws -> [TimeSegment] {
         try context.fetch(FetchDescriptor<TimeSegment>())
             .visibleDeduplicatedByID()
-            .sorted(by: TimeSegment.startOrder)
+            .sorted(byKey: \.startOrderKey, by: DatedIdentityOrder.oldestFirst)
     }
 
     func canonicalSegments(ids: Set<UUID>) throws -> [TimeSegment] {
@@ -106,12 +106,5 @@ extension SwiftDataTimeTrackingRepository {
             throw TimeTrackingRepositoryError.taskUnavailable
         }
         return try LedgerPersistencePolicy.prepareTitleSnapshot(task.title)
-    }
-
-    private func sessionStartOrder(_ lhs: TimeSession, _ rhs: TimeSession) -> Bool {
-        if lhs.startedAt != rhs.startedAt {
-            return lhs.startedAt > rhs.startedAt
-        }
-        return lhs.id < rhs.id
     }
 }

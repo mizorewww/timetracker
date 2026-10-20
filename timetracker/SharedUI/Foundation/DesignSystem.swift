@@ -5,7 +5,11 @@ import UIKit
 #endif
 
 enum AppLayout {
-    static let cardRadius: CGFloat = 8
+    #if os(macOS)
+    static let cardRadius: CGFloat = 18
+    #else
+    static let cardRadius: CGFloat = 22
+    #endif
     /// Corner radius matching the native inset-grouped list card on iOS.
     static let nativeGroupedCardRadius: CGFloat = 26
     static let iconRadius: CGFloat = 7
@@ -28,23 +32,34 @@ enum AppMotion {
     static let press = Animation.easeOut(duration: 0.12)
 }
 
-struct AppCardBackground: ViewModifier {
-    var padding: CGFloat = AppLayout.cardPadding
-    var stroke: Bool = true
+/// A design-language card: `cardBackground` fill with the card shadow, plus
+/// a faint light edge in dark mode so cards separate from the window.
+private struct AppCardSurface: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: AppLayout.cardRadius, style: .continuous)
+        if colorScheme == .dark {
+            shape
+                .fill(AppColors.cardBackground)
+                .strokeBorder(.white.opacity(0.06))
+                .shadow(color: .black.opacity(0.35), radius: 10, y: 6)
+        } else {
+            shape
+                .fill(AppColors.cardBackground)
+                .shadow(color: AppColors.shadowInk.opacity(0.04), radius: 1, y: 1)
+                .shadow(color: AppColors.shadowInk.opacity(0.06), radius: 10, y: 6)
+        }
+    }
+}
+
+private struct AppCardBackground: ViewModifier {
+    let padding: CGFloat
 
     func body(content: Content) -> some View {
         content
             .padding(padding)
-            .background(
-                AppColors.cardBackground,
-                in: RoundedRectangle(cornerRadius: AppLayout.cardRadius, style: .continuous)
-            )
-            .overlay {
-                if stroke {
-                    RoundedRectangle(cornerRadius: AppLayout.cardRadius, style: .continuous)
-                        .stroke(AppColors.border)
-                }
-            }
+            .background(AppCardSurface())
     }
 }
 
@@ -66,14 +81,14 @@ private struct AppNativeCardBackground: ViewModifier {
                 )
         case .regular:
             content
-                .modifier(AppCardBackground(padding: padding, stroke: true))
+                .modifier(AppCardBackground(padding: padding))
         }
     }
 }
 
 extension View {
-    func appCard(padding: CGFloat = AppLayout.cardPadding, stroke: Bool = true) -> some View {
-        modifier(AppCardBackground(padding: padding, stroke: stroke))
+    func appCard(padding: CGFloat = AppLayout.cardPadding) -> some View {
+        modifier(AppCardBackground(padding: padding))
     }
 
     /// Card matching the surrounding surface's native card language.

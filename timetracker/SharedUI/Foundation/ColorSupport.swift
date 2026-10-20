@@ -7,13 +7,17 @@ import UIKit
 #endif
 
 enum AppColors {
-    static let background = Color(platformColor: .systemGroupedBackground)
     #if os(macOS)
-    static let cardBackground = Color(nsColor: .controlBackgroundColor)
+    static let background = Color(light: 0xF2F3F7, dark: 0x1B1C1F)
+    static let cardBackground = Color(light: 0xFFFFFF, dark: 0x26272B)
     #else
+    // iOS lists draw their rows in the system grouped colors, so the canvas
+    // and cards keep those colors to stay continuous with them.
+    static let background = Color(uiColor: .systemGroupedBackground)
     static let cardBackground = Color(uiColor: .secondarySystemGroupedBackground)
     #endif
-    static let border = Color.primary.opacity(0.08)
+    /// Tint of the light-mode card shadow.
+    static let shadowInk = Color(red: 0x14 / 255, green: 0x16 / 255, blue: 0x1E / 255)
     static let grossTime = Color.green
     static let wallTime = Color.blue
 }
@@ -200,22 +204,18 @@ extension Color {
         #endif
     }
 
-    init(platformColor: PlatformColor) {
-        #if os(macOS)
-        self.init(nsColor: platformColor)
-        #else
-        self.init(uiColor: platformColor)
-        #endif
+    #if os(macOS)
+    /// A fixed sRGB pair, `0xRRGGBB`, that follows the light/dark appearance.
+    init(light: UInt32, dark: UInt32) {
+        self.init(nsColor: NSColor(name: nil) { appearance in
+            let rgb = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
+            return NSColor(
+                srgbRed: CGFloat((rgb >> 16) & 0xFF) / 255,
+                green: CGFloat((rgb >> 8) & 0xFF) / 255,
+                blue: CGFloat(rgb & 0xFF) / 255,
+                alpha: 1
+            )
+        })
     }
+    #endif
 }
-
-#if os(macOS)
-typealias PlatformColor = NSColor
-extension PlatformColor {
-    static var systemGroupedBackground: NSColor {
-        NSColor.windowBackgroundColor
-    }
-}
-#else
-typealias PlatformColor = UIColor
-#endif

@@ -33,42 +33,48 @@ enum StoreRefreshCoordinator {
         plan: StoreRefreshPlan,
         schedulesPomodoroReconciliation: Bool
     ) throws {
-        if plan.refreshTasks {
-            try PerformanceSignpost.interval("Task domain refresh") {
-                try store.refreshTaskDomain(plan: plan)
+        do {
+            if plan.refreshTasks {
+                try PerformanceSignpost.interval("Task domain refresh") {
+                    try store.refreshTaskDomain(plan: plan)
+                }
             }
-        }
-        if plan.refreshLedger {
-            try PerformanceSignpost.interval("Ledger domain refresh") {
-                try store.refreshLedgerDomain(plan: plan)
+            if plan.refreshLedger {
+                try PerformanceSignpost.interval("Ledger domain refresh") {
+                    try store.refreshLedgerDomain(plan: plan)
+                }
             }
-        }
-        if plan.refreshPomodoro {
-            try PerformanceSignpost.interval("Pomodoro domain refresh") {
-                try store.refreshPomodoroDomain(
-                    schedulesReconciliation: schedulesPomodoroReconciliation
-                )
+            if plan.refreshPomodoro {
+                try PerformanceSignpost.interval("Pomodoro domain refresh") {
+                    try store.refreshPomodoroDomain(
+                        schedulesReconciliation: schedulesPomodoroReconciliation
+                    )
+                }
             }
-        }
-        if plan.refreshPreferences {
-            try PerformanceSignpost.interval("Preference domain refresh") {
-                try store.refreshPreferenceDomain()
+            if plan.refreshPreferences {
+                try PerformanceSignpost.interval("Preference domain refresh") {
+                    try store.refreshPreferenceDomain()
+                }
             }
-        }
-        if plan.refreshCountdown {
-            try PerformanceSignpost.interval("Countdown fetch") {
-                store.countdownEvents = try store.fetchCountdownEvents()
+            if plan.refreshCountdown {
+                try PerformanceSignpost.interval("Countdown fetch") {
+                    store.countdownEvents = try store.fetchCountdownEvents()
+                }
             }
-        }
-        if plan.refreshChecklist {
-            try PerformanceSignpost.interval("Checklist fetch") {
-                try store.refreshChecklistDomain(plan: plan)
+            if plan.refreshChecklist {
+                try PerformanceSignpost.interval("Checklist fetch") {
+                    try store.refreshChecklistDomain(plan: plan)
+                }
             }
-        }
-        if plan.refreshInbox {
-            try PerformanceSignpost.interval("Inbox fetch") {
-                try store.refreshInboxDomain(plan: plan)
+            if plan.refreshInbox {
+                try PerformanceSignpost.interval("Inbox fetch") {
+                    try store.refreshInboxDomain(plan: plan)
+                }
             }
+        } catch {
+            // History catch-up never replays what a failed refresh missed.
+            store.needsFullRefresh = true
+            throw error
         }
     }
 

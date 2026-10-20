@@ -1,7 +1,7 @@
 # TimeTracker Agent 决策文档
 
 状态：有效决策记录
-最近更新：2026-10-15
+最近更新：2026-10-20
 
 只收录违反后会损坏用户数据或打散架构、且从代码里不容易看出的长期不变量。其余细节以代码、行为测试和 [Architecture](Architecture.md) 为准；历史决策由 git 承载。编号沿用原值以保持引用稳定。
 
@@ -30,3 +30,5 @@
 ## 平台
 
 **AD-139：按窗口宽度选择共享 shell。** `AppRootView` 以实测宽度选 compact（<720 pt）或 regular shell；`#if os(...)` 只封装真实缺失的 API 与系统 chrome，不按设备 idiom 复制同一页面。
+
+**AD-144：iOS/iPadOS 界面用 UIKit 承载。** 用户以性能为由决定（目标：`PagePerformanceUITests` Release 度量相对 SwiftUI 基线 10x）。iOS/iPadOS 的 shell 与页面是 UIKit view controller：列表用 `UICollectionView` + diffable data source，store 变化靠 UIKit 对 `@Observable` 的自动观察（`updateProperties()`/`viewWillLayoutSubviews()` 中读取），不另建通知或轮询。macOS 保持 SwiftUI。迁移逐页进行，未迁移页面经 `UIHostingController` 挂在 UIKit shell 下；AD-139 的按宽度选 shell 规则不变，写入仍只走命令边界（AD-002）。

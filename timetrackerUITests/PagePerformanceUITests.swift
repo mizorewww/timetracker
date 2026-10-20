@@ -1,8 +1,9 @@
+#if os(iOS)
 import XCTest
 
-/// Baseline for the UIKit rewrite (AD-144): the app's own cost of launching,
-/// showing each tab and scrolling it, measured the same way before and after.
-/// Run in Release (`UI_TEST_CONFIGURATION=Release`). Wall-clock time is not
+/// The app's own cost of launching, showing each compact-shell tab and
+/// scrolling it, for comparing changes made for performance (AD-144). Run in
+/// Release (`UI_TEST_CONFIGURATION=Release`). Wall-clock time is not
 /// measured: XCUITest's waits for an idle app dominate it.
 final class PagePerformanceUITests: XCTestCase {
     /// Tab labels; the tests launch in English.
@@ -22,8 +23,8 @@ final class PagePerformanceUITests: XCTestCase {
         }
     }
 
-    func testSwitchingTabs() {
-        let app = launchShownApp()
+    func testSwitchingTabs() throws {
+        let app = try launchCompactShell()
         measure(metrics: [XCTCPUMetric(application: app), XCTMemoryMetric(application: app)]) {
             for tab in tabs {
                 app.buttons[tab].tap()
@@ -31,8 +32,8 @@ final class PagePerformanceUITests: XCTestCase {
         }
     }
 
-    func testScrollingEachTab() {
-        let app = launchShownApp()
+    func testScrollingEachTab() throws {
+        let app = try launchCompactShell()
         measure(metrics: [XCTHitchMetric(application: app), XCTCPUMetric(application: app)]) {
             for tab in tabs {
                 app.buttons[tab].tap()
@@ -45,9 +46,13 @@ final class PagePerformanceUITests: XCTestCase {
         }
     }
 
-    private func launchShownApp() -> XCUIApplication {
+    private func launchCompactShell() throws -> XCUIApplication {
         let app = launchDemoApp()
         XCTAssertTrue(app.descendants(matching: .any)["home.view"].waitForExistence(timeout: 15))
+        guard app.buttons["settings.open"].exists else {
+            throw XCTSkip("Tab measurements walk the compact shell's tabs.")
+        }
         return app
     }
 }
+#endif

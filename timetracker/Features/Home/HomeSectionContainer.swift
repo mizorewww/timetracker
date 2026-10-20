@@ -63,7 +63,7 @@ struct HomeSectionHeader<Trailing: View>: View {
         switch container {
         case .card:
             Text(title)
-                .font(.headline)
+                .appCardTitleStyle()
         case .listSection:
             Text(title)
         }

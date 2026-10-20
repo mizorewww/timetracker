@@ -1,49 +1,30 @@
 import SwiftUI
 
-struct AppSectionHeader: View {
-    let title: String
-    var subtitle: String?
-    var systemImage: String?
-    var trailing: String?
+#if os(macOS)
+private let cardTitleFont = Font.subheadline.weight(.semibold)
+#else
+private let cardTitleFont = Font.caption2.weight(.semibold)
+#endif
 
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            if let systemImage {
-                Image(systemName: systemImage)
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.headline)
-                if let subtitle, !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Spacer(minLength: 8)
-
-            if let trailing, !trailing.isEmpty {
-                Text(trailing)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.tint)
-                    .lineLimit(1)
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
+extension View {
+    /// The design language's card title: small, semibold, uppercase,
+    /// tracked and secondary.
+    func appCardTitleStyle() -> some View {
+        font(cardTitleFont)
+            .textCase(.uppercase)
+            .tracking(0.44)
+            .foregroundStyle(.secondary)
     }
 }
 
 struct SectionTitle: View {
     let title: String
-    var trailing: String?
 
     var body: some View {
-        AppSectionHeader(title: title, trailing: trailing)
+        Text(title)
+            .appCardTitleStyle()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -52,9 +33,15 @@ struct SettingsHeader: View {
     let title: String
 
     var body: some View {
-        AppSectionHeader(title: title, systemImage: symbol)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(title)
-            .accessibilityAddTraits(.isHeader)
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: symbol)
+                .foregroundStyle(.secondary)
+            Text(title)
+                .font(.headline)
+            Spacer(minLength: 8)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(.isHeader)
     }
 }

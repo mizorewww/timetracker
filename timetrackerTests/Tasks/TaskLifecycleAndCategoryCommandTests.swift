@@ -194,6 +194,28 @@ struct TaskLifecycleAndCategoryCommandTests {
         #expect(store.desktopDestination == .today)
     }
 
+    @Test
+    func corruptedParentCyclesAndOrphanSubtasksAreRepairedAsRoots() throws {
+        let context = try makeTestContext()
+        let cycleA = TaskNode(title: "Cycle A", parentID: nil, deviceID: "sync")
+        let cycleB = TaskNode(title: "Cycle B", parentID: cycleA.id, deviceID: "sync")
+        cycleA.parentID = cycleB.id
+        let orphan = TaskNode(title: "Orphan", parentID: UUID(), deviceID: "sync")
+        context.insert(cycleA)
+        context.insert(cycleB)
+        context.insert(orphan)
+        try context.save()
+
+        let store = makeTestStore()
+        try store.configureIfNeeded(context: context)
+
+        let rootIDs = Set(store.rootTasks().map(\.id))
+        let expectedCycleBreaker = min(cycleA.id, cycleB.id)
+        #expect(rootIDs.contains(expectedCycleBreaker))
+        #expect(rootIDs.contains(orphan.id))
+        #expect(store.visibleTaskCount == 3)
+    }
+
     private func task(_ id: UUID, in container: ModelContainer) throws -> TaskNode {
         try #require(
             try ModelContext(container)

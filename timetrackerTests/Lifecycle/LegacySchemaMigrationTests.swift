@@ -6,6 +6,97 @@ import Testing
 @Suite(.serialized)
 struct LegacySchemaMigrationTests {
     @Test @MainActor
+    func versionFourStoreMigratesTaskCategoryAssignmentsForRootsOnly() throws {
+        let fixture = try LegacyStoreFixture.create(
+            name: "LegacyV4",
+            schema: TimeTrackerSchemaV4.self
+        ) { context in
+            let category = TimeTrackerSchemaV4.TaskCategory(
+                title: "Work",
+                deviceID: "legacy",
+                colorHex: "1677FF",
+                iconName: "briefcase",
+                includesInForecast: true
+            )
+            let root = TimeTrackerSchemaV4.TaskNode(
+                title: "Legacy Root",
+                parentID: nil,
+                deviceID: "legacy",
+                categoryID: category.id,
+                colorHex: nil,
+                iconName: nil
+            )
+            let child = TimeTrackerSchemaV4.TaskNode(
+                title: "Legacy Child",
+                parentID: root.id,
+                deviceID: "legacy",
+                categoryID: category.id,
+                colorHex: nil,
+                iconName: nil
+            )
+            context.insert(category)
+            context.insert(root)
+            context.insert(child)
+            return (rootID: root.id, childID: child.id, categoryID: category.id)
+        }
+
+        try fixture.withCurrentContext { context in
+            let assignments = try context.fetch(FetchDescriptor<TaskCategoryAssignment>())
+            #expect(assignments.count == 1)
+            #expect(assignments.first?.taskID == fixture.seed.rootID)
+            #expect(assignments.first?.categoryID == fixture.seed.categoryID)
+            #expect(assignments.contains { $0.taskID == fixture.seed.childID } == false)
+        }
+    }
+
+    @Test @MainActor
+    func versionThirteenStoreMigratesFrozenChecklistItems() throws {
+        let fixture = try LegacyStoreFixture.create(
+            name: "LegacyV13",
+            schema: TimeTrackerSchemaV13.self
+        ) { context in
+            let task = TaskNode(title: "V13 task", parentID: nil, deviceID: "legacy")
+            let item = TimeTrackerSchemaV13.ChecklistItem(
+                taskID: task.id,
+                title: "V13 step",
+                isCompleted: false,
+                sortOrder: 10,
+                deviceID: "legacy"
+            )
+            context.insert(task)
+            context.insert(item)
+            return (taskID: task.id, itemID: item.id)
+        }
+
+        try fixture.withCurrentContext { context in
+            let migrated = try #require(
+                try context.fetch(FetchDescriptor<ChecklistItem>())
+                    .first { $0.id == fixture.seed.itemID }
+            )
+            #expect(migrated.title == "V13 step")
+            #expect(migrated.sortOrder == 10)
+            #expect(migrated.sortOrderBeforeCompletion == nil)
+
+            let coordinator = StoreScopedChecklistCommandCoordinator(
+                session: .testHarness(context.container),
+                deviceID: "test"
+            )
+            _ = try coordinator.setCompletion(
+                taskID: fixture.seed.taskID,
+                itemID: fixture.seed.itemID,
+                isCompleted: true
+            )
+            let updated = try #require(
+                try ModelContext(context.container)
+                    .fetch(FetchDescriptor<ChecklistItem>())
+                    .first { $0.id == fixture.seed.itemID }
+            )
+            #expect(updated.isCompleted)
+            #expect(updated.sortOrderBeforeCompletion == 10)
+        }
+    }
+
+    @Test @MainActor
     func versionEightStoreMigratesToCurrentSchemaWithoutTheLegacyDailySummaryCache() throws {
         let fixture = try LegacyStoreFixture.create(
             name: "LegacyV8",

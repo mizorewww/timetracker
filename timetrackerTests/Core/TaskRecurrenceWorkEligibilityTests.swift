@@ -176,6 +176,76 @@ struct TaskRecurrenceWorkEligibilityTests {
         )
         #expect(manual.taskID == fixture.generatedTaskID)
     }
+
+    @Test
+    func setEnabledTogglesRuleValidatesBaselineAndCopiesQuantityBlueprint() throws {
+        let context = try makeTestContext()
+        let template = try SwiftDataTaskRepository(context: context, deviceID: "seed")
+            .createTask(title: "Read daily", parentID: nil)
+        let templateGoal = TaskQuantityGoal(
+            taskID: template.id,
+            targetAmount: 30,
+            unitLabel: "pages",
+            deviceID: "seed"
+        )
+        context.insert(templateGoal)
+        try context.save()
+
+        let coordinator = recurrenceCoordinator(container: context.container)
+        let beforeStart = try date(year: 2026, month: 8, day: 1, hour: 12)
+        let activeDay = try date(year: 2026, month: 8, day: 2, hour: 12)
+
+        // Start on 2026-08-02; materializing on 2026-08-01 must skip occurrence creation.
+        let initialOutcome = try coordinator.createDailyRule(
+            templateTaskID: template.id,
+            startDayKey: "2026-08-02",
+            timeZoneIdentifier: "Asia/Singapore",
+            now: beforeStart
+        )
+        #expect(initialOutcome.materializations.isEmpty)
+
+        let ruleBeforeToggle = try #require(
+            try ModelContext(context.container).fetch(FetchDescriptor<TaskRecurrenceRule>()).first
+        )
+        let initialBaseline = TaskRecurrenceRuleMutationBaseline(rule: ruleBeforeToggle)
+
+        // Pause the rule: materializing on 2026-08-02 while paused does nothing.
+        _ = try coordinator.setEnabled(
+            baseline: initialBaseline,
+            isEnabled: false,
+            now: activeDay
+        )
+        #expect(try coordinator.materializeCurrentDay(now: activeDay).materializations.isEmpty)
+
+        // Stale baseline is rejected.
+        #expect(throws: TaskRecurrenceMutationError.ruleChanged) {
+            _ = try coordinator.setEnabled(
+                baseline: initialBaseline,
+                isEnabled: true,
+                now: activeDay.addingTimeInterval(10)
+            )
+        }
+
+        // Re-enabling with fresh baseline materializes today's occurrence and copies the quantity goal blueprint.
+        let pausedRule = try #require(
+            try ModelContext(context.container).fetch(FetchDescriptor<TaskRecurrenceRule>()).first
+        )
+        let resumeOutcome = try coordinator.setEnabled(
+            baseline: TaskRecurrenceRuleMutationBaseline(rule: pausedRule),
+            isEnabled: true,
+            now: activeDay.addingTimeInterval(20)
+        )
+        let materialization = try #require(resumeOutcome.materializations.first)
+        let copiedGoalID = try #require(materialization.generatedQuantityGoalID)
+        let copiedGoal = try #require(
+            try ModelContext(context.container)
+                .fetch(FetchDescriptor<TaskQuantityGoal>())
+                .first { $0.id == copiedGoalID }
+        )
+        #expect(copiedGoal.taskID == materialization.generatedTaskID)
+        #expect(copiedGoal.targetAmount == 30)
+        #expect(copiedGoal.unitLabel == "pages")
+    }
 }
 
 private extension TaskRecurrenceWorkEligibilityTests {

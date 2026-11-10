@@ -159,6 +159,77 @@ struct StoreScopedInboxCommandCoordinatorTests {
         #expect(suggestions.allSatisfy { $0.deletedAt != nil })
     }
 
+    @Test
+    func routingToCategoryAndDiscardingOrDroppingStaleSuggestions() throws {
+        let context = try makeTestContext()
+        let category = try SwiftDataTaskRepository(context: context, deviceID: "seed")
+            .createCategory(title: "Engineering", colorHex: "1677FF", iconName: "hammer")
+        let inbox = coordinator(context.container)
+
+        // 1. Route to Category creates a root task assigned to that category.
+        _ = try inbox.add(title: "Ship release")
+        let routeItem = try #require(try openItems(context.container).first)
+        let routeOutcome = try inbox.route(
+            baseline: InboxManualRouteBaseline(item: routeItem),
+            destination: .category(categoryID: category.id)
+        )
+        #expect(routeOutcome.didMutate)
+        let createdRoot = try #require(
+            try ModelContext(context.container)
+                .fetch(FetchDescriptor<TaskNode>())
+                .first { $0.title == "Ship release" }
+        )
+        #expect(createdRoot.parentID == nil)
+        let assignments = try ModelContext(context.container)
+            .fetch(FetchDescriptor<TaskCategoryAssignment>())
+            .logicalWinnersByTaskID()
+        #expect(assignments[createdRoot.id]?.categoryID == category.id)
+
+        // 2. Stale generated suggestion (mismatched title) is dropped without mutating.
+        _ = try inbox.add(title: "Write docs")
+        let suggestionItem = try #require(try openItems(context.container).first)
+        let staleOutcome = try inbox.storeGeneratedSuggestion(
+            itemID: suggestionItem.id,
+            requestedTitle: "Outdated title",
+            requestedIdentity: suggestionItem.suggestionIdentity,
+            result: LLMInboxSuggestionResult(
+                destination: .category(categoryID: category.id),
+                reason: "Fits engineering",
+                iconName: "doc.text",
+                colorHex: "1677FF",
+                modelID: "model"
+            )
+        )
+        #expect(staleOutcome.didMutate == false)
+
+        // 3. Matching suggestion stores, and discardSuggestion tombstones it and records dismissal.
+        let storedOutcome = try inbox.storeGeneratedSuggestion(
+            itemID: suggestionItem.id,
+            requestedTitle: "Write docs",
+            requestedIdentity: suggestionItem.suggestionIdentity,
+            result: LLMInboxSuggestionResult(
+                destination: .category(categoryID: category.id),
+                reason: "Fits engineering",
+                iconName: "doc.text",
+                colorHex: "1677FF",
+                modelID: "model"
+            )
+        )
+        #expect(storedOutcome.didMutate)
+
+        let discardOutcome = try inbox.discardSuggestion(itemID: suggestionItem.id)
+        #expect(discardOutcome.didMutate)
+        let freshContext = ModelContext(context.container)
+        let updatedItem = try #require(
+            try freshContext.fetch(FetchDescriptor<InboxItem>())
+                .first { $0.id == suggestionItem.id }
+        )
+        #expect(updatedItem.isCurrentSuggestionRevisionDismissed)
+        let activeSuggestions = try freshContext.fetch(FetchDescriptor<InboxSuggestion>())
+            .filter { $0.deletedAt == nil }
+        #expect(activeSuggestions.isEmpty)
+    }
+
     private func coordinator(
         _ container: ModelContainer,
         deviceID: String = "scene"

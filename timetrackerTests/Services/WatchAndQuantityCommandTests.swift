@@ -108,6 +108,51 @@ struct WatchAndQuantityCommandTests {
             .fetch(FetchDescriptor<TaskQuantityEntry>())
             .filter { $0.deletedAt == nil }
         #expect(entries.map(\.amount) == [2])
+
+        let entry = try #require(entries.first)
+        let updateBaseline = TaskQuantityEntryMutationBaseline(entry: entry)
+        let updateOpID = UUID()
+        let updatedDate = entry.recordedAt.addingTimeInterval(60)
+        try store.updateTaskQuantityEntry(
+            baseline: updateBaseline,
+            amount: 5,
+            recordedAt: updatedDate,
+            operationID: updateOpID
+        )
+        // Replaying the same operationID with the same baseline is idempotent.
+        try store.updateTaskQuantityEntry(
+            baseline: updateBaseline,
+            amount: 5,
+            recordedAt: updatedDate,
+            operationID: updateOpID
+        )
+
+        let updatedEntry = try #require(
+            try ModelContext(context.container)
+                .fetch(FetchDescriptor<TaskQuantityEntry>())
+                .first { $0.id == entryID }
+        )
+        #expect(updatedEntry.amount == 5)
+        #expect(updatedEntry.recordedAt == updatedDate)
+
+        let deleteBaseline = TaskQuantityEntryMutationBaseline(entry: updatedEntry)
+        let deleteOpID = UUID()
+        try store.deleteTaskQuantityEntry(
+            baseline: deleteBaseline,
+            operationID: deleteOpID
+        )
+        // Replaying the same delete operationID is idempotent.
+        try store.deleteTaskQuantityEntry(
+            baseline: deleteBaseline,
+            operationID: deleteOpID
+        )
+
+        let deletedEntry = try #require(
+            try ModelContext(context.container)
+                .fetch(FetchDescriptor<TaskQuantityEntry>())
+                .first { $0.id == entryID }
+        )
+        #expect(deletedEntry.deletedAt != nil)
     }
 
     private func command(

@@ -1,3 +1,0 @@
-CFBundleDisplayName = "时间追踪";
-CFBundleName = "时间追踪";
-NSHealthShareUsageDescription = "时间追踪会从“Apple 健康”读取运动和睡眠记录，并显示在时间线和分析中。App 会在本机保留加密、只读缓存，用于增量刷新和导出。个人健康记录绝不会进入本 App 的 iCloud 数据库；“清除全部数据”会删除该缓存。";

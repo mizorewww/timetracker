@@ -1,5 +1,0 @@
-"live.timer.defaultPath" = "Tracking time";
-"live.timer.elapsed" = "Elapsed";
-"live.timer.open" = "Open Time Tracker";
-"live.timer.stale" = "Update delayed";
-"live.timer.staleHint" = "Timer details may be delayed; elapsed time continues from the original start.";

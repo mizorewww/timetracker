@@ -8,7 +8,7 @@ UI/SwiftUI 工作可参考 `.agents/skills/apple-hig/SKILL.md` 与 `.agents/skil
 
 - **Must** keep `CODE_SIGN_STYLE=Automatic` and team `LT98S43NKA`; never disable signing (`CODE_SIGNING_ALLOWED=NO`, empty team, ad-hoc) to make a build or check pass. The APS entitlement key is `aps-environment`.
 - **Must** treat user data as safety-critical: durable writes go through the store-scoped command boundary; schema changes follow the rules in Architecture plus an old-store compatibility test. Never delete or mutate user data outside an explicit, user-approved command path.
-- **Must** add every new `.strings` key to `en`, `zh-Hans`, and `zh-Hant` in the same change (`make localization-check`, also the pre-commit hook).
+- **Must** add every new `.xcstrings` localization key to `en`, `zh-Hans`, and `zh-Hant` in the same change (`make localization-check`, also the pre-commit hook).
 - **Must not** write source-string scan tests (reading Swift/project source to assert symbols, strings, or file layout).
 - **Must** release resources you started (tested app, runners, simulators you created, temporary result bundles) and never stop another agent's.
 

@@ -20,7 +20,7 @@
 - Xcode 需匹配声明的 SDK:iOS/iPadOS 26.2、macOS 15.7、watchOS 26.2。
 - 自动签名,team `LT98S43NKA`;**不要**用 `CODE_SIGNING_ALLOWED=NO`、空 team 或 ad-hoc 签名让构建"通过"。
 - 格式化工具:`brew install swiftformat`。
-- clone 后执行一次 `make install-hooks`,安装校验三语种 `.strings` key parity 与 SwiftFormat 的 pre-commit 钩子。
+- clone 后执行一次 `make install-hooks`,安装校验三语种 `.xcstrings` key parity 与 SwiftFormat 的 pre-commit 钩子。
 
 ## 常用命令
 
@@ -33,7 +33,7 @@ make build-macos         # macOS app 构建(generic/platform=macOS)
 make build-ios           # iOS app 构建(generic/platform=iOS,含扩展)
 make build-install-all   # 构建并安装 iOS+Watch 与 macOS(默认 Release,复制到 /Applications;.device-install-exclusions 可排除设备)
 make export-artifacts    # 归档并导出签名产物(iOS IPA + macOS app/zip,默认到 build/Archives 与 build/Exports)
-make localization-check  # 校验三语种 .strings key 一致(也是 pre-commit 闸门,无需 xcodebuild)
+make localization-check  # 校验三语种 .xcstrings key 一致(也是 pre-commit 闸门,无需 xcodebuild)
 make format              # SwiftFormat 原地格式化;make format-check 只读校验
 make bump-version        # 发布前手动递增 patch 版本与 build 号(所有 target)
 make clean               # 删除 build/ 下的导出、归档与安装产物

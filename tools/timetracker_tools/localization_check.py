@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
-"""静态校验所有 .strings 资源在 en / zh-Hans / zh-Hant 之间 key 集合一致。
+"""静态校验所有 .xcstrings String Catalog 资源在 en / zh-Hans / zh-Hant 之间词条完整一致。
 
-统一校验 `Localizable.strings`、`InfoPlist.strings` 与 `AppShortcuts.strings`
-的 key parity,无需运行 xcodebuild。只比对 key 集合,不扫描源码或限制 value 内容。
+统一校验 `Localizable.xcstrings`、`InfoPlist.xcstrings` 与 `AppShortcuts.xcstrings`
+的 key parity 与翻译完整性，无需运行 xcodebuild。
 
-退出码:全部一致为 0,任一资源不一致为 1。``--quiet`` 仅在出现不一致时输出。
+退出码：全部一致为 0，任一资源缺失或不一致为 1。`--quiet` 仅在出现不一致时输出。
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 from pathlib import Path
 
-# target -> 该 target 下需校验的资源族(.strings 文件名前缀)。
 TARGETS: dict[str, tuple[str, ...]] = {
     "timetracker": ("Localizable", "InfoPlist", "AppShortcuts"),
     "timetrackerWatchApp": ("Localizable", "InfoPlist"),
@@ -25,44 +23,25 @@ TARGETS: dict[str, tuple[str, ...]] = {
 LOCALES: tuple[str, ...] = ("en", "zh-Hans", "zh-Hant")
 
 
-def parse_strings_keys(path: Path) -> set[str]:
-    """用系统 plutil 解析 .strings,返回 key 集合(格式错误直接报错)。"""
-    result = subprocess.run(
-        ["plutil", "-convert", "json", "-o", "-", str(path)],
-        check=True,
-        capture_output=True,
-    )
-    return set(json.loads(result.stdout))
+def check_xcstrings(path: Path) -> tuple[int, dict[str, list[str]]]:
+    """解析 .xcstrings JSON，返回 (总 key 数, 各 locale 缺失译文的 key 列表)。"""
+    data = json.loads(path.read_text(encoding="utf-8"))
+    strings = data.get("strings", {})
+    if not isinstance(strings, dict):
+        raise ValueError(f"Invalid 'strings' dictionary in {path}")
 
+    missing: dict[str, list[str]] = {loc: [] for loc in LOCALES}
+    for key in sorted(strings.keys()):
+        entry = strings[key]
+        localizations = entry.get("localizations", {}) if isinstance(entry, dict) else {}
+        for loc in LOCALES:
+            loc_entry = localizations.get(loc, {})
+            string_unit = loc_entry.get("stringUnit", {}) if isinstance(loc_entry, dict) else {}
+            value = string_unit.get("value")
+            if not isinstance(value, str):
+                missing[loc].append(key)
 
-def _collect(
-    repo: Path, target: str, resource: str
-) -> tuple[dict[str, set[str]], dict[str, Path]]:
-    """返回各 locale 的 key 集合与实际存在的文件路径。"""
-    keys: dict[str, set[str]] = {}
-    paths: dict[str, Path] = {}
-    for locale in LOCALES:
-        path = repo / target / f"{locale}.lproj" / f"{resource}.strings"
-        if path.is_file():
-            keys[locale] = parse_strings_keys(path)
-            paths[locale] = path
-        else:
-            keys[locale] = set()
-            paths[locale] = path  # 记下期望路径,便于报告"文件缺失"
-    return keys, paths
-
-
-def _compare(keys: dict[str, set[str]]) -> dict[str, list[str]]:
-    """以三语种 union 为基准,返回每个 locale 相对 union 缺失的 key。"""
-    union: set[str] = set()
-    for ks in keys.values():
-        union |= ks
-    missing: dict[str, list[str]] = {}
-    for locale, ks in keys.items():
-        diff = sorted(union - ks)
-        if diff:
-            missing[locale] = diff
-    return missing
+    return len(strings), {loc: ks for loc, ks in missing.items() if ks}
 
 
 def main() -> int:
@@ -83,24 +62,17 @@ def main() -> int:
     if not repo.is_dir():
         raise SystemExit(f"Repo root not found: {repo}")
 
-    fails: list[tuple[str, str, str]] = []  # (target, resource, 详情)
+    fails: list[tuple[str, str, str]] = []
     ok_count = 0
 
-    for target in TARGETS:
-        for resource in TARGETS[target]:
-            keys, paths = _collect(repo, target, resource)
-            present = {loc for loc in LOCALES if paths[loc].is_file()}
-            if not present:
-                # 该 target 无此资源族,跳过(矩阵未声明即不应存在)。
+    for target, resources in TARGETS.items():
+        for resource in resources:
+            path = repo / target / f"{resource}.xcstrings"
+            if not path.is_file():
+                fails.append((target, resource, f"missing file: {path.relative_to(repo)}"))
+                _print_fail(target, resource, [f"missing file: {path.relative_to(repo)}"])
                 continue
-            if len(present) != len(LOCALES):
-                missing_locales = sorted(set(LOCALES) - present)
-                fails.append(
-                    (target, resource, f"missing files: {', '.join(missing_locales)}")
-                )
-                _print_fail(target, resource, [f"missing files: {', '.join(missing_locales)}"])
-                continue
-            missing = _compare(keys)
+            key_count, missing = check_xcstrings(path)
             if missing:
                 details = [f"{loc} missing {len(ks)}: {', '.join(ks)}" for loc, ks in missing.items()]
                 fails.append((target, resource, "; ".join(details)))
@@ -108,8 +80,7 @@ def main() -> int:
             else:
                 ok_count += 1
                 if not args.quiet:
-                    sample = next(iter(keys.values()))
-                    print(f"OK   {target}/{resource}.strings ({len(sample)} keys)")
+                    print(f"OK   {target}/{resource}.xcstrings ({key_count} keys)")
 
     total = ok_count + len(fails)
     print()
@@ -121,7 +92,7 @@ def main() -> int:
 
 
 def _print_fail(target: str, resource: str, details: list[str]) -> None:
-    print(f"FAIL {target}/{resource}.strings")
+    print(f"FAIL {target}/{resource}.xcstrings")
     for line in details:
         print(f"  {line}")
 

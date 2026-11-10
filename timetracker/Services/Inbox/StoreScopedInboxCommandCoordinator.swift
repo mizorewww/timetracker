@@ -171,10 +171,29 @@ struct StoreScopedInboxCommandCoordinator {
     }
 
     func visibleItem(id: UUID, context: ModelContext) throws -> InboxItem? {
-        try InboxSuggestionIdentityService.visibleLogicalItems(
-            from: context.fetch(FetchDescriptor<InboxItem>())
+        let requestedID = id
+        let directDescriptor = FetchDescriptor<InboxItem>(
+            predicate: #Predicate {
+                $0.id == requestedID || $0.suggestionContextID == requestedID
+            }
         )
-        .first { $0.id == id }
+        let directMatches = try context.fetch(directDescriptor)
+        guard directMatches.isEmpty == false else { return nil }
+        let contextIDs = Array(Set(directMatches.map(\.effectiveSuggestionContextID)))
+        let scopedRows: [InboxItem]
+        if contextIDs == [requestedID] {
+            scopedRows = directMatches
+        } else {
+            let contextDescriptor = FetchDescriptor<InboxItem>(
+                predicate: #Predicate {
+                    contextIDs.contains($0.id) ||
+                        ($0.suggestionContextID != nil && contextIDs.contains($0.suggestionContextID!))
+                }
+            )
+            scopedRows = try context.fetch(contextDescriptor)
+        }
+        return InboxSuggestionIdentityService.visibleLogicalItems(from: scopedRows)
+            .first { $0.id == id }
     }
 
     private static func ordered(_ items: [InboxItem]) -> [InboxItem] {

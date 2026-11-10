@@ -161,18 +161,8 @@ extension StoreScopedInboxCommandCoordinator {
                 title: content.title,
                 parentID: parentTaskID,
                 colorHex: content.colorHex,
-                iconName: content.iconName
-            )
-            try repository.updateTask(
-                taskID: task.id,
-                title: task.title,
-                parentID: parentTaskID,
-                categoryID: nil,
-                colorHex: content.colorHex,
                 iconName: content.iconName,
-                notes: content.notes,
-                estimatedSeconds: nil,
-                dueAt: nil
+                notes: content.notes
             )
             var affectedAncestorIDs = Set(
                 StoreSelectionCoordinator.ancestorTaskIDs(
@@ -199,18 +189,8 @@ extension StoreScopedInboxCommandCoordinator {
                 parentID: nil,
                 categoryID: categoryID,
                 colorHex: content.colorHex,
-                iconName: content.iconName
-            )
-            try repository.updateTask(
-                taskID: task.id,
-                title: task.title,
-                parentID: nil,
-                categoryID: categoryID,
-                colorHex: content.colorHex,
                 iconName: content.iconName,
-                notes: content.notes,
-                estimatedSeconds: nil,
-                dueAt: nil
+                notes: content.notes
             )
             return .task(taskID: task.id, affectedAncestorIDs: [])
 

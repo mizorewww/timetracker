@@ -1,12 +1,12 @@
 import Foundation
 
-extension TodayActivityHeatmapSnapshotService {
+nonisolated extension TodayActivityHeatmapSnapshotService {
     func activityIndexes(
-        taskByID: [UUID: TaskNode],
-        segments: [TimeSegment],
-        checklistItems: [ChecklistItem],
-        quantityGoals: [TaskQuantityGoal],
-        quantityEntries: [TaskQuantityEntry],
+        taskByID: [UUID: ActivityHeatmapTaskRecord],
+        segments: [ActivityHeatmapSegmentRecord],
+        checklistItems: [ActivityHeatmapChecklistRecord],
+        quantityGoals: [ActivityHeatmapQuantityGoalRecord],
+        quantityEntries: [ActivityHeatmapQuantityEntryRecord],
         interval: DateInterval,
         now: Date,
         calendar: Calendar
@@ -55,7 +55,7 @@ extension TodayActivityHeatmapSnapshotService {
             checklistValuesByTaskAndDay[item.taskID, default: [:]][day, default: 0] += 1
         }
 
-        var quantityGoalByTaskID: [UUID: TaskQuantityGoal] = [:]
+        var quantityGoalByTaskID: [UUID: ActivityHeatmapQuantityGoalRecord] = [:]
         for goal in quantityGoals.visibleDeduplicatedByID() {
             guard validTaskIDs.contains(goal.taskID),
                   TaskQuantityPolicy.valueRange.contains(goal.targetAmount),

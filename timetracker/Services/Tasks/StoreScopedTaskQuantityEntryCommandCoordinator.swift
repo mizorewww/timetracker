@@ -24,7 +24,10 @@ struct StoreScopedTaskQuantityEntryCommandCoordinator {
     func record(
         command: TaskQuantityEntryRecordCommand
     ) throws -> TaskQuantityEntryMutationOutcome {
-        try withFreshState { context, state in
+        try withFreshState(
+            scopedTaskID: command.taskID,
+            scopedEntryID: command.proposedEntryID
+        ) { context, state in
             try record(command: command, context: context, state: state)
         }
     }
@@ -32,7 +35,10 @@ struct StoreScopedTaskQuantityEntryCommandCoordinator {
     func update(
         command: TaskQuantityEntryUpdateCommand
     ) throws -> TaskQuantityEntryMutationOutcome {
-        try withFreshState { _, state in
+        try withFreshState(
+            scopedTaskID: command.entryBaseline.taskID,
+            scopedEntryID: command.entryBaseline.entryID
+        ) { _, state in
             try update(command: command, state: state)
         }
     }
@@ -40,12 +46,17 @@ struct StoreScopedTaskQuantityEntryCommandCoordinator {
     func delete(
         command: TaskQuantityEntryDeleteCommand
     ) throws -> TaskQuantityEntryMutationOutcome {
-        try withFreshState { _, state in
+        try withFreshState(
+            scopedTaskID: command.entryBaseline.taskID,
+            scopedEntryID: command.entryBaseline.entryID
+        ) { _, state in
             try delete(command: command, state: state)
         }
     }
 
     private func withFreshState<Result>(
+        scopedTaskID: UUID,
+        scopedEntryID: UUID,
         _ operation: (
             ModelContext,
             TaskQuantityEntryPersistenceState
@@ -54,7 +65,11 @@ struct StoreScopedTaskQuantityEntryCommandCoordinator {
         try session.withFreshMutationContext { context in
             try operation(
                 context,
-                TaskQuantityEntryPersistenceState(context: context)
+                TaskQuantityEntryPersistenceState(
+                    context: context,
+                    scopedTaskID: scopedTaskID,
+                    scopedEntryID: scopedEntryID
+                )
             )
         }
     }

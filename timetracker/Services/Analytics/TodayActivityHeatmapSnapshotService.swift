@@ -1,8 +1,9 @@
 import Foundation
 
-struct TodayActivityHeatmapSnapshotService {
+nonisolated struct TodayActivityHeatmapSnapshotService: Sendable {
     static let daysPerWeek = 7
 
+    @MainActor
     func taskSnapshots(
         selectedTaskIDs: [UUID],
         taskByID: [UUID: TaskNode],
@@ -16,59 +17,85 @@ struct TodayActivityHeatmapSnapshotService {
         now: Date,
         calendar: Calendar = .current
     ) async -> [TaskActivityHeatmapSnapshot] {
-        let dateRange = dateRange(
-            period: period,
-            now: now,
-            calendar: calendar
-        )
-        let indexes = await activityIndexes(
+        guard selectedTaskIDs.isEmpty == false else { return [] }
+        let input = ActivityHeatmapSnapshotInput(
+            selectedTaskIDs: selectedTaskIDs,
             taskByID: taskByID,
+            childrenByParentID: childrenByParentID,
+            additionalContributingTaskIDsBySelectedTaskID:
+            additionalContributingTaskIDsBySelectedTaskID,
             segments: segments,
             checklistItems: checklistItems,
             quantityGoals: quantityGoals,
             quantityEntries: quantityEntries,
-            interval: dateRange.interval,
+            period: period,
             now: now,
             calendar: calendar
+        )
+        return await Self.buildSnapshots(input)
+    }
+
+    @concurrent
+    static func buildSnapshots(
+        _ input: ActivityHeatmapSnapshotInput
+    ) async -> [TaskActivityHeatmapSnapshot] {
+        await TodayActivityHeatmapSnapshotService().taskSnapshots(input)
+    }
+
+    func taskSnapshots(
+        _ input: ActivityHeatmapSnapshotInput
+    ) async -> [TaskActivityHeatmapSnapshot] {
+        let dateRange = dateRange(
+            period: input.period,
+            now: input.now,
+            calendar: input.calendar
+        )
+        let indexes = await activityIndexes(
+            taskByID: input.taskByID,
+            segments: input.segments,
+            checklistItems: input.checklistItems,
+            quantityGoals: input.quantityGoals,
+            quantityEntries: input.quantityEntries,
+            interval: dateRange.interval,
+            now: input.now,
+            calendar: input.calendar
         )
         var seen = Set<UUID>()
 
         var snapshots: [TaskActivityHeatmapSnapshot] = []
-        for selectedTaskID in selectedTaskIDs {
-            // Heavy per-task projection (values + 53-week calendar work).
-            // Yield between tasks so a first fast scroll stays responsive.
+        for selectedTaskID in input.selectedTaskIDs {
             await Task.yield()
             guard Task.isCancelled == false else { return snapshots }
             guard seen.insert(selectedTaskID).inserted,
-                  let task = taskByID[selectedTaskID],
+                  let task = input.taskByID[selectedTaskID],
                   task.deletedAt == nil
             else {
                 continue
             }
             var contributingRootTaskIDs =
-                additionalContributingTaskIDsBySelectedTaskID[
+                input.additionalContributingTaskIDsBySelectedTaskID[
                     selectedTaskID
                 ] ?? []
             contributingRootTaskIDs.insert(selectedTaskID)
             let contributingIDs = contributingTaskIDs(
                 selectedTaskIDs: Array(contributingRootTaskIDs),
-                taskByID: taskByID,
-                childrenByParentID: childrenByParentID
+                taskByID: input.taskByID,
+                childIDsByParentID: input.childIDsByParentID
             )
             let values = values(
                 selectedTaskID: selectedTaskID,
                 contributingTaskIDs: contributingIDs,
                 indexes: indexes,
-                calendar: calendar
+                calendar: input.calendar
             )
             let maximumDailyValue = values.valuesByDay.values.max() ?? 0
             let weeks = weeks(
                 valuesByDay: values.valuesByDay,
                 referencesByDay: values.referencesByDay,
                 defaultReferenceValue: maximumDailyValue,
-                weekCount: period.weekCount,
+                weekCount: input.period.weekCount,
                 dateRange: dateRange,
-                calendar: calendar
+                calendar: input.calendar
             )
 
             snapshots.append(
@@ -92,8 +119,8 @@ struct TodayActivityHeatmapSnapshotService {
 
     func contributingTaskIDs(
         selectedTaskIDs: [UUID],
-        taskByID: [UUID: TaskNode],
-        childrenByParentID: [UUID?: [TaskNode]]
+        taskByID: [UUID: ActivityHeatmapTaskRecord],
+        childIDsByParentID: [UUID?: [UUID]]
     ) -> Set<UUID> {
         var result = Set<UUID>()
         var pending = Array(Set(selectedTaskIDs.filter { taskID in
@@ -108,7 +135,7 @@ struct TodayActivityHeatmapSnapshotService {
                 continue
             }
             pending.append(
-                contentsOf: (childrenByParentID[taskID] ?? []).lazy.map(\.id)
+                contentsOf: childIDsByParentID[taskID] ?? []
             )
         }
         return result

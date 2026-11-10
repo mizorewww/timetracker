@@ -1,6 +1,6 @@
 import Foundation
 
-extension TodayActivityHeatmapSnapshotService {
+nonisolated extension TodayActivityHeatmapSnapshotService {
     func values(
         selectedTaskID: UUID,
         contributingTaskIDs: Set<UUID>,

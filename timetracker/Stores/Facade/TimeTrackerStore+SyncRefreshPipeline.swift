@@ -10,7 +10,7 @@ extension TimeTrackerStore {
         guard let modelContext else {
             return StoreRefreshPlanner.plan(after: [.remoteImportCompleted])
         }
-        return StoreRefreshPlan(scopes: remoteChangeHistory.scopesSinceLastCatchUp(in: modelContext))
+        return remoteChangeHistory.refreshPlanSinceLastCatchUp(in: modelContext)
     }
 
     /// Coalesces CloudKit and remote-store notifications into one read-model

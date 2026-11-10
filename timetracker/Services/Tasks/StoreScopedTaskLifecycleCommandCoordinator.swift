@@ -197,25 +197,38 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
             let ancestorsBeforeSave = existingTask.map {
                 Self.ancestorTaskIDs(for: $0, tasks: tasksBeforeSave)
             } ?? []
-            let savedTaskID = try draft.taskID ?? taskRepository.createTask(
-                proposedID: proposedTaskID ?? UUID(),
-                title: sanitizedTitle,
-                parentID: draft.parentID,
-                categoryID: draft.categoryID,
-                colorHex: draft.colorHex,
-                iconName: draft.iconName
-            ).id
-            try taskRepository.updateTask(
-                taskID: savedTaskID,
-                title: sanitizedTitle,
-                parentID: draft.parentID,
-                categoryID: draft.categoryID,
-                colorHex: draft.colorHex,
-                iconName: draft.iconName,
-                notes: draft.notes.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty,
-                estimatedSeconds: TaskEstimatePolicy.seconds(fromMinutes: draft.estimatedMinutes),
-                dueAt: draft.hasDueDate ? draft.dueAt : nil
-            )
+            let sanitizedNotes = draft.notes.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+            let estimatedSeconds = TaskEstimatePolicy.seconds(fromMinutes: draft.estimatedMinutes)
+            let dueAt = draft.hasDueDate ? draft.dueAt : nil
+            let savedTaskID: UUID
+            if let existingTaskID = draft.taskID {
+                savedTaskID = existingTaskID
+                try taskRepository.updateTask(
+                    taskID: existingTaskID,
+                    title: sanitizedTitle,
+                    parentID: draft.parentID,
+                    categoryID: draft.categoryID,
+                    colorHex: draft.colorHex,
+                    iconName: draft.iconName,
+                    notes: sanitizedNotes,
+                    estimatedSeconds: estimatedSeconds,
+                    dueAt: dueAt,
+                    existingNodes: tasksBeforeSave
+                )
+            } else {
+                savedTaskID = try taskRepository.createTask(
+                    proposedID: proposedTaskID ?? UUID(),
+                    title: sanitizedTitle,
+                    parentID: draft.parentID,
+                    categoryID: draft.categoryID,
+                    colorHex: draft.colorHex,
+                    iconName: draft.iconName,
+                    notes: sanitizedNotes,
+                    estimatedSeconds: estimatedSeconds,
+                    dueAt: dueAt,
+                    existingNodes: tasksBeforeSave
+                ).id
+            }
             try ChecklistDraftService().save(
                 drafts: draft.checklistItems,
                 taskID: savedTaskID,

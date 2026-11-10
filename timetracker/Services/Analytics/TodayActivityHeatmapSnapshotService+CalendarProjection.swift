@@ -1,6 +1,6 @@
 import Foundation
 
-extension TodayActivityHeatmapSnapshotService {
+nonisolated extension TodayActivityHeatmapSnapshotService {
     func weeks(
         valuesByDay: [Date: Int],
         referencesByDay: [Date: Int],

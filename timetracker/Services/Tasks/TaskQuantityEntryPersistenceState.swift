@@ -12,7 +12,11 @@ struct TaskQuantityEntryPersistenceState {
     let directWorkTaskIDs: Set<UUID>
     let recurrenceTemplateTaskIDs: Set<UUID>
 
-    init(context: ModelContext) throws {
+    init(
+        context: ModelContext,
+        scopedTaskID: UUID? = nil,
+        scopedEntryID: UUID? = nil
+    ) throws {
         tasks = try context.fetch(FetchDescriptor<TaskNode>())
         recurrenceRules = try context.fetch(
             FetchDescriptor<TaskRecurrenceRule>()
@@ -20,12 +24,45 @@ struct TaskQuantityEntryPersistenceState {
         recurrenceOccurrences = try context.fetch(
             FetchDescriptor<TaskRecurrenceOccurrence>()
         )
-        quantityGoals = try context.fetch(
-            FetchDescriptor<TaskQuantityGoal>()
-        )
-        quantityEntries = try context.fetch(
-            FetchDescriptor<TaskQuantityEntry>()
-        )
+        if let scopedTaskID {
+            let expectedGoalID = TaskProgressIdentity.quantityGoalID(
+                taskID: scopedTaskID
+            )
+            quantityGoals = try context.fetch(
+                FetchDescriptor<TaskQuantityGoal>(
+                    predicate: #Predicate {
+                        $0.taskID == scopedTaskID || $0.id == expectedGoalID
+                    }
+                )
+            )
+            if let scopedEntryID {
+                quantityEntries = try context.fetch(
+                    FetchDescriptor<TaskQuantityEntry>(
+                        predicate: #Predicate {
+                            $0.taskID == scopedTaskID ||
+                                $0.quantityGoalID == expectedGoalID ||
+                                $0.id == scopedEntryID
+                        }
+                    )
+                )
+            } else {
+                quantityEntries = try context.fetch(
+                    FetchDescriptor<TaskQuantityEntry>(
+                        predicate: #Predicate {
+                            $0.taskID == scopedTaskID ||
+                                $0.quantityGoalID == expectedGoalID
+                        }
+                    )
+                )
+            }
+        } else {
+            quantityGoals = try context.fetch(
+                FetchDescriptor<TaskQuantityGoal>()
+            )
+            quantityEntries = try context.fetch(
+                FetchDescriptor<TaskQuantityEntry>()
+            )
+        }
 
         let canonicalTasks = tasks.deduplicatedByID()
         let visibleRules = recurrenceRules.visibleDeduplicatedByID()

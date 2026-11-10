@@ -9,15 +9,19 @@ nonisolated extension SwiftDataTaskRepository {
         parentID: UUID?,
         categoryID: UUID? = nil,
         colorHex: String? = nil,
-        iconName: String? = nil
+        iconName: String? = nil,
+        notes: String? = nil,
+        estimatedSeconds: Int? = nil,
+        dueAt: Date? = nil,
+        existingNodes: [TaskNode]? = nil
     ) throws -> TaskNode {
         let values = try TaskPersistencePolicy.prepareTask(
             title: title,
             colorHex: colorHex,
             iconName: iconName,
-            notes: nil
+            notes: notes
         )
-        let nodes = try allNodes()
+        let nodes = try existingNodes ?? allNodes()
         let siblings = nodes.filter { $0.parentID == parentID }
         let node = TaskNode(
             title: values.title,
@@ -28,6 +32,9 @@ nonisolated extension SwiftDataTaskRepository {
             sortOrder: SortOrderPolicy.after(siblings.map(\.sortOrder).max())
         )
         node.id = proposedID
+        node.notes = values.notes
+        node.estimatedSeconds = TaskEstimatePolicy.normalized(seconds: estimatedSeconds)
+        node.dueAt = dueAt
 
         try applyHierarchy(to: node, parentID: parentID, nodes: nodes)
         context.insert(node)
@@ -45,7 +52,8 @@ nonisolated extension SwiftDataTaskRepository {
         iconName: String?,
         notes: String?,
         estimatedSeconds: Int?,
-        dueAt: Date?
+        dueAt: Date?,
+        existingNodes: [TaskNode]? = nil
     ) throws {
         let values = try TaskPersistencePolicy.prepareTask(
             title: title,
@@ -53,7 +61,7 @@ nonisolated extension SwiftDataTaskRepository {
             iconName: iconName,
             notes: notes
         )
-        let nodes = try allNodes()
+        let nodes = try existingNodes ?? allNodes()
         guard let node = nodes.first(where: { $0.id == taskID }) else { return }
         let isChangingParent = node.parentID != parentID
         guard canMove(nodeID: taskID, to: parentID, nodes: nodes) else {

@@ -2,14 +2,6 @@
   "originHash" : "568acf43fb1a1235e4bf033a4867e10c1ced37d8cf3ae70d10f8118e0020840f",
   "pins" : [
     {
-      "identity" : "blossomcolorpicker",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Lakr233/BlossomColorPicker",
-      "state" : {
-        "revision" : "9a1ee3df309e37ae271362818dcdfdb072ea9611"
-      }
-    },
-    {
       "identity" : "highlightr",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/raspu/Highlightr",

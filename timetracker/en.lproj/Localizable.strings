@@ -1094,7 +1094,7 @@
 "task.detail.heatmap.title" = "Activity Heatmap";
 "task.detail.heatmap.toggle" = "Show This Task in Today";
 "task.detail.heatmap.recurringToggle" = "Show Repeating Parent in Today";
-"task.detail.heatmap.footer" = "Off by default. The task color selected with the Blossom color picker becomes this Heatmap’s theme, and subtasks contribute to its daily activity.";
+"task.detail.heatmap.footer" = "Off by default. The selected task color becomes this Heatmap’s theme, and subtasks contribute to its daily activity.";
 "task.detail.heatmap.recurringFooter" = "Work stays recorded on this occurrence. Its repeating parent owns the Heatmap and combines every occurrence.";
 "task.detail.heatmap.unavailable" = "This Heatmap is temporarily unavailable while the repeating task relationship is incomplete.";
 "task.detail.heatmap.limitReached" = "The Heatmap task limit has been reached. Deselect a task in Settings before enabling this one.";

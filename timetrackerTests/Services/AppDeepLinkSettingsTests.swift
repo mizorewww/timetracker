@@ -68,4 +68,21 @@ struct AppDeepLinkSettingsTests {
         #expect(openedNativeSettings == 1)
         #expect(router.sheet == nil)
     }
+
+    @Test
+    func pendingDeepLinkKeepsNewestValidLinkAndRestoreDoesNotOverwriteNewer() {
+        let tasks = URL(string: "timetracker://open/tasks")!
+        let inbox = URL(string: "timetracker://open/inbox")!
+        let pending = PendingDeepLink()
+
+        #expect(pending.set(tasks))
+        #expect(pending.set(inbox))
+        #expect(pending.set(URL(string: "https://example.com")!) == false)
+        pending.restore(tasks)
+
+        #expect(pending.take() == inbox)
+        #expect(pending.take() == nil)
+        pending.restore(tasks)
+        #expect(pending.take() == tasks)
+    }
 }

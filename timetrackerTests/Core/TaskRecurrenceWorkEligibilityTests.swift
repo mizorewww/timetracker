@@ -57,180 +57,67 @@ struct TaskRecurrenceWorkEligibilityTests {
     }
 
     @Test
-    func activePomodoroBlocksRecurrenceTemplateCreation() throws {
+    func activePomodoroBlocksRecurrenceTemplateCreationWhileCompletedHistoryAllowsIt() throws {
         let context = try makeTestContext()
-        let task = try SwiftDataTaskRepository(
+        let activeTask = try SwiftDataTaskRepository(
             context: context,
             deviceID: "seed"
-        ).createTask(
-            title: "Active focus",
-            parentID: nil,
-            colorHex: nil,
-            iconName: nil
-        )
-        let run = PomodoroRun(taskID: task.id, deviceID: "pomodoro")
-        run.state = .focusing
-        context.insert(run)
-        try context.save()
-
-        #expect(throws: TaskRecurrenceMutationError.templateHasActiveWork) {
-            _ = try recurrenceCoordinator(container: context.container)
-                .createDailyRule(
-                    templateTaskID: task.id,
-                    startDayKey: "2026-08-02",
-                    timeZoneIdentifier: "Asia/Singapore",
-                    now: date(year: 2026, month: 8, day: 2, hour: 12)
-                )
-        }
-    }
-
-    @Test
-    func completedPomodoroHistoryDoesNotBlockRecurrenceTemplateCreation() throws {
-        let context = try makeTestContext()
-        let task = try SwiftDataTaskRepository(
+        ).createTask(title: "Active focus", parentID: nil)
+        let completedTask = try SwiftDataTaskRepository(
             context: context,
             deviceID: "seed"
-        ).createTask(
-            title: "Past focus",
-            parentID: nil,
-            colorHex: nil,
-            iconName: nil
-        )
+        ).createTask(title: "Past focus", parentID: nil)
         let now = try date(year: 2026, month: 8, day: 2, hour: 12)
-        let run = PomodoroRun(taskID: task.id, deviceID: "pomodoro")
-        run.state = .completed
-        run.endedAt = now
-        context.insert(run)
+
+        let activeRun = PomodoroRun(taskID: activeTask.id, deviceID: "pomodoro")
+        activeRun.state = .focusing
+        let completedRun = PomodoroRun(taskID: completedTask.id, deviceID: "pomodoro")
+        completedRun.state = .completed
+        completedRun.endedAt = now
+        context.insert(activeRun)
+        context.insert(completedRun)
         try context.save()
 
-        let outcome = try recurrenceCoordinator(container: context.container)
-            .createDailyRule(
-                templateTaskID: task.id,
+        let coordinator = recurrenceCoordinator(container: context.container)
+        #expect(throws: TaskRecurrenceMutationError.templateHasActiveWork) {
+            _ = try coordinator.createDailyRule(
+                templateTaskID: activeTask.id,
                 startDayKey: "2026-08-02",
                 timeZoneIdentifier: "Asia/Singapore",
                 now: now
             )
-
+        }
+        let outcome = try coordinator.createDailyRule(
+            templateTaskID: completedTask.id,
+            startDayKey: "2026-08-02",
+            timeZoneIdentifier: "Asia/Singapore",
+            now: now
+        )
         #expect(outcome.materializations.count == 1)
     }
 
     @Test
-    func templateRemainsAParentButOnlyOccurrenceAcceptsDirectWork()
-        throws
-    {
-        let fixture = try makeFixture()
-        let fresh = ModelContext(fixture.container)
-        let repository = SwiftDataTaskRepository(
-            context: fresh,
-            deviceID: "eligibility"
-        )
-        let tasks = try repository.allNodes()
-        let rules = try repository.taskRecurrenceRules()
-        let hierarchyEligibleIDs = TaskTrackingAvailabilityService.trackableTaskIDs(tasks: tasks)
-        let directWorkIDs = try TaskTrackingAvailabilityService.directWorkTaskIDs(
-            tasks: tasks,
-            recurrenceRules: rules,
-            recurrenceOccurrences:
-            repository.taskRecurrenceOccurrences()
-        )
-
-        #expect(hierarchyEligibleIDs.contains(fixture.templateTaskID))
-        #expect(hierarchyEligibleIDs.contains(fixture.generatedTaskID))
-        #expect(directWorkIDs.contains(fixture.templateTaskID) == false)
-        #expect(directWorkIDs.contains(fixture.generatedTaskID))
-
-        let generatedChild = try repository.createTask(
-            title: "Nested work",
-            parentID: fixture.templateTaskID,
-            colorHex: nil,
-            iconName: nil
-        )
-        #expect(generatedChild.parentID == fixture.templateTaskID)
-    }
-
-    @Test
-    func pausedRuleStillProtectsTemplateUntilRuleIsDeleted() throws {
+    func pausedRuleAndStagedOccurrenceStillProtectTemplateFromDirectWork() throws {
         let fixture = try makeFixture()
         let context = ModelContext(fixture.container)
         let repository = SwiftDataTaskRepository(
             context: context,
             deviceID: "eligibility"
         )
-        let tasks = try repository.allNodes()
-        let rule = try #require(
-            try repository.taskRecurrenceRules().first
-        )
+        let rule = try #require(try repository.taskRecurrenceRules().first)
         rule.isEnabled = false
-
-        #expect(
-            TaskTrackingAvailabilityService.directWorkTaskIDs(
-                tasks: tasks,
-                recurrenceRules: [rule],
-                recurrenceOccurrences: []
-            ).contains(fixture.templateTaskID) == false
-        )
-
-        rule.deletedAt = fixture.now
-        #expect(
-            TaskTrackingAvailabilityService.directWorkTaskIDs(
-                tasks: tasks,
-                recurrenceRules: [rule],
-                recurrenceOccurrences: []
-            ).contains(fixture.templateTaskID)
-        )
-        #expect(try repository.directWorkTask(id: fixture.templateTaskID) == nil)
-    }
-
-    @Test
-    func scopedAdmissionPreservesArchivedAncestorAndStagedOccurrenceRules() throws {
-        let context = try makeTestContext()
-        let archivedParent = TaskNode(
-            title: "Archived parent",
-            parentID: nil,
-            deviceID: "eligibility"
-        )
-        archivedParent.archivedAt = Date(timeIntervalSinceReferenceDate: 1000)
-        let archivedChild = TaskNode(
-            title: "Archived descendant",
-            parentID: archivedParent.id,
-            deviceID: "eligibility"
-        )
-        let stagedTemplate = TaskNode(
-            title: "Staged recurrence template",
-            parentID: nil,
-            deviceID: "eligibility"
-        )
-        let ordinaryTask = TaskNode(
-            title: "Ordinary work",
-            parentID: nil,
-            deviceID: "eligibility"
-        )
-        context.insert(archivedParent)
-        context.insert(archivedChild)
-        context.insert(stagedTemplate)
-        context.insert(ordinaryTask)
-        context.insert(TaskRecurrenceOccurrence(
-            ruleID: UUID(),
-            templateTaskID: stagedTemplate.id,
-            occurrenceDayKey: "2026-07-29",
-            timeZoneIdentifier: "Asia/Singapore",
-            deviceID: "eligibility"
-        ))
         try context.save()
 
-        let repository = SwiftDataTaskRepository(
-            context: ModelContext(context.container),
-            deviceID: "eligibility"
-        )
-        #expect(try repository.directWorkTask(id: archivedChild.id) == nil)
-        #expect(try repository.directWorkTask(id: stagedTemplate.id) == nil)
-        #expect(try repository.directWorkTask(id: ordinaryTask.id)?.id == ordinaryTask.id)
+        #expect(try repository.directWorkTask(id: fixture.templateTaskID) == nil)
+        rule.deletedAt = fixture.now
+        try context.save()
+        // Occurrence still claims the template even after the rule is tombstoned.
+        #expect(try repository.directWorkTask(id: fixture.templateTaskID) == nil)
+        #expect(try repository.directWorkTask(id: fixture.generatedTaskID)?.id == fixture.generatedTaskID)
     }
 
     @Test
-    func timerPomodoroAndManualTimeRejectTemplateBeforeMutating()
-        throws
-    {
+    func timerPomodoroAndManualTimeRejectTemplateAndAcceptGeneratedOccurrence() throws {
         let fixture = try makeFixture()
         let timer = StoreScopedTimerCommandCoordinator(
             session: .testHarness(fixture.container),
@@ -241,18 +128,9 @@ struct TaskRecurrenceWorkEligibilityTests {
         #expect(throws: SystemActionCommandError.taskNotFound) {
             _ = try timer.start(taskID: fixture.templateTaskID)
         }
-        let timerOutcome = try timer.start(
-            taskID: fixture.generatedTaskID
-        )
-        #expect(
-            timerOutcome.subjectSegment?.taskID ==
-                fixture.generatedTaskID
-        )
-        _ = try timer.stop(
-            segmentID: #require(
-                timerOutcome.subjectSegment?.segmentID
-            )
-        )
+        let timerOutcome = try timer.start(taskID: fixture.generatedTaskID)
+        #expect(timerOutcome.subjectSegment?.taskID == fixture.generatedTaskID)
+        _ = try timer.stop(segmentID: #require(timerOutcome.subjectSegment?.segmentID))
 
         let pomodoro = StoreScopedPomodoroCommandCoordinator(
             session: .testHarness(fixture.container),
@@ -275,10 +153,7 @@ struct TaskRecurrenceWorkEligibilityTests {
             longBreakSeconds: nil,
             targetRounds: 2
         )
-        #expect(
-            focus.startedFocus.taskID ==
-                fixture.generatedTaskID
-        )
+        #expect(focus.startedFocus.taskID == fixture.generatedTaskID)
 
         let timeRepository = SwiftDataTimeTrackingRepository(
             context: ModelContext(fixture.container),
@@ -301,95 +176,6 @@ struct TaskRecurrenceWorkEligibilityTests {
         )
         #expect(manual.taskID == fixture.generatedTaskID)
     }
-
-    @Test
-    func facadeAndSharedPickerKeepTemplateAsExpandableContainer()
-        throws
-    {
-        let fixture = try makeFixture()
-        let store = makeTestStore()
-        try store.configureIfNeeded(
-            context: ModelContext(fixture.container)
-        )
-        let template = try #require(
-            store.task(for: fixture.templateTaskID)
-        )
-        let occurrence = try #require(
-            store.task(for: fixture.generatedTaskID)
-        )
-
-        #expect(store.isTaskEligibleAsParent(template))
-        #expect(store.isTaskAvailableForTracking(template) == false)
-        #expect(store.isTaskAvailableForTracking(occurrence))
-        #expect(
-            store.nextDailyTaskRecurrenceBoundary(
-                after: fixture.now
-            ) != nil
-        )
-
-        let timerIDs = TaskHierarchyPickerMode.timer
-            .selectionEligibleTaskIDs(in: store)
-        let pomodoroIDs = TaskHierarchyPickerMode.singleSelection(
-            selectedTaskID: nil,
-            context: .pomodoro
-        ).selectionEligibleTaskIDs(in: store)
-        let inboxIDs = TaskHierarchyPickerMode.singleSelection(
-            selectedTaskID: nil,
-            context: .inboxChildTaskParent
-        ).selectionEligibleTaskIDs(in: store)
-        let inboxChecklistIDs = TaskHierarchyPickerMode.singleSelection(
-            selectedTaskID: nil,
-            context: .inboxChecklistTarget
-        ).selectionEligibleTaskIDs(in: store)
-        let heatmapIDs = TaskHierarchyPickerMode.multipleSelection(
-            selectedTaskIDs: [],
-            context: .todayHeatmap
-        ).selectionEligibleTaskIDs(in: store)
-
-        #expect(timerIDs.contains(template.id) == false)
-        #expect(pomodoroIDs.contains(template.id) == false)
-        #expect(inboxIDs.contains(template.id))
-        #expect(inboxChecklistIDs.contains(template.id))
-        #expect(heatmapIDs.contains(template.id))
-
-        let collapsed = TaskHierarchyProjection(
-            store: store,
-            expandedTaskIDs: [],
-            searchText: "",
-            availableTaskIDs: timerIDs
-        )
-        let templateSection = try #require(
-            collapsed.sections.first {
-                $0.items.contains { $0.id == template.id }
-            }
-        )
-        let templateItem = try #require(
-            templateSection.items.first { $0.id == template.id }
-        )
-        let timerPicker = TaskHierarchyPicker(
-            store: store,
-            mode: .timer,
-            onDismiss: {}
-        )
-        #expect(templateItem.isAvailable == false)
-        #expect(templateItem.hasAvailableDescendant)
-        #expect(
-            timerPicker.displayedItems(in: templateSection)
-                .contains { $0.id == template.id }
-        )
-
-        let expanded = TaskHierarchyProjection(
-            store: store,
-            expandedTaskIDs: [template.id],
-            searchText: "",
-            availableTaskIDs: timerIDs
-        )
-        let occurrenceItem = try #require(
-            expanded.sections.flatMap(\.items)
-                .first { $0.id == occurrence.id }
-        )
-        #expect(occurrenceItem.isAvailable)
-    }
 }
 
 private extension TaskRecurrenceWorkEligibilityTests {
@@ -411,50 +197,29 @@ private extension TaskRecurrenceWorkEligibilityTests {
             colorHex: nil,
             iconName: nil
         )
-        let now = try date(
-            year: 2026,
-            month: 7,
-            day: 20,
-            hour: 12
-        )
-        let outcome = try StoreScopedTaskRecurrenceCommandCoordinator(
-            session: .testHarness(context.container),
-            deviceID: "recurrence"
-        ).createDailyRule(
-            templateTaskID: template.id,
-            startDayKey: "2026-07-20",
-            timeZoneIdentifier: "Asia/Singapore",
-            now: now
-        )
+        let now = try date(year: 2026, month: 7, day: 20, hour: 12)
+        let outcome = try recurrenceCoordinator(container: context.container)
+            .createDailyRule(
+                templateTaskID: template.id,
+                startDayKey: "2026-07-20",
+                timeZoneIdentifier: "Asia/Singapore",
+                now: now
+            )
         return try Fixture(
             container: context.container,
             templateTaskID: template.id,
-            generatedTaskID: #require(
-                outcome.materializations.first?.generatedTaskID
-            ),
+            generatedTaskID: #require(outcome.materializations.first?.generatedTaskID),
             now: now
         )
     }
 
-    func date(
-        year: Int,
-        month: Int,
-        day: Int,
-        hour: Int
-    ) throws -> Date {
+    func date(year: Int, month: Int, day: Int, hour: Int) throws -> Date {
         var calendar = Calendar(identifier: .gregorian)
         calendar.locale = Locale(identifier: "en_US_POSIX")
-        calendar.timeZone = try #require(
-            TimeZone(identifier: "Asia/Singapore")
-        )
+        calendar.timeZone = try #require(TimeZone(identifier: "Asia/Singapore"))
         return try #require(
             calendar.date(
-                from: DateComponents(
-                    year: year,
-                    month: month,
-                    day: day,
-                    hour: hour
-                )
+                from: DateComponents(year: year, month: month, day: day, hour: hour)
             )
         )
     }

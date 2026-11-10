@@ -54,6 +54,10 @@ final class AdaptiveShellUITests: XCTestCase {
             app.descendants(matching: .any)["home.view"].waitForExistence(timeout: 15),
             "Today never rendered, so no shell could be identified."
         )
+        XCTAssertTrue(
+            app.descendants(matching: .any)["home.activeTimers"].waitForExistence(timeout: 10),
+            "Today rendered without its Now section."
+        )
 
         let isCompactShell = compactSettingsButton(in: app).exists
         let width = app.windows.firstMatch.frame.width
@@ -138,18 +142,4 @@ final class AdaptiveShellUITests: XCTestCase {
 
     /// Mirrors `RootLayoutPolicy.regularShellMinimumWidth`.
     private static let shellBreakpoint: CGFloat = 720
-
-    /// Today's Now section must survive whichever shell is chosen — the two
-    /// shells host it in different containers (list section vs. card), so a
-    /// regression can hide in one and not the other.
-    func testNowSectionRendersInWhicheverShellIsChosen() {
-        let app = launchApp()
-
-        XCTAssertTrue(
-            app.descendants(matching: .any)["home.activeTimers"].waitForExistence(timeout: 15),
-            "Today rendered without its Now section."
-        )
-
-        attachScreenshot(app, named: "today-now-section")
-    }
 }

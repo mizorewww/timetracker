@@ -54,25 +54,6 @@ struct TodayTimelineSnapshotTests {
     }
 
     @Test
-    func ledgerMutationIsReflectedAfterCachedRead() throws {
-        let (store, task, _) = try makeStoreWithSegments(now: Date())
-        let beforeNow = Date()
-        let before = store.todaySnapshot(now: beforeNow).live.timeline
-        #expect(before.entries.count == 1)
-
-        // Durable ledger write through the facade path (starts a second timer).
-        #expect(try store.startTask(task))
-        let afterNow = Date()
-        let after = store.todaySnapshot(now: afterNow).live.timeline
-
-        #expect(after.entries.count == 2)
-        let activeEntry = try #require(
-            after.entries.first { $0.usesCurrentEndLabel }
-        )
-        #expect(activeEntry.taskID == task.id)
-    }
-
-    @Test
     func taskEditIsReflectedAfterCachedRead() throws {
         let now = Date()
         let (store, task, _) = try makeStoreWithSegments(now: now)
@@ -131,6 +112,7 @@ struct TodayTimelineSnapshotTests {
         let after = store.todaySnapshot(now: later)
 
         #expect(after.content.activeSegments.map(\.taskID) == [task.id])
+        #expect(after.live.timeline.entries.count == 2)
         #expect(after.live.isLive)
         #expect(after.live.rows.first?.usesCurrentEndLabel == true)
         #expect(after.live.metrics.grossSeconds >= before.live.metrics.grossSeconds)

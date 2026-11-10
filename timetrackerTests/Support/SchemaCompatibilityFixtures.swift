@@ -17,6 +17,7 @@ struct LegacyStoreFixture<Seed> {
         directoryPrefix: String? = nil,
         seed: (ModelContext) throws -> Seed
     ) throws -> LegacyStoreFixture<Seed> {
+        pruneStaleDirectories()
         let directory = FileManager.default.temporaryDirectory
             .appending(
                 path: "TimeTracker\(directoryPrefix ?? name)-\(UUID().uuidString)",
@@ -72,180 +73,21 @@ struct LegacyStoreFixture<Seed> {
         }
     }
 
-    func remove() {
-        try? FileManager.default.removeItem(at: directory)
-    }
-}
-
-@MainActor
-struct LegacyV4CategoryStoreFixture {
-    let fixture: LegacyStoreFixture<(rootTaskID: UUID, categoryID: UUID)>
-
-    var storeURL: URL {
-        fixture.storeURL
-    }
-
-    var rootTaskID: UUID {
-        fixture.seed.rootTaskID
-    }
-
-    var categoryID: UUID {
-        fixture.seed.categoryID
-    }
-
-    static func create(
-        rootTitle: String = "Legacy Root",
-        categoryTitle: String = "Work",
-        deviceID: String = "legacy"
-    ) throws -> LegacyV4CategoryStoreFixture {
-        try LegacyV4CategoryStoreFixture(
-            fixture: LegacyStoreFixture.create(
-                name: "LegacyV4",
-                schema: TimeTrackerSchemaV4.self
-            ) { context in
-                let category = TimeTrackerSchemaV4.TaskCategory(
-                    title: categoryTitle,
-                    deviceID: deviceID,
-                    colorHex: "1677FF",
-                    iconName: "briefcase",
-                    includesInForecast: true
-                )
-                let root = TimeTrackerSchemaV4.TaskNode(
-                    title: rootTitle,
-                    parentID: nil,
-                    deviceID: deviceID,
-                    categoryID: category.id,
-                    colorHex: nil,
-                    iconName: nil
-                )
-                context.insert(category)
-                context.insert(root)
-                return (root.id, category.id)
+    private static func pruneStaleDirectories() {
+        let fm = FileManager.default
+        let tempDir = fm.temporaryDirectory
+        let cutoff = Date().addingTimeInterval(-10)
+        guard let entries = try? fm.contentsOfDirectory(
+            at: tempDir,
+            includingPropertiesForKeys: [.creationDateKey],
+            options: [.skipsHiddenFiles]
+        ) else { return }
+        for url in entries where url.lastPathComponent.hasPrefix("TimeTrackerLegacy") {
+            if let created = (try? url.resourceValues(forKeys: [.creationDateKey]))?.creationDate,
+               created < cutoff
+            {
+                try? fm.removeItem(at: url)
             }
-        )
-    }
-
-    func withCurrentContext<Result>(
-        _ body: (ModelContext) throws -> Result
-    ) throws -> Result {
-        try fixture.withCurrentContext(body)
-    }
-
-    func remove() {
-        fixture.remove()
-    }
-}
-
-@MainActor
-struct LegacyV8DailySummaryStoreFixture {
-    let fixture: LegacyStoreFixture<UUID>
-
-    var storeURL: URL {
-        fixture.storeURL
-    }
-
-    var taskID: UUID {
-        fixture.seed
-    }
-
-    static func create() throws -> LegacyV8DailySummaryStoreFixture {
-        try LegacyV8DailySummaryStoreFixture(
-            fixture: LegacyStoreFixture.create(
-                name: "LegacyV8",
-                schema: TimeTrackerSchemaV8.self
-            ) { context in
-                let task = TaskNode(title: "V8 task", parentID: nil, deviceID: "legacy")
-                let summary = DailySummary(
-                    date: Date(timeIntervalSinceReferenceDate: 100_000),
-                    taskID: task.id,
-                    grossSeconds: 900,
-                    wallClockSeconds: 900,
-                    pomodoroCount: 1,
-                    interruptionCount: 0
-                )
-                context.insert(task)
-                context.insert(summary)
-                return task.id
-            }
-        )
-    }
-
-    func withCurrentContext<Result>(
-        _ body: (ModelContext) throws -> Result
-    ) throws -> Result {
-        try fixture.withCurrentContext(body)
-    }
-
-    func remove() {
-        fixture.remove()
-    }
-}
-
-@MainActor
-struct LegacyV9InboxStoreFixture {
-    let fixture: LegacyStoreFixture<(dismissedItemID: UUID, readyItemID: UUID, suggestionID: UUID)>
-
-    var storeURL: URL {
-        fixture.storeURL
-    }
-
-    var dismissedItemID: UUID {
-        fixture.seed.dismissedItemID
-    }
-
-    var readyItemID: UUID {
-        fixture.seed.readyItemID
-    }
-
-    var suggestionID: UUID {
-        fixture.seed.suggestionID
-    }
-
-    static func create() throws -> LegacyV9InboxStoreFixture {
-        try LegacyV9InboxStoreFixture(
-            fixture: LegacyStoreFixture.create(
-                name: "LegacyV9",
-                schema: TimeTrackerSchemaV9.self
-            ) { context in
-                let task = TaskNode(title: "Migration target", parentID: nil, deviceID: "legacy")
-                let dismissedItem = TimeTrackerSchemaV9.InboxItem(
-                    title: "Dismissed before migration",
-                    deviceID: "legacy"
-                )
-                dismissedItem.suggestionGeneratedAt = Date(timeIntervalSinceReferenceDate: 100)
-                let readyItem = TimeTrackerSchemaV9.InboxItem(
-                    title: "Suggestion survives migration",
-                    deviceID: "legacy"
-                )
-                readyItem.suggestedTaskID = task.id
-                readyItem.suggestionGeneratedAt = Date(timeIntervalSinceReferenceDate: 200)
-                let suggestion = TimeTrackerSchemaV9.InboxSuggestion(
-                    inboxItemID: readyItem.id,
-                    taskID: task.id,
-                    titleSnapshot: readyItem.title,
-                    deviceID: "legacy"
-                )
-
-                context.insert(task)
-                context.insert(dismissedItem)
-                context.insert(readyItem)
-                context.insert(suggestion)
-                return (
-                    dismissedItemID: dismissedItem.id,
-                    readyItemID: readyItem.id,
-                    suggestionID: suggestion.id
-                )
-            }
-        )
-    }
-
-    func withCurrentContext<Result>(
-        _ body: (ModelContext) throws -> Result
-    ) throws -> Result {
-        try fixture.withCurrentContext(body)
-    }
-
-    func remove() {
-        fixture.remove()
+        }
     }
 }

@@ -4,7 +4,7 @@ enum TaskRollupHistoricalPolicy {
     static let paceDayCount = 90
 }
 
-struct ChecklistProgress: Equatable {
+nonisolated struct ChecklistProgress: Equatable, Sendable {
     let taskID: UUID
     let totalCount: Int
     let completedCount: Int

@@ -7,103 +7,50 @@ import Testing
 @MainActor
 struct TimeTrackingFutureWinnerMutationTests {
     @Test
-    func editStaysAheadOfTheFutureActiveVersion() throws {
-        let fixture = try makeFixture(
+    func mutationsStayAheadOfFutureStampedStaleDuplicates() throws {
+        // 1. Edit
+        let editFixture = try makeFixture(
             title: "Future edit",
             startedAt: Date(timeIntervalSinceReferenceDate: 800_100_000)
         )
-        let editedStart = fixture.startedAt.addingTimeInterval(1)
-        try repository(fixture, now: fixture.mutationDate).updateSegment(
-            segmentID: fixture.segmentID,
-            taskID: fixture.taskID,
+        let editedStart = editFixture.startedAt.addingTimeInterval(1)
+        try repository(editFixture).updateSegment(
+            segmentID: editFixture.segmentID,
+            taskID: editFixture.taskID,
             startedAt: editedStart,
             endedAt: nil,
             note: "Edited"
         )
+        try verifyDominanceAfterStaleCopies(editFixture) { segment, session, _ in
+            #expect(segment.startedAt == editedStart)
+            #expect(session.startedAt == editedStart)
+            #expect(session.note == "Edited")
+        }
 
-        var context = ModelContext(fixture.container)
-        var segment = try canonicalSegment(fixture, context: context)
-        var session = try canonicalSession(fixture, context: context)
-        #expect(segment.startedAt == editedStart)
-        #expect(segment.updatedAt > fixture.futureDate)
-        #expect(session.startedAt == editedStart)
-        #expect(session.note == "Edited")
-        #expect(session.updatedAt > fixture.futureDate)
-
-        insertStaleOpenCopies(fixture, context: context)
-        try context.save()
-
-        context = ModelContext(fixture.container)
-        segment = try canonicalSegment(fixture, context: context)
-        session = try canonicalSession(fixture, context: context)
-        #expect(segment.startedAt == editedStart)
-        #expect(session.startedAt == editedStart)
-        #expect(session.note == "Edited")
-    }
-
-    @Test
-    func deletionStaysAheadOfTheFutureVisibleVersion() throws {
-        let fixture = try makeFixture(
+        // 2. Soft delete
+        let deleteFixture = try makeFixture(
             title: "Future delete",
             startedAt: Date(timeIntervalSinceReferenceDate: 800_200_000)
         )
-        try repository(fixture, now: fixture.mutationDate)
-            .softDeleteSegment(segmentID: fixture.segmentID)
-
-        var context = ModelContext(fixture.container)
-        let segment = try canonicalSegment(fixture, context: context)
-        let session = try canonicalSession(fixture, context: context)
-        #expect(segment.deletedAt != nil)
-        #expect(segment.updatedAt > fixture.futureDate)
-        #expect(session.deletedAt != nil)
-        #expect(session.updatedAt > fixture.futureDate)
-
-        insertStaleOpenCopies(fixture, context: context)
-        try context.save()
-
-        context = ModelContext(fixture.container)
-        #expect(
-            try context.fetch(FetchDescriptor<TimeSegment>())
+        try repository(deleteFixture).softDeleteSegment(segmentID: deleteFixture.segmentID)
+        try verifyDominanceAfterStaleCopies(deleteFixture) { segment, session, context in
+            #expect(segment.deletedAt != nil)
+            #expect(session.deletedAt != nil)
+            let visibleSegments = try context.fetch(FetchDescriptor<TimeSegment>())
                 .visibleDeduplicatedByID()
-                .contains { $0.id == fixture.segmentID } == false
-        )
-        #expect(
-            try context.fetch(FetchDescriptor<TimeSession>())
-                .visibleDeduplicatedByID()
-                .contains { $0.id == fixture.sessionID } == false
-        )
-    }
+            #expect(visibleSegments.contains { $0.id == deleteFixture.segmentID } == false)
+        }
 
-    @Test
-    func sessionStopStaysAheadOfTheFutureActiveVersion() throws {
-        let fixture = try makeFixture(
+        // 3. Session stop
+        let stopFixture = try makeFixture(
             title: "Future session stop",
             startedAt: Date(timeIntervalSinceReferenceDate: 800_300_000)
         )
-        try repository(fixture, now: fixture.mutationDate)
-            .stopSession(sessionID: fixture.sessionID)
-
-        var context = ModelContext(fixture.container)
-        var segment = try canonicalSegment(fixture, context: context)
-        var session = try canonicalSession(fixture, context: context)
-        #expect(segment.endedAt == fixture.mutationDate)
-        #expect(segment.updatedAt > fixture.futureDate)
-        #expect(session.endedAt == fixture.mutationDate)
-        #expect(session.updatedAt > fixture.futureDate)
-
-        insertStaleOpenCopies(fixture, context: context)
-        try context.save()
-
-        context = ModelContext(fixture.container)
-        segment = try canonicalSegment(fixture, context: context)
-        session = try canonicalSession(fixture, context: context)
-        #expect(segment.endedAt == fixture.mutationDate)
-        #expect(session.endedAt == fixture.mutationDate)
-        #expect(
-            try repository(fixture, now: fixture.mutationDate)
-                .activeSegments()
-                .contains { $0.id == fixture.segmentID } == false
-        )
+        try repository(stopFixture).stopSession(sessionID: stopFixture.sessionID)
+        try verifyDominanceAfterStaleCopies(stopFixture) { segment, session, _ in
+            #expect(segment.endedAt == stopFixture.mutationDate)
+            #expect(session.endedAt == stopFixture.mutationDate)
+        }
     }
 
     private struct Fixture {
@@ -119,32 +66,17 @@ struct TimeTrackingFutureWinnerMutationTests {
         let mutationDate: Date
     }
 
-    private func makeFixture(
-        title: String,
-        startedAt: Date
-    ) throws -> Fixture {
+    private func makeFixture(title: String, startedAt: Date) throws -> Fixture {
         let context = try makeTestContext()
-        let task = try SwiftDataTaskRepository(
-            context: context,
-            deviceID: "fixture"
-        ).createTask(
-            title: title,
-            parentID: nil,
-            colorHex: nil,
-            iconName: nil
-        )
-        let segment = try SwiftDataTimeTrackingRepository(
+        let task = try SwiftDataTaskRepository(context: context, deviceID: "fixture")
+            .createTask(title: title, parentID: nil)
+        let repo = SwiftDataTimeTrackingRepository(
             context: context,
             deviceID: "fixture",
             nowProvider: { startedAt }
-        ).startTask(taskID: task.id, source: .timer)
-        let session = try #require(
-            try SwiftDataTimeTrackingRepository(
-                context: context,
-                deviceID: "fixture",
-                nowProvider: { startedAt }
-            ).sessions(ids: [segment.sessionID]).first
         )
+        let segment = try repo.startTask(taskID: task.id, source: .timer)
+        let session = try #require(try repo.sessions(ids: [segment.sessionID]).first)
         let mutationDate = startedAt.addingTimeInterval(30)
         let futureDate = mutationDate.addingTimeInterval(3600)
         segment.updatedAt = futureDate
@@ -164,43 +96,19 @@ struct TimeTrackingFutureWinnerMutationTests {
         )
     }
 
-    private func repository(
-        _ fixture: Fixture,
-        now: Date
-    ) -> SwiftDataTimeTrackingRepository {
+    private func repository(_ fixture: Fixture) -> SwiftDataTimeTrackingRepository {
         SwiftDataTimeTrackingRepository(
             context: ModelContext(fixture.container),
             deviceID: "mutation",
-            nowProvider: { now }
+            nowProvider: { fixture.mutationDate }
         )
     }
 
-    private func canonicalSegment(
+    private func verifyDominanceAfterStaleCopies(
         _ fixture: Fixture,
-        context: ModelContext
-    ) throws -> TimeSegment {
-        try #require(
-            try context.fetch(FetchDescriptor<TimeSegment>())
-                .deduplicatedByID()
-                .first { $0.id == fixture.segmentID }
-        )
-    }
-
-    private func canonicalSession(
-        _ fixture: Fixture,
-        context: ModelContext
-    ) throws -> TimeSession {
-        try #require(
-            try context.fetch(FetchDescriptor<TimeSession>())
-                .deduplicatedByID()
-                .first { $0.id == fixture.sessionID }
-        )
-    }
-
-    private func insertStaleOpenCopies(
-        _ fixture: Fixture,
-        context: ModelContext
-    ) {
+        assertions: (TimeSegment, TimeSession, ModelContext) throws -> Void
+    ) throws {
+        let seedContext = ModelContext(fixture.container)
         let session = TimeSession(
             taskID: fixture.taskID,
             source: .timer,
@@ -222,7 +130,23 @@ struct TimeTrackingFutureWinnerMutationTests {
         segment.id = fixture.segmentID
         segment.createdAt = fixture.segmentCreatedAt
         segment.updatedAt = fixture.futureDate
-        context.insert(session)
-        context.insert(segment)
+        seedContext.insert(session)
+        seedContext.insert(segment)
+        try seedContext.save()
+
+        let verifyContext = ModelContext(fixture.container)
+        let winningSegment = try #require(
+            try verifyContext.fetch(FetchDescriptor<TimeSegment>())
+                .deduplicatedByID()
+                .first { $0.id == fixture.segmentID }
+        )
+        let winningSession = try #require(
+            try verifyContext.fetch(FetchDescriptor<TimeSession>())
+                .deduplicatedByID()
+                .first { $0.id == fixture.sessionID }
+        )
+        #expect(winningSegment.updatedAt > fixture.futureDate)
+        #expect(winningSession.updatedAt > fixture.futureDate)
+        try assertions(winningSegment, winningSession, verifyContext)
     }
 }

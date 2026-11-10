@@ -12,24 +12,18 @@ nonisolated enum TaskUsageRankingService {
     ) -> [TaskNode] {
         availableTasks
             .filter { excludedIDs.contains($0.id) == false }
-            .sorted { lhs, rhs in
-                let lhsActivity = activityByTaskID[lhs.id]
-                let rhsActivity = activityByTaskID[rhs.id]
-                let lhsSegmentCount = lhsActivity?.segmentCount ?? 0
-                let rhsSegmentCount = rhsActivity?.segmentCount ?? 0
-                if lhsSegmentCount != rhsSegmentCount {
-                    return lhsSegmentCount > rhsSegmentCount
+            .sorted(byKey: { task in
+                let activity = activityByTaskID[task.id]
+                return (count: activity?.segmentCount ?? 0, lastStartedAt: activity?.lastStartedAt ?? .distantPast, id: task.id)
+            }, by: { lhs, rhs in
+                if lhs.count != rhs.count {
+                    return lhs.count > rhs.count
                 }
-
-                let lhsLastStartedAt =
-                    lhsActivity?.lastStartedAt ?? .distantPast
-                let rhsLastStartedAt =
-                    rhsActivity?.lastStartedAt ?? .distantPast
-                if lhsLastStartedAt != rhsLastStartedAt {
-                    return lhsLastStartedAt > rhsLastStartedAt
+                if lhs.lastStartedAt != rhs.lastStartedAt {
+                    return lhs.lastStartedAt > rhs.lastStartedAt
                 }
                 return lhs.id < rhs.id
-            }
+            })
     }
 
     static func frequentRecentTasks(
@@ -49,12 +43,7 @@ nonisolated enum TaskUsageRankingService {
             historicallyUsedTasks.map(\.id)
         )
         let recentTasks = availableTasks
-            .sorted {
-                if $0.updatedAt != $1.updatedAt {
-                    return $0.updatedAt > $1.updatedAt
-                }
-                return $0.id < $1.id
-            }
+            .sorted(byKey: { ($0.updatedAt, $0.id) }, by: DatedIdentityOrder.newestFirst)
             .prefix(4)
         let fallbackTasks = recentTasks.filter {
             excludedIDs.contains($0.id) == false &&

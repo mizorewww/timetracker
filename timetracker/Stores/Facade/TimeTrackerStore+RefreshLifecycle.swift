@@ -10,18 +10,22 @@ extension TimeTrackerStore {
         }
     }
 
-    func refreshForForeground(
-        cloudAccountStatusClient: CloudAccountStatusClient? = nil
-    ) async {
-        refreshQuietly()
+    func refreshForForeground() async {
+        // Persistent history names what changed while the app was away;
+        // reconciling Pomodoro re-converges today's window and live timers.
+        if needsFullRefresh {
+            refreshQuietly()
+        } else {
+            refreshChangesSinceLastCatchUp()
+        }
         materializeCurrentDailyTaskRecurrences()
         reconcileActivePomodoro(now: Date())
         enqueueCommittedMutationSystemProjections(
             events: [.fullSync]
         )
-        await refreshCloudAccountStatus(
-            client: cloudAccountStatusClient
-        )
+        if AppCloudSync.checksCloudAccountAutomatically {
+            await refreshCloudAccountStatus()
+        }
     }
 
     @discardableResult
@@ -48,6 +52,7 @@ extension TimeTrackerStore {
 
     func refresh() throws {
         try refresh(plan: StoreRefreshPlanner.plan(after: [.fullSync]))
+        needsFullRefresh = false
     }
 
     func refresh(plan: StoreRefreshPlan) throws {

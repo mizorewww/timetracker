@@ -52,7 +52,7 @@ struct TaskStore {
 
         tasks = (tasks.filter { replacedTaskIDs.contains($0.id) == false } + fetchedTasks)
             .deduplicatedByID()
-            .sorted(by: TaskTreeService.hierarchyOrder)
+            .sorted(byKey: \.hierarchyOrderKey, by: <)
         categories = try repository.categories()
         categoryAssignments = try repository.categoryAssignments()
         try refreshTaskProgress(

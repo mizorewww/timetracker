@@ -64,6 +64,14 @@ enum AppCloudSync {
         }
     }
 
+    /// Whether to check the iCloud account automatically: every launch except
+    /// unit-test, UI-test and demo ones, whose stores never sync.
+    static var checksCloudAccountAutomatically: Bool {
+        AppRuntimeEnvironment.isUnitTestHost() == false &&
+            persistenceMode != modeUITest &&
+            persistenceMode != modeDemoData
+    }
+
     static var allowsAutomaticDemoSeeding: Bool {
         guard lastError?.isEmpty ?? true else { return false }
         switch persistenceMode {

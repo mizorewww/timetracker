@@ -5,7 +5,7 @@ nonisolated extension SwiftDataTaskRepository {
     func allNodes() throws -> [TaskNode] {
         try context.fetch(FetchDescriptor<TaskNode>())
             .visibleDeduplicatedByID()
-            .sorted(by: taskHierarchyOrder)
+            .sorted(byKey: \.hierarchyOrderKey, by: <)
     }
 
     /// The predicate only nominates candidates: every copy of each candidate
@@ -19,7 +19,7 @@ nonisolated extension SwiftDataTaskRepository {
         )
         return try tasks(ids: candidateIDs)
             .filter { $0.parentID == parent }
-            .sorted(by: TaskTreeService.siblingOrder)
+            .sorted(byKey: \.siblingOrderKey, by: <)
     }
 
     func task(id: UUID) throws -> TaskNode? {
@@ -61,7 +61,7 @@ nonisolated extension SwiftDataTaskRepository {
         )
         return try context.fetch(descriptor)
             .visibleDeduplicatedByID()
-            .sorted(by: taskHierarchyOrder)
+            .sorted(byKey: \.hierarchyOrderKey, by: <)
     }
 
     func taskRecurrenceRules() throws -> [TaskRecurrenceRule] {
@@ -153,10 +153,6 @@ nonisolated extension SwiftDataTaskRepository {
                 }
                 return persistentIdentityOrder($0, $1)
             }
-    }
-
-    private func taskHierarchyOrder(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {
-        TaskTreeService.hierarchyOrder(lhs, rhs)
     }
 
     private func persistentIdentityOrder<Model: PersistentUUIDModel>(

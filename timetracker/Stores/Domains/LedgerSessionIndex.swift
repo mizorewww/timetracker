@@ -11,8 +11,11 @@ struct LedgerSessionIndex {
     private var startedAtByID: [UUID: Date] = [:]
     private var taskIDByID: [UUID: UUID] = [:]
 
-    mutating func rebuild(_ fetchedSessions: [TimeSession]) {
-        sessions = fetchedSessions.visibleDeduplicatedByID().sorted(by: sessionOrder)
+    /// `canonicalSessions` must already be visible, deduplicated and newest
+    /// first, as `SwiftDataTimeTrackingRepository.sessions()` returns them.
+    mutating func rebuild(_ canonicalSessions: [TimeSession]) {
+        assert(Set(canonicalSessions.map(\.id)).count == canonicalSessions.count, "Sessions must be deduplicated")
+        sessions = canonicalSessions
         arrayIndexByID = SortedUUIDArrayIndex.buildIndex(for: sessions)
         startedAtByID = Dictionary(uniqueKeysWithValues: sessions.map {
             ($0.id, $0.startedAt)
@@ -99,17 +102,10 @@ struct LedgerSessionIndex {
             [session],
             into: &sessions,
             indexByID: &arrayIndexByID,
-            orderedBy: sessionOrder
+            orderedBy: { DatedIdentityOrder.newestFirst($0.startOrderKey, $1.startOrderKey) }
         )
         startedAtByID[id] = session.startedAt
         taskIDByID[id] = session.taskID
         revision &+= 1
-    }
-
-    private func sessionOrder(_ lhs: TimeSession, _ rhs: TimeSession) -> Bool {
-        if lhs.startedAt != rhs.startedAt {
-            return lhs.startedAt > rhs.startedAt
-        }
-        return lhs.id < rhs.id
     }
 }

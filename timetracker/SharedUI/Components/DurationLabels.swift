@@ -53,9 +53,7 @@ struct DurationLabel: View {
             endedAt: endedAt,
             now: now
         )
-        return AnimatedNumberText(
-            text: DurationFormatter.clock(display.elapsedSeconds),
-            value: display.elapsedSeconds
-        )
+        return Text(DurationFormatter.clock(display.elapsedSeconds))
+            .monospacedDigit()
     }
 }

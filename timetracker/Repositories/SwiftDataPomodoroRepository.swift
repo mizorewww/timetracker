@@ -27,11 +27,11 @@ final class SwiftDataPomodoroRepository {
     func runs() throws -> [PomodoroRun] {
         try context.fetch(FetchDescriptor<PomodoroRun>())
             .visibleDeduplicatedByID()
-            .sorted(by: runCreationOrder)
+            .sorted(byKey: \.creationOrderKey, by: DatedIdentityOrder.newestFirst)
     }
 
     func runs(ids: Set<UUID>) throws -> [PomodoroRun] {
-        try canonicalRuns(ids: ids).sorted(by: runCreationOrder)
+        try canonicalRuns(ids: ids).sorted(byKey: \.creationOrderKey, by: DatedIdentityOrder.newestFirst)
     }
 
     /// Timer stop commands only need open runs attached to the sessions they
@@ -263,13 +263,6 @@ final class SwiftDataPomodoroRepository {
         let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
         return try canonicalRuns(ids: candidateIDs)
             .filter(postFilter)
-            .sorted(by: runCreationOrder)
-    }
-
-    private func runCreationOrder(_ lhs: PomodoroRun, _ rhs: PomodoroRun) -> Bool {
-        if lhs.createdAt != rhs.createdAt {
-            return lhs.createdAt > rhs.createdAt
-        }
-        return lhs.id < rhs.id
+            .sorted(byKey: \.creationOrderKey, by: DatedIdentityOrder.newestFirst)
     }
 }

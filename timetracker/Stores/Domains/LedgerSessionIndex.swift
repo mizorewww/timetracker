@@ -13,9 +13,7 @@ struct LedgerSessionIndex {
 
     mutating func rebuild(_ fetchedSessions: [TimeSession]) {
         sessions = fetchedSessions.visibleDeduplicatedByID().sorted(by: sessionOrder)
-        arrayIndexByID = Dictionary(uniqueKeysWithValues: sessions.indices.map {
-            (sessions[$0].id, $0)
-        })
+        arrayIndexByID = SortedUUIDArrayIndex.buildIndex(for: sessions)
         startedAtByID = Dictionary(uniqueKeysWithValues: sessions.map {
             ($0.id, $0.startedAt)
         })
@@ -67,11 +65,13 @@ struct LedgerSessionIndex {
     ) {
         if let existingIndex = arrayIndexByID[id] {
             guard let session else {
-                sessions.remove(at: existingIndex)
-                arrayIndexByID.removeValue(forKey: id)
+                SortedUUIDArrayIndex.remove(
+                    ids: [id],
+                    from: &sessions,
+                    indexByID: &arrayIndexByID
+                )
                 startedAtByID.removeValue(forKey: id)
                 taskIDByID.removeValue(forKey: id)
-                reindex(from: existingIndex)
                 revision &+= 1
                 return
             }
@@ -85,41 +85,25 @@ struct LedgerSessionIndex {
                 return
             }
 
-            sessions.remove(at: existingIndex)
-            arrayIndexByID.removeValue(forKey: id)
+            SortedUUIDArrayIndex.remove(
+                ids: [id],
+                from: &sessions,
+                indexByID: &arrayIndexByID
+            )
             startedAtByID.removeValue(forKey: id)
             taskIDByID.removeValue(forKey: id)
-            reindex(from: existingIndex)
         }
 
         guard let session else { return }
-        let insertionIndex = insertionIndex(for: session)
-        sessions.insert(session, at: insertionIndex)
+        SortedUUIDArrayIndex.insert(
+            [session],
+            into: &sessions,
+            indexByID: &arrayIndexByID,
+            orderedBy: sessionOrder
+        )
         startedAtByID[id] = session.startedAt
         taskIDByID[id] = session.taskID
-        reindex(from: insertionIndex)
         revision &+= 1
-    }
-
-    private mutating func reindex(from startIndex: Int) {
-        guard startIndex < sessions.count else { return }
-        for index in startIndex ..< sessions.count {
-            arrayIndexByID[sessions[index].id] = index
-        }
-    }
-
-    private func insertionIndex(for session: TimeSession) -> Int {
-        var lowerBound = sessions.startIndex
-        var upperBound = sessions.endIndex
-        while lowerBound < upperBound {
-            let middle = lowerBound + sessions.distance(from: lowerBound, to: upperBound) / 2
-            if sessionOrder(sessions[middle], session) {
-                lowerBound = middle + 1
-            } else {
-                upperBound = middle
-            }
-        }
-        return lowerBound
     }
 
     private func sessionOrder(_ lhs: TimeSession, _ rhs: TimeSession) -> Bool {

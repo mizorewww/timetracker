@@ -78,21 +78,6 @@ nonisolated struct TimelineAxisCompression: Equatable, Sendable {
             guard end > start else { return nil }
             return DateInterval(start: start, end: end)
         }
-        .sorted { $0.start < $1.start }
-
-        var merged: [DateInterval] = []
-        for interval in clipped {
-            guard let last = merged.last else {
-                merged.append(interval)
-                continue
-            }
-
-            if interval.start <= last.end {
-                merged[merged.count - 1] = DateInterval(start: last.start, end: max(last.end, interval.end))
-            } else {
-                merged.append(interval)
-            }
-        }
-        return merged
+        return TimeAggregationService.mergeOverlappingIntervals(clipped)
     }
 }

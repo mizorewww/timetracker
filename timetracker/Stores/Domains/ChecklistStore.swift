@@ -14,14 +14,10 @@ struct ChecklistStore {
         self.items = sortedItems(items)
         self.visuals = sortedVisuals(visuals)
         itemsByTaskID = Dictionary(grouping: self.items, by: \.taskID)
-        itemArrayIndexByID = Dictionary(uniqueKeysWithValues: self.items.indices.map {
-            (self.items[$0].id, $0)
-        })
+        itemArrayIndexByID = SortedUUIDArrayIndex.buildIndex(for: self.items)
         visualIDsByChecklistItemID = Dictionary(grouping: self.visuals, by: \.checklistItemID)
             .mapValues { Set($0.map(\.id)) }
-        visualArrayIndexByID = Dictionary(uniqueKeysWithValues: self.visuals.indices.map {
-            (self.visuals[$0].id, $0)
-        })
+        visualArrayIndexByID = SortedUUIDArrayIndex.buildIndex(for: self.visuals)
         visualByChecklistItemID = self.visuals.reduce(into: [:]) { result, visual in
             if result[visual.checklistItemID] == nil {
                 result[visual.checklistItemID] = visual

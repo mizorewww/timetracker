@@ -76,9 +76,14 @@ struct AnalyticsTimelineSnapshotService {
             else {
                 return nil
             }
-            let durationIntervals = Self.mergedIntervals(
+            let durationIntervals = TimeAggregationService.mergeOverlappingIntervals(
                 seed.durationIntervals.compactMap {
-                    $0.intersection(with: interval)
+                    guard let clipped = $0.intersection(with: interval),
+                          clipped.duration > 0
+                    else {
+                        return nil
+                    }
+                    return clipped
                 }
             )
             guard durationIntervals.isEmpty == false else { return nil }
@@ -153,33 +158,5 @@ struct AnalyticsTimelineSnapshotService {
             return lhs.interval.end < rhs.interval.end
         }
         return lhs.id.stableSortKey < rhs.id.stableSortKey
-    }
-
-    private nonisolated static func mergedIntervals(
-        _ intervals: [DateInterval]
-    ) -> [DateInterval] {
-        let sorted = intervals
-            .filter { $0.duration > 0 }
-            .sorted {
-                if $0.start != $1.start {
-                    return $0.start < $1.start
-                }
-                return $0.end < $1.end
-            }
-        guard var current = sorted.first else { return [] }
-        var result: [DateInterval] = []
-        for interval in sorted.dropFirst() {
-            if interval.start <= current.end {
-                current = DateInterval(
-                    start: current.start,
-                    end: max(current.end, interval.end)
-                )
-            } else {
-                result.append(current)
-                current = interval
-            }
-        }
-        result.append(current)
-        return result
     }
 }

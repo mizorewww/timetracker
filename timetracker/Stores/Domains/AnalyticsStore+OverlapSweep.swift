@@ -1,24 +1,59 @@
 import Foundation
 import HeapModule
 
-nonisolated extension AnalyticsStore {
-    func sweepOverlapWindows(
-        _ items: [AnalyticsBoundedSegment],
-        participantsByTaskID: [UUID: OverlapAnalyticsParticipant]
+nonisolated struct OverlapSweepSegment: Sendable {
+    let id: UUID
+    let taskID: UUID
+    let interval: DateInterval
+}
+
+nonisolated struct RawOverlapWindow: Sendable {
+    let start: Date
+    var end: Date
+    let concurrentSegmentCount: Int
+    let participantCount: Int
+    let visibleParticipants: [OverlapAnalyticsParticipant]
+}
+
+nonisolated enum OverlapWindowSweepEngine {
+    static func overlapPoints(
+        segments: [OverlapSweepSegment],
+        participantsByTaskID: [UUID: OverlapAnalyticsParticipant],
+        expectedExcessSeconds: Int,
+        checksCancellation: Bool = false
+    ) -> [OverlapAnalyticsPoint] {
+        let rawWindows = sweepOverlapWindows(
+            segments,
+            participantsByTaskID: participantsByTaskID,
+            checksCancellation: checksCancellation
+        )
+        if checksCancellation, Task.isCancelled {
+            return []
+        }
+        return materializeOverlapWindows(
+            rawWindows,
+            expectedExcessSeconds: expectedExcessSeconds
+        )
+    }
+
+    static func sweepOverlapWindows(
+        _ segments: [OverlapSweepSegment],
+        participantsByTaskID: [UUID: OverlapAnalyticsParticipant],
+        checksCancellation: Bool = false
     ) -> [RawOverlapWindow] {
-        var events = items.flatMap { item in
+        var events = segments.flatMap { segment in
             [
                 OverlapSweepEvent(
-                    date: item.interval.start,
+                    date: segment.interval.start,
                     kind: .start,
-                    segmentID: item.segment.id,
-                    taskID: item.segment.taskID
+                    segmentID: segment.id,
+                    taskID: segment.taskID
                 ),
                 OverlapSweepEvent(
-                    date: item.interval.end,
+                    date: segment.interval.end,
                     kind: .end,
-                    segmentID: item.segment.id,
-                    taskID: item.segment.taskID
+                    segmentID: segment.id,
+                    taskID: segment.taskID
                 ),
             ]
         }
@@ -34,6 +69,9 @@ nonisolated extension AnalyticsStore {
         var canMergeAcrossCursor = false
 
         while index < events.endIndex {
+            if checksCancellation, Task.isCancelled {
+                return []
+            }
             let date = events[index].date
             if let start = cursor, date > start, activeSegmentIDs.count > 1 {
                 let visibleParticipants = firstActiveParticipants(
@@ -112,7 +150,106 @@ nonisolated extension AnalyticsStore {
         return rawWindows
     }
 
-    private func overlapEventPrecedes(_ lhs: OverlapSweepEvent, _ rhs: OverlapSweepEvent) -> Bool {
+    static func materializeOverlapWindows(
+        _ rawWindows: [RawOverlapWindow],
+        expectedExcessSeconds: Int
+    ) -> [OverlapAnalyticsPoint] {
+        guard !rawWindows.isEmpty else {
+            assert(expectedExcessSeconds == 0)
+            return []
+        }
+
+        let exactExcess = rawWindows.map { window in
+            max(
+                0,
+                window.end.timeIntervalSince(window.start)
+                    * Double(max(0, window.concurrentSegmentCount - 1))
+            )
+        }
+        var allocatedExcess = exactExcess.map { Int($0.rounded(.down)) }
+        reconcileOverlapSeconds(
+            &allocatedExcess,
+            exactExcess: exactExcess,
+            windows: rawWindows,
+            expectedTotal: max(0, expectedExcessSeconds)
+        )
+
+        let points = zip(rawWindows.indices, rawWindows).map { index, window in
+            OverlapAnalyticsPoint(
+                start: window.start,
+                end: window.end,
+                concurrentSegmentCount: window.concurrentSegmentCount,
+                participantCount: window.participantCount,
+                visibleParticipants: window.visibleParticipants,
+                wallDurationSeconds: max(0, Int(window.end.timeIntervalSince(window.start))),
+                excessDurationSeconds: allocatedExcess[index]
+            )
+        }
+        .sorted(by: overlapPointPrecedes)
+        assert(points.reduce(0) { $0 + $1.excessDurationSeconds } == expectedExcessSeconds)
+        return points
+    }
+
+    private static func reconcileOverlapSeconds(
+        _ allocated: inout [Int],
+        exactExcess: [TimeInterval],
+        windows: [RawOverlapWindow],
+        expectedTotal: Int
+    ) {
+        var difference = expectedTotal - allocated.reduce(0, +)
+        guard difference != 0, !allocated.isEmpty else { return }
+
+        let indexes = allocated.indices.sorted { lhs, rhs in
+            let lhsRemainder = exactExcess[lhs] - exactExcess[lhs].rounded(.down)
+            let rhsRemainder = exactExcess[rhs] - exactExcess[rhs].rounded(.down)
+            if lhsRemainder != rhsRemainder {
+                return difference > 0
+                    ? lhsRemainder > rhsRemainder
+                    : lhsRemainder < rhsRemainder
+            }
+            return rawWindowPrecedes(windows[lhs], windows[rhs])
+        }
+
+        var allocationCursor = 0
+        while difference != 0 {
+            let target = indexes[allocationCursor % indexes.count]
+            if difference > 0 {
+                allocated[target] += 1
+                difference -= 1
+            } else if allocated[target] > 0 {
+                allocated[target] -= 1
+                difference += 1
+            }
+            allocationCursor += 1
+        }
+    }
+
+    private static func firstActiveParticipants(
+        limit: Int,
+        heap: inout Heap<OverlapAnalyticsParticipant>,
+        residentParticipantIDs: inout Set<UUID>,
+        activeSegmentCountByTaskID: [UUID: Int]
+    ) -> [OverlapAnalyticsParticipant] {
+        var participants: [OverlapAnalyticsParticipant] = []
+
+        while participants.count < limit {
+            while let candidate = heap.min,
+                  activeSegmentCountByTaskID[candidate.id] == nil
+            {
+                _ = heap.popMin()
+                residentParticipantIDs.remove(candidate.id)
+            }
+            guard let participant = heap.popMin() else { break }
+            participants.append(participant)
+        }
+
+        for participant in participants {
+            heap.insert(participant)
+        }
+        return participants
+    }
+
+    private static func overlapEventPrecedes(_ lhs: OverlapSweepEvent, _ rhs: OverlapSweepEvent) -> Bool {
         if lhs.date != rhs.date {
             return lhs.date < rhs.date
         }
@@ -120,6 +257,37 @@ nonisolated extension AnalyticsStore {
             return lhs.kind.rawValue < rhs.kind.rawValue
         }
         return lhs.segmentID < rhs.segmentID
+    }
+
+    private static func overlapPointPrecedes(_ lhs: OverlapAnalyticsPoint, _ rhs: OverlapAnalyticsPoint) -> Bool {
+        if lhs.excessDurationSeconds != rhs.excessDurationSeconds {
+            return lhs.excessDurationSeconds > rhs.excessDurationSeconds
+        }
+        if lhs.wallDurationSeconds != rhs.wallDurationSeconds {
+            return lhs.wallDurationSeconds > rhs.wallDurationSeconds
+        }
+        if lhs.start != rhs.start {
+            return lhs.start < rhs.start
+        }
+        if lhs.end != rhs.end {
+            return lhs.end < rhs.end
+        }
+        if lhs.concurrentSegmentCount != rhs.concurrentSegmentCount {
+            return lhs.concurrentSegmentCount > rhs.concurrentSegmentCount
+        }
+        return lhs.visibleParticipants.map { $0.id.uuidString }.lexicographicallyPrecedes(
+            rhs.visibleParticipants.map { $0.id.uuidString }
+        )
+    }
+
+    private static func rawWindowPrecedes(_ lhs: RawOverlapWindow, _ rhs: RawOverlapWindow) -> Bool {
+        if lhs.start != rhs.start {
+            return lhs.start < rhs.start
+        }
+        if lhs.end != rhs.end {
+            return lhs.end < rhs.end
+        }
+        return lhs.concurrentSegmentCount > rhs.concurrentSegmentCount
     }
 }
 
@@ -133,12 +301,4 @@ private nonisolated struct OverlapSweepEvent {
     let kind: OverlapSweepEventKind
     let segmentID: UUID
     let taskID: UUID
-}
-
-nonisolated struct RawOverlapWindow {
-    let start: Date
-    var end: Date
-    let concurrentSegmentCount: Int
-    let participantCount: Int
-    let visibleParticipants: [OverlapAnalyticsParticipant]
 }

@@ -1,5 +1,73 @@
 import Foundation
 
+nonisolated enum SortedUUIDArrayIndex {
+    static func buildIndex<Element: PersistentUUIDModel>(
+        for elements: [Element]
+    ) -> [UUID: Int] {
+        Dictionary(uniqueKeysWithValues: elements.indices.map {
+            (elements[$0].id, $0)
+        })
+    }
+
+    static func insertionIndex<Element>(
+        for element: Element,
+        in elements: [Element],
+        orderedBy precedes: (Element, Element) -> Bool
+    ) -> Int {
+        var lowerBound = elements.startIndex
+        var upperBound = elements.endIndex
+        while lowerBound < upperBound {
+            let middle = lowerBound + elements.distance(from: lowerBound, to: upperBound) / 2
+            if precedes(elements[middle], element) {
+                lowerBound = middle + 1
+            } else {
+                upperBound = middle
+            }
+        }
+        return lowerBound
+    }
+
+    static func reindex<Element: PersistentUUIDModel>(
+        _ elements: [Element],
+        indexByID: inout [UUID: Int],
+        from startIndex: Int
+    ) {
+        guard startIndex < elements.count else { return }
+        for index in startIndex ..< elements.count {
+            indexByID[elements[index].id] = index
+        }
+    }
+
+    static func remove<Element: PersistentUUIDModel>(
+        ids: Set<UUID>,
+        from elements: inout [Element],
+        indexByID: inout [UUID: Int]
+    ) {
+        let indices = ids.compactMap { indexByID[$0] }.sorted(by: >)
+        guard let firstChangedIndex = indices.last else { return }
+        for index in indices {
+            elements.remove(at: index)
+        }
+        for id in ids {
+            indexByID.removeValue(forKey: id)
+        }
+        reindex(elements, indexByID: &indexByID, from: firstChangedIndex)
+    }
+
+    static func insert<Element: PersistentUUIDModel>(
+        _ insertedElements: [Element],
+        into elements: inout [Element],
+        indexByID: inout [UUID: Int],
+        orderedBy precedes: (Element, Element) -> Bool
+    ) {
+        for element in insertedElements {
+            let index = insertionIndex(for: element, in: elements, orderedBy: precedes)
+            elements.insert(element, at: index)
+            reindex(elements, indexByID: &indexByID, from: index)
+        }
+    }
+}
+
 extension ChecklistStore {
     func sortedItems(_ items: [ChecklistItem]) -> [ChecklistItem] {
         items.sorted(by: itemOrder)
@@ -69,84 +137,36 @@ extension ChecklistStore {
     }
 
     mutating func removeItems(ids: Set<UUID>) {
-        let indices = ids.compactMap { itemArrayIndexByID[$0] }.sorted(by: >)
-        guard let firstChangedIndex = indices.last else { return }
-        for index in indices {
-            items.remove(at: index)
-        }
-        for id in ids {
-            itemArrayIndexByID.removeValue(forKey: id)
-        }
-        reindexItems(from: firstChangedIndex)
+        SortedUUIDArrayIndex.remove(
+            ids: ids,
+            from: &items,
+            indexByID: &itemArrayIndexByID
+        )
     }
 
     mutating func insertItems(_ insertedItems: [ChecklistItem]) {
-        for item in insertedItems {
-            let index = itemInsertionIndex(for: item)
-            items.insert(item, at: index)
-            reindexItems(from: index)
-        }
+        SortedUUIDArrayIndex.insert(
+            insertedItems,
+            into: &items,
+            indexByID: &itemArrayIndexByID,
+            orderedBy: itemOrder
+        )
     }
 
     mutating func removeVisuals(ids: Set<UUID>) {
-        let indices = ids.compactMap { visualArrayIndexByID[$0] }.sorted(by: >)
-        guard let firstChangedIndex = indices.last else { return }
-        for index in indices {
-            visuals.remove(at: index)
-        }
-        for id in ids {
-            visualArrayIndexByID.removeValue(forKey: id)
-        }
-        reindexVisuals(from: firstChangedIndex)
+        SortedUUIDArrayIndex.remove(
+            ids: ids,
+            from: &visuals,
+            indexByID: &visualArrayIndexByID
+        )
     }
 
     mutating func insertVisuals(_ insertedVisuals: [ChecklistItemVisual]) {
-        for visual in insertedVisuals {
-            let index = visualInsertionIndex(for: visual)
-            visuals.insert(visual, at: index)
-            reindexVisuals(from: index)
-        }
-    }
-
-    mutating func reindexItems(from startIndex: Int) {
-        guard startIndex < items.count else { return }
-        for index in startIndex ..< items.count {
-            itemArrayIndexByID[items[index].id] = index
-        }
-    }
-
-    mutating func reindexVisuals(from startIndex: Int) {
-        guard startIndex < visuals.count else { return }
-        for index in startIndex ..< visuals.count {
-            visualArrayIndexByID[visuals[index].id] = index
-        }
-    }
-
-    func itemInsertionIndex(for item: ChecklistItem) -> Int {
-        var lowerBound = items.startIndex
-        var upperBound = items.endIndex
-        while lowerBound < upperBound {
-            let middle = lowerBound + items.distance(from: lowerBound, to: upperBound) / 2
-            if itemOrder(items[middle], item) {
-                lowerBound = middle + 1
-            } else {
-                upperBound = middle
-            }
-        }
-        return lowerBound
-    }
-
-    func visualInsertionIndex(for visual: ChecklistItemVisual) -> Int {
-        var lowerBound = visuals.startIndex
-        var upperBound = visuals.endIndex
-        while lowerBound < upperBound {
-            let middle = lowerBound + visuals.distance(from: lowerBound, to: upperBound) / 2
-            if visualOrder(visuals[middle], visual) {
-                lowerBound = middle + 1
-            } else {
-                upperBound = middle
-            }
-        }
-        return lowerBound
+        SortedUUIDArrayIndex.insert(
+            insertedVisuals,
+            into: &visuals,
+            indexByID: &visualArrayIndexByID,
+            orderedBy: visualOrder
+        )
     }
 }

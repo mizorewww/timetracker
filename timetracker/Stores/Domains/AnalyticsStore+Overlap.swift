@@ -14,14 +14,36 @@ nonisolated extension AnalyticsStore {
             tasks: tasks,
             sessions: sessions
         )
-        let rawWindows = sweepOverlapWindows(
-            canonicalItems,
-            participantsByTaskID: participantsByTaskID
-        )
-        return materializeOverlapWindows(
-            rawWindows,
+        return OverlapWindowSweepEngine.overlapPoints(
+            segments: canonicalItems.map {
+                OverlapSweepSegment(
+                    id: $0.segment.id,
+                    taskID: $0.segment.taskID,
+                    interval: $0.interval
+                )
+            },
+            participantsByTaskID: participantsByTaskID,
             expectedExcessSeconds: overview(items: canonicalItems).overlapSeconds
         )
+    }
+
+    func overlapParticipants(
+        taskIDs: Set<UUID>,
+        tasks: [AnalyticsTaskRecord],
+        sessions: [AnalyticsSessionRecord]
+    ) -> [UUID: OverlapAnalyticsParticipant] {
+        let taskByID = tasks.latestByID()
+        let fallbackTitleByTaskID = AnalyticsSelectionPolicy.latestSessionTitleByTaskID(
+            sessions: sessions,
+            restrictingTo: taskIDs
+        )
+
+        return taskIDs.reduce(into: [UUID: OverlapAnalyticsParticipant]()) { result, taskID in
+            let title = taskByID[taskID]?.title
+                ?? fallbackTitleByTaskID[taskID]
+                ?? AppStrings.localized("task.unavailable")
+            result[taskID] = OverlapAnalyticsParticipant(id: taskID, title: title)
+        }
     }
 
     private func canonicalOverlapItems(_ items: [AnalyticsBoundedSegment]) -> [AnalyticsBoundedSegment] {

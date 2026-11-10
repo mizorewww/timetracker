@@ -268,25 +268,14 @@ extension StoreScopedTaskLifecycleCommandCoordinator {
         for task: TaskNode,
         tasks: [TaskNode]
     ) -> Set<UUID> {
-        ancestorTaskIDs(startingAt: task.parentID, tasks: tasks)
+        TaskTreeService.ancestorIDs(startingAt: task.parentID, tasks: tasks)
     }
 
     private static func ancestorTaskIDs(
         startingAt firstParentID: UUID?,
         tasks: [TaskNode]
     ) -> Set<UUID> {
-        let taskByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
-        var ancestors = Set<UUID>()
-        var visited = Set<UUID>()
-        var parentID = firstParentID
-        while let currentID = parentID,
-              visited.insert(currentID).inserted,
-              let parent = taskByID[currentID]
-        {
-            ancestors.insert(currentID)
-            parentID = parent.parentID
-        }
-        return ancestors
+        TaskTreeService.ancestorIDs(startingAt: firstParentID, tasks: tasks)
     }
 }
 

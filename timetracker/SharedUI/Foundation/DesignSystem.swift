@@ -126,7 +126,6 @@ extension View {
         modifier(AppNativeCardBackground(padding: padding))
     }
 
-    @ViewBuilder
     func platformSheetFrame(width: CGFloat, height: CGFloat) -> some View {
         #if os(macOS)
         frame(minWidth: width, idealWidth: width, minHeight: height, idealHeight: height)
@@ -137,7 +136,6 @@ extension View {
 
     /// Native list style for a sheet/pushed surface: inset-grouped on iOS,
     /// plain inset elsewhere.
-    @ViewBuilder
     func appSheetListStyle() -> some View {
         #if os(iOS)
         listStyle(.insetGrouped)
@@ -147,7 +145,6 @@ extension View {
     }
 
     /// Inline navigation title on platforms that support it; no-op on macOS.
-    @ViewBuilder
     func appInlineNavigationTitle() -> some View {
         #if os(iOS)
         navigationBarTitleDisplayMode(.inline)

@@ -35,10 +35,10 @@ extension TimeTrackerStore {
             calendar.locale = Locale(identifier: "en_US_POSIX")
             calendar.timeZone = timeZone
             guard let deadline = calendar.dateInterval(
-                of: .day,
-                for: now
-            )?.end,
-                deadline > now
+                      of: .day,
+                      for: now
+                  )?.end,
+                  deadline > now
             else {
                 return nil
             }

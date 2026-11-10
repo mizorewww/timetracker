@@ -121,16 +121,16 @@ extension StoreScopedInboxCommandCoordinator {
             }
             let suggestions = try suggestions(for: item, context: context)
             guard let suggestion = InboxSuggestionIdentityService.index(
-                items: [item],
-                suggestions: suggestions
-            )[item.id],
-                suggestion.id == baseline.suggestionID,
-                suggestion.clientMutationID == baseline.suggestionMutationID,
-                let destination = suggestion.manualRouteDestination,
-                InboxSuggestionStateService.displaySuggestion(
-                    for: resolution.readModel,
-                    suggestion: suggestion
-                ) != nil
+                      items: [item],
+                      suggestions: suggestions
+                  )[item.id],
+                  suggestion.id == baseline.suggestionID,
+                  suggestion.clientMutationID == baseline.suggestionMutationID,
+                  let destination = suggestion.manualRouteDestination,
+                  InboxSuggestionStateService.displaySuggestion(
+                      for: resolution.readModel,
+                      suggestion: suggestion
+                  ) != nil
             else {
                 throw StoreScopedInboxMutationError.inboxChanged
             }

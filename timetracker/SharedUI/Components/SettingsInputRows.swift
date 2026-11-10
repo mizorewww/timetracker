@@ -32,7 +32,6 @@ struct SettingsTextFieldRow: View {
         .settingsRowSeparatorAligned()
     }
 
-    @ViewBuilder
     private var inputField: some View {
         Group {
             if isSecure {

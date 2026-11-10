@@ -91,11 +91,11 @@ extension TaskHierarchyPicker {
         for item: TaskHierarchyProjection.Item
     ) -> Bool {
         guard case let .multipleSelection(
-            selectedTaskIDs,
-            _,
-            maximumSelectionCount
-        ) = mode,
-            let maximumSelectionCount
+                  selectedTaskIDs,
+                  _,
+                  maximumSelectionCount
+              ) = mode,
+              let maximumSelectionCount
         else {
             return false
         }

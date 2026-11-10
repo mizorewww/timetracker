@@ -80,7 +80,6 @@ struct SettingsPomodoroMinuteWheelRow: View {
         }
     }
 
-    @ViewBuilder
     private var minuteSelectionContent: some View {
         #if os(iOS)
         Picker(title, selection: normalizedValue) {

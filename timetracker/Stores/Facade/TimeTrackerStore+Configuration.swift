@@ -56,13 +56,7 @@ extension TimeTrackerStore {
             startupErrors.append(error)
         }
         #endif
-        do {
-            try context.withHistoryAuthor(.bootstrapMaintenance) {
-                try AppleHealthCatalogCleanup.removeLegacyCatalogRowsIfNeeded(context: context)
-            }
-        } catch {
-            startupErrors.append(error)
-        }
+
         do {
             try refresh()
         } catch {

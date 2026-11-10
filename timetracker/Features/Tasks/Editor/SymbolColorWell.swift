@@ -59,7 +59,6 @@ struct SymbolColorWell: View {
             .accessibilityIdentifier("symbol.picker.color.well")
     }
 
-    @ViewBuilder
     private var platformWell: some View {
         #if os(iOS)
         Button {

@@ -147,9 +147,9 @@ struct StoreScopedPomodoroCommandCoordinator {
                 .allowParallelTimers(in: context)
 
             guard let outcome = try PomodoroCommandHandler(
-                deviceID: resolvedDeviceID,
-                nowProvider: { now }
-            ).resumeFocusAfterBreak(
+                      deviceID: resolvedDeviceID,
+                      nowProvider: { now }
+                  ).resumeFocusAfterBreak(
                 runID: run.id,
                 expectedState: run.state,
                 allowParallelTimers: allowParallelTimers,
@@ -157,9 +157,9 @@ struct StoreScopedPomodoroCommandCoordinator {
                 repository: pomodoroRepository,
                 context: context
             ),
-                let resumedRun = try pomodoroRepository.run(id: run.id),
-                resumedRun.state == .focusing,
-                resumedRun.clientMutationID != phase.mutationID
+                  let resumedRun = try pomodoroRepository.run(id: run.id),
+                  resumedRun.state == .focusing,
+                  resumedRun.clientMutationID != phase.mutationID
             else {
                 throw StoreScopedPomodoroCommandInvariantError.resumedFocusMissing
             }

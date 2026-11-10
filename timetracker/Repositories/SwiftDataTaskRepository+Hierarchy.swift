@@ -13,21 +13,7 @@ nonisolated extension SwiftDataTaskRepository {
         if TaskTrackingAvailabilityService.trackableTaskIDs(tasks: nodes).contains(newParentID) == false {
             return false
         }
-        return !descendantIDs(of: nodeID, nodes: nodes).contains(newParentID)
-    }
-
-    func descendantIDs(of nodeID: UUID, nodes: [TaskNode]) -> Set<UUID> {
-        let childrenByParentID = Dictionary(grouping: nodes) { $0.parentID }
-        var pending = childrenByParentID[nodeID] ?? []
-        var visited: Set<UUID> = [nodeID]
-        var result = Set<UUID>()
-
-        while let child = pending.popLast() {
-            guard visited.insert(child.id).inserted else { continue }
-            result.insert(child.id)
-            pending.append(contentsOf: childrenByParentID[child.id] ?? [])
-        }
-        return result
+        return !TaskTreeService.descendantIDs(of: nodeID, tasks: nodes).contains(newParentID)
     }
 
     /// `nodes` is the caller's visible task snapshot, reused so one write does

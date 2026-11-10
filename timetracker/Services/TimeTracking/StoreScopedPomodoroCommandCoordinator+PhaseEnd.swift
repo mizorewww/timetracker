@@ -21,16 +21,16 @@ extension StoreScopedPomodoroCommandCoordinator {
             }
             let sessionIDBefore = run.sessionID
             guard try PomodoroCommandHandler(
-                deviceID: resolvedDeviceID,
-                nowProvider: { now }
-            ).completeFocus(
+                      deviceID: resolvedDeviceID,
+                      nowProvider: { now }
+                  ).completeFocus(
                 runID: run.id,
                 expectedState: run.state,
                 repository: pomodoroRepository
             ),
-                run.clientMutationID != phase.mutationID,
-                run.sessionID == nil,
-                run.state == .shortBreak || run.state == .longBreak || run.state == .completed
+                  run.clientMutationID != phase.mutationID,
+                  run.sessionID == nil,
+                  run.state == .shortBreak || run.state == .longBreak || run.state == .completed
             else {
                 throw StoreScopedPomodoroPhaseEndInvariantError.focusCompletionMissing
             }

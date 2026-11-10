@@ -84,16 +84,7 @@ extension TimeTrackerStore {
     }
 
     func rootTask(for task: TaskNode) -> TaskNode {
-        var cursor = task
-        var visited: Set<UUID> = [task.id]
-        while let parentID = cursor.parentID,
-              !visited.contains(parentID),
-              let parent = taskByID[parentID]
-        {
-            visited.insert(parentID)
-            cursor = parent
-        }
-        return cursor
+        TaskTreeService.rootTask(for: task, taskByID: taskByID)
     }
 
     func effectiveCategory(for task: TaskNode) -> TaskCategory? {

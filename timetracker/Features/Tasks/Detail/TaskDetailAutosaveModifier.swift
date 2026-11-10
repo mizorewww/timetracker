@@ -93,7 +93,6 @@ extension View {
         )
     }
 
-    @ViewBuilder
     fileprivate func taskDetailAutosaveTerminationFlush(
         perform action: @escaping () -> Void
     ) -> some View {

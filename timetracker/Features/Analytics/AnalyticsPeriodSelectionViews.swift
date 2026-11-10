@@ -202,15 +202,15 @@ enum AnalyticsPeriodNavigation {
         monthAnchor = anchor
 
         guard let targetMonthStart = range.date(
-            byAdding: value,
-            to: referenceDate,
-            calendar: calendar
-        ),
-            let targetMonth = range.interval(
-                containing: targetMonthStart,
-                calendar: calendar
-            ),
-            let currentMonth = range.interval(containing: liveNow, calendar: calendar)
+                  byAdding: value,
+                  to: referenceDate,
+                  calendar: calendar
+              ),
+              let targetMonth = range.interval(
+                  containing: targetMonthStart,
+                  calendar: calendar
+              ),
+              let currentMonth = range.interval(containing: liveNow, calendar: calendar)
         else {
             return min(referenceDate, liveNow)
         }
@@ -250,20 +250,20 @@ nonisolated struct AnalyticsMonthNavigationAnchor: Hashable, Sendable {
         // month recover the original selection (Jan 31 → Feb 28 → Mar 31).
         let clampedDay = min(max(day, validDays.lowerBound), validDays.upperBound - 1)
         guard let targetDay = calendar.date(
-            byAdding: .day,
-            value: clampedDay - validDays.lowerBound,
-            to: month.start
-        ),
-            let anchoredDate = calendar.date(
-                bySettingHour: hour,
-                minute: minute,
-                second: second,
-                of: targetDay,
-                matchingPolicy: .nextTimePreservingSmallerComponents,
-                repeatedTimePolicy: .first,
-                direction: .forward
-            ),
-            month.contains(anchoredDate)
+                  byAdding: .day,
+                  value: clampedDay - validDays.lowerBound,
+                  to: month.start
+              ),
+              let anchoredDate = calendar.date(
+                  bySettingHour: hour,
+                  minute: minute,
+                  second: second,
+                  of: targetDay,
+                  matchingPolicy: .nextTimePreservingSmallerComponents,
+                  repeatedTimePolicy: .first,
+                  direction: .forward
+              ),
+              month.contains(anchoredDate)
         else {
             return nil
         }

@@ -39,38 +39,36 @@ final class SwiftDataPomodoroRepository {
     /// user's entire Pomodoro history and one query per stopped session.
     func openRuns(sessionIDs: Set<UUID>) throws -> [PomodoroRun] {
         guard sessionIDs.isEmpty == false else { return [] }
-        let descriptor = FetchDescriptor<PomodoroRun>(
-            predicate: #Predicate {
-                $0.endedAt == nil && $0.deletedAt == nil
-            }
-        )
-        let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
-        return try canonicalRuns(ids: candidateIDs)
-            .filter {
+        return try canonicalRuns(
+            nominating: FetchDescriptor<PomodoroRun>(
+                predicate: #Predicate {
+                    $0.endedAt == nil && $0.deletedAt == nil
+                }
+            ),
+            matching: {
                 $0.endedAt == nil &&
                     $0.sessionID.map(sessionIDs.contains) == true
             }
-            .sorted(by: runCreationOrder)
+        )
     }
 
     func activeRuns() throws -> [PomodoroRun] {
         let completed = PomodoroState.completed.rawValue
         let cancelled = PomodoroState.cancelled.rawValue
-        let descriptor = FetchDescriptor<PomodoroRun>(
-            predicate: #Predicate {
+        return try canonicalRuns(
+            nominating: FetchDescriptor<PomodoroRun>(
+                predicate: #Predicate {
+                    $0.endedAt == nil &&
+                        $0.stateRaw != completed &&
+                        $0.stateRaw != cancelled
+                }
+            ),
+            matching: {
                 $0.endedAt == nil &&
                     $0.stateRaw != completed &&
                     $0.stateRaw != cancelled
             }
         )
-        let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
-        return try canonicalRuns(ids: candidateIDs)
-            .filter {
-                $0.endedAt == nil &&
-                    $0.stateRaw != completed &&
-                    $0.stateRaw != cancelled
-            }
-            .sorted(by: runCreationOrder)
     }
 
     @discardableResult
@@ -256,6 +254,16 @@ final class SwiftDataPomodoroRepository {
             predicate: #Predicate { requestedIDs.contains($0.id) }
         )
         return try context.fetch(descriptor).visibleDeduplicatedByID()
+    }
+
+    private func canonicalRuns(
+        nominating descriptor: FetchDescriptor<PomodoroRun>,
+        matching postFilter: (PomodoroRun) -> Bool
+    ) throws -> [PomodoroRun] {
+        let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
+        return try canonicalRuns(ids: candidateIDs)
+            .filter(postFilter)
+            .sorted(by: runCreationOrder)
     }
 
     private func runCreationOrder(_ lhs: PomodoroRun, _ rhs: PomodoroRun) -> Bool {

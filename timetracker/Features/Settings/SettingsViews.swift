@@ -33,7 +33,6 @@ struct SettingsView: View {
             }
     }
 
-    @ViewBuilder
     private var settingsNavigation: some View {
         #if os(macOS)
         NavigationSplitView(columnVisibility: fixedSettingsColumnVisibility) {

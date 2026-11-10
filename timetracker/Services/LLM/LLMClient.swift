@@ -49,16 +49,16 @@ nonisolated enum LLMClient {
     /// `/chat/completions`, since users paste either.
     static func configuration(endpoint: String, apiKey: String) -> OpenAI.Configuration? {
         guard let components = URLComponents(
-            string: endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
-        ),
-            let scheme = components.scheme?.lowercased(),
-            let host = components.host?.lowercased(),
-            host.isEmpty == false,
-            components.user == nil,
-            components.password == nil,
-            components.query == nil,
-            components.fragment == nil,
-            scheme == "https" || (scheme == "http" && loopbackHosts.contains(host))
+                  string: endpoint.trimmingCharacters(in: .whitespacesAndNewlines)
+              ),
+              let scheme = components.scheme?.lowercased(),
+              let host = components.host?.lowercased(),
+              host.isEmpty == false,
+              components.user == nil,
+              components.password == nil,
+              components.query == nil,
+              components.fragment == nil,
+              scheme == "https" || (scheme == "http" && loopbackHosts.contains(host))
         else {
             return nil
         }

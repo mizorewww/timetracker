@@ -72,13 +72,85 @@ nonisolated enum TaskTreeService {
         )
     }
 
+    static func hierarchyOrder(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {
+        if lhs.depth != rhs.depth {
+            return lhs.depth < rhs.depth
+        }
+        return siblingOrder(lhs, rhs)
+    }
+
+    static func siblingOrder(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {
+        if lhs.sortOrder != rhs.sortOrder {
+            return lhs.sortOrder < rhs.sortOrder
+        }
+        if lhs.createdAt != rhs.createdAt {
+            return lhs.createdAt < rhs.createdAt
+        }
+        return lhs.id < rhs.id
+    }
+
+    static func ancestorIDs(
+        startingAt firstParentID: UUID?,
+        parentByID: (UUID) -> UUID?
+    ) -> [UUID] {
+        var result: [UUID] = []
+        var visited = Set<UUID>()
+        var cursor = firstParentID
+        while let current = cursor, visited.insert(current).inserted {
+            result.append(current)
+            cursor = parentByID(current)
+        }
+        return result
+    }
+
+    static func ancestorIDs(
+        of taskID: UUID,
+        taskByID: [UUID: TaskNode]
+    ) -> [UUID] {
+        ancestorIDs(
+            startingAt: taskByID[taskID]?.parentID,
+            parentByID: { taskByID[$0]?.parentID }
+        )
+    }
+
+    static func ancestorIDs(
+        startingAt firstParentID: UUID?,
+        tasks: [TaskNode]
+    ) -> Set<UUID> {
+        let taskByID = Dictionary(
+            tasks.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        return Set(
+            ancestorIDs(
+                startingAt: firstParentID,
+                parentByID: { taskByID[$0]?.parentID }
+            )
+        )
+    }
+
+    static func rootTask(
+        for task: TaskNode,
+        taskByID: [UUID: TaskNode]
+    ) -> TaskNode {
+        var cursor = task
+        var visited: Set<UUID> = [task.id]
+        while let parentID = cursor.parentID,
+              visited.insert(parentID).inserted,
+              let parent = taskByID[parentID]
+        {
+            cursor = parent
+        }
+        return cursor
+    }
+
     static func taskAndDescendantIDs(
-        for taskID: UUID,
+        for taskIDs: Set<UUID>,
         childrenByParentID: [UUID?: [TaskNode]],
         visited: Set<UUID> = []
     ) -> Set<UUID> {
         var seen = visited
-        var pending = [taskID]
+        var pending = Array(taskIDs)
         var result = Set<UUID>()
 
         while let currentID = pending.popLast() {
@@ -87,6 +159,18 @@ nonisolated enum TaskTreeService {
             pending.append(contentsOf: (childrenByParentID[currentID] ?? []).map(\.id))
         }
         return result
+    }
+
+    static func taskAndDescendantIDs(
+        for taskID: UUID,
+        childrenByParentID: [UUID?: [TaskNode]],
+        visited: Set<UUID> = []
+    ) -> Set<UUID> {
+        taskAndDescendantIDs(
+            for: [taskID],
+            childrenByParentID: childrenByParentID,
+            visited: visited
+        )
     }
 
     static func descendantIDs(of taskID: UUID, tasks: [TaskNode]) -> Set<UUID> {

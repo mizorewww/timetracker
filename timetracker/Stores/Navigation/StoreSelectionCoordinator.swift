@@ -7,17 +7,7 @@ enum StoreSelectionCoordinator {
     }
 
     static func ancestorTaskIDs(for taskID: UUID, taskByID: [UUID: TaskNode]) -> [UUID] {
-        var result: [UUID] = []
-        var cursor = taskByID[taskID]
-        var visited: Set<UUID> = []
-
-        while let parentID = cursor?.parentID, !visited.contains(parentID) {
-            result.append(parentID)
-            visited.insert(parentID)
-            cursor = taskByID[parentID]
-        }
-
-        return result
+        TaskTreeService.ancestorIDs(of: taskID, taskByID: taskByID)
     }
 
     static func affectedAncestorIDs(

@@ -3,13 +3,12 @@ import SwiftData
 
 extension SwiftDataTimeTrackingRepository {
     func activeSegments() throws -> [TimeSegment] {
-        let descriptor = FetchDescriptor<TimeSegment>(
-            predicate: #Predicate { $0.endedAt == nil }
+        try canonicalSegments(
+            nominating: FetchDescriptor<TimeSegment>(
+                predicate: #Predicate { $0.endedAt == nil }
+            ),
+            matching: { $0.endedAt == nil }
         )
-        let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
-        return try canonicalSegments(ids: candidateIDs)
-            .filter { $0.endedAt == nil }
-            .sorted(by: TimeSegment.startOrder)
     }
 
     func sessions() throws -> [TimeSession] {
@@ -36,13 +35,12 @@ extension SwiftDataTimeTrackingRepository {
     func segments(sessionIDs: Set<UUID>) throws -> [TimeSegment] {
         guard sessionIDs.isEmpty == false else { return [] }
         let requestedSessionIDs = Array(sessionIDs)
-        let descriptor = FetchDescriptor<TimeSegment>(
-            predicate: #Predicate { requestedSessionIDs.contains($0.sessionID) }
+        return try canonicalSegments(
+            nominating: FetchDescriptor<TimeSegment>(
+                predicate: #Predicate { requestedSessionIDs.contains($0.sessionID) }
+            ),
+            matching: { sessionIDs.contains($0.sessionID) }
         )
-        let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
-        return try canonicalSegments(ids: candidateIDs)
-            .filter { sessionIDs.contains($0.sessionID) }
-            .sorted(by: TimeSegment.startOrder)
     }
 
     func segments(from: Date, to: Date) throws -> [TimeSegment] {
@@ -54,15 +52,14 @@ extension SwiftDataTimeTrackingRepository {
         let upperBound = to
         let lowerBound = from
         let activeSegmentEnd = min(now, upperBound)
-        let descriptor = FetchDescriptor<TimeSegment>(
-            predicate: #Predicate {
-                $0.startedAt < upperBound &&
-                    ($0.endedAt ?? activeSegmentEnd) > lowerBound
-            }
-        )
-        let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
-        return try canonicalSegments(ids: candidateIDs)
-            .filter { segment in
+        return try canonicalSegments(
+            nominating: FetchDescriptor<TimeSegment>(
+                predicate: #Predicate {
+                    $0.startedAt < upperBound &&
+                        ($0.endedAt ?? activeSegmentEnd) > lowerBound
+                }
+            ),
+            matching: { segment in
                 TrackedTimePolicy.overlaps(
                     startedAt: segment.startedAt,
                     endedAt: segment.endedAt,
@@ -70,7 +67,7 @@ extension SwiftDataTimeTrackingRepository {
                     now: now
                 )
             }
-            .sorted(by: TimeSegment.startOrder)
+        )
     }
 
     func allSegments() throws -> [TimeSegment] {
@@ -86,6 +83,16 @@ extension SwiftDataTimeTrackingRepository {
             predicate: #Predicate { requestedIDs.contains($0.id) }
         )
         return try context.fetch(descriptor).visibleDeduplicatedByID()
+    }
+
+    private func canonicalSegments(
+        nominating descriptor: FetchDescriptor<TimeSegment>,
+        matching postFilter: (TimeSegment) -> Bool
+    ) throws -> [TimeSegment] {
+        let candidateIDs = try Set(context.fetch(descriptor).map(\.id))
+        return try canonicalSegments(ids: candidateIDs)
+            .filter(postFilter)
+            .sorted(by: TimeSegment.startOrder)
     }
 
     func canonicalSessions(ids: Set<UUID>) throws -> [TimeSession] {

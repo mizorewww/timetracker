@@ -24,14 +24,10 @@ extension RollupIncrementalIndex {
     }
 
     func ancestorIDs(of taskID: UUID) -> [UUID] {
-        var result: [UUID] = []
-        var cursor = parentByTaskID[taskID]
-        var visited = Set<UUID>()
-        while let current = cursor, visited.insert(current).inserted {
-            result.append(current)
-            cursor = parentByTaskID[current]
-        }
-        return result
+        TaskTreeService.ancestorIDs(
+            startingAt: parentByTaskID[taskID],
+            parentByID: { parentByTaskID[$0] }
+        )
     }
 
     func makeDepths() -> [UUID: Int] {

@@ -12,17 +12,14 @@ nonisolated extension SwiftDataTaskRepository {
     /// is re-fetched so LWW picks the winner even if only a stale copy matched.
     func children(of parentID: UUID?) throws -> [TaskNode] {
         let parent = parentID
-        let candidates = try context.fetch(
-            FetchDescriptor<TaskNode>(predicate: #Predicate { $0.parentID == parent })
+        let candidateIDs = try Set(
+            context.fetch(
+                FetchDescriptor<TaskNode>(predicate: #Predicate { $0.parentID == parent })
+            ).map(\.id)
         )
-        let candidateIDs = Array(Set(candidates.map(\.id)))
-        guard candidateIDs.isEmpty == false else { return [] }
-        return try context.fetch(
-            FetchDescriptor<TaskNode>(predicate: #Predicate { candidateIDs.contains($0.id) })
-        )
-        .visibleDeduplicatedByID()
-        .filter { $0.parentID == parent }
-        .sorted(by: taskSiblingOrder)
+        return try tasks(ids: candidateIDs)
+            .filter { $0.parentID == parent }
+            .sorted(by: TaskTreeService.siblingOrder)
     }
 
     func task(id: UUID) throws -> TaskNode? {
@@ -159,20 +156,7 @@ nonisolated extension SwiftDataTaskRepository {
     }
 
     private func taskHierarchyOrder(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {
-        if lhs.depth != rhs.depth {
-            return lhs.depth < rhs.depth
-        }
-        return taskSiblingOrder(lhs, rhs)
-    }
-
-    private func taskSiblingOrder(_ lhs: TaskNode, _ rhs: TaskNode) -> Bool {
-        if lhs.sortOrder != rhs.sortOrder {
-            return lhs.sortOrder < rhs.sortOrder
-        }
-        if lhs.createdAt != rhs.createdAt {
-            return lhs.createdAt < rhs.createdAt
-        }
-        return lhs.id < rhs.id
+        TaskTreeService.hierarchyOrder(lhs, rhs)
     }
 
     private func persistentIdentityOrder<Model: PersistentUUIDModel>(

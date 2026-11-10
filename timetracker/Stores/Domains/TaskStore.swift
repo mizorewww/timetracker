@@ -44,15 +44,15 @@ struct TaskStore {
         let fetchedTaskIDs = Set(fetchedTasks.map(\.id))
         let missingTaskIDs = scopedTaskIDs.subtracting(fetchedTaskIDs)
         let childrenByParentID = Dictionary(grouping: tasks, by: \.parentID)
-        let removedTaskIDs = taskAndDescendantIDs(
+        let removedTaskIDs = TaskTreeService.taskAndDescendantIDs(
             for: missingTaskIDs,
             childrenByParentID: childrenByParentID
         )
         let replacedTaskIDs = scopedTaskIDs.union(removedTaskIDs)
 
-        tasks = sortedTasks(
-            (tasks.filter { replacedTaskIDs.contains($0.id) == false } + fetchedTasks).deduplicatedByID()
-        )
+        tasks = (tasks.filter { replacedTaskIDs.contains($0.id) == false } + fetchedTasks)
+            .deduplicatedByID()
+            .sorted(by: TaskTreeService.hierarchyOrder)
         categories = try repository.categories()
         categoryAssignments = try repository.categoryAssignments()
         try refreshTaskProgress(
@@ -178,34 +178,6 @@ struct TaskStore {
             $0.recordedAt == $1.recordedAt
                 ? $0.id < $1.id
                 : $0.recordedAt < $1.recordedAt
-        }
-    }
-
-    private func taskAndDescendantIDs(
-        for taskIDs: Set<UUID>,
-        childrenByParentID: [UUID?: [TaskNode]]
-    ) -> Set<UUID> {
-        var result = Set<UUID>()
-        var pending = Array(taskIDs)
-        while let currentID = pending.popLast() {
-            guard result.insert(currentID).inserted else { continue }
-            pending.append(contentsOf: (childrenByParentID[currentID] ?? []).map(\.id))
-        }
-        return result
-    }
-
-    private func sortedTasks(_ tasks: [TaskNode]) -> [TaskNode] {
-        tasks.sorted { lhs, rhs in
-            if lhs.depth != rhs.depth {
-                return lhs.depth < rhs.depth
-            }
-            if lhs.sortOrder != rhs.sortOrder {
-                return lhs.sortOrder < rhs.sortOrder
-            }
-            if lhs.createdAt != rhs.createdAt {
-                return lhs.createdAt < rhs.createdAt
-            }
-            return lhs.id < rhs.id
         }
     }
 }

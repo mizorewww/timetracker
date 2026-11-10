@@ -1,7 +1,6 @@
 import SwiftUI
 
 extension View {
-    @ViewBuilder
     func settingsPopoverAdaptation() -> some View {
         #if os(iOS)
         presentationCompactAdaptation(.sheet)
@@ -10,7 +9,6 @@ extension View {
         #endif
     }
 
-    @ViewBuilder
     func settingsPopoverContentFrame(idealWidth: CGFloat) -> some View {
         #if os(macOS)
         frame(width: idealWidth)

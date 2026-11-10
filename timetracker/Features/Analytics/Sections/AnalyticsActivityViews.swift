@@ -1,3 +1,5 @@
+import Charts
+import Foundation
 import SwiftUI
 
 struct TodayActivityContent: View {
@@ -7,8 +9,17 @@ struct TodayActivityContent: View {
     @ScaledMetric(relativeTo: .body) private var chartHeight: CGFloat = 150
     let activity: [HourTaskActivity]
 
+    private static let minimumUpperBoundSeconds = 3600
+
     private var totalSeconds: Int {
         activity.reduce(0) { $0 + $1.totalSeconds }
+    }
+
+    private var upperBoundSeconds: Int {
+        max(
+            Self.minimumUpperBoundSeconds,
+            activity.map(\.totalSeconds).max() ?? 0
+        )
     }
 
     private var legendItems: [HourTaskSlice] {
@@ -33,10 +44,6 @@ struct TodayActivityContent: View {
         .map { $0 }
     }
 
-    private var hourScale: HourActivityScale {
-        HourActivityScale(hourTotals: activity.map(\.totalSeconds))
-    }
-
     private var hourMarkers: [Int] {
         dynamicTypeSize.isAccessibilitySize ? [0, 12, 24] : [0, 6, 12, 18, 24]
     }
@@ -56,7 +63,7 @@ struct TodayActivityContent: View {
             VStack(alignment: .leading, spacing: 14) {
                 TodayActivityHeader(totalSeconds: totalSeconds)
 
-                activityBars
+                activityChart
 
                 hourAxis
 
@@ -70,21 +77,65 @@ struct TodayActivityContent: View {
         }
     }
 
-    private var activityBars: some View {
-        let scale = hourScale
-
-        return HStack(alignment: .bottom, spacing: 3) {
+    private var activityChart: some View {
+        let maxSeconds = upperBoundSeconds
+        return Chart {
             ForEach(activity) { point in
-                HourTaskActivityBar(
-                    point: point,
-                    scale: scale,
-                    availableHeight: chartHeight
+                BarMark(
+                    x: .value("Hour", point.hour),
+                    yStart: .value("Start", 0),
+                    yEnd: .value("Capacity", maxSeconds),
+                    width: .ratio(0.78)
                 )
+                .foregroundStyle(Color.secondary.opacity(0.10))
+                .cornerRadius(4)
+                .accessibilityHidden(true)
+
+                ForEach(point.slices.filter { $0.seconds > 0 }) { slice in
+                    BarMark(
+                        x: .value(
+                            String.localizedStringWithFormat(
+                                AppStrings.localized("analytics.hourDistribution.accessibility.hour"),
+                                AnalyticsHourLabelFormatter.string(
+                                    for: point.hour,
+                                    calendar: calendar,
+                                    locale: locale
+                                )
+                            ),
+                            point.hour
+                        ),
+                        y: .value(slice.title, slice.seconds),
+                        width: .ratio(0.78)
+                    )
+                    .foregroundStyle(slice.color)
+                    .cornerRadius(3)
+                    .accessibilityLabel(
+                        String.localizedStringWithFormat(
+                            AppStrings.localized("analytics.hourDistribution.accessibility.hour"),
+                            AnalyticsHourLabelFormatter.string(
+                                for: point.hour,
+                                calendar: calendar,
+                                locale: locale
+                            )
+                        )
+                    )
+                    .accessibilityValue(
+                        String.localizedStringWithFormat(
+                            AppStrings.localized("analytics.hourDistribution.accessibility.task"),
+                            slice.title,
+                            DurationFormatter.compact(slice.seconds, locale: locale)
+                        )
+                    )
+                }
             }
         }
+        .chartXAxis(.hidden)
+        .chartYAxis(.hidden)
+        .chartLegend(.hidden)
+        .chartYScale(domain: 0 ... maxSeconds)
         .frame(maxWidth: .infinity)
         .frame(height: chartHeight)
-        .padding(.horizontal, 2)
+        .padding(.horizontal, 4)
         .padding(.top, 8)
         .padding(.bottom, 4)
         .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -106,6 +157,46 @@ struct TodayActivityContent: View {
             }
         }
         .accessibilityHidden(true)
+    }
+}
+
+enum AnalyticsHourLabelFormatter {
+    static func string(for hour: Int, calendar: Calendar, locale: Locale) -> String {
+        var components = DateComponents()
+        components.calendar = calendar
+        components.timeZone = calendar.timeZone
+        components.year = 2001
+        components.month = 1
+        components.day = hour >= 24 ? 2 : 1
+        components.hour = hour % 24
+
+        guard let date = calendar.date(from: components) else {
+            return hour.formatted(.number.locale(locale).grouping(.never))
+        }
+        return date.formatted(
+            Date.FormatStyle(
+                locale: locale,
+                calendar: calendar,
+                timeZone: calendar.timeZone
+            )
+            .hour(.defaultDigits(amPM: .abbreviated))
+        )
+    }
+}
+
+struct AnalyticsLegendSwatch: View {
+    let color: Color
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(color)
+                .frame(width: 12, height: 12)
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 

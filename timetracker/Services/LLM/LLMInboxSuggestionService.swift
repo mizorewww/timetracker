@@ -181,7 +181,6 @@ struct LLMInboxSuggestionService {
         let payload = PromptPayload(
             instructions: instructions,
             inboxTitle: input.inboxTitle,
-            allowedSymbols: SymbolCatalog.symbolNames,
             allowedColors: TaskColorPalette.hexValues,
             tasks: input.taskCandidates,
             categories: input.categoryCandidates
@@ -203,8 +202,8 @@ extension LLMInboxSuggestionService {
     childTask only when the inbox work is useful to time independently under \
     that Task. Use category to create an independently timed root Task in that \
     Category. Use checklist for an untimed completion step inside that Task. \
-    Never represent the same work as both a Task and a Checklist item. Use an \
-    SF Symbol from allowedSymbols and a color from allowedColors exactly.
+    Never represent the same work as both a Task and a Checklist item. Use a \
+    valid SF Symbol name for iconName and a color from allowedColors exactly.
     """
 }
 
@@ -219,7 +218,6 @@ struct InboxSuggestionPayload: Codable, Equatable {
 private struct PromptPayload: Encodable {
     let instructions: String
     let inboxTitle: String
-    let allowedSymbols: [String]
     let allowedColors: [String]
     let tasks: [LLMTaskCandidate]
     let categories: [LLMCategoryCandidate]

@@ -292,7 +292,7 @@ nonisolated extension LLMTaskWorkspacePlanningService {
         toolName: String
     ) throws -> Date? {
         guard let value else { return nil }
-        guard let date = ISO8601DateFormatter().date(from: value) else {
+        guard let date = try? Date(value, strategy: .iso8601) else {
             throw LLMTaskWorkspacePlanningError.invalidToolArguments(
                 toolName
             )

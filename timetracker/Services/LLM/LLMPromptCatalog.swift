@@ -247,8 +247,6 @@ extension LLMPromptKind {
             ? "`reasoning_effort`: omitted (provider default)."
             : "`reasoning_effort`: `\(reasoningEffort.rawValue)`."
         let symbolSummary = """
-        - `allowedSymbols`: \
-        \(SymbolCatalog.symbolNames.count) exact SF Symbol names.
         - `allowedColors`: \(TaskColorPalette.hexValues.count) exact color values.
         """
 

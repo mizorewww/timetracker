@@ -81,7 +81,6 @@ struct LLMChecklistVisualSuggestionService {
             checklistTitle: input.checklistTitle,
             taskTitle: input.taskTitle,
             taskPath: input.taskPath,
-            allowedSymbols: SymbolCatalog.symbolNames,
             allowedColors: TaskColorPalette.hexValues
         )
         let data = try JSONEncoder().encode(payload)
@@ -94,8 +93,8 @@ struct LLMChecklistVisualSuggestionService {
 
 extension LLMChecklistVisualSuggestionService {
     static let responseContract = """
-    Return only JSON with keys iconName, colorHex, reason. Use an SF Symbol from \
-    allowedSymbols exactly and a color from allowedColors exactly.
+    Return only JSON with keys iconName, colorHex, reason. Use a valid SF Symbol \
+    name for iconName and a color from allowedColors exactly.
     """
 }
 
@@ -110,6 +109,5 @@ private struct ChecklistVisualPromptPayload: Encodable {
     let checklistTitle: String
     let taskTitle: String
     let taskPath: String
-    let allowedSymbols: [String]
     let allowedColors: [String]
 }

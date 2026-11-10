@@ -199,7 +199,7 @@ struct LLMPromptInstructionsEditor: View {
                             spacing: 8
                         ) {
                             ForEach(
-                                SymbolCatalog.symbolNames,
+                                SymbolCatalog.curatedSymbols,
                                 id: \.self
                             ) { symbol in
                                 Image(systemName: symbol)

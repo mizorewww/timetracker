@@ -259,8 +259,8 @@ nonisolated extension LLMTaskWorkspacePlanningService {
 
     Read and mutation tools update a private in-memory proposal only. They do \
     not write user data. Re-read tool results as needed. Task removal is \
-    archive_task; there is no hard-delete Task tool. Use only allowedSymbols \
-    and allowedColors from the user envelope.
+    archive_task; there is no hard-delete Task tool. Use a valid SF Symbol \
+    name for iconName and only allowedColors from the user envelope.
 
     When the proposal completely satisfies the request, call finalize_plan by \
     itself. Never return a create-only JSON plan, Markdown, or prose instead \
@@ -296,7 +296,6 @@ private nonisolated extension LLMTaskWorkspacePlanningService {
         let instructions: String
         let request: String
         let workspace: AITaskWorkspaceSnapshot
-        let allowedSymbols: [String]
         let allowedColors: [String]
     }
 
@@ -349,7 +348,6 @@ private nonisolated extension LLMTaskWorkspacePlanningService {
             instructions: instructions,
             request: request,
             workspace: workspace,
-            allowedSymbols: SymbolCatalog.symbolNames,
             allowedColors: TaskColorPalette.hexValues
         )
         let encoder = JSONEncoder()

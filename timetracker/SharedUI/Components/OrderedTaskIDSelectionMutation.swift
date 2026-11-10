@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum OrderedTaskIDSelectionMutation {
     static func adding(_ id: UUID, to selectedIDs: [UUID]) -> [UUID] {
@@ -53,22 +54,8 @@ enum OrderedTaskIDSelectionMutation {
             return selectedIDs
         }
 
-        let movingIDs = sourceOffsets.map { visibleIDs[$0] }
         var reorderedVisibleIDs = visibleIDs
-        for sourceIndex in sourceOffsets.reversed() {
-            reorderedVisibleIDs.remove(at: sourceIndex)
-        }
-        let removedBeforeDestination = sourceOffsets.count(in: 0 ..< destination)
-        let insertionIndex = destination - removedBeforeDestination
-        guard reorderedVisibleIDs.indices.contains(insertionIndex) ||
-            insertionIndex == reorderedVisibleIDs.endIndex
-        else {
-            return selectedIDs
-        }
-        reorderedVisibleIDs.insert(
-            contentsOf: movingIDs,
-            at: insertionIndex
-        )
+        reorderedVisibleIDs.move(fromOffsets: sourceOffsets, toOffset: destination)
 
         let visibleIDSet = Set(visibleIDs)
         var reorderedSelections = selectedIDs

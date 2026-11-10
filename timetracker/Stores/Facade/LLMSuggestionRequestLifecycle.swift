@@ -1,6 +1,27 @@
 import Foundation
 import Observation
 
+struct StoreLLMSuggestionTask {
+    let requestID: UUID
+    let isAutomatic: Bool
+    let task: Task<Void, Never>
+}
+
+struct StoreLLMSuggestionDebounceTask {
+    let schedulingFingerprint: String
+    let task: Task<Void, Never>
+}
+
+struct ChecklistVisualSuggestionFailure {
+    let fingerprint: String
+    let retryAfter: Date
+}
+
+struct LLMSuggestionTaskSnapshot {
+    let inboxRequestIDsByItemID: [UUID: UUID]
+    let checklistRequestIDsByItemID: [UUID: UUID]
+}
+
 /// Shared bounded-concurrency request lifecycle for LLM suggestion features.
 /// Holds in-flight request identity, an optional per-item debounce stage, a
 /// pending FIFO queue, and the per-item failure payload. Feature-specific

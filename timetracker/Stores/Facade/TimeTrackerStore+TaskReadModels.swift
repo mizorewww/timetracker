@@ -1,6 +1,61 @@
 import Foundation
 
+nonisolated struct TaskLedgerActivitySummary: Equatable, Sendable {
+    let segmentCount: Int
+    let lastStartedAt: Date
+}
+
 extension TimeTrackerStore {
+    func isTaskAvailableForTracking(_ task: TaskNode) -> Bool {
+        trackableTaskIDs.contains(task.id)
+    }
+
+    func isTaskEligibleAsParent(_ task: TaskNode) -> Bool {
+        parentEligibleTaskIDs.contains(task.id)
+    }
+
+    func isTaskVisible(_ task: TaskNode) -> Bool {
+        visibleTaskIDs.contains(task.id)
+    }
+
+    func isTaskRecurrenceTemplate(_ task: TaskNode) -> Bool {
+        _ = taskReadModelRevision
+        return taskDomainStore.incompleteRecurrenceTemplateTaskIDs
+            .contains(task.id) || taskRecurrenceRules.contains {
+                $0.deletedAt == nil && $0.templateTaskID == task.id
+            } || taskRecurrenceOccurrences.contains {
+                $0.deletedAt == nil && $0.templateTaskID == task.id
+            }
+    }
+
+    func isGeneratedRecurrenceTask(taskID: UUID) -> Bool {
+        _ = taskReadModelRevision
+        return taskDomainStore.incompleteRecurrenceGeneratedTaskIDs
+            .contains(taskID) || taskRecurrenceOccurrences.contains {
+                $0.deletedAt == nil && $0.generatedTaskID == taskID
+            }
+    }
+
+    func taskHasActiveWork(taskID: UUID) -> Bool {
+        activeSegment(for: taskID) != nil ||
+            activePomodoroRun(for: taskID) != nil
+    }
+
+    func taskUsageActivityByTaskID(
+        for availableTasks: [TaskNode]
+    ) -> [UUID: TaskLedgerActivitySummary] {
+        availableTasks.reduce(into: [:]) { activityByTaskID, task in
+            let snapshots = ledgerDomainStore.snapshots(forTaskID: task.id)
+                .filter { readableLedgerSegmentIDs.contains($0.id) }
+            if let lastStartedAt = snapshots.lazy.map(\.startedAt).max() {
+                activityByTaskID[task.id] = TaskLedgerActivitySummary(
+                    segmentCount: snapshots.count,
+                    lastStartedAt: lastStartedAt
+                )
+            }
+        }
+    }
+
     /// Tasks that can be timed, in tree order; recomputed once per task
     /// read-model revision.
     var trackableTasks: [TaskNode] {

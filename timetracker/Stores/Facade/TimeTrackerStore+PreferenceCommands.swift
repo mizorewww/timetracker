@@ -10,6 +10,13 @@ extension TimeTrackerStore {
         try setPreference(.showGrossAndWallTogether, valueJSON: PreferenceJSON.encode(value))
     }
 
+    func setPomodoroPlans(_ plans: [PomodoroPlan]) throws {
+        try setPreference(
+            .pomodoroPlans,
+            valueJSON: PreferenceJSON.encode(AppPreferenceValueSanitizer.pomodoroPlans(plans))
+        )
+    }
+
     func setPreference(_ key: AppPreferenceKey, valueJSON: String) throws {
         try performStoreCommand(
             eventsForOutcome: { _ in [.preferenceChanged(key: key.rawValue)] }
@@ -18,5 +25,15 @@ extension TimeTrackerStore {
                 session: session
             ).set(key: key, valueJSON: valueJSON)
         }
+    }
+
+    var syncStatus: SyncStatus {
+        SyncStatus(
+            mode: AppCloudSync.persistenceMode,
+            containerIdentifier: AppCloudSync.containerIdentifier,
+            deviceID: DeviceIdentity.current,
+            lastError: AppCloudSync.lastError,
+            accountCheck: cloudAccountCheck
+        )
     }
 }
